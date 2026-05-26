@@ -1,0 +1,9 @@
+{
+  "name": "@studymate/editor-core",
+  "private": true,
+  "version": "0.0.2",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}
+

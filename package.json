@@ -1,0 +1,18 @@
+{
+  "name": "studymate-graph",
+  "private": true,
+  "version": "0.0.2",
+  "description": "学伴图谱：以知识图谱画布为中心的学习平台 monorepo。",
+  "workspaces": [
+    "frontend-user",
+    "frontend-admin",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:user": "npm --workspace frontend-user run dev",
+    "dev:admin": "npm --workspace frontend-admin run dev",
+    "build:user": "npm --workspace frontend-user run build",
+    "build:admin": "npm --workspace frontend-admin run build",
+    "typecheck": "npm --workspaces --if-present run typecheck"
+  }
+}
