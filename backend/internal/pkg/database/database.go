@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
-	"github.com/glebarez/sqlite"
 	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -71,36 +69,20 @@ func Connect(cfg config.Config) (*Dependencies, error) {
 }
 
 func openSQL(cfg config.DatabaseConfig) (*gorm.DB, string, error) {
-	switch cfg.Driver {
-	case "mysql":
-		if cfg.MySQLDSN == "" {
-			return nil, "", fmt.Errorf("mysql driver selected but MYSQL_DSN is empty")
-		}
-
-		db, err := gorm.Open(mysql.Open(cfg.MySQLDSN), &gorm.Config{})
-		if err != nil {
-			return nil, "", fmt.Errorf("connect mysql failed: %w", err)
-		}
-
-		return db, "mysql", nil
-	case "sqlite":
-		if cfg.SQLitePath == "" {
-			return nil, "", fmt.Errorf("sqlite driver selected but SQLITE_PATH is empty")
-		}
-
-		if err := ensureDir(filepath.Dir(cfg.SQLitePath)); err != nil {
-			return nil, "", err
-		}
-
-		db, err := gorm.Open(sqlite.Open(cfg.SQLitePath), &gorm.Config{})
-		if err != nil {
-			return nil, "", fmt.Errorf("connect sqlite failed: %w", err)
-		}
-
-		return db, "sqlite", nil
-	default:
-		return nil, "", fmt.Errorf("unsupported DB_DRIVER: %s", cfg.Driver)
+	if cfg.Driver != "mysql" {
+		return nil, "", fmt.Errorf("unsupported DB_DRIVER: %s; StudyMate uses mysql", cfg.Driver)
 	}
+
+	if cfg.MySQLDSN == "" {
+		return nil, "", fmt.Errorf("mysql driver selected but MYSQL_DSN is empty")
+	}
+
+	db, err := gorm.Open(mysql.Open(cfg.MySQLDSN), &gorm.Config{})
+	if err != nil {
+		return nil, "", fmt.Errorf("connect mysql failed: %w", err)
+	}
+
+	return db, "mysql", nil
 }
 
 func connectRedis(cfg config.RedisConfig) (*redis.Client, error) {

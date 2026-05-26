@@ -88,6 +88,8 @@ export interface MaterialPayload {
   tags: string[];
   coverFileId: string;
   attachmentFileId: string;
+  attachmentName: string;
+  attachmentMime: string;
   status: string;
   favoritesCount: number;
   averageRating: number;
@@ -110,6 +112,51 @@ export interface AuthSession {
   refreshToken: string;
   accessTokenExpiresAt: string;
   user: AuthUser;
+}
+
+export interface NotePayload {
+  id: string;
+  ownerUserId: string;
+  title: string;
+  summary: string;
+  content: string;
+  materialId: string;
+  folderName: string;
+  tags: string[];
+  versionNumber: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NoteVersionPayload {
+  id: string;
+  noteId: string;
+  versionNumber: number;
+  title: string;
+  summary: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface ReaderAnnotationPayload {
+  id: string;
+  materialId: string;
+  page: number;
+  quote: string;
+  comment: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReaderStatePayload {
+  materialId: string;
+  currentPage: number;
+  totalPages: number;
+  progressPercent: number;
+  bookmarks: number[];
+  lastReadAt: string;
+  annotations: ReaderAnnotationPayload[];
 }
 
 function withAuth(session: AuthSession | null) {
@@ -300,4 +347,127 @@ export async function rateMaterial(session: AuthSession, materialId: string, sco
     headers: withAuth(session),
     body: JSON.stringify({ score })
   });
+}
+
+export async function listNotes(session: AuthSession, materialId?: string) {
+  const search = materialId ? `?materialId=${encodeURIComponent(materialId)}` : "";
+  return request<NotePayload[]>(`/notes${search}`, {
+    headers: withAuth(session)
+  });
+}
+
+export async function getNote(session: AuthSession, noteId: string) {
+  return request<NotePayload>(`/notes/${noteId}`, {
+    headers: withAuth(session)
+  });
+}
+
+export async function createNote(
+  session: AuthSession,
+  input: {
+    title: string;
+    summary: string;
+    content: string;
+    materialId: string;
+    folderName: string;
+    tags: string[];
+  }
+) {
+  return request<NotePayload>("/notes", {
+    method: "POST",
+    headers: withAuth(session),
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateNote(
+  session: AuthSession,
+  noteId: string,
+  input: {
+    title: string;
+    summary: string;
+    content: string;
+    folderName: string;
+    tags: string[];
+  }
+) {
+  return request<NotePayload>(`/notes/${noteId}`, {
+    method: "PUT",
+    headers: withAuth(session),
+    body: JSON.stringify(input)
+  });
+}
+
+export async function deleteNote(session: AuthSession, noteId: string) {
+  return request<{ message: string }>(`/notes/${noteId}`, {
+    method: "DELETE",
+    headers: withAuth(session)
+  });
+}
+
+export async function listNoteVersions(session: AuthSession, noteId: string) {
+  return request<NoteVersionPayload[]>(`/notes/${noteId}/versions`, {
+    headers: withAuth(session)
+  });
+}
+
+export async function restoreNoteVersion(session: AuthSession, noteId: string, versionId: string) {
+  return request<NotePayload>(`/notes/${noteId}/versions/${versionId}/restore`, {
+    method: "POST",
+    headers: withAuth(session)
+  });
+}
+
+export async function getReaderState(session: AuthSession, materialId: string) {
+  return request<ReaderStatePayload>(`/materials/${materialId}/reader`, {
+    headers: withAuth(session)
+  });
+}
+
+export async function updateReaderProgress(
+  session: AuthSession,
+  materialId: string,
+  input: {
+    currentPage: number;
+    totalPages: number;
+    progressPercent: number;
+    bookmarks: number[];
+  }
+) {
+  return request<ReaderStatePayload>(`/materials/${materialId}/reader/progress`, {
+    method: "PUT",
+    headers: withAuth(session),
+    body: JSON.stringify(input)
+  });
+}
+
+export async function createReaderAnnotation(
+  session: AuthSession,
+  materialId: string,
+  input: {
+    page: number;
+    quote: string;
+    comment: string;
+    color: string;
+  }
+) {
+  return request<ReaderAnnotationPayload>(`/materials/${materialId}/reader/annotations`, {
+    method: "POST",
+    headers: withAuth(session),
+    body: JSON.stringify(input)
+  });
+}
+
+export async function deleteReaderAnnotation(
+  session: AuthSession,
+  materialId: string,
+  annotationId: string
+) {
+  return request<{ message: string }>(
+    `/materials/${materialId}/reader/annotations/${annotationId}`,
+    {
+      method: "DELETE",
+      headers: withAuth(session)
+    }
+  );
 }

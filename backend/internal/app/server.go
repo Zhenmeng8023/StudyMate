@@ -33,6 +33,16 @@ import (
 	materialrepo "studymate/backend/internal/modules/material/repository"
 	materialrouter "studymate/backend/internal/modules/material/router"
 	materialservice "studymate/backend/internal/modules/material/service"
+	notehandler "studymate/backend/internal/modules/note/handler"
+	notemodel "studymate/backend/internal/modules/note/model"
+	noterepo "studymate/backend/internal/modules/note/repository"
+	noterouter "studymate/backend/internal/modules/note/router"
+	noteservice "studymate/backend/internal/modules/note/service"
+	readerhandler "studymate/backend/internal/modules/reader/handler"
+	readermodel "studymate/backend/internal/modules/reader/model"
+	readerrepo "studymate/backend/internal/modules/reader/repository"
+	readerrouter "studymate/backend/internal/modules/reader/router"
+	readerservice "studymate/backend/internal/modules/reader/service"
 	userhandler "studymate/backend/internal/modules/user/handler"
 	usermodel "studymate/backend/internal/modules/user/model"
 	userrepo "studymate/backend/internal/modules/user/repository"
@@ -66,6 +76,11 @@ func NewServer(cfg config.Config) (*Server, error) {
 		&materialmodel.Material{},
 		&materialmodel.MaterialFavorite{},
 		&materialmodel.MaterialRating{},
+		&notemodel.Note{},
+		&notemodel.NoteVersion{},
+		&notemodel.NoteRelation{},
+		&readermodel.ReadingProgress{},
+		&readermodel.PDFAnnotation{},
 	); err != nil {
 		return nil, fmt.Errorf("auto-migrate failed: %w", err)
 	}
@@ -82,6 +97,8 @@ func NewServer(cfg config.Config) (*Server, error) {
 	auditRepository := adminrepo.NewAuditLogRepository(deps.SQL)
 	communityRepository := communityrepo.NewRepository(deps.SQL)
 	materialRepository := materialrepo.NewRepository(deps.SQL)
+	noteRepository := noterepo.NewRepository(deps.SQL)
+	readerRepository := readerrepo.NewRepository(deps.SQL)
 
 	authService := authservice.NewService(
 		userRepository,
@@ -94,6 +111,8 @@ func NewServer(cfg config.Config) (*Server, error) {
 	fileService := fileservice.NewService(fileRepository, auditRepository, cfg.Storage.UploadDir)
 	communityService := communityservice.NewService(communityRepository, auditRepository)
 	materialService := materialservice.NewService(materialRepository, auditRepository)
+	noteService := noteservice.NewService(noteRepository, materialRepository, auditRepository)
+	readerService := readerservice.NewService(readerRepository, materialRepository, auditRepository)
 	adminModerationService := adminservice.NewService(auditRepository, communityRepository, materialRepository)
 
 	if err := authService.EnsureBootstrapAdmin(cfg.Bootstrap); err != nil {
@@ -126,6 +145,8 @@ func NewServer(cfg config.Config) (*Server, error) {
 	moderationHandler := adminhandler.NewModerationHandler(adminModerationService)
 	communityHandler := communityhandler.NewHandler(communityService)
 	materialHandler := materialhandler.NewHandler(materialService)
+	noteHandler := notehandler.NewHandler(noteService)
+	readerHandler := readerhandler.NewHandler(readerService)
 
 	server.registerRoutes(
 		tokenManager,
@@ -136,6 +157,8 @@ func NewServer(cfg config.Config) (*Server, error) {
 		moderationHandler,
 		communityHandler,
 		materialHandler,
+		noteHandler,
+		readerHandler,
 	)
 
 	return server, nil
@@ -154,6 +177,8 @@ func (s *Server) registerRoutes(
 	moderationHandler *adminhandler.ModerationHandler,
 	communityHandler *communityhandler.Handler,
 	materialHandler *materialhandler.Handler,
+	noteHandler *notehandler.Handler,
+	readerHandler *readerhandler.Handler,
 ) {
 	s.router.GET("/health", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -185,6 +210,8 @@ func (s *Server) registerRoutes(
 	filerouter.RegisterRoutes(protected, fileHandler)
 	communityrouter.RegisterProtectedRoutes(protected, communityHandler)
 	materialrouter.RegisterProtectedRoutes(protected, materialHandler)
+	noterouter.RegisterRoutes(protected, noteHandler)
+	readerrouter.RegisterRoutes(protected, readerHandler)
 
 	adminrouter.RegisterRoutes(api, adminHandler, moderationHandler, tokenManager)
 }

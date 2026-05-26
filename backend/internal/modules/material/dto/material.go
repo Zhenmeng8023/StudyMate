@@ -32,6 +32,8 @@ type MaterialSummary struct {
 	Tags             []string `json:"tags"`
 	CoverFileID      string   `json:"coverFileId"`
 	AttachmentFileID string   `json:"attachmentFileId"`
+	AttachmentName   string   `json:"attachmentName"`
+	AttachmentMime   string   `json:"attachmentMime"`
 	Status           string   `json:"status"`
 	FavoritesCount   int64    `json:"favoritesCount"`
 	AverageRating    float64  `json:"averageRating"`

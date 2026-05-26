@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"net/http"
+	"os"
 
 	"gorm.io/gorm"
 	adminrepo "studymate/backend/internal/modules/admin/repository"
@@ -137,4 +138,20 @@ func (s *Service) RateMaterial(userID string, materialID string, score int) (*ma
 		return nil, apperrors.Internal("保存资料评分失败")
 	}
 	return &materialdto.MaterialRatingResponse{AverageRating: average, UserScore: score}, nil
+}
+
+func (s *Service) GetApprovedAttachment(materialID string) (*materialrepo.MaterialAttachment, error) {
+	attachment, err := s.repository.FindApprovedAttachment(materialID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.New(http.StatusNotFound, "material_attachment_not_found", "资料附件不存在")
+		}
+		return nil, apperrors.Internal("读取资料附件失败")
+	}
+
+	if _, err := os.Stat(attachment.File.Path); err != nil {
+		return nil, apperrors.New(http.StatusNotFound, "material_attachment_missing", "资料附件文件不存在")
+	}
+
+	return attachment, nil
 }

@@ -29,9 +29,8 @@ type AuthConfig struct {
 }
 
 type DatabaseConfig struct {
-	Driver     string
-	MySQLDSN   string
-	SQLitePath string
+	Driver   string
+	MySQLDSN string
 }
 
 type MongoConfig struct {
@@ -70,9 +69,8 @@ func Load() Config {
 			RefreshTokenTTL: getDurationEnv("JWT_REFRESH_TTL", 7*24*time.Hour),
 		},
 		Database: DatabaseConfig{
-			Driver:     getEnv("DB_DRIVER", "sqlite"),
-			MySQLDSN:   getEnv("MYSQL_DSN", ""),
-			SQLitePath: getEnv("SQLITE_PATH", "../storage/studymate.db"),
+			Driver:   getEnv("DB_DRIVER", "mysql"),
+			MySQLDSN: getEnv("MYSQL_DSN", "root:123456@tcp(127.0.0.1:3306)/studymate?charset=utf8mb4&parseTime=True&loc=Local"),
 		},
 		Mongo: MongoConfig{
 			URI:            getEnv("MONGO_URI", "mongodb://127.0.0.1:27017"),

@@ -50,6 +50,20 @@ func (h *Handler) GetMaterial(ctx *gin.Context) {
 	response.Success(ctx, http.StatusOK, result)
 }
 
+func (h *Handler) GetAttachment(ctx *gin.Context) {
+	attachment, err := h.service.GetApprovedAttachment(ctx.Param("id"))
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	if attachment.File.MimeType != "" {
+		ctx.Header("Content-Type", attachment.File.MimeType)
+	}
+	ctx.Header("Content-Disposition", `inline; filename="`+attachment.File.OriginalName+`"`)
+	ctx.File(attachment.File.Path)
+}
+
 func (h *Handler) UpdateMaterial(ctx *gin.Context) {
 	var request materialdto.UpdateMaterialRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {

@@ -1,45 +1,61 @@
 # 学伴图谱
 
-学伴图谱是一个以知识图谱画布为中心的学习平台。
-
-核心学习闭环：
+学伴图谱是一个以知识图谱画布为中心的学习平台。  
+它把资料收集、PDF 阅读、批注摘录、富文本笔记、图谱组织、卡片复习、AI 学伴和社区分享串成一条完整学习闭环。
 
 ```text
-资料和 PDF 阅读 -> 笔记沉淀 -> 图谱组织 -> AI 辅助 -> Anki 式复习 -> 社区分享
+资料库 -> 阅读器 -> 批注摘录 -> 笔记沉淀 -> 图谱组织 -> AI 辅助 -> 卡片复习 -> 社区分享
 ```
 
-## 当前状态
+## 当前阶段
 
-- `v0.0.1`：创建全局项目记录文件。
-- `v0.0.2`：初始化 monorepo 工程目录骨架。
-- `v0.0.3`：补齐基础配置、应用入口、共享包和项目文档。
-- `v0.0.4`：完成后端和前端基础验证。
-- `v0.0.5`：启动本地开发服务并补充开发说明。
-- `v0.0.6`：确立项目主要语言为汉语。
-- `v0.0.8`：生成未来版本规划文档。
-- `v0.0.9`：开始实现 `v0.2.0` 平台基础版。
-- `v0.0.10`：实现 `v0.3.0` 社区资料版第一条业务闭环。
+当前正在推进 `v0.4.0` 的前台体验加厚和前端重构：
 
-## 应用规划
+- 资料库已经接回搜索、上传、创建、编辑、收藏、评分和阅读入口。
+- 阅读器已经接回阅读进度、书签和批注。
+- 笔记页已经接回富文本编辑、版本历史和恢复。
+- 图谱、复习、AI 学伴和部分后台能力先用高质量占位承接。
+- 管理端已经重建为统一治理后台，并保留真实审核链路。
 
-- `backend`：Go + Gin + GORM API 服务。
-- `frontend-user`：React + Vite + TypeScript 前台用户端。
-- `frontend-admin`：Vue 3 + Vite + Element Plus 后台管理端。
-- `packages/graph-core`：共享图谱文档和画布核心。
-- `packages/editor-core`：共享编辑器基础能力。
-- `packages/api-client`：共享 API 客户端。
-- `packages/ui`：共享 UI 组件。
+## 技术栈
 
-## 当前推进重点
+- 后端：Go + Gin + GORM
+- 前台用户端：React + Vite + TypeScript
+- 后台管理端：Vue 3 + Vite
+- 数据层：MySQL、MongoDB、Redis
+- 阅读：PDF.js / react-pdf
+- 编辑：Tiptap
 
-当前正在实现 `v0.3.0` 社区资料版：
+## 目录结构
 
-1. 社区发帖、评论、点赞和收藏。
-2. 资料创建、详情、收藏和评分。
-3. 帖子和资料进入后台审核队列。
-4. 管理员执行通过、驳回、下架。
-5. 平台基础层继续支撑账号、附件和权限。
+```text
+StudyMate
+├── backend
+├── frontend-user
+├── frontend-admin
+├── packages
+├── docs
+├── storage
+└── PROJECT_LOG.md
+```
 
-## 开发说明
+## 本地地址
 
-见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+- 用户端：`http://localhost:8001/`
+- 管理端：`http://localhost:8002/`
+- 后端健康检查：`http://localhost:8023/health`
+
+## 关键文档
+
+- 开发说明：[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
+- 架构说明：[docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)
+- 开发路线：[docs/planning/ROADMAP.md](docs/planning/ROADMAP.md)
+- 版本规划：[docs/planning/VERSION_PLAN.md](docs/planning/VERSION_PLAN.md)
+- 前端重建设计方案：[docs/design/FRONTEND_REBUILD_PLAN.md](docs/design/FRONTEND_REBUILD_PLAN.md)
+- 项目记录：[PROJECT_LOG.md](PROJECT_LOG.md)
+
+## 当前重点
+
+1. 继续加厚 `v0.4.0` 的阅读与笔记体验。
+2. 把管理端和用户端收敛到统一设计系统。
+3. 为 `v0.5.0` 图谱画布 MVP 预留稳定前端骨架。

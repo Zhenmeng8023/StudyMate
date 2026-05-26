@@ -8,6 +8,7 @@ import (
 func RegisterPublicRoutes(group *gin.RouterGroup, handler *materialhandler.Handler) {
 	group.GET("/materials", handler.ListMaterials)
 	group.GET("/materials/:id", handler.GetMaterial)
+	group.GET("/materials/:id/attachment", handler.GetAttachment)
 }
 
 func RegisterProtectedRoutes(group *gin.RouterGroup, handler *materialhandler.Handler) {

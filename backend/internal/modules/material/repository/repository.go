@@ -7,12 +7,18 @@ import (
 
 	"gorm.io/gorm"
 	admindto "studymate/backend/internal/modules/admin/dto"
+	filemodel "studymate/backend/internal/modules/file/model"
 	materialdto "studymate/backend/internal/modules/material/dto"
 	materialmodel "studymate/backend/internal/modules/material/model"
 )
 
 type Repository struct {
 	db *gorm.DB
+}
+
+type MaterialAttachment struct {
+	Material materialmodel.Material
+	File     filemodel.FileRecord
 }
 
 func NewRepository(db *gorm.DB) *Repository {
@@ -50,6 +56,8 @@ func (r *Repository) ListApproved() ([]materialdto.MaterialSummary, error) {
 		Tags             string    `gorm:"column:tags"`
 		CoverFileID      string    `gorm:"column:cover_file_id"`
 		AttachmentFileID string    `gorm:"column:attachment_file_id"`
+		AttachmentName   string    `gorm:"column:attachment_name"`
+		AttachmentMime   string    `gorm:"column:attachment_mime"`
 		Status           string    `gorm:"column:status"`
 		CreatedAt        time.Time `gorm:"column:created_at"`
 		UpdatedAt        time.Time `gorm:"column:updated_at"`
@@ -67,11 +75,14 @@ func (r *Repository) ListApproved() ([]materialdto.MaterialSummary, error) {
 			materials.tags,
 			materials.cover_file_id,
 			materials.attachment_file_id,
+			files.original_name as attachment_name,
+			files.mime_type as attachment_mime,
 			materials.status,
 			materials.created_at,
 			materials.updated_at
 		`).
 		Joins("left join users on users.id = materials.owner_user_id").
+		Joins("left join file_records as files on files.id = materials.attachment_file_id").
 		Where("materials.status = ?", "approved").
 		Order("materials.created_at desc").
 		Scan(&rows).Error
@@ -92,6 +103,8 @@ func (r *Repository) ListApproved() ([]materialdto.MaterialSummary, error) {
 			Tags:             decodeTags(row.Tags),
 			CoverFileID:      row.CoverFileID,
 			AttachmentFileID: row.AttachmentFileID,
+			AttachmentName:   row.AttachmentName,
+			AttachmentMime:   row.AttachmentMime,
 			Status:           row.Status,
 			FavoritesCount:   r.countFavorites(row.ID),
 			AverageRating:    avg,
@@ -114,6 +127,8 @@ func (r *Repository) BuildSummary(material *materialmodel.Material) (*materialdt
 		Tags             string    `gorm:"column:tags"`
 		CoverFileID      string    `gorm:"column:cover_file_id"`
 		AttachmentFileID string    `gorm:"column:attachment_file_id"`
+		AttachmentName   string    `gorm:"column:attachment_name"`
+		AttachmentMime   string    `gorm:"column:attachment_mime"`
 		Status           string    `gorm:"column:status"`
 		CreatedAt        time.Time `gorm:"column:created_at"`
 		UpdatedAt        time.Time `gorm:"column:updated_at"`
@@ -131,11 +146,14 @@ func (r *Repository) BuildSummary(material *materialmodel.Material) (*materialdt
 			materials.tags,
 			materials.cover_file_id,
 			materials.attachment_file_id,
+			files.original_name as attachment_name,
+			files.mime_type as attachment_mime,
 			materials.status,
 			materials.created_at,
 			materials.updated_at
 		`).
 		Joins("left join users on users.id = materials.owner_user_id").
+		Joins("left join file_records as files on files.id = materials.attachment_file_id").
 		Where("materials.id = ?", material.ID).
 		First(&row).Error; err != nil {
 		return nil, err
@@ -152,6 +170,8 @@ func (r *Repository) BuildSummary(material *materialmodel.Material) (*materialdt
 		Tags:             decodeTags(row.Tags),
 		CoverFileID:      row.CoverFileID,
 		AttachmentFileID: row.AttachmentFileID,
+		AttachmentName:   row.AttachmentName,
+		AttachmentMime:   row.AttachmentMime,
 		Status:           row.Status,
 		FavoritesCount:   r.countFavorites(row.ID),
 		AverageRating:    avg,
@@ -262,6 +282,27 @@ func (r *Repository) ListModerationItems() ([]admindto.ModerationItem, error) {
 	}
 
 	return items, nil
+}
+
+func (r *Repository) FindApprovedAttachment(materialID string) (*MaterialAttachment, error) {
+	var material materialmodel.Material
+	if err := r.db.First(&material, "id = ? AND status = ?", materialID, "approved").Error; err != nil {
+		return nil, err
+	}
+
+	if material.AttachmentFileID == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	var file filemodel.FileRecord
+	if err := r.db.First(&file, "id = ?", material.AttachmentFileID).Error; err != nil {
+		return nil, err
+	}
+
+	return &MaterialAttachment{
+		Material: material,
+		File:     file,
+	}, nil
 }
 
 func EncodeTags(tags []string) string {
