@@ -103,3 +103,22 @@ func (h *Handler) RestoreVersion(ctx *gin.Context) {
 	response.Success(ctx, http.StatusOK, result)
 }
 
+func (h *Handler) GenerateCardDrafts(ctx *gin.Context) {
+	result, err := h.service.GenerateCardDrafts(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"))
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}
+
+func (h *Handler) GenerateGraphDrafts(ctx *gin.Context) {
+	result, err := h.service.GenerateGraphDrafts(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"))
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}

@@ -237,6 +237,18 @@ func (r *Repository) ListForModeration() ([]materialmodel.Material, error) {
 	return materials, err
 }
 
+func (r *Repository) CountAllMaterials() (int64, error) {
+	var count int64
+	err := r.db.Model(&materialmodel.Material{}).Count(&count).Error
+	return count, err
+}
+
+func (r *Repository) CountPendingMaterials() (int64, error) {
+	var count int64
+	err := r.db.Model(&materialmodel.Material{}).Where("status <> ?", "approved").Count(&count).Error
+	return count, err
+}
+
 func (r *Repository) ListModerationItems() ([]admindto.ModerationItem, error) {
 	type row struct {
 		ID         string    `gorm:"column:id"`

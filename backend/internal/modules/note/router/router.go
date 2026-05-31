@@ -13,5 +13,6 @@ func RegisterRoutes(group *gin.RouterGroup, handler *notehandler.Handler) {
 	group.DELETE("/notes/:id", handler.DeleteNote)
 	group.GET("/notes/:id/versions", handler.ListVersions)
 	group.POST("/notes/:id/versions/:versionId/restore", handler.RestoreVersion)
+	group.POST("/notes/:id/ai/generate-cards", handler.GenerateCardDrafts)
+	group.POST("/notes/:id/ai/generate-graph-drafts", handler.GenerateGraphDrafts)
 }
-

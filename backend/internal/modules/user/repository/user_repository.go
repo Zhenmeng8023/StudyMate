@@ -81,6 +81,12 @@ func (r *Repository) ExistsByEmailExcludingUser(email string, userID string) (bo
 	return count > 0, err
 }
 
+func (r *Repository) CountAll() (int64, error) {
+	var count int64
+	err := r.db.Model(&model.User{}).Count(&count).Error
+	return count, err
+}
+
 func (r *Repository) IsNotFound(err error) bool {
 	return errors.Is(err, gorm.ErrRecordNotFound)
 }

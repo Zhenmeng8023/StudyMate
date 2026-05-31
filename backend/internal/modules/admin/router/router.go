@@ -18,6 +18,7 @@ func RegisterRoutes(
 	protected := group.Group("/admin")
 	protected.Use(middleware.Authenticate(tokenManager), middleware.RequireRole("admin"))
 	protected.GET("/me", adminHandler.Me)
+	protected.GET("/overview", adminHandler.Overview)
 	protected.GET("/moderation", moderationHandler.List)
 	protected.POST("/moderation/posts/:id/approve", moderationHandler.ApprovePost)
 	protected.POST("/moderation/posts/:id/reject", moderationHandler.RejectPost)

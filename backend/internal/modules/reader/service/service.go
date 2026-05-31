@@ -6,6 +6,9 @@ import (
 	"time"
 
 	adminrepo "studymate/backend/internal/modules/admin/repository"
+	aidto "studymate/backend/internal/modules/ai/dto"
+	aiservice "studymate/backend/internal/modules/ai/service"
+	carddto "studymate/backend/internal/modules/card/dto"
 	materialrepo "studymate/backend/internal/modules/material/repository"
 	readerdto "studymate/backend/internal/modules/reader/dto"
 	readermodel "studymate/backend/internal/modules/reader/model"
@@ -17,13 +20,15 @@ type Service struct {
 	repository *readerrepo.Repository
 	materials  *materialrepo.Repository
 	auditLogs  *adminrepo.AuditLogRepository
+	aiTasks    *aiservice.Service
 }
 
-func NewService(repository *readerrepo.Repository, materials *materialrepo.Repository, auditLogs *adminrepo.AuditLogRepository) *Service {
+func NewService(repository *readerrepo.Repository, materials *materialrepo.Repository, auditLogs *adminrepo.AuditLogRepository, aiTasks *aiservice.Service) *Service {
 	return &Service{
 		repository: repository,
 		materials:  materials,
 		auditLogs:  auditLogs,
+		aiTasks:    aiTasks,
 	}
 }
 
@@ -151,6 +156,91 @@ func (s *Service) DeleteAnnotation(userID string, materialID string, annotationI
 	return nil
 }
 
+func (s *Service) GenerateCardDrafts(userID string, materialID string, annotationIDs []string) ([]carddto.CardDraftPayload, error) {
+	if err := s.ensureReadable(materialID); err != nil {
+		return nil, err
+	}
+
+	allAnnotations, err := s.repository.ListAnnotations(userID, materialID)
+	if err != nil {
+		return nil, apperrors.Internal("读取阅读批注失败")
+	}
+
+	indexByID := make(map[string]readerdto.AnnotationSummary, len(allAnnotations))
+	for _, annotation := range allAnnotations {
+		indexByID[annotation.ID] = annotation
+	}
+
+	selected := make([]readerdto.AnnotationSummary, 0, len(annotationIDs))
+	for _, annotationID := range annotationIDs {
+		annotation, ok := indexByID[annotationID]
+		if !ok {
+			return nil, apperrors.New(http.StatusNotFound, "annotation_not_found", "选中的批注不存在")
+		}
+		selected = append(selected, annotation)
+	}
+
+	material, err := s.materials.FindByID(materialID)
+	if err != nil {
+		return nil, apperrors.Internal("读取资料失败")
+	}
+
+	drafts := BuildCardDraftsFromAnnotations(material.Title, selected)
+	if s.aiTasks == nil {
+		return drafts, nil
+	}
+
+	persisted, err := s.aiTasks.RecordReaderCardDrafts(userID, materialID, drafts)
+	if err != nil {
+		return nil, err
+	}
+
+	return persisted, nil
+}
+
+func (s *Service) GenerateGraphDrafts(userID string, materialID string, annotationIDs []string) ([]aidto.DraftPayload, error) {
+	if err := s.ensureReadable(materialID); err != nil {
+		return nil, err
+	}
+
+	allAnnotations, err := s.repository.ListAnnotations(userID, materialID)
+	if err != nil {
+		return nil, apperrors.Internal("读取阅读批注失败")
+	}
+
+	indexByID := make(map[string]readerdto.AnnotationSummary, len(allAnnotations))
+	for _, annotation := range allAnnotations {
+		indexByID[annotation.ID] = annotation
+	}
+
+	selected := make([]readerdto.AnnotationSummary, 0, len(annotationIDs))
+	for _, annotationID := range annotationIDs {
+		annotation, ok := indexByID[annotationID]
+		if !ok {
+			return nil, apperrors.New(http.StatusNotFound, "annotation_not_found", "选中的批注不存在")
+		}
+		selected = append(selected, annotation)
+	}
+
+	material, err := s.materials.FindByID(materialID)
+	if err != nil {
+		return nil, apperrors.Internal("读取资料失败")
+	}
+
+	draft := BuildGraphDraftFromAnnotations(material.Title, materialID, selected)
+	drafts := []aidto.DraftPayload{draft}
+	if s.aiTasks == nil {
+		return drafts, nil
+	}
+
+	persisted, err := s.aiTasks.RecordReaderGraphDrafts(userID, materialID, drafts)
+	if err != nil {
+		return nil, err
+	}
+
+	return persisted, nil
+}
+
 func (s *Service) ensureReadable(materialID string) error {
 	material, err := s.materials.FindByID(materialID)
 	if err != nil {
@@ -166,4 +256,3 @@ func (s *Service) ensureReadable(materialID string) error {
 
 	return nil
 }
-

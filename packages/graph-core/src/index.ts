@@ -1,5 +1,20 @@
 export type GraphNodeType = "text" | "note" | "material" | "card" | "concept";
 
+export type GraphNodeTone = "neutral" | "sage" | "sky" | "amber" | "rose";
+
+export type GraphNodeEmphasis = "default" | "strong" | "muted";
+
+export interface GraphNodeAppearance {
+  tone?: GraphNodeTone;
+  emphasis?: GraphNodeEmphasis;
+}
+
+export interface GraphNodeMetadata {
+  detail?: string;
+  appearance?: GraphNodeAppearance | null;
+  [key: string]: unknown;
+}
+
 export interface GraphNode {
   id: string;
   type: GraphNodeType;
@@ -8,7 +23,7 @@ export interface GraphNode {
   y: number;
   width: number;
   height: number;
-  metadata?: Record<string, unknown>;
+  metadata?: GraphNodeMetadata;
 }
 
 export interface GraphEdge {
@@ -31,4 +46,3 @@ export interface GraphDocument {
     zoom: number;
   };
 }
-

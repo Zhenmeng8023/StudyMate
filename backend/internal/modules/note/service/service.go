@@ -2,10 +2,14 @@ package service
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
 	"gorm.io/gorm"
 	adminrepo "studymate/backend/internal/modules/admin/repository"
+	aidto "studymate/backend/internal/modules/ai/dto"
+	aiservice "studymate/backend/internal/modules/ai/service"
+	carddto "studymate/backend/internal/modules/card/dto"
 	materialrepo "studymate/backend/internal/modules/material/repository"
 	notedto "studymate/backend/internal/modules/note/dto"
 	notemodel "studymate/backend/internal/modules/note/model"
@@ -15,15 +19,25 @@ import (
 
 type Service struct {
 	repository *noterepo.Repository
+	documents  *noterepo.DocumentRepository
 	materials  *materialrepo.Repository
 	auditLogs  *adminrepo.AuditLogRepository
+	aiTasks    *aiservice.Service
 }
 
-func NewService(repository *noterepo.Repository, materials *materialrepo.Repository, auditLogs *adminrepo.AuditLogRepository) *Service {
+func NewService(
+	repository *noterepo.Repository,
+	documents *noterepo.DocumentRepository,
+	materials *materialrepo.Repository,
+	auditLogs *adminrepo.AuditLogRepository,
+	aiTasks *aiservice.Service,
+) *Service {
 	return &Service{
 		repository: repository,
+		documents:  documents,
 		materials:  materials,
 		auditLogs:  auditLogs,
+		aiTasks:    aiTasks,
 	}
 }
 
@@ -56,20 +70,23 @@ func (s *Service) CreateNote(ownerUserID string, request notedto.CreateNoteReque
 		return nil, apperrors.Internal("创建笔记失败")
 	}
 
-	if err := s.repository.CreateVersion(&notemodel.NoteVersion{
+	version := &notemodel.NoteVersion{
 		NoteID:        note.ID,
 		EditorUserID:  ownerUserID,
 		VersionNumber: note.VersionNumber,
 		Title:         note.Title,
 		Summary:       note.Summary,
 		Content:       note.Content,
-	}); err != nil {
+	}
+	if err := s.repository.CreateVersion(version); err != nil {
 		return nil, apperrors.Internal("保存笔记版本失败")
 	}
 
 	if err := s.repository.EnsureMaterialRelation(note.ID, note.MaterialID); err != nil {
 		return nil, apperrors.Internal("保存笔记关联失败")
 	}
+
+	s.syncMongoContent(note, version)
 
 	_ = s.auditLogs.Create(ownerUserID, "note.create", "note", map[string]any{
 		"noteId":     note.ID,
@@ -107,16 +124,19 @@ func (s *Service) UpdateNote(ownerUserID string, noteID string, request notedto.
 		return nil, apperrors.Internal("更新笔记失败")
 	}
 
-	if err := s.repository.CreateVersion(&notemodel.NoteVersion{
+	version := &notemodel.NoteVersion{
 		NoteID:        note.ID,
 		EditorUserID:  ownerUserID,
 		VersionNumber: note.VersionNumber,
 		Title:         note.Title,
 		Summary:       note.Summary,
 		Content:       note.Content,
-	}); err != nil {
+	}
+	if err := s.repository.CreateVersion(version); err != nil {
 		return nil, apperrors.Internal("保存笔记版本失败")
 	}
+
+	s.syncMongoContent(note, version)
 
 	result := noterepo.BuildSummary(*note)
 	return &result, nil
@@ -131,6 +151,16 @@ func (s *Service) DeleteNote(ownerUserID string, noteID string) error {
 	if err := s.repository.Delete(note); err != nil {
 		return apperrors.Internal("删除笔记失败")
 	}
+
+	if err := s.repository.DeleteVersions(note.ID); err != nil {
+		return apperrors.Internal("删除笔记版本失败")
+	}
+
+	if err := s.repository.DeleteRelations(note.ID); err != nil {
+		return apperrors.Internal("删除笔记关联失败")
+	}
+
+	s.deleteMongoContent(note.ID)
 
 	return nil
 }
@@ -171,19 +201,86 @@ func (s *Service) RestoreVersion(ownerUserID string, noteID string, versionID st
 		return nil, apperrors.Internal("恢复笔记版本失败")
 	}
 
-	if err := s.repository.CreateVersion(&notemodel.NoteVersion{
+	restoredVersion := &notemodel.NoteVersion{
 		NoteID:        note.ID,
 		EditorUserID:  ownerUserID,
 		VersionNumber: note.VersionNumber,
 		Title:         note.Title,
 		Summary:       note.Summary,
 		Content:       note.Content,
-	}); err != nil {
+	}
+	if err := s.repository.CreateVersion(restoredVersion); err != nil {
 		return nil, apperrors.Internal("保存恢复后的笔记版本失败")
 	}
 
+	s.syncMongoContent(note, restoredVersion)
+
 	result := noterepo.BuildSummary(*note)
 	return &result, nil
+}
+
+func (s *Service) GenerateCardDrafts(ownerUserID string, noteID string) ([]carddto.CardDraftPayload, error) {
+	note, err := s.requireOwnerNote(ownerUserID, noteID)
+	if err != nil {
+		return nil, err
+	}
+
+	summary := noterepo.BuildSummary(*note)
+	drafts := BuildCardDraftsFromNote(summary)
+	if s.aiTasks == nil {
+		return drafts, nil
+	}
+
+	persisted, err := s.aiTasks.RecordNoteCardDrafts(ownerUserID, note.ID, drafts)
+	if err != nil {
+		return nil, err
+	}
+
+	return persisted, nil
+}
+
+func (s *Service) GenerateGraphDrafts(ownerUserID string, noteID string) ([]aidto.DraftPayload, error) {
+	note, err := s.requireOwnerNote(ownerUserID, noteID)
+	if err != nil {
+		return nil, err
+	}
+
+	draft := BuildGraphDraftFromNote(noterepo.BuildSummary(*note))
+	drafts := []aidto.DraftPayload{draft}
+	if s.aiTasks == nil {
+		return drafts, nil
+	}
+
+	persisted, err := s.aiTasks.RecordNoteGraphDrafts(ownerUserID, note.ID, drafts)
+	if err != nil {
+		return nil, err
+	}
+
+	return persisted, nil
+}
+
+func (s *Service) syncMongoContent(note *notemodel.Note, version *notemodel.NoteVersion) {
+	if s.documents == nil {
+		return
+	}
+
+	if err := s.documents.UpsertCurrent(note); err != nil {
+		log.Printf("note mongo sync current failed: note=%s err=%v", note.ID, err)
+	}
+
+	if err := s.documents.CreateSnapshot(note, version); err != nil {
+		log.Printf("note mongo sync snapshot failed: note=%s version=%d err=%v", note.ID, version.VersionNumber, err)
+	}
+}
+
+func (s *Service) deleteMongoContent(noteID string) {
+	if s.documents == nil {
+		return
+	}
+
+	if err := s.documents.DeleteNoteArtifacts(noteID); err != nil {
+		log.Printf("note mongo delete artifacts failed: note=%s err=%v", noteID, err)
+	}
 }
 
 func (s *Service) requireOwnerNote(ownerUserID string, noteID string) (*notemodel.Note, error) {
@@ -221,4 +318,3 @@ func (s *Service) ensureMaterialReadable(ownerUserID string, materialID string) 
 
 	return nil
 }
-

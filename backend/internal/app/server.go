@@ -8,43 +8,48 @@ import (
 	"github.com/gin-gonic/gin"
 	"studymate/backend/internal/config"
 	"studymate/backend/internal/middleware"
+	mysqlmigrations "studymate/backend/internal/migrations/mysql"
 	adminhandler "studymate/backend/internal/modules/admin/handler"
-	adminmodel "studymate/backend/internal/modules/admin/model"
 	adminrepo "studymate/backend/internal/modules/admin/repository"
 	adminrouter "studymate/backend/internal/modules/admin/router"
 	adminservice "studymate/backend/internal/modules/admin/service"
+	aihandler "studymate/backend/internal/modules/ai/handler"
+	airepo "studymate/backend/internal/modules/ai/repository"
+	airouter "studymate/backend/internal/modules/ai/router"
+	aiservice "studymate/backend/internal/modules/ai/service"
 	authhandler "studymate/backend/internal/modules/auth/handler"
-	authmodel "studymate/backend/internal/modules/auth/model"
 	authrepo "studymate/backend/internal/modules/auth/repository"
 	authrouter "studymate/backend/internal/modules/auth/router"
 	authservice "studymate/backend/internal/modules/auth/service"
+	cardhandler "studymate/backend/internal/modules/card/handler"
+	cardrepo "studymate/backend/internal/modules/card/repository"
+	cardrouter "studymate/backend/internal/modules/card/router"
+	cardservice "studymate/backend/internal/modules/card/service"
 	communityhandler "studymate/backend/internal/modules/community/handler"
-	communitymodel "studymate/backend/internal/modules/community/model"
 	communityrepo "studymate/backend/internal/modules/community/repository"
 	communityrouter "studymate/backend/internal/modules/community/router"
 	communityservice "studymate/backend/internal/modules/community/service"
 	filehandler "studymate/backend/internal/modules/file/handler"
-	filemodel "studymate/backend/internal/modules/file/model"
 	filerepo "studymate/backend/internal/modules/file/repository"
 	filerouter "studymate/backend/internal/modules/file/router"
 	fileservice "studymate/backend/internal/modules/file/service"
+	graphhandler "studymate/backend/internal/modules/graph/handler"
+	graphrepo "studymate/backend/internal/modules/graph/repository"
+	graphrouter "studymate/backend/internal/modules/graph/router"
+	graphservice "studymate/backend/internal/modules/graph/service"
 	materialhandler "studymate/backend/internal/modules/material/handler"
-	materialmodel "studymate/backend/internal/modules/material/model"
 	materialrepo "studymate/backend/internal/modules/material/repository"
 	materialrouter "studymate/backend/internal/modules/material/router"
 	materialservice "studymate/backend/internal/modules/material/service"
 	notehandler "studymate/backend/internal/modules/note/handler"
-	notemodel "studymate/backend/internal/modules/note/model"
 	noterepo "studymate/backend/internal/modules/note/repository"
 	noterouter "studymate/backend/internal/modules/note/router"
 	noteservice "studymate/backend/internal/modules/note/service"
 	readerhandler "studymate/backend/internal/modules/reader/handler"
-	readermodel "studymate/backend/internal/modules/reader/model"
 	readerrepo "studymate/backend/internal/modules/reader/repository"
 	readerrouter "studymate/backend/internal/modules/reader/router"
 	readerservice "studymate/backend/internal/modules/reader/service"
 	userhandler "studymate/backend/internal/modules/user/handler"
-	usermodel "studymate/backend/internal/modules/user/model"
 	userrepo "studymate/backend/internal/modules/user/repository"
 	userrouter "studymate/backend/internal/modules/user/router"
 	userservice "studymate/backend/internal/modules/user/service"
@@ -64,25 +69,8 @@ func NewServer(cfg config.Config) (*Server, error) {
 		return nil, err
 	}
 
-	if err := deps.SQL.AutoMigrate(
-		&usermodel.User{},
-		&authmodel.RefreshToken{},
-		&filemodel.FileRecord{},
-		&adminmodel.AuditLog{},
-		&communitymodel.Post{},
-		&communitymodel.Comment{},
-		&communitymodel.PostLike{},
-		&communitymodel.PostFavorite{},
-		&materialmodel.Material{},
-		&materialmodel.MaterialFavorite{},
-		&materialmodel.MaterialRating{},
-		&notemodel.Note{},
-		&notemodel.NoteVersion{},
-		&notemodel.NoteRelation{},
-		&readermodel.ReadingProgress{},
-		&readermodel.PDFAnnotation{},
-	); err != nil {
-		return nil, fmt.Errorf("auto-migrate failed: %w", err)
+	if err := mysqlmigrations.Apply(deps.SQL); err != nil {
+		return nil, fmt.Errorf("apply mysql migrations failed: %w", err)
 	}
 
 	tokenManager := security.NewTokenManager(
@@ -95,10 +83,16 @@ func NewServer(cfg config.Config) (*Server, error) {
 	refreshTokenRepository := authrepo.NewRefreshTokenRepository(deps.SQL)
 	fileRepository := filerepo.NewRepository(deps.SQL)
 	auditRepository := adminrepo.NewAuditLogRepository(deps.SQL)
+	aiRepository := airepo.NewRepository(deps.SQL)
+	aiDocumentRepository := airepo.NewDocumentRepository(deps.Mongo)
 	communityRepository := communityrepo.NewRepository(deps.SQL)
 	materialRepository := materialrepo.NewRepository(deps.SQL)
 	noteRepository := noterepo.NewRepository(deps.SQL)
+	noteDocumentRepository := noterepo.NewDocumentRepository(deps.Mongo)
+	graphRepository := graphrepo.NewRepository(deps.SQL)
+	graphDocumentRepository := graphrepo.NewDocumentRepository(deps.Mongo)
 	readerRepository := readerrepo.NewRepository(deps.SQL)
+	cardRepository := cardrepo.NewRepository(deps.SQL)
 
 	authService := authservice.NewService(
 		userRepository,
@@ -108,12 +102,21 @@ func NewServer(cfg config.Config) (*Server, error) {
 		cfg.Auth.RefreshTokenTTL,
 	)
 	userService := userservice.NewService(userRepository, auditRepository)
+	aiService := aiservice.NewService(aiRepository, aiDocumentRepository, auditRepository)
 	fileService := fileservice.NewService(fileRepository, auditRepository, cfg.Storage.UploadDir)
 	communityService := communityservice.NewService(communityRepository, auditRepository)
 	materialService := materialservice.NewService(materialRepository, auditRepository)
-	noteService := noteservice.NewService(noteRepository, materialRepository, auditRepository)
-	readerService := readerservice.NewService(readerRepository, materialRepository, auditRepository)
-	adminModerationService := adminservice.NewService(auditRepository, communityRepository, materialRepository)
+	noteService := noteservice.NewService(noteRepository, noteDocumentRepository, materialRepository, auditRepository, aiService)
+	readerService := readerservice.NewService(readerRepository, materialRepository, auditRepository, aiService)
+	cardService := cardservice.NewService(cardRepository, auditRepository, aiService)
+	graphService := graphservice.NewService(graphRepository, graphDocumentRepository, auditRepository, cardService, aiService)
+	adminModerationService := adminservice.NewService(
+		auditRepository,
+		communityRepository,
+		materialRepository,
+		graphRepository,
+		userRepository,
+	)
 
 	if err := authService.EnsureBootstrapAdmin(cfg.Bootstrap); err != nil {
 		return nil, err
@@ -140,25 +143,31 @@ func NewServer(cfg config.Config) (*Server, error) {
 
 	authHandler := authhandler.NewHandler(authService)
 	userHandler := userhandler.NewHandler(userService)
+	aiHandler := aihandler.NewHandler(aiService)
 	fileHandler := filehandler.NewHandler(fileService)
-	adminHandler := adminhandler.NewHandler(authService, userService)
+	adminHandler := adminhandler.NewHandler(authService, userService, adminModerationService)
 	moderationHandler := adminhandler.NewModerationHandler(adminModerationService)
 	communityHandler := communityhandler.NewHandler(communityService)
 	materialHandler := materialhandler.NewHandler(materialService)
 	noteHandler := notehandler.NewHandler(noteService)
+	graphHandler := graphhandler.NewHandler(graphService)
 	readerHandler := readerhandler.NewHandler(readerService)
+	cardHandler := cardhandler.NewHandler(cardService)
 
 	server.registerRoutes(
 		tokenManager,
 		authHandler,
 		userHandler,
+		aiHandler,
 		fileHandler,
 		adminHandler,
 		moderationHandler,
 		communityHandler,
 		materialHandler,
 		noteHandler,
+		graphHandler,
 		readerHandler,
+		cardHandler,
 	)
 
 	return server, nil
@@ -172,13 +181,16 @@ func (s *Server) registerRoutes(
 	tokenManager *security.TokenManager,
 	authHandler *authhandler.Handler,
 	userHandler *userhandler.Handler,
+	aiHandler *aihandler.Handler,
 	fileHandler *filehandler.Handler,
 	adminHandler *adminhandler.Handler,
 	moderationHandler *adminhandler.ModerationHandler,
 	communityHandler *communityhandler.Handler,
 	materialHandler *materialhandler.Handler,
 	noteHandler *notehandler.Handler,
+	graphHandler *graphhandler.Handler,
 	readerHandler *readerhandler.Handler,
+	cardHandler *cardhandler.Handler,
 ) {
 	s.router.GET("/health", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -207,11 +219,14 @@ func (s *Server) registerRoutes(
 	protected.Use(middleware.Authenticate(tokenManager))
 	authrouter.RegisterProtectedRoutes(protected, authHandler)
 	userrouter.RegisterRoutes(protected, userHandler)
+	airouter.RegisterRoutes(protected, aiHandler)
 	filerouter.RegisterRoutes(protected, fileHandler)
 	communityrouter.RegisterProtectedRoutes(protected, communityHandler)
 	materialrouter.RegisterProtectedRoutes(protected, materialHandler)
 	noterouter.RegisterRoutes(protected, noteHandler)
+	graphrouter.RegisterRoutes(protected, graphHandler)
 	readerrouter.RegisterRoutes(protected, readerHandler)
+	cardrouter.RegisterRoutes(protected, cardHandler)
 
 	adminrouter.RegisterRoutes(api, adminHandler, moderationHandler, tokenManager)
 }

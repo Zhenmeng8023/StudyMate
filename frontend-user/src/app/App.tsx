@@ -17,11 +17,20 @@ import {
   UserRound
 } from "lucide-react";
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
+import { GraphWorkspacePage } from "../modules/graph/GraphWorkspacePage";
 import { PdfReaderPane } from "../modules/reader/PdfReaderPane";
+import { ReviewWorkspacePage } from "../modules/review/ReviewWorkspacePage";
+import { SearchWorkspacePage } from "../modules/search/SearchWorkspacePage";
 import { RichTextEditor } from "../modules/notes/RichTextEditor";
 import {
+  AiDraftPayload,
+  AiTaskPayload,
+  AiUsageSummaryPayload,
   AuthSession,
+  CardDraftPayload,
+  DeckPayload,
   FilePayload,
+  GraphDetailPayload,
   MaterialPayload,
   NotePayload,
   NoteVersionPayload,
@@ -29,13 +38,26 @@ import {
   ProfilePayload,
   ReaderAnnotationPayload,
   ReaderStatePayload,
+  GraphSummaryPayload,
+  bulkCreateDeckCards,
+  commitGraphChangeDraftSelection,
   createMaterial,
   createNote,
   createReaderAnnotation,
   deleteNote,
   deleteReaderAnnotation,
+  generateAnnotationGraphDrafts,
+  generateAnnotationCardDrafts,
+  generateNoteGraphDrafts,
+  generateNoteCardDrafts,
+  listAiDrafts,
+  getAiUsageSummary,
+  getGraph,
   getProfile,
   getReaderState,
+  listGraphs,
+  listAiTasks,
+  listDecks,
   listMaterials,
   listNotes,
   listNoteVersions,
@@ -227,6 +249,235 @@ function createNoteDraft(materialId = "") {
     folderName: "收集箱",
     tags: [] as string[]
   };
+}
+
+function buildCardInputsFromDrafts(drafts: CardDraftPayload[]) {
+  return drafts.map((draft) => ({
+    cardType: "basic",
+    draftId: draft.draftId,
+    front: draft.front,
+    back: draft.back,
+    sourceType: draft.sourceType,
+    sourceId: draft.sourceId
+  }));
+}
+
+function buildCardInputsFromAiDrafts(drafts: AiDraftPayload[]) {
+  return drafts.map((draft) => ({
+    cardType: "basic",
+    draftId: draft.id,
+    front: draft.front,
+    back: draft.back,
+    sourceType: draft.sourceType,
+    sourceId: draft.sourceId
+  }));
+}
+
+function formatAiTaskLabel(taskType: string) {
+  switch (taskType) {
+    case "graph.generate_cards":
+      return "图谱生成卡片草稿";
+    case "note.generate_cards":
+      return "笔记生成卡片草稿";
+    case "reader.generate_cards":
+      return "批注生成卡片草稿";
+    default:
+      return taskType;
+  }
+}
+
+function formatAiSourceLabel(task: AiTaskPayload) {
+  switch (task.sourceType) {
+    case "graph":
+      return `图谱 ${task.sourceId || ""}`.trim();
+    case "note":
+      return `笔记 ${task.sourceId || ""}`.trim();
+    case "material":
+      return `资料 ${task.sourceId || ""}`.trim();
+    default:
+      return task.sourceId || "未关联来源";
+  }
+}
+
+function formatAiStatusLabel(status: string) {
+  switch (status) {
+    case "completed":
+    case "confirmed":
+      return "已完成";
+    case "failed":
+      return "失败";
+    default:
+      return "进行中";
+  }
+}
+
+function formatAiDraftTarget(draft: AiDraftPayload) {
+  if (draft.draftType === "graph_change") {
+    if (draft.sourceType === "note") {
+      return `来自笔记 ${draft.sourceId || ""}`.trim();
+    }
+    if (draft.sourceType === "material") {
+      return `来自资料 ${draft.sourceId || ""}`.trim();
+    }
+  }
+
+  switch (draft.targetType) {
+    case "graph":
+      return `图谱 ${draft.targetId}`;
+    case "note":
+      return `笔记 ${draft.targetId}`;
+    case "material":
+      return `资料 ${draft.targetId}`;
+    default:
+      return draft.targetId;
+  }
+}
+
+function buildAiDraftWorkspacePath(draft: AiDraftPayload) {
+  switch (draft.sourceType || draft.targetType) {
+    case "graph":
+      return "/graph";
+    case "note":
+      return `/notes?selected=${encodeURIComponent(draft.sourceId || draft.targetId)}`;
+    case "material":
+      return `/reader/${encodeURIComponent(draft.sourceId || draft.targetId)}`;
+    default:
+      return "";
+  }
+}
+
+function getAiDraftSourceKey(draft: AiDraftPayload) {
+  return draft.sourceType || draft.targetType || "unknown";
+}
+
+function getAiDraftMetadataList(draft: AiDraftPayload, key: string) {
+  const value = draft.metadata?.[key];
+  return Array.isArray(value) ? value : [];
+}
+
+function getAiDraftGraphSummary(draft: AiDraftPayload) {
+  const value = draft.metadata?.summary;
+  return typeof value === "string" ? value : "";
+}
+
+function getAiDraftNodeTitles(draft: AiDraftPayload) {
+  return getAiDraftMetadataList(draft, "nodes")
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return "";
+      }
+      const title = "title" in item ? item.title : "";
+      return typeof title === "string" ? title.trim() : "";
+    })
+    .filter(Boolean);
+}
+
+function getAiDraftEdgeLabels(draft: AiDraftPayload) {
+  return getAiDraftMetadataList(draft, "edges")
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return "";
+      }
+      const label = "label" in item ? item.label : "";
+      return typeof label === "string" && label.trim() ? label.trim() : "未命名连线";
+    })
+    .filter(Boolean);
+}
+
+function getAiDraftNodeIds(draft: AiDraftPayload) {
+  return getAiDraftMetadataList(draft, "nodes")
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return "";
+      }
+      const id = "id" in item ? item.id : "";
+      return typeof id === "string" ? id.trim() : "";
+    })
+    .filter(Boolean);
+}
+
+function getAiDraftNodeEntries(draft: AiDraftPayload) {
+  return getAiDraftMetadataList(draft, "nodes")
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+      const rawId = "id" in item ? item.id : "";
+      const rawTitle = "title" in item ? item.title : "";
+      const rawX = "x" in item ? item.x : 0;
+      const rawY = "y" in item ? item.y : 0;
+      const rawWidth = "width" in item ? item.width : 240;
+      const rawHeight = "height" in item ? item.height : 120;
+      const id = typeof rawId === "string" ? rawId.trim() : "";
+      const title = typeof rawTitle === "string" ? rawTitle.trim() : "";
+      if (!id || !title) {
+        return null;
+      }
+      return {
+        id,
+        title,
+        x: typeof rawX === "number" ? rawX : 0,
+        y: typeof rawY === "number" ? rawY : 0,
+        width: typeof rawWidth === "number" ? rawWidth : 240,
+        height: typeof rawHeight === "number" ? rawHeight : 120
+      };
+    })
+    .filter(
+      (
+        item
+      ): item is { id: string; title: string; x: number; y: number; width: number; height: number } => Boolean(item)
+    );
+}
+
+function estimateAiDraftNodePlacement(
+  node: { x: number; y: number; height: number },
+  graphDetail: GraphDetailPayload | null
+) {
+  const existingNodes = graphDetail?.document.nodes || [];
+  const nextY = existingNodes.length
+    ? Math.max(...existingNodes.map((item) => item.y + item.height)) + 80
+    : 0;
+  const x = Math.round(node.x);
+  const y = Math.round(nextY + node.y);
+  const zone = x < 240 ? "左侧" : x < 520 ? "中部" : "右侧";
+  return { x, y, zone };
+}
+
+function findSimilarGraphTitles(title: string, graphDetail: GraphDetailPayload | null) {
+  if (!graphDetail) {
+    return [];
+  }
+
+  const keyword = title.trim().toLowerCase();
+  if (!keyword) {
+    return [];
+  }
+
+  return graphDetail.document.nodes
+    .map((node) => node.title.trim())
+    .filter(Boolean)
+    .filter((candidate) => {
+      const normalized = candidate.toLowerCase();
+      return normalized === keyword || normalized.includes(keyword) || keyword.includes(normalized);
+    })
+    .slice(0, 3);
+}
+
+function buildGraphFocusLink(
+  graphId: string,
+  node: { title: string; x: number; y: number; width: number; height: number },
+  graphDetail: GraphDetailPayload | null
+) {
+  const placement = estimateAiDraftNodePlacement(node, graphDetail);
+  const params = new URLSearchParams({
+    graphId,
+    focusX: String(placement.x),
+    focusY: String(placement.y),
+    focusWidth: String(Math.round(node.width)),
+    focusHeight: String(Math.round(node.height)),
+    focusLabel: node.title
+  });
+  return `/graph?${params.toString()}`;
 }
 
 function WorkspaceHeader(props: {
@@ -984,17 +1235,26 @@ function CommunityPage() {
 function NotesPage(props: { session: AuthSession }) {
   const [notes, setNotes] = useState<NotePayload[]>([]);
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
+  const [decks, setDecks] = useState<DeckPayload[]>([]);
   const [versions, setVersions] = useState<NoteVersionPayload[]>([]);
   const [noteId, setNoteId] = useState("");
   const [draft, setDraft] = useState(createNoteDraft());
+  const [cardDrafts, setCardDrafts] = useState<CardDraftPayload[]>([]);
+  const [selectedDeckId, setSelectedDeckId] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState("");
   const searchParams = new URLSearchParams(useLocation().search);
 
   async function loadAll(selected?: string) {
-    const [noteItems, materialItems] = await Promise.all([listNotes(props.session), listMaterials()]);
+    const [noteItems, materialItems, deckItems] = await Promise.all([
+      listNotes(props.session),
+      listMaterials(),
+      listDecks(props.session)
+    ]);
     setNotes(noteItems);
     setMaterials(materialItems);
+    setDecks(deckItems);
+    setSelectedDeckId((current) => current || deckItems[0]?.id || "");
     const nextId = selected || searchParams.get("selected") || noteItems[0]?.id || "";
     setNoteId(nextId);
   }
@@ -1003,6 +1263,7 @@ function NotesPage(props: { session: AuthSession }) {
     void loadAll().catch(() => {
       setNotes([]);
       setMaterials([]);
+      setDecks([]);
     });
   }, [props.session]);
 
@@ -1013,6 +1274,7 @@ function NotesPage(props: { session: AuthSession }) {
     if (!selectedNote) {
       setDraft(createNoteDraft());
       setVersions([]);
+      setCardDrafts([]);
       return;
     }
 
@@ -1026,6 +1288,7 @@ function NotesPage(props: { session: AuthSession }) {
     });
 
     void listNoteVersions(props.session, selectedNote.id).then(setVersions).catch(() => setVersions([]));
+    setCardDrafts([]);
   }, [props.session, selectedNote]);
 
   async function handleCreate() {
@@ -1101,6 +1364,72 @@ function NotesPage(props: { session: AuthSession }) {
     }
   }
 
+  async function handleGenerateCardDrafts() {
+    if (!selectedNote) {
+      return;
+    }
+
+    setBusy("note-drafts");
+    setMessage("");
+    try {
+      const payload = await generateNoteCardDrafts(props.session, selectedNote.id);
+      setCardDrafts(payload);
+      setMessage(payload.length ? "已生成笔记复习草稿。" : "这条笔记暂时没有可生成的草稿。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "生成笔记草稿失败。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handleGenerateGraphDrafts() {
+    if (!selectedNote) {
+      return;
+    }
+
+    setBusy("note-graph-drafts");
+    setMessage("");
+    try {
+      const payload = await generateNoteGraphDrafts(props.session, selectedNote.id);
+      setMessage(payload.length ? "已生成笔记图谱变更草稿，去 AI 工作台确认。" : "这条笔记暂时没有可生成的图谱变更草稿。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "生成笔记图谱草稿失败。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handleCommitCardDrafts() {
+    if (!selectedDeckId || cardDrafts.length === 0) {
+      return;
+    }
+
+    setBusy("note-commit");
+    setMessage("");
+    try {
+      const payload = await bulkCreateDeckCards(props.session, selectedDeckId, buildCardInputsFromDrafts(cardDrafts));
+      setDecks((current) =>
+        current.map((deck) =>
+          deck.id === selectedDeckId
+            ? { ...deck, cardCount: deck.cardCount + payload.length, updatedAt: new Date().toISOString() }
+            : deck
+        )
+      );
+      setCardDrafts([]);
+      setMessage(`已把 ${payload.length} 张笔记卡片写入 deck。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "写入复习卡片失败。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function handleDraftChange(draftId: string, field: "front" | "back", value: string) {
+    setCardDrafts((current) =>
+      current.map((item) => (item.id === draftId ? { ...item, [field]: value } : item))
+    );
+  }
+
   return (
     <>
       <WorkspaceHeader
@@ -1148,6 +1477,22 @@ function NotesPage(props: { session: AuthSession }) {
                     删除
                   </button>
                 ) : null}
+                <button
+                  className="secondary-button"
+                  disabled={!selectedNote || busy === "note-drafts"}
+                  onClick={() => void handleGenerateCardDrafts()}
+                  type="button"
+                >
+                  生成复习草稿
+                </button>
+                <button
+                  className="secondary-button"
+                  disabled={!selectedNote || busy === "note-graph-drafts"}
+                  onClick={() => void handleGenerateGraphDrafts()}
+                  type="button"
+                >
+                  生成图谱变更
+                </button>
                 <button className="primary-button" disabled={busy === "update"} onClick={handleUpdate} type="button">
                   保存当前版本
                 </button>
@@ -1224,21 +1569,78 @@ function NotesPage(props: { session: AuthSession }) {
               )}
             </SectionFrame>
 
-            <SectionFrame slim subtitle="版本" title="历史记录">
-              <div className="list-stack dense">
-                {versions.map((version) => (
-                  <div className="list-row compact" key={version.id}>
-                    <div>
-                      <strong>v{version.versionNumber}</strong>
-                      <p>{version.title}</p>
+            <div className="page-stack">
+              <SectionFrame slim subtitle="版本" title="历史记录">
+                <div className="list-stack dense">
+                  {versions.map((version) => (
+                    <div className="list-row compact" key={version.id}>
+                      <div>
+                        <strong>v{version.versionNumber}</strong>
+                        <p>{version.title}</p>
+                      </div>
+                      <button className="secondary-button" disabled={busy === `restore-${version.id}`} onClick={() => handleRestore(version.id)} type="button">
+                        恢复
+                      </button>
                     </div>
-                    <button className="secondary-button" disabled={busy === `restore-${version.id}`} onClick={() => handleRestore(version.id)} type="button">
-                      恢复
-                    </button>
+                  ))}
+                </div>
+              </SectionFrame>
+
+              <SectionFrame slim subtitle="Phase 6 / 7" title="复习草稿">
+                {cardDrafts.length ? (
+                  <div className="page-stack">
+                    <div className="graph-form-stack">
+                      <label>
+                        <span>写入 Deck</span>
+                        <select onChange={(event) => setSelectedDeckId(event.target.value)} value={selectedDeckId}>
+                          <option value="">请选择一个 deck</option>
+                          {decks.map((deck) => (
+                            <option key={deck.id} value={deck.id}>
+                              {deck.title}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        className="secondary-button"
+                        disabled={!selectedDeckId || busy === "note-commit"}
+                        onClick={() => void handleCommitCardDrafts()}
+                        type="button"
+                      >
+                        写入复习系统
+                      </button>
+                    </div>
+
+                    <div className="graph-card-draft-list">
+                      {cardDrafts.map((item) => (
+                        <article className="graph-card-draft" key={item.id}>
+                          <strong>{item.sourceLabel || "笔记草稿"}</strong>
+                          <label>
+                            <span>问题</span>
+                            <input onChange={(event) => handleDraftChange(item.id, "front", event.target.value)} value={item.front} />
+                          </label>
+                          <label>
+                            <span>答案</span>
+                            <textarea onChange={(event) => handleDraftChange(item.id, "back", event.target.value)} rows={4} value={item.back} />
+                          </label>
+                          {item.explanation ? <small>{item.explanation}</small> : null}
+                        </article>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </SectionFrame>
+                ) : decks.length ? (
+                  <article className="graph-meta-card muted">
+                    <strong>先生成草稿</strong>
+                    <p>这块会承接从当前笔记提取出的问答卡片。你可以先保存笔记，再生成并确认写入 deck。</p>
+                  </article>
+                ) : (
+                  <article className="graph-meta-card muted">
+                    <strong>Deck 尚未准备好</strong>
+                    <p>先去复习页创建一个 deck，这里就能把笔记草稿直接写进去。</p>
+                  </article>
+                )}
+              </SectionFrame>
+            </div>
           </div>
         </div>
       </div>
@@ -1249,28 +1651,37 @@ function NotesPage(props: { session: AuthSession }) {
 function ReaderPage(props: { session: AuthSession }) {
   const params = useParams();
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
+  const [decks, setDecks] = useState<DeckPayload[]>([]);
   const [selectedId, setSelectedId] = useState(params.materialId ?? "");
   const [readerState, setReaderState] = useState<ReaderStatePayload | null>(null);
   const [selection, setSelection] = useState("");
   const [annotationComment, setAnnotationComment] = useState("");
+  const [annotationDrafts, setAnnotationDrafts] = useState<CardDraftPayload[]>([]);
+  const [selectedDeckId, setSelectedDeckId] = useState("");
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    void listMaterials()
-      .then((items) => {
+    void Promise.all([listMaterials(), listDecks(props.session)])
+      .then(([items, deckItems]) => {
         const readable = items.filter((item) => item.attachmentFileId);
         setMaterials(readable);
+        setDecks(deckItems);
+        setSelectedDeckId((current) => current || deckItems[0]?.id || "");
         setSelectedId((current) => current || params.materialId || readable[0]?.id || "");
       })
-      .catch(() => setMaterials([]));
-  }, [params.materialId]);
+      .catch(() => {
+        setMaterials([]);
+        setDecks([]);
+      });
+  }, [params.materialId, props.session]);
 
   const selectedMaterial = materials.find((material) => material.id === selectedId) ?? null;
 
   useEffect(() => {
     if (!selectedMaterial) {
       setReaderState(null);
+      setAnnotationDrafts([]);
       return;
     }
 
@@ -1285,6 +1696,7 @@ function ReaderPage(props: { session: AuthSession }) {
         annotations: []
       });
     });
+    setAnnotationDrafts([]);
   }, [props.session, selectedMaterial]);
 
   async function persistProgress(nextPage: number, totalPages: number) {
@@ -1360,8 +1772,82 @@ function ReaderPage(props: { session: AuthSession }) {
     }
   }
 
+  async function handleGenerateAnnotationDrafts() {
+    if (!selectedMaterial || !readerState?.annotations.length) {
+      return;
+    }
+
+    setBusy("annotation-drafts");
+    setMessage("");
+    try {
+      const payload = await generateAnnotationCardDrafts(
+        props.session,
+        selectedMaterial.id,
+        readerState.annotations.map((annotation) => annotation.id)
+      );
+      setAnnotationDrafts(payload);
+      setMessage(payload.length ? "已生成批注复习草稿。" : "当前批注还不足以生成复习草稿。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "生成批注草稿失败。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handleGenerateAnnotationGraphDrafts() {
+    if (!selectedMaterial || !readerState?.annotations.length) {
+      return;
+    }
+
+    setBusy("annotation-graph-drafts");
+    setMessage("");
+    try {
+      const payload = await generateAnnotationGraphDrafts(
+        props.session,
+        selectedMaterial.id,
+        readerState.annotations.map((annotation) => annotation.id)
+      );
+      setMessage(payload.length ? "已生成阅读图谱变更草稿，去 AI 工作台确认。" : "当前批注暂时没有可生成的图谱变更草稿。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "生成阅读图谱草稿失败。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handleCommitAnnotationDrafts() {
+    if (!selectedDeckId || annotationDrafts.length === 0) {
+      return;
+    }
+
+    setBusy("annotation-commit");
+    setMessage("");
+    try {
+      const payload = await bulkCreateDeckCards(props.session, selectedDeckId, buildCardInputsFromDrafts(annotationDrafts));
+      setDecks((current) =>
+        current.map((deck) =>
+          deck.id === selectedDeckId
+            ? { ...deck, cardCount: deck.cardCount + payload.length, updatedAt: new Date().toISOString() }
+            : deck
+        )
+      );
+      setAnnotationDrafts([]);
+      setMessage(`已把 ${payload.length} 张批注卡片写入 deck。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "写入复习卡片失败。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function handleAnnotationDraftChange(draftId: string, field: "front" | "back", value: string) {
+    setAnnotationDrafts((current) =>
+      current.map((item) => (item.id === draftId ? { ...item, [field]: value } : item))
+    );
+  }
+
   const fileUrl = selectedMaterial ? `/api/v1/materials/${selectedMaterial.id}/attachment` : "";
-  const canUsePdf = selectedMaterial?.attachmentMime.toLowerCase().includes("pdf");
+  const canUsePdf = selectedMaterial?.attachmentMime?.toLowerCase().includes("pdf") ?? false;
 
   return (
     <>
@@ -1450,9 +1936,27 @@ function ReaderPage(props: { session: AuthSession }) {
                 <span>批注内容</span>
                 <input onChange={(event) => setAnnotationComment(event.target.value)} value={annotationComment} />
               </label>
-              <button className="primary-button" disabled={busy === "annotation"} onClick={() => void handleCreateAnnotation()} type="button">
-                保存批注
-              </button>
+              <div className="detail-actions">
+                <button className="primary-button" disabled={busy === "annotation"} onClick={() => void handleCreateAnnotation()} type="button">
+                  保存批注
+                </button>
+                <button
+                  className="secondary-button"
+                  disabled={!readerState.annotations.length || busy === "annotation-drafts"}
+                  onClick={() => void handleGenerateAnnotationDrafts()}
+                  type="button"
+                >
+                  生成复习草稿
+                </button>
+                <button
+                  className="secondary-button"
+                  disabled={!readerState.annotations.length || busy === "annotation-graph-drafts"}
+                  onClick={() => void handleGenerateAnnotationGraphDrafts()}
+                  type="button"
+                >
+                  生成图谱变更
+                </button>
+              </div>
               <div className="bookmark-stack">
                 {readerState.bookmarks.map((bookmark) => (
                   <span className="bookmark-chip chip" key={bookmark}>
@@ -1476,6 +1980,65 @@ function ReaderPage(props: { session: AuthSession }) {
                   </article>
                 ))}
               </div>
+              {annotationDrafts.length ? (
+                <div className="page-stack">
+                  <div className="graph-form-stack">
+                    <label>
+                      <span>写入 Deck</span>
+                      <select onChange={(event) => setSelectedDeckId(event.target.value)} value={selectedDeckId}>
+                        <option value="">请选择一个 deck</option>
+                        {decks.map((deck) => (
+                          <option key={deck.id} value={deck.id}>
+                            {deck.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      className="secondary-button"
+                      disabled={!selectedDeckId || busy === "annotation-commit"}
+                      onClick={() => void handleCommitAnnotationDrafts()}
+                      type="button"
+                    >
+                      写入复习系统
+                    </button>
+                  </div>
+
+                  <div className="graph-card-draft-list">
+                    {annotationDrafts.map((item) => (
+                      <article className="graph-card-draft" key={item.id}>
+                        <strong>{item.sourceLabel || "批注草稿"}</strong>
+                        <label>
+                          <span>问题</span>
+                          <input
+                            onChange={(event) => handleAnnotationDraftChange(item.id, "front", event.target.value)}
+                            value={item.front}
+                          />
+                        </label>
+                        <label>
+                          <span>答案</span>
+                          <textarea
+                            onChange={(event) => handleAnnotationDraftChange(item.id, "back", event.target.value)}
+                            rows={4}
+                            value={item.back}
+                          />
+                        </label>
+                        {item.explanation ? <small>{item.explanation}</small> : null}
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              ) : decks.length ? (
+                <article className="graph-meta-card muted">
+                  <strong>批注草稿待生成</strong>
+                  <p>先积累几条有信息量的批注，再生成并确认写入 deck，复习系统就会接住这部分阅读成果。</p>
+                </article>
+              ) : (
+                <article className="graph-meta-card muted">
+                  <strong>Deck 尚未准备好</strong>
+                  <p>先去复习页创建一个 deck，这里就能把批注草稿直接写进去。</p>
+                </article>
+              )}
               {message ? <p className="muted-copy">{message}</p> : null}
             </div>
           ) : (
@@ -1517,7 +2080,7 @@ function PlaceholderBoard(props: {
   );
 }
 
-function GraphPage() {
+function LegacyGraphPage() {
   return (
     <PlaceholderBoard
       columns={graphPlaceholderColumns}
@@ -1526,6 +2089,14 @@ function GraphPage() {
       title="让知识组织真正围绕画布展开"
     />
   );
+}
+
+function GraphPage(props: { session: AuthSession }) {
+  return <GraphWorkspacePage session={props.session} />;
+}
+
+function ReviewWorkspaceRoute(props: { session: AuthSession }) {
+  return <ReviewWorkspacePage session={props.session} />;
 }
 
 function ReviewPage() {
@@ -1548,21 +2119,478 @@ function ReviewPage() {
   );
 }
 
-function AiPage() {
+function AiPage(props: { session: AuthSession }) {
+  const [tasks, setTasks] = useState<AiTaskPayload[]>([]);
+  const [drafts, setDrafts] = useState<AiDraftPayload[]>([]);
+  const [decks, setDecks] = useState<DeckPayload[]>([]);
+  const [graphs, setGraphs] = useState<GraphSummaryPayload[]>([]);
+  const [selectedDeckId, setSelectedDeckId] = useState("");
+  const [selectedGraphId, setSelectedGraphId] = useState("");
+  const [selectedGraphDraftIds, setSelectedGraphDraftIds] = useState<string[]>([]);
+  const [selectedGraphNodeIdsByDraft, setSelectedGraphNodeIdsByDraft] = useState<Record<string, string[]>>({});
+  const [selectedGraphDetail, setSelectedGraphDetail] = useState<GraphDetailPayload | null>(null);
+  const [summary, setSummary] = useState<AiUsageSummaryPayload | null>(null);
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState("");
+  const sourceOptions = useMemo(
+    () => Array.from(new Set(drafts.map((draft) => getAiDraftSourceKey(draft)))).sort(),
+    [drafts]
+  );
+  const filteredDrafts = useMemo(
+    () =>
+      drafts.filter((draft) => {
+        const matchesSource = sourceFilter === "all" || getAiDraftSourceKey(draft) === sourceFilter;
+        const matchesStatus = statusFilter === "all" || draft.status === statusFilter;
+        return matchesSource && matchesStatus;
+      }),
+    [drafts, sourceFilter, statusFilter]
+  );
+  const pendingCardDrafts = useMemo(
+    () => filteredDrafts.filter((draft) => draft.status === "pending" && draft.draftType === "card_draft"),
+    [filteredDrafts]
+  );
+  const pendingGraphDrafts = useMemo(
+    () => filteredDrafts.filter((draft) => draft.status === "pending" && draft.draftType === "graph_change"),
+    [filteredDrafts]
+  );
+  const selectedPendingGraphDrafts = useMemo(
+    () => pendingGraphDrafts.filter((draft) => selectedGraphDraftIds.includes(draft.id)),
+    [pendingGraphDrafts, selectedGraphDraftIds]
+  );
+  const existingGraphTitles = useMemo(() => {
+    if (!selectedGraphDetail) {
+      return new Set<string>();
+    }
+    return new Set(selectedGraphDetail.document.nodes.map((node) => node.title.trim().toLowerCase()).filter(Boolean));
+  }, [selectedGraphDetail]);
+
+  async function loadAiWorkspace() {
+    const [taskItems, draftItems, summaryPayload, deckItems, graphItems] = await Promise.all([
+      listAiTasks(props.session),
+      listAiDrafts(props.session),
+      getAiUsageSummary(props.session),
+      listDecks(props.session),
+      listGraphs(props.session)
+    ]);
+    setTasks(taskItems);
+    setDrafts(draftItems);
+    setSummary(summaryPayload);
+    setDecks(deckItems);
+    setGraphs(graphItems);
+    setSelectedDeckId((current) =>
+      current && deckItems.some((deck) => deck.id === current) ? current : deckItems[0]?.id || ""
+    );
+    setSelectedGraphId((current) =>
+      current && graphItems.some((graph) => graph.id === current) ? current : graphItems[0]?.id || ""
+    );
+  }
+
+  useEffect(() => {
+    void loadAiWorkspace()
+      .catch((error) => {
+        setTasks([]);
+        setDrafts([]);
+        setDecks([]);
+        setGraphs([]);
+        setSummary(null);
+        setSelectedDeckId("");
+        setSelectedGraphId("");
+        setMessage(error instanceof Error ? error.message : "读取 AI 工作台失败。");
+      });
+  }, [props.session]);
+
+  useEffect(() => {
+    const availableIds = pendingGraphDrafts.map((draft) => draft.id);
+    setSelectedGraphDraftIds((current) => {
+      const preserved = current.filter((id) => availableIds.includes(id));
+      if (preserved.length > 0) {
+        return preserved;
+      }
+      return availableIds;
+    });
+    setSelectedGraphNodeIdsByDraft((current) => {
+      const next: Record<string, string[]> = {};
+      for (const draft of pendingGraphDrafts) {
+        const allNodeIds = getAiDraftNodeIds(draft);
+        const preserved = (current[draft.id] || []).filter((id) => allNodeIds.includes(id));
+        next[draft.id] = preserved.length > 0 ? preserved : allNodeIds;
+      }
+      return next;
+    });
+  }, [pendingGraphDrafts]);
+
+  useEffect(() => {
+    if (!selectedGraphId) {
+      setSelectedGraphDetail(null);
+      return;
+    }
+
+    void getGraph(props.session, selectedGraphId)
+      .then(setSelectedGraphDetail)
+      .catch(() => setSelectedGraphDetail(null));
+  }, [props.session, selectedGraphId]);
+
+  async function handleCommitDrafts() {
+    if (!selectedDeckId || pendingCardDrafts.length === 0) {
+      return;
+    }
+
+    setBusy("commit");
+    setMessage("");
+    try {
+      const payload = await bulkCreateDeckCards(props.session, selectedDeckId, buildCardInputsFromAiDrafts(pendingCardDrafts));
+      await loadAiWorkspace();
+      setMessage(`已把 ${payload.length} 张 AI 草稿写入复习系统。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "写入 AI 草稿失败。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handleCommitGraphDrafts() {
+    if (!selectedGraphId || selectedPendingGraphDrafts.length === 0) {
+      return;
+    }
+
+    setBusy("commit-graph");
+    setMessage("");
+    try {
+      const nodeSelections = selectedPendingGraphDrafts.map((draft) => ({
+        draftId: draft.id,
+        nodeIds: selectedGraphNodeIdsByDraft[draft.id] || getAiDraftNodeIds(draft)
+      }));
+      if (nodeSelections.some((item) => item.nodeIds.length === 0)) {
+        setMessage("至少为每条待确认图谱草稿保留一个节点。");
+        setBusy("");
+        return;
+      }
+      const payload = await commitGraphChangeDraftSelection(props.session, selectedGraphId, {
+        draftIds: selectedPendingGraphDrafts.map((draft) => draft.id),
+        nodeSelections
+      });
+      await loadAiWorkspace();
+      setMessage(`已把 ${selectedPendingGraphDrafts.length} 条图谱变更写入《${payload.title}》。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "写入图谱变更失败。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function handleToggleGraphDraft(draftId: string) {
+    setSelectedGraphDraftIds((current) =>
+      current.includes(draftId) ? current.filter((id) => id !== draftId) : [...current, draftId]
+    );
+  }
+
+  function handleToggleGraphDraftNode(draftId: string, nodeId: string) {
+    setSelectedGraphNodeIdsByDraft((current) => {
+      const existing = current[draftId] || [];
+      return {
+        ...current,
+        [draftId]: existing.includes(nodeId) ? existing.filter((id) => id !== nodeId) : [...existing, nodeId]
+      };
+    });
+  }
+
   return (
     <>
       <WorkspaceHeader
-        description="AI 学伴不会直接替你改内容，而是先把建议放进待确认区，让它成为辅助，不是黑盒。"
+        description="AI 学伴现在会把草稿生成任务、状态和用量记下来。它依旧先生成待确认内容，但不再是看不见来路的黑盒。"
         eyebrow="AI 学伴"
-        title="让 AI 对资料、笔记和图谱提供上下文感知的帮助"
+        title="让 AI 草稿、任务历史和用量轨迹都能被回看"
       />
-      <div className="mini-card-grid">
-        {aiPlaceholderCards.map((title) => (
-          <article className="mini-card tall" key={title}>
-            <strong>{title}</strong>
-            <p>这里先承接布局和交互节奏，后面再接模型调用与确认流程。</p>
-          </article>
-        ))}
+
+      <div className="ai-workspace">
+        <div className="metrics-grid">
+          <MetricTile
+            helper="当前账号累计记录的 AI 草稿任务数。"
+            label="任务总数"
+            value={String(summary?.totalTasks ?? 0)}
+          />
+          <MetricTile
+            helper="目前已经成功完成并留下结果的任务。"
+            label="完成任务"
+            value={String(summary?.completedTasks ?? 0)}
+          />
+          <MetricTile
+            helper="用于排查来源或输入问题的失败任务数。"
+            label="失败任务"
+            value={String(summary?.failedTasks ?? 0)}
+          />
+          <MetricTile
+            helper="这一阶段主要记录本地草稿引擎，所以成本通常为 0。"
+            label="累计用量"
+            value={`${summary?.totalOutputTokens ?? 0} 输出`}
+          />
+        </div>
+
+        <SectionFrame
+          subtitle="待确认结果"
+          title="最近 AI 草稿"
+          action={<span className="inline-message">筛选后 {filteredDrafts.length} 条，待确认 {pendingCardDrafts.length + pendingGraphDrafts.length}</span>}
+        >
+          <div className="form-stack ai-panel-controls">
+            <div className="ai-filter-grid">
+              <label>
+                <span>来源筛选</span>
+                <select className="select-field" onChange={(event) => setSourceFilter(event.target.value)} value={sourceFilter}>
+                  <option value="all">全部来源</option>
+                  {sourceOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>状态筛选</span>
+                <select className="select-field" onChange={(event) => setStatusFilter(event.target.value)} value={statusFilter}>
+                  <option value="all">全部状态</option>
+                  <option value="pending">待确认</option>
+                  <option value="confirmed">已确认</option>
+                  <option value="failed">失败</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          {pendingCardDrafts.length ? (
+            decks.length ? (
+              <div className="form-stack ai-panel-controls">
+                <label>
+                  <span>写入目标 deck</span>
+                  <select
+                    className="select-field"
+                    onChange={(event) => setSelectedDeckId(event.target.value)}
+                    value={selectedDeckId}
+                  >
+                    {decks.map((deck) => (
+                      <option key={deck.id} value={deck.id}>
+                        {deck.title} · {deck.cardCount} 张
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="ai-panel-actions">
+                  <button
+                    className="primary-button"
+                    disabled={!selectedDeckId || busy === "commit"}
+                    onClick={() => void handleCommitDrafts()}
+                    type="button"
+                  >
+                    {busy === "commit" ? "写入中..." : `把 ${pendingCardDrafts.length} 张待确认卡片草稿写入复习系统`}
+                  </button>
+                  <span className="inline-message">
+                    确认后会按当前正反面内容创建卡片，并把对应草稿标记为已确认。
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="inline-link-row">
+                还没有可写入的 deck，先去 <Link to="/review">复习页</Link> 创建一个，再回来确认这些草稿。
+              </p>
+            )
+          ) : null}
+
+          {pendingGraphDrafts.length ? (
+            graphs.length ? (
+              <div className="form-stack ai-panel-controls">
+                <label>
+                  <span>写入目标图谱</span>
+                  <select
+                    className="select-field"
+                    onChange={(event) => setSelectedGraphId(event.target.value)}
+                    value={selectedGraphId}
+                  >
+                    {graphs.map((graph) => (
+                      <option key={graph.id} value={graph.id}>
+                        {graph.title} · {graph.nodeCount} 节点
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="ai-panel-actions">
+                  <button
+                    className="secondary-button"
+                    disabled={selectedPendingGraphDrafts.length === pendingGraphDrafts.length}
+                    onClick={() => setSelectedGraphDraftIds(pendingGraphDrafts.map((draft) => draft.id))}
+                    type="button"
+                  >
+                    全选当前筛选结果
+                  </button>
+                  <button
+                    className="secondary-button"
+                    disabled={selectedPendingGraphDrafts.length === 0}
+                    onClick={() => setSelectedGraphDraftIds([])}
+                    type="button"
+                  >
+                    清空选择
+                  </button>
+                  <button
+                    className="primary-button"
+                    disabled={!selectedGraphId || selectedPendingGraphDrafts.length === 0 || busy === "commit-graph"}
+                    onClick={() => void handleCommitGraphDrafts()}
+                    type="button"
+                  >
+                    {busy === "commit-graph" ? "写入中..." : `把 ${selectedPendingGraphDrafts.length} 条图谱变更写入所选图谱`}
+                  </button>
+                  <span className="inline-message">
+                    已选 {selectedPendingGraphDrafts.length} / {pendingGraphDrafts.length} 条。确认后会把候选节点和连线追加进目标图谱，并把对应草稿标记为已确认。
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="inline-link-row">
+                还没有可写入的图谱，先去 <Link to="/graph">图谱页</Link> 创建一个，再回来确认这些变更。
+              </p>
+            )
+          ) : null}
+
+          <div className="ai-task-list">
+            {filteredDrafts.length ? (
+              filteredDrafts.map((draft) => (
+                <article className="ai-task-card" key={draft.id}>
+                  <div className="story-card-head">
+                    <div className="ai-card-heading">
+                      {draft.draftType === "graph_change" && draft.status === "pending" ? (
+                        <label className="ai-draft-toggle">
+                          <input
+                            checked={selectedGraphDraftIds.includes(draft.id)}
+                            onChange={() => handleToggleGraphDraft(draft.id)}
+                            type="checkbox"
+                          />
+                          <span>纳入这次确认</span>
+                        </label>
+                      ) : null}
+                      <strong>{draft.sourceLabel || draft.front}</strong>
+                    </div>
+                    <span className={`ai-status-pill ${draft.status}`}>{formatAiStatusLabel(draft.status)}</span>
+                  </div>
+                  <p>{formatAiDraftTarget(draft)}</p>
+                  <div className="story-card-meta">
+                    <span>{draft.draftType === "graph_change" ? "图谱变更草稿" : draft.front}</span>
+                    <span>{formatDate(draft.updatedAt)}</span>
+                  </div>
+                  <p>{draft.back}</p>
+                  {draft.draftType === "graph_change" ? (
+                    <div className="ai-draft-preview">
+                      <p className="inline-message">
+                        候选节点 {getAiDraftMetadataList(draft, "nodes").length} 个，候选连线 {getAiDraftMetadataList(draft, "edges").length} 条
+                        {getAiDraftGraphSummary(draft) ? ` · ${getAiDraftGraphSummary(draft)}` : ""}
+                      </p>
+                      {selectedGraphDetail ? (
+                        <p className="inline-message">
+                          {(() => {
+                            const conflictTitles = getAiDraftNodeEntries(draft)
+                              .map((item) => item.title)
+                              .filter((title) => existingGraphTitles.has(title.toLowerCase()));
+                            return conflictTitles.length
+                              ? `目标图谱里已有同名节点：${conflictTitles.join("、")}`
+                              : "目标图谱里暂时没有发现同名节点冲突。";
+                          })()}
+                        </p>
+                      ) : null}
+                      <div className="ai-draft-preview-grid">
+                        <div>
+                          <strong>候选节点</strong>
+                          <ul>
+                            {getAiDraftNodeEntries(draft).map((item) => (
+                              <li key={`${draft.id}-node-${item.id}`}>
+                                <label className="ai-draft-node-toggle">
+                                  <input
+                                    checked={(selectedGraphNodeIdsByDraft[draft.id] || []).includes(item.id)}
+                                    onChange={() => handleToggleGraphDraftNode(draft.id, item.id)}
+                                    type="checkbox"
+                                  />
+                                  <span>{item.title}</span>
+                                </label>
+                                <div className="ai-draft-node-meta">
+                                  <span>
+                                    预计落点 {estimateAiDraftNodePlacement(item, selectedGraphDetail).zone} · x
+                                    {estimateAiDraftNodePlacement(item, selectedGraphDetail).x} / y
+                                    {estimateAiDraftNodePlacement(item, selectedGraphDetail).y}
+                                  </span>
+                                  <span>
+                                    {findSimilarGraphTitles(item.title, selectedGraphDetail).length
+                                      ? `相似节点：${findSimilarGraphTitles(item.title, selectedGraphDetail).join("、")}`
+                                      : "相似节点：未发现明显近似项"}
+                                  </span>
+                                  {selectedGraphId ? (
+                                    <span>
+                                      <Link to={buildGraphFocusLink(selectedGraphId, item, selectedGraphDetail)}>
+                                        去目标图谱查看落点
+                                      </Link>
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <strong>候选连线</strong>
+                          <ul>
+                            {getAiDraftEdgeLabels(draft).map((label, index) => (
+                              <li key={`${draft.id}-edge-${index}`}>{label}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                  {draft.explanation ? <p className="inline-message">{draft.explanation}</p> : null}
+                  {buildAiDraftWorkspacePath(draft) ? (
+                    <p className="inline-link-row">
+                      <Link to={buildAiDraftWorkspacePath(draft)}>打开来源工作台</Link>
+                    </p>
+                  ) : null}
+                </article>
+              ))
+            ) : (
+              <article className="placeholder-card">
+                <strong>当前筛选下没有草稿</strong>
+                <p>可以调整来源或状态筛选，或者去图谱、笔记、阅读器里再生成一轮 AI 草稿。</p>
+              </article>
+            )}
+          </div>
+          {message ? <p className="muted-copy">{message}</p> : null}
+        </SectionFrame>
+
+        <SectionFrame
+          subtitle="任务历史"
+          title="最近 AI 任务"
+          action={summary?.lastTaskAt ? <span className="inline-message">最近任务 {formatDate(summary.lastTaskAt)}</span> : undefined}
+        >
+          <div className="ai-task-list">
+            {tasks.length ? (
+              tasks.map((task) => (
+                <article className="ai-task-card" key={task.id}>
+                  <div className="story-card-head">
+                    <strong>{formatAiTaskLabel(task.taskType)}</strong>
+                    <span className={`ai-status-pill ${task.status}`}>{formatAiStatusLabel(task.status)}</span>
+                  </div>
+                  <p>{formatAiSourceLabel(task)}</p>
+                  <div className="story-card-meta">
+                    <span>模型 {task.model}</span>
+                    <span>输入 {task.inputTokens}</span>
+                    <span>输出 {task.outputTokens}</span>
+                    <span>{formatDate(task.createdAt)}</span>
+                  </div>
+                  {task.errorMessage ? <p className="inline-message">{task.errorMessage}</p> : null}
+                </article>
+              ))
+            ) : (
+              <article className="placeholder-card">
+                <strong>还没有 AI 任务</strong>
+                <p>去图谱、笔记或阅读器里生成一次草稿，这里就会开始沉淀任务历史和用量轨迹。</p>
+              </article>
+            )}
+          </div>
+        </SectionFrame>
       </div>
     </>
   );
@@ -1645,6 +2673,8 @@ function RequireAuth(props: { session: AuthSession | null; children: ReactNode }
 
 function ShellFrame(props: { session: AuthSession | null; onLogout: () => void; children: ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchText, setSearchText] = useState(() => new URLSearchParams(location.search).get("q") || "");
   const contextCards = useMemo<ContextCard[]>(() => {
     if (location.pathname.startsWith("/materials")) {
       return [
@@ -1672,6 +2702,16 @@ function ShellFrame(props: { session: AuthSession | null; onLogout: () => void; 
       { title: "当前阶段", body: "正在继续做厚 v0.4.0，把真正可用的前台体验先立起来。", tone: "muted" }
     ];
   }, [location.pathname]);
+
+  useEffect(() => {
+    setSearchText(new URLSearchParams(location.search).get("q") || "");
+  }, [location.search]);
+
+  function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = searchText.trim();
+    navigate(query ? `/search?q=${encodeURIComponent(query)}` : "/search");
+  }
 
   return (
     <div className="shell-root">
@@ -1722,10 +2762,10 @@ function ShellFrame(props: { session: AuthSession | null; onLogout: () => void; 
 
         <div className="shell-main">
           <div className="topbar">
-            <label className="search-field">
+            <form className="search-field" onSubmit={handleSearchSubmit}>
               <Search size={16} />
-              <input placeholder="搜索资料、笔记、帖子和后续图谱入口" />
-            </label>
+              <input onChange={(event) => setSearchText(event.target.value)} placeholder="?????????????" value={searchText} />
+            </form>
             <div className="topbar-actions">
               <button className="icon-button" title="提醒" type="button">
                 <Bell size={16} />
@@ -1815,6 +2855,14 @@ export function App() {
       />
       <Route
         element={
+          <ShellFrame onLogout={() => void handleLogout()} session={session}>
+            <SearchWorkspacePage session={session} />
+          </ShellFrame>
+        }
+        path="/search"
+      />
+      <Route
+        element={
           <RequireAuth session={session}>
             <ShellFrame onLogout={() => void handleLogout()} session={session}>
               <ReaderPage session={session as AuthSession} />
@@ -1847,7 +2895,7 @@ export function App() {
         element={
           <RequireAuth session={session}>
             <ShellFrame onLogout={() => void handleLogout()} session={session}>
-              <GraphPage />
+              <GraphPage session={session as AuthSession} />
             </ShellFrame>
           </RequireAuth>
         }
@@ -1857,7 +2905,7 @@ export function App() {
         element={
           <RequireAuth session={session}>
             <ShellFrame onLogout={() => void handleLogout()} session={session}>
-              <ReviewPage />
+              <ReviewWorkspaceRoute session={session!} />
             </ShellFrame>
           </RequireAuth>
         }
@@ -1867,7 +2915,7 @@ export function App() {
         element={
           <RequireAuth session={session}>
             <ShellFrame onLogout={() => void handleLogout()} session={session}>
-              <AiPage />
+              <AiPage session={session as AuthSession} />
             </ShellFrame>
           </RequireAuth>
         }

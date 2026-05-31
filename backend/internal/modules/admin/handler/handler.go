@@ -7,19 +7,22 @@ import (
 	"studymate/backend/internal/middleware"
 	"studymate/backend/internal/modules/auth/dto"
 	authservice "studymate/backend/internal/modules/auth/service"
+	adminservice "studymate/backend/internal/modules/admin/service"
 	userservice "studymate/backend/internal/modules/user/service"
 	"studymate/backend/internal/pkg/response"
 )
 
 type Handler struct {
-	authService *authservice.Service
-	userService *userservice.Service
+	authService  *authservice.Service
+	userService  *userservice.Service
+	adminService *adminservice.Service
 }
 
-func NewHandler(authService *authservice.Service, userService *userservice.Service) *Handler {
+func NewHandler(authService *authservice.Service, userService *userservice.Service, adminService *adminservice.Service) *Handler {
 	return &Handler{
-		authService: authService,
-		userService: userService,
+		authService:  authService,
+		userService:  userService,
+		adminService: adminService,
 	}
 }
 
@@ -48,4 +51,14 @@ func (h *Handler) Me(ctx *gin.Context) {
 	}
 
 	response.Success(ctx, http.StatusOK, profile)
+}
+
+func (h *Handler) Overview(ctx *gin.Context) {
+	result, err := h.adminService.Overview()
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
 }

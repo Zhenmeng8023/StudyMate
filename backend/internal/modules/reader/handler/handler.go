@@ -69,3 +69,34 @@ func (h *Handler) DeleteAnnotation(ctx *gin.Context) {
 	response.Success(ctx, http.StatusOK, gin.H{"message": "批注已删除"})
 }
 
+func (h *Handler) GenerateCardDrafts(ctx *gin.Context) {
+	var request readerdto.GenerateAnnotationCardDraftsRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	result, err := h.service.GenerateCardDrafts(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), request.AnnotationIDs)
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}
+
+func (h *Handler) GenerateGraphDrafts(ctx *gin.Context) {
+	var request readerdto.GenerateAnnotationCardDraftsRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	result, err := h.service.GenerateGraphDrafts(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), request.AnnotationIDs)
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}

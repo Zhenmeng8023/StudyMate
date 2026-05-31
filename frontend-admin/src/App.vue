@@ -27,6 +27,14 @@ interface ModerationItem {
   updatedAt: string;
 }
 
+interface OverviewPayload {
+  userCount: number;
+  postCount: number;
+  materialCount: number;
+  graphCount: number;
+  pendingModerationCount: number;
+}
+
 interface ApiResponse<T> {
   success: boolean;
   data: T;
@@ -63,9 +71,10 @@ const form = reactive({
 const session = ref<AuthPayload | null>(readSession());
 const profile = ref<AuthUser | null>(session.value?.user ?? null);
 const moderationItems = ref<ModerationItem[]>([]);
+const overview = ref<OverviewPayload | null>(null);
 const loading = ref(false);
 const errorMessage = ref("");
-const notice = ref("登录后会同步审核队列、运营统计和治理入口。");
+const notice = ref("登录后会同步运营概览和审核队列。");
 const activeView = ref<AdminView>("dashboard");
 
 const loggedIn = computed(() => Boolean(session.value));
@@ -91,30 +100,30 @@ const navItems = computed<AdminNavItem[]>(() => [
 const overviewCards = computed(() => [
   {
     label: "待审核内容",
-    value: String(moderationItems.value.length),
-    helper: "帖子、资料和后续内容会统一回到这条治理队列里。"
+    value: String(overview.value?.pendingModerationCount ?? moderationItems.value.length),
+    helper: "帖子、资料和后续公开内容统一进入治理队列。"
   },
   {
-    label: "资料审核",
-    value: String(pendingMaterials.value.length),
-    helper: "分类、标签和附件巡检会继续接到这一块。"
+    label: "资料总量",
+    value: String(overview.value?.materialCount ?? 0),
+    helper: "用于跟踪资料沉淀规模和审核压力。"
   },
   {
-    label: "社区审核",
-    value: String(pendingPosts.value.length),
-    helper: "帖子、评论和举报处理会逐步回到统一界面。"
+    label: "用户 / 图谱",
+    value: `${overview.value?.userCount ?? 0} / ${overview.value?.graphCount ?? 0}`,
+    helper: "用户与图谱总量用于判断试用期活跃面。"
   },
   {
-    label: "AI 任务",
-    value: "占位",
-    helper: "后面会展示调用量、失败任务和人工确认状态。"
+    label: "帖子总量",
+    value: String(overview.value?.postCount ?? 0),
+    helper: "社区规模已接真实数据，AI 指标后续扩展。"
   }
 ]);
 
 const placeholderModules = {
-  materials: ["分类纠正", "标签治理", "附件巡检"],
+  materials: ["分类校正", "标签治理", "附件巡检"],
   community: ["话题治理", "举报处理", "推荐策略"],
-  users: ["角色权限", "账号禁用", "活跃统计"],
+  users: ["角色权限", "账号封禁", "活跃统计"],
   graph: ["模板审核", "推荐位管理", "模板分类"],
   ai: ["任务队列", "失败重试", "用量统计"],
   system: ["存储配置", "审核策略", "系统偏好"],
@@ -122,7 +131,7 @@ const placeholderModules = {
 } as const;
 
 if (session.value) {
-  void Promise.all([refreshProfile(), loadModeration()]);
+  void Promise.all([refreshProfile(), loadModeration(), loadOverview()]);
 }
 
 async function login() {
@@ -145,8 +154,8 @@ async function login() {
     session.value = data.data;
     profile.value = data.data.user;
     window.localStorage.setItem(sessionKey, JSON.stringify(data.data));
-    notice.value = "后台已经进入治理模式，正在同步概览和审核队列。";
-    await Promise.all([refreshProfile(), loadModeration()]);
+    notice.value = "后台已进入治理模式，正在同步概览和审核队列。";
+    await Promise.all([refreshProfile(), loadModeration(), loadOverview()]);
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "管理员登录失败";
   } finally {
@@ -173,6 +182,28 @@ async function refreshProfile() {
     profile.value = data.data;
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "读取管理员资料失败";
+  }
+}
+
+async function loadOverview() {
+  if (!session.value) {
+    return;
+  }
+
+  try {
+    const payload = await fetch("/api/v1/admin/overview", {
+      headers: {
+        Authorization: `Bearer ${session.value.accessToken}`
+      }
+    });
+    const data = (await payload.json()) as ApiResponse<OverviewPayload>;
+    if (!payload.ok || !data.success) {
+      throw new Error(data.error?.message ?? "读取后台概览失败");
+    }
+
+    overview.value = data.data;
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : "读取后台概览失败";
   }
 }
 
@@ -229,8 +260,8 @@ async function moderate(item: ModerationItem, action: "approve" | "reject" | "hi
       throw new Error(data.error?.message ?? "更新审核状态失败");
     }
 
-    notice.value = `《${item.title}》已更新为 ${data.data.status}。`;
-    await loadModeration();
+    notice.value = `“${item.title}”已更新为 ${data.data.status}。`;
+    await Promise.all([loadModeration(), loadOverview()]);
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "更新审核状态失败";
   } finally {
@@ -242,6 +273,7 @@ function logout() {
   session.value = null;
   profile.value = null;
   moderationItems.value = [];
+  overview.value = null;
   activeView.value = "dashboard";
   window.localStorage.removeItem(sessionKey);
   notice.value = "后台会话已清空。";
@@ -259,50 +291,37 @@ function readSession(): AuthPayload | null {
     return null;
   }
 }
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString("zh-CN", {
-    month: "numeric",
-    day: "numeric"
-  });
-}
 </script>
 
 <template>
-  <main class="admin-root">
-    <section v-if="!loggedIn" class="login-shell">
-      <article class="login-card">
-        <p class="eyebrow">StudyMate Admin</p>
-        <h1>进入治理后台</h1>
-        <p class="lead">这一版先把审核、概览和各模块治理入口统一到同一个后台壳层里。</p>
-        <form class="login-form" @submit.prevent="login">
-          <label>
-            <span>用户名或邮箱</span>
-            <input v-model="form.login" placeholder="输入管理员账号" />
-          </label>
-          <label>
-            <span>密码</span>
-            <input v-model="form.password" placeholder="输入密码" type="password" />
-          </label>
-          <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
-          <button class="primary-button" :disabled="loading" type="submit">
-            {{ loading ? "登录中..." : "登录后台" }}
-          </button>
-        </form>
-      </article>
+  <main class="admin-shell">
+    <section v-if="!loggedIn" class="login-card">
+      <p class="eyebrow">Admin</p>
+      <h1>StudyMate 管理后台</h1>
+      <form class="form-stack" @submit.prevent="login">
+        <label>
+          <span>账号</span>
+          <input v-model="form.login" placeholder="用户名或邮箱" />
+        </label>
+        <label>
+          <span>密码</span>
+          <input v-model="form.password" placeholder="密码" type="password" />
+        </label>
+        <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
+        <button class="primary-button" :disabled="loading" type="submit">
+          {{ loading ? "登录中..." : "登录" }}
+        </button>
+      </form>
     </section>
 
-    <div v-else class="admin-shell">
-      <aside class="admin-sidebar">
+    <template v-else>
+      <aside class="sidebar">
         <div class="brand-block">
-          <div class="brand-glyph">管</div>
-          <div>
-            <strong>StudyMate Admin</strong>
-            <span>学习内容治理后台</span>
-          </div>
+          <strong>StudyMate Admin</strong>
+          <span>{{ profile?.displayName }}</span>
         </div>
 
-        <nav class="admin-nav">
+        <nav class="nav-stack">
           <button
             v-for="item in navItems"
             :key="item.key"
@@ -315,30 +334,25 @@ function formatDate(value: string) {
           </button>
         </nav>
 
-        <article class="sidebar-card">
-          <strong>{{ profile?.displayName }}</strong>
-          <span>{{ profile?.email }}</span>
-          <span>{{ profile?.role }}</span>
-          <button class="secondary-button" type="button" @click="logout">退出后台</button>
-        </article>
+        <button class="secondary-button" type="button" @click="logout">退出</button>
       </aside>
 
-      <section class="admin-surface">
+      <section class="admin-main">
         <header class="topbar">
           <div>
-            <p class="eyebrow">治理工作区</p>
+            <p class="eyebrow">运营面板</p>
             <h2>{{ navItems.find((item) => item.key === activeView)?.label }}</h2>
-            <p class="lead">{{ notice }}</p>
           </div>
           <button class="secondary-button" :disabled="loading" type="button" @click="loadModeration">
-            {{ loading ? "同步中..." : "刷新数据" }}
+            刷新审核队列
           </button>
         </header>
 
+        <p class="notice">{{ notice }}</p>
         <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
 
         <template v-if="activeView === 'dashboard'">
-          <div class="metric-grid">
+          <div class="card-grid">
             <article v-for="card in overviewCards" :key="card.label" class="metric-card">
               <span>{{ card.label }}</span>
               <strong>{{ card.value }}</strong>
@@ -348,223 +362,161 @@ function formatDate(value: string) {
         </template>
 
         <template v-else-if="activeView === 'moderation'">
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <p class="eyebrow">待处理队列</p>
-                <h3>帖子与资料审核</h3>
-              </div>
-            </div>
+          <div class="card-grid narrow">
+            <article class="metric-card">
+              <span>待审帖子</span>
+              <strong>{{ pendingPosts.length }}</strong>
+              <p>社区内容审核入口。</p>
+            </article>
+            <article class="metric-card">
+              <span>待审资料</span>
+              <strong>{{ pendingMaterials.length }}</strong>
+              <p>资料与版权状态审核入口。</p>
+            </article>
+          </div>
 
-            <div class="moderation-list">
-              <article v-for="item in moderationItems" :key="item.id" class="moderation-card">
-                <div class="moderation-head">
-                  <div>
-                    <strong>{{ item.title }}</strong>
-                    <span>{{ item.type === "post" ? "帖子" : "资料" }} · {{ item.authorName }}</span>
-                  </div>
-                  <span class="status-chip">{{ item.status }}</span>
-                </div>
-                <p>{{ item.summary }}</p>
-                <div class="moderation-meta">
-                  <span>创建于 {{ formatDate(item.createdAt) }}</span>
-                  <div class="actions">
-                    <button class="secondary-button" type="button" @click="moderate(item, 'approve')">通过</button>
-                    <button class="secondary-button" type="button" @click="moderate(item, 'reject')">驳回</button>
-                    <button class="secondary-button danger" type="button" @click="moderate(item, 'hide')">下架</button>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </section>
+          <div class="moderation-list">
+            <article v-for="item in moderationItems" :key="item.id" class="moderation-card">
+              <div class="moderation-head">
+                <strong>{{ item.title }}</strong>
+                <span>{{ item.type }} · {{ item.status }}</span>
+              </div>
+              <p>{{ item.summary }}</p>
+              <div class="moderation-meta">
+                <span>{{ item.authorName }}</span>
+                <span>{{ new Date(item.createdAt).toLocaleString("zh-CN") }}</span>
+              </div>
+              <div class="action-row">
+                <button class="secondary-button" type="button" @click="moderate(item, 'approve')">通过</button>
+                <button class="secondary-button danger" type="button" @click="moderate(item, 'reject')">驳回</button>
+                <button class="secondary-button" type="button" @click="moderate(item, 'hide')">隐藏</button>
+              </div>
+            </article>
+          </div>
         </template>
 
         <template v-else>
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <p class="eyebrow">功能占位</p>
-                <h3>{{ navItems.find((item) => item.key === activeView)?.label }}</h3>
-              </div>
-            </div>
-
-            <div class="placeholder-grid">
-              <article
-                v-for="item in placeholderModules[activeView as keyof typeof placeholderModules]"
-                :key="item"
-                class="placeholder-card"
-              >
-                <strong>{{ item }}</strong>
-                <p>这一块的后台能力会沿当前治理壳层继续补齐。</p>
-              </article>
-            </div>
-          </section>
+          <div class="placeholder-list">
+            <article
+              v-for="item in placeholderModules[activeView as keyof typeof placeholderModules]"
+              :key="item"
+              class="placeholder-card"
+            >
+              <strong>{{ item }}</strong>
+              <p>当前页面已保留模块入口，后续继续接真实数据流。</p>
+            </article>
+          </div>
         </template>
       </section>
-    </div>
+    </template>
   </main>
 </template>
 
 <style scoped>
-:global(:root) {
-  --bg-0: #f5f1e7;
-  --bg-1: #efe7d8;
-  --surface: rgba(250, 246, 238, 0.92);
-  --surface-strong: rgba(255, 252, 246, 0.96);
-  --surface-soft: rgba(244, 237, 225, 0.82);
-  --line: rgba(57, 58, 52, 0.12);
-  --line-strong: rgba(57, 58, 52, 0.2);
-  --text-0: #1f2520;
-  --text-1: #4d564b;
-  --text-2: #7b7f72;
-  --accent: #295846;
-  --accent-strong: #204638;
-  --amber: #a96a1d;
-  --danger: #a94d40;
-  --shadow-lg: 0 22px 60px rgba(61, 47, 24, 0.12);
-  --shadow-sm: 0 10px 24px rgba(61, 47, 24, 0.06);
+:root {
+  color-scheme: light;
 }
 
-:global(body) {
-  margin: 0;
-  color: var(--text-0);
-  background:
-    linear-gradient(180deg, rgba(255, 252, 246, 0.84) 0%, rgba(240, 232, 216, 0.92) 100%),
-    linear-gradient(90deg, rgba(35, 61, 51, 0.02) 1px, transparent 1px),
-    linear-gradient(rgba(35, 61, 51, 0.02) 1px, transparent 1px);
-  background-size: auto, 32px 32px, 32px 32px;
-  font-family: "PingFang SC", "Microsoft YaHei UI", sans-serif;
-}
-
-:global(*),
-:global(*::before),
-:global(*::after) {
+* {
   box-sizing: border-box;
 }
 
-.admin-root {
-  min-height: 100vh;
-}
-
-.login-shell,
 .admin-shell {
-  min-height: 100vh;
-}
-
-.login-shell {
-  position: relative;
   display: grid;
-  place-items: center;
-  padding: 24px;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 20px;
+  min-height: 100vh;
+  padding: 20px;
+  color: #1f2520;
+  background: #f5f1e7;
 }
 
 .login-card,
-.admin-sidebar,
-.admin-surface,
-.panel,
+.sidebar,
+.admin-main,
 .metric-card,
 .moderation-card,
-.placeholder-card,
-.sidebar-card {
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  background: var(--surface);
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(14px);
+.placeholder-card {
+  border: 1px solid rgba(57, 58, 52, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 252, 246, 0.94);
+  box-shadow: 0 10px 24px rgba(61, 47, 24, 0.06);
 }
 
 .login-card {
-  width: min(560px, 100%);
-  padding: 34px;
+  display: grid;
+  gap: 16px;
+  width: min(480px, 100%);
+  margin: auto;
+  padding: 28px;
 }
 
-.eyebrow {
-  margin: 0 0 10px;
-  color: var(--amber);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.sidebar {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding: 20px;
 }
 
-.login-card h1,
-.topbar h2,
-.panel h3,
-.metric-card strong,
+.admin-main {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding: 22px;
+}
+
+.brand-block span,
+.notice,
+.metric-card span,
+.metric-card p,
+.moderation-card p,
+.moderation-meta span,
+.placeholder-card p {
+  color: #697167;
+}
+
 .brand-block strong,
-.sidebar-card strong {
-  margin: 0;
+.topbar h2,
+.metric-card strong,
+.moderation-head strong,
+.placeholder-card strong,
+.login-card h1 {
   font-family: "Iowan Old Style", "STZhongsong", "Songti SC", serif;
 }
 
-.lead,
-.metric-card p,
-.moderation-card p,
-.placeholder-card p,
-.sidebar-card span,
-.moderation-meta span,
-.moderation-head span {
-  margin: 0;
-  color: var(--text-1);
-  line-height: 1.7;
-}
-
-.login-form,
-.admin-nav,
-.metric-grid,
+.nav-stack,
+.form-stack,
 .moderation-list,
-.placeholder-grid {
+.placeholder-list,
+.card-grid {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
-.login-form {
-  margin-top: 20px;
-}
-
-.login-form label {
-  display: grid;
-  gap: 8px;
-}
-
-.login-form span {
-  color: var(--text-1);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-input,
-button {
-  appearance: none;
-  font: inherit;
-}
-
-button {
-  border: 0;
-}
-
-input {
-  min-height: 46px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  color: var(--text-0);
-  background: rgba(255, 255, 255, 0.72);
-}
-
+.nav-item,
 .primary-button,
-.secondary-button,
-.nav-item {
+.secondary-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   min-height: 42px;
   padding: 0 14px;
-  border: 1px solid transparent;
-  border-radius: 999px;
+  border: 0;
+  border-radius: 8px;
   cursor: pointer;
-  transition: 180ms ease;
+  font: inherit;
+}
+
+.nav-item {
+  justify-content: space-between;
+  color: #4d564b;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.nav-item.active {
+  color: #1f2520;
+  background: rgba(41, 88, 70, 0.1);
 }
 
 .primary-button {
@@ -572,179 +524,88 @@ input {
   background: linear-gradient(135deg, #285645 0%, #3a6d59 100%);
 }
 
-.secondary-button,
-.nav-item {
-  color: var(--text-1);
-  border-color: var(--line);
+.secondary-button {
+  color: #1f2520;
   background: rgba(255, 255, 255, 0.58);
 }
 
-.secondary-button:hover,
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.danger {
-  color: var(--danger);
-}
-
-.admin-shell {
-  position: relative;
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 20px;
-  padding: 22px;
-}
-
-.admin-sidebar {
-  display: grid;
-  align-content: start;
-  gap: 18px;
-  padding: 22px 18px;
-}
-
-.brand-block {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 8px 2px;
-}
-
-.brand-glyph {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  color: #f2efe6;
-  background: linear-gradient(135deg, #264d3f 0%, #3d715b 100%);
-}
-
-.brand-block span,
-.metric-card span,
-.moderation-head span,
-.moderation-meta span,
-.sidebar-card span {
-  display: block;
-  color: var(--text-2);
-  font-size: 13px;
-}
-
-.nav-item {
-  justify-content: space-between;
-  width: 100%;
-  min-height: 48px;
-  text-align: left;
-}
-
-.nav-item.active {
-  color: var(--text-0);
-  box-shadow: inset 0 0 0 1px rgba(41, 88, 70, 0.14);
-  background: linear-gradient(135deg, rgba(41, 88, 70, 0.1), rgba(255, 255, 255, 0.68));
-}
-
-.nav-item small {
-  color: var(--amber);
-}
-
-.sidebar-card {
-  display: grid;
-  gap: 8px;
-  padding: 16px;
-  border-radius: 16px;
-  background: var(--surface-strong);
-  box-shadow: var(--shadow-sm);
-}
-
-.admin-surface {
-  display: grid;
-  align-content: start;
-  gap: 18px;
-  padding: 24px;
+.secondary-button.danger {
+  color: #fff7f5;
+  background: linear-gradient(135deg, #9f5246 0%, #b05f52 100%);
 }
 
 .topbar,
-.panel-head,
 .moderation-head,
 .moderation-meta,
-.actions {
+.action-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.topbar h2,
-.panel h3 {
-  font-size: 30px;
+.card-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.panel {
-  display: grid;
-  gap: 18px;
-  padding: 18px;
-  border-radius: 22px;
-  background: var(--surface-soft);
-}
-
-.metric-grid {
+.card-grid.narrow {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.metric-card {
-  display: grid;
-  gap: 10px;
-  min-height: 180px;
-  padding: 20px;
-  border-radius: 18px;
-  background: var(--surface-strong);
-  box-shadow: var(--shadow-sm);
+.metric-card,
+.moderation-card,
+.placeholder-card {
+  padding: 16px;
 }
 
 .metric-card strong {
-  font-size: 36px;
-  line-height: 1;
+  font-size: 30px;
 }
 
 .moderation-card,
 .placeholder-card {
   display: grid;
-  gap: 12px;
-  padding: 18px;
-  border-radius: 18px;
-  background: var(--surface-strong);
-  box-shadow: var(--shadow-sm);
+  gap: 10px;
 }
 
-.moderation-head strong,
-.placeholder-card strong {
-  font-size: 18px;
+.action-row {
+  justify-content: flex-start;
 }
 
-.status-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  color: var(--accent-strong);
-  background: rgba(41, 88, 70, 0.12);
+label {
+  display: grid;
+  gap: 8px;
 }
 
-.placeholder-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+input {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(57, 58, 52, 0.12);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: #697167;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.notice,
+.error-text {
+  margin: 0;
 }
 
 .error-text {
-  margin: 0;
-  color: var(--danger);
+  color: #a94d40;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1100px) {
   .admin-shell,
-  .metric-grid,
-  .placeholder-grid {
+  .card-grid,
+  .card-grid.narrow {
     grid-template-columns: 1fr;
   }
 }

@@ -227,6 +227,18 @@ func (r *Repository) ListPostsForModeration() ([]communitymodel.Post, error) {
 	return posts, err
 }
 
+func (r *Repository) CountAllPosts() (int64, error) {
+	var count int64
+	err := r.db.Model(&communitymodel.Post{}).Count(&count).Error
+	return count, err
+}
+
+func (r *Repository) CountPendingPosts() (int64, error) {
+	var count int64
+	err := r.db.Model(&communitymodel.Post{}).Where("status <> ?", "approved").Count(&count).Error
+	return count, err
+}
+
 func (r *Repository) ListPostsForModerationItems() ([]admindto.ModerationItem, error) {
 	type row struct {
 		ID         string    `gorm:"column:id"`

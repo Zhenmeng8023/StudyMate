@@ -30,6 +30,14 @@ func (r *Repository) Delete(note *notemodel.Note) error {
 	return r.db.Delete(note).Error
 }
 
+func (r *Repository) DeleteVersions(noteID string) error {
+	return r.db.Where("note_id = ?", noteID).Delete(&notemodel.NoteVersion{}).Error
+}
+
+func (r *Repository) DeleteRelations(noteID string) error {
+	return r.db.Where("note_id = ?", noteID).Delete(&notemodel.NoteRelation{}).Error
+}
+
 func (r *Repository) FindByID(noteID string) (*notemodel.Note, error) {
 	var note notemodel.Note
 	if err := r.db.First(&note, "id = ?", noteID).Error; err != nil {

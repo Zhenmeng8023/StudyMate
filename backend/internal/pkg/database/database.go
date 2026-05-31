@@ -34,7 +34,7 @@ func Connect(cfg config.Config) (*Dependencies, error) {
 		return nil, err
 	}
 
-	sqlDB, mode, err := openSQL(cfg.Database)
+	sqlDB, mode, err := ConnectPrimarySQL(cfg.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +66,10 @@ func Connect(cfg config.Config) (*Dependencies, error) {
 	}
 
 	return deps, nil
+}
+
+func ConnectPrimarySQL(cfg config.DatabaseConfig) (*gorm.DB, string, error) {
+	return openSQL(cfg)
 }
 
 func openSQL(cfg config.DatabaseConfig) (*gorm.DB, string, error) {

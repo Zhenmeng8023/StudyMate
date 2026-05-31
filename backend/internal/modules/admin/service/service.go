@@ -4,7 +4,9 @@ import (
 	admindto "studymate/backend/internal/modules/admin/dto"
 	adminrepo "studymate/backend/internal/modules/admin/repository"
 	communityrepo "studymate/backend/internal/modules/community/repository"
+	graphrepo "studymate/backend/internal/modules/graph/repository"
 	materialrepo "studymate/backend/internal/modules/material/repository"
+	userrepo "studymate/backend/internal/modules/user/repository"
 	"studymate/backend/internal/pkg/apperrors"
 )
 
@@ -12,17 +14,23 @@ type Service struct {
 	auditLogs *adminrepo.AuditLogRepository
 	community *communityrepo.Repository
 	materials *materialrepo.Repository
+	graphs    *graphrepo.Repository
+	users     *userrepo.Repository
 }
 
 func NewService(
 	auditLogs *adminrepo.AuditLogRepository,
 	community *communityrepo.Repository,
 	materials *materialrepo.Repository,
+	graphs *graphrepo.Repository,
+	users *userrepo.Repository,
 ) *Service {
 	return &Service{
 		auditLogs: auditLogs,
 		community: community,
 		materials: materials,
+		graphs:    graphs,
+		users:     users,
 	}
 }
 
@@ -76,4 +84,44 @@ func (s *Service) ModerateMaterial(actorID string, materialID string, status str
 		"reason":     reason,
 	})
 	return nil
+}
+
+func (s *Service) Overview() (*admindto.OverviewPayload, error) {
+	userCount, err := s.users.CountAll()
+	if err != nil {
+		return nil, apperrors.Internal("读取用户概览失败")
+	}
+
+	postCount, err := s.community.CountAllPosts()
+	if err != nil {
+		return nil, apperrors.Internal("读取帖子概览失败")
+	}
+
+	materialCount, err := s.materials.CountAllMaterials()
+	if err != nil {
+		return nil, apperrors.Internal("读取资料概览失败")
+	}
+
+	graphCount, err := s.graphs.CountAllGraphs()
+	if err != nil {
+		return nil, apperrors.Internal("读取图谱概览失败")
+	}
+
+	pendingPosts, err := s.community.CountPendingPosts()
+	if err != nil {
+		return nil, apperrors.Internal("读取待审核帖子数量失败")
+	}
+
+	pendingMaterials, err := s.materials.CountPendingMaterials()
+	if err != nil {
+		return nil, apperrors.Internal("读取待审核资料数量失败")
+	}
+
+	return &admindto.OverviewPayload{
+		UserCount:              userCount,
+		PostCount:              postCount,
+		MaterialCount:          materialCount,
+		GraphCount:             graphCount,
+		PendingModerationCount: pendingPosts + pendingMaterials,
+	}, nil
 }

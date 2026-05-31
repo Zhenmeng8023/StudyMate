@@ -14,24 +14,27 @@ type CreateAnnotationRequest struct {
 	Color   string `json:"color" binding:"max=32"`
 }
 
+type GenerateAnnotationCardDraftsRequest struct {
+	AnnotationIDs []string `json:"annotationIds" binding:"required,min=1,max=20,dive,min=1"`
+}
+
 type AnnotationSummary struct {
-	ID        string `json:"id"`
+	ID         string `json:"id"`
 	MaterialID string `json:"materialId"`
-	Page      int    `json:"page"`
-	Quote     string `json:"quote"`
-	Comment   string `json:"comment"`
-	Color     string `json:"color"`
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
+	Page       int    `json:"page"`
+	Quote      string `json:"quote"`
+	Comment    string `json:"comment"`
+	Color      string `json:"color"`
+	CreatedAt  string `json:"createdAt"`
+	UpdatedAt  string `json:"updatedAt"`
 }
 
 type ReaderStateResponse struct {
-	MaterialID       string              `json:"materialId"`
-	CurrentPage      int                 `json:"currentPage"`
-	TotalPages       int                 `json:"totalPages"`
-	ProgressPercent  float64             `json:"progressPercent"`
-	Bookmarks        []int               `json:"bookmarks"`
-	LastReadAt       string              `json:"lastReadAt"`
-	Annotations      []AnnotationSummary `json:"annotations"`
+	MaterialID      string              `json:"materialId"`
+	CurrentPage     int                 `json:"currentPage"`
+	TotalPages      int                 `json:"totalPages"`
+	ProgressPercent float64             `json:"progressPercent"`
+	Bookmarks       []int               `json:"bookmarks"`
+	LastReadAt      string              `json:"lastReadAt"`
+	Annotations     []AnnotationSummary `json:"annotations"`
 }
-

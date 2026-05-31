@@ -49,6 +49,52 @@ go list -m -json all
 
 本地开发默认使用 MySQL，和项目最初规划保持一致。请先确认本机已经创建 `studymate` 数据库，并且 `root` 用户密码为 `123456`：
 
+服务启动时会自动执行内置的 MySQL 迁移脚本，迁移目录位于 `backend/internal/migrations/mysql/`。
+当前默认包括：
+
+- `001_init_schema.sql`：基础表结构
+- `002_seed_baseline.sql`：基础角色、权限、系统配置种子数据
+- `003_align_current_tables.sql`：补齐历史本地库缺失字段和查询索引
+
+对应回滚文件使用 `.down.sql` 命名，例如：
+
+- `001_init_schema.down.sql`
+- `002_seed_baseline.down.sql`
+- `003_align_current_tables.down.sql`
+
+如果只想先执行数据库迁移，可以单独运行：
+
+```powershell
+cd backend
+go run ./cmd/migrate
+```
+
+MongoDB 当前采用脚本初始化集合与索引，脚本目录位于 `backend/internal/migrations/mongo/`。
+初始化：
+
+```powershell
+mongosh "mongodb://127.0.0.1:27017/studymate_content" --file "backend/internal/migrations/mongo/001_init_content_collections.js"
+```
+
+回滚：
+
+```powershell
+mongosh "mongodb://127.0.0.1:27017/studymate_content" --file "backend/internal/migrations/mongo/001_init_content_collections.down.js"
+```
+
+当前 Mongo 脚本覆盖：
+
+- `note_documents`
+- `note_snapshots`
+- `graph_documents`
+- `graph_snapshots`
+- `pdf_annotation_documents`
+- `material_text_documents`
+- `ai_conversations`
+- `ai_drafts`
+- `diagram_source_documents`
+- `user_workspace_states`
+
 ```powershell
 cd backend
 $env:APP_PORT='8023'
@@ -110,6 +156,7 @@ npm --workspace frontend-admin run dev -- --port 8004
 - 资料列表、资料详情、上传附件、创建资料、编辑资料
 - 阅读器进度、书签、批注
 - 富文本笔记、版本历史、版本恢复
+- 笔记正文双写到 MongoDB `note_documents / note_snapshots`
 - 社区公开内容浏览
 
 ### 管理端

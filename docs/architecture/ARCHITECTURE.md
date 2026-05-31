@@ -14,6 +14,8 @@
 - 本地存储起步：PDF、图片、附件、封面和导出文件。
 - Meilisearch 后续接入：面向用户的全文搜索。
 
+详细数据库结构见 [DATABASE_DESIGN.md](./DATABASE_DESIGN.md)。
+
 ## 后端结构
 
 每个领域模块按以下结构生长：
