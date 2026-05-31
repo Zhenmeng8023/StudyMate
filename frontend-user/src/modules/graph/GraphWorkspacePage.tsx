@@ -81,11 +81,25 @@ type DragState =
       originY: number;
     }
   | {
+      kind: "multi-node";
+      nodeIds: string[];
+      pointerX: number;
+      pointerY: number;
+      origins: Record<string, { x: number; y: number }>;
+    }
+  | {
       kind: "pan";
       pointerX: number;
       pointerY: number;
       originX: number;
       originY: number;
+    }
+  | {
+      kind: "marquee";
+      startX: number;
+      startY: number;
+      currentX: number;
+      currentY: number;
     };
 
 type ImportMode = "markdown" | "mermaid";
@@ -106,6 +120,13 @@ type ContextMenuState =
       edgeId?: string;
     }
   | null;
+
+type SelectionBox = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+} | null;
 
 function cloneDocument(document: GraphDocumentPayload): GraphDocumentPayload {
   return {
@@ -298,6 +319,30 @@ function focusPreviewArea(
   });
 }
 
+function buildSelectionBox(startX: number, startY: number, currentX: number, currentY: number): SelectionBox {
+  return {
+    left: Math.min(startX, currentX),
+    top: Math.min(startY, currentY),
+    width: Math.abs(currentX - startX),
+    height: Math.abs(currentY - startY)
+  };
+}
+
+function projectClientPointToWorld(
+  stage: HTMLDivElement,
+  viewport: GraphDocumentPayload["viewport"],
+  clientX: number,
+  clientY: number
+) {
+  const rect = stage.getBoundingClientRect();
+  const localX = clientX - rect.left;
+  const localY = clientY - rect.top;
+  return {
+    x: (localX - viewport.x) / viewport.zoom,
+    y: (localY - viewport.y) / viewport.zoom
+  };
+}
+
 function downloadTextFile(filename: string, content: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -378,6 +423,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
   const [cardDrafts, setCardDrafts] = useState<GraphCardDraftPayload[]>([]);
   const [graphDetail, setGraphDetail] = useState<GraphDetailPayload | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState("");
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedEdgeId, setSelectedEdgeId] = useState("");
   const [linkFromNodeId, setLinkFromNodeId] = useState("");
   const [historyPast, setHistoryPast] = useState<GraphDocumentPayload[]>([]);
@@ -393,6 +439,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
   const [stageViewport, setStageViewport] = useState({ width: 0, height: 0 });
   const [focusPreview, setFocusPreview] = useState<FocusPreview | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
+  const [selectionBox, setSelectionBox] = useState<SelectionBox>(null);
   const detailRef = useRef<GraphDetailPayload | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [selectedDraftDeckId, setSelectedDraftDeckId] = useState("");
@@ -453,6 +500,10 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
   }, [document?.nodes]);
   const hiddenNodeIds = useMemo(() => findHiddenNodeIds(document?.groups ?? []), [document?.groups]);
   const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) ?? null : null;
+  const selectedNodes = useMemo(
+    () => selectedNodeIds.map((nodeId) => nodeMap.get(nodeId)).filter((node): node is GraphNodePayload => Boolean(node)),
+    [nodeMap, selectedNodeIds]
+  );
   const selectedEdge = selectedEdgeId ? document?.edges.find((edge) => edge.id === selectedEdgeId) ?? null : null;
   const selectedNodeSourceTarget = selectedNode ? buildNodeSourceTarget(selectedNode) : "";
   const visibleNodes = useMemo(
@@ -482,10 +533,12 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     setHistoryFuture([]);
     setDirty(false);
     setSelectedNodeId("");
+    setSelectedNodeIds([]);
     setSelectedEdgeId("");
     setLinkFromNodeId("");
     setValidationIssues([]);
     setCardDrafts([]);
+    setSelectionBox(null);
   }
 
   function replaceGraphSummary(summary: GraphSummaryPayload) {
@@ -515,6 +568,148 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     replaceGraphSummary(nextDetail);
     setDirty(true);
     setStatusMessage(options?.status ?? "图谱有未保存的更改");
+  }
+
+  function setSingleNodeSelection(nodeId: string) {
+    setSelectedNodeId(nodeId);
+    setSelectedNodeIds(nodeId ? [nodeId] : []);
+    setSelectedEdgeId("");
+  }
+
+  function clearNodeSelection() {
+    setSelectedNodeId("");
+    setSelectedNodeIds([]);
+  }
+
+  function toggleNodeInSelection(nodeId: string) {
+    setSelectedNodeIds((current) => {
+      if (current.includes(nodeId)) {
+        const next = current.filter((item) => item !== nodeId);
+        setSelectedNodeId(next[0] || "");
+        return next;
+      }
+      const next = [...current, nodeId];
+      setSelectedNodeId(nodeId);
+      return next;
+    });
+    setSelectedEdgeId("");
+  }
+
+  function deleteSelectedNodes(nodeIds: string[]) {
+    if (nodeIds.length === 0) {
+      return;
+    }
+
+    mutateDocument((draft) => {
+      draft.nodes = draft.nodes.filter((node) => !nodeIds.includes(node.id));
+      draft.edges = draft.edges.filter(
+        (edge) => !nodeIds.includes(edge.sourceNodeId) && !nodeIds.includes(edge.targetNodeId)
+      );
+      draft.groups = draft.groups.map((group) => ({
+        ...group,
+        nodeIds: group.nodeIds.filter((nodeId) => !nodeIds.includes(nodeId))
+      }));
+    });
+    clearNodeSelection();
+    setLinkFromNodeId("");
+  }
+
+  function alignSelectedNodes(direction: "left" | "top" | "center" | "middle") {
+    if (selectedNodes.length < 2) {
+      return;
+    }
+
+    if (direction === "left") {
+      const anchor = Math.min(...selectedNodes.map((node) => node.x));
+      mutateDocument((draft) => {
+        draft.nodes = draft.nodes.map((node) =>
+          selectedNodeIds.includes(node.id)
+            ? {
+                ...node,
+                x: Math.max(0, Math.min(stageWidth - node.width, Number(anchor.toFixed(1))))
+              }
+            : node
+        );
+      });
+      return;
+    }
+
+    if (direction === "top") {
+      const anchor = Math.min(...selectedNodes.map((node) => node.y));
+      mutateDocument((draft) => {
+        draft.nodes = draft.nodes.map((node) =>
+          selectedNodeIds.includes(node.id)
+            ? {
+                ...node,
+                y: Math.max(0, Math.min(stageHeight - node.height, Number(anchor.toFixed(1))))
+              }
+            : node
+        );
+      });
+      return;
+    }
+
+    if (direction === "center") {
+      const center = selectedNodes.reduce((sum, node) => sum + node.x + node.width / 2, 0) / selectedNodes.length;
+      mutateDocument((draft) => {
+        draft.nodes = draft.nodes.map((node) =>
+          selectedNodeIds.includes(node.id)
+            ? {
+                ...node,
+                x: Math.max(0, Math.min(stageWidth - node.width, Number((center - node.width / 2).toFixed(1))))
+              }
+            : node
+        );
+      });
+      return;
+    }
+
+    const middle = selectedNodes.reduce((sum, node) => sum + node.y + node.height / 2, 0) / selectedNodes.length;
+    mutateDocument((draft) => {
+      draft.nodes = draft.nodes.map((node) =>
+        selectedNodeIds.includes(node.id)
+          ? {
+              ...node,
+              y: Math.max(0, Math.min(stageHeight - node.height, Number((middle - node.height / 2).toFixed(1))))
+            }
+          : node
+      );
+    });
+  }
+
+  function distributeSelectedNodes(axis: "horizontal" | "vertical") {
+    if (selectedNodes.length < 3) {
+      return;
+    }
+
+    const ordered = [...selectedNodes].sort((left, right) => (axis === "horizontal" ? left.x - right.x : left.y - right.y));
+    const first = ordered[0];
+    const last = ordered[ordered.length - 1];
+    const span = axis === "horizontal" ? last.x - first.x : last.y - first.y;
+    if (span <= 0) {
+      return;
+    }
+
+    const step = span / (ordered.length - 1);
+    const positions = Object.fromEntries(
+      ordered.map((node, index) => [
+        node.id,
+        axis === "horizontal"
+          ? {
+              x: Math.max(0, Math.min(stageWidth - node.width, Number((first.x + index * step).toFixed(1))))
+            }
+          : {
+              y: Math.max(0, Math.min(stageHeight - node.height, Number((first.y + index * step).toFixed(1))))
+            }
+      ])
+    );
+
+    mutateDocument((draft) => {
+      draft.nodes = draft.nodes.map((node) => {
+        const position = positions[node.id];
+        return position ? { ...node, ...position } : node;
+      });
+    });
   }
 
   function mutateDocument(mutator: (draft: GraphDocumentPayload) => void, options?: { captureHistory?: boolean; status?: string }) {
@@ -719,6 +914,49 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
         return;
       }
 
+      if (currentDrag.kind === "multi-node") {
+        const deltaX = (event.clientX - currentDrag.pointerX) / current.document.viewport.zoom;
+        const deltaY = (event.clientY - currentDrag.pointerY) / current.document.viewport.zoom;
+        mutateDocument(
+          (draft) => {
+            draft.nodes = draft.nodes.map((node) => {
+              const origin = currentDrag.origins[node.id];
+              if (!origin) {
+                return node;
+              }
+              return {
+                ...node,
+                x: Math.max(0, Math.min(stageWidth - node.width, Number((origin.x + deltaX).toFixed(1)))),
+                y: Math.max(0, Math.min(stageHeight - node.height, Number((origin.y + deltaY).toFixed(1))))
+              };
+            });
+          },
+          { captureHistory: false, status: "正在批量调整节点位置" }
+        );
+        return;
+      }
+
+      if (currentDrag.kind === "marquee") {
+        if (!stageRef.current) {
+          return;
+        }
+        const rect = stageRef.current.getBoundingClientRect();
+        setSelectionBox(
+          buildSelectionBox(
+            currentDrag.startX,
+            currentDrag.startY,
+            event.clientX - rect.left,
+            event.clientY - rect.top
+          )
+        );
+        setDragState({
+          ...currentDrag,
+          currentX: event.clientX - rect.left,
+          currentY: event.clientY - rect.top
+        });
+        return;
+      }
+
       const nextViewport = {
         x: currentDrag.originX + event.clientX - currentDrag.pointerX,
         y: currentDrag.originY + event.clientY - currentDrag.pointerY
@@ -735,6 +973,33 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     }
 
     function handlePointerUp() {
+      if (currentDrag.kind === "marquee" && stageRef.current && detailRef.current && selectionBox) {
+        const viewport = detailRef.current.document.viewport;
+        const rectStart = projectClientPointToWorld(
+          stageRef.current,
+          viewport,
+          currentDrag.startX + stageRef.current.getBoundingClientRect().left,
+          currentDrag.startY + stageRef.current.getBoundingClientRect().top
+        );
+        const rectEnd = projectClientPointToWorld(
+          stageRef.current,
+          viewport,
+          currentDrag.currentX + stageRef.current.getBoundingClientRect().left,
+          currentDrag.currentY + stageRef.current.getBoundingClientRect().top
+        );
+        const left = Math.min(rectStart.x, rectEnd.x);
+        const right = Math.max(rectStart.x, rectEnd.x);
+        const top = Math.min(rectStart.y, rectEnd.y);
+        const bottom = Math.max(rectStart.y, rectEnd.y);
+        const matched = (detailRef.current.document.nodes ?? [])
+          .filter((node) => !hiddenNodeIds.has(node.id))
+          .filter((node) => node.x < right && node.x + node.width > left && node.y < bottom && node.y + node.height > top)
+          .map((node) => node.id);
+        setSelectedNodeIds(matched);
+        setSelectedNodeId(matched[0] || "");
+        setSelectedEdgeId("");
+        setSelectionBox(null);
+      }
       setDragState(null);
     }
 
@@ -744,7 +1009,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [dragState]);
+  }, [dragState, hiddenNodeIds, selectionBox]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -796,20 +1061,9 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
       }
 
       if (event.key === "Delete") {
-        if (selectedNodeId) {
+        if (selectedNodeIds.length > 0) {
           event.preventDefault();
-          mutateDocument((draft) => {
-            draft.nodes = draft.nodes.filter((node) => node.id !== selectedNodeId);
-            draft.edges = draft.edges.filter(
-              (edge) => edge.sourceNodeId !== selectedNodeId && edge.targetNodeId !== selectedNodeId
-            );
-            draft.groups = draft.groups.map((group) => ({
-              ...group,
-              nodeIds: group.nodeIds.filter((nodeId) => nodeId !== selectedNodeId)
-            }));
-          });
-          setSelectedNodeId("");
-          setLinkFromNodeId("");
+          deleteSelectedNodes(selectedNodeIds);
           return;
         }
 
@@ -824,12 +1078,13 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
 
       if (event.key === "Escape") {
         setLinkFromNodeId("");
+        setSelectionBox(null);
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [historyFuture, historyPast, selectedEdgeId, selectedNodeId]);
+  }, [deleteSelectedNodes, historyFuture, historyPast, selectedEdgeId, selectedNodeIds]);
 
   function createNode(type: "text" | "rich-note" | "material" | "card", source?: GraphNodePayload["source"]) {
     const current = detailRef.current;
@@ -860,8 +1115,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     mutateDocument((draft) => {
       draft.nodes.push(nextNode);
     });
-    setSelectedNodeId(nextNode.id);
-    setSelectedEdgeId("");
+    setSingleNodeSelection(nextNode.id);
     setLinkFromNodeId("");
   }
 
@@ -884,14 +1138,28 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
   }
 
   function handleCanvasPointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    if (!document || event.target !== event.currentTarget) {
+    if (!document || event.target !== event.currentTarget || event.button !== 0) {
       return;
     }
 
     setContextMenu(null);
-    setSelectedNodeId("");
+    clearNodeSelection();
     setSelectedEdgeId("");
     setLinkFromNodeId("");
+    if (event.shiftKey && stageRef.current) {
+      const rect = stageRef.current.getBoundingClientRect();
+      const startX = event.clientX - rect.left;
+      const startY = event.clientY - rect.top;
+      setSelectionBox({ left: startX, top: startY, width: 0, height: 0 });
+      setDragState({
+        kind: "marquee",
+        startX,
+        startY,
+        currentX: startX,
+        currentY: startY
+      });
+      return;
+    }
     setDragState({
       kind: "pan",
       pointerX: event.clientX,
@@ -903,17 +1171,45 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
 
   function handleNodePointerDown(event: React.PointerEvent<HTMLButtonElement>, node: GraphNodePayload) {
     event.stopPropagation();
+    if (event.button !== 0) {
+      return;
+    }
     if (linkFromNodeId && linkFromNodeId !== node.id) {
       return;
     }
 
     setContextMenu(null);
+    if (event.shiftKey || event.metaKey || event.ctrlKey) {
+      toggleNodeInSelection(node.id);
+      return;
+    }
+
+    const nextSelection = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id];
+    setSelectedNodeIds(nextSelection);
     setSelectedNodeId(node.id);
     setSelectedEdgeId("");
     const currentDetail = detailRef.current;
     if (currentDetail) {
       setHistoryPast((past) => [...past.slice(-(maxHistoryEntries - 1)), cloneDocument(currentDetail.document)]);
       setHistoryFuture([]);
+    }
+    if (nextSelection.length > 1) {
+      const origins = Object.fromEntries(
+        nextSelection
+          .map((nodeId) => {
+            const item = currentDetail?.document.nodes.find((currentNode) => currentNode.id === nodeId);
+            return item ? [nodeId, { x: item.x, y: item.y }] : null;
+          })
+          .filter(Boolean) as Array<[string, { x: number; y: number }]>
+      );
+      setDragState({
+        kind: "multi-node",
+        nodeIds: nextSelection,
+        pointerX: event.clientX,
+        pointerY: event.clientY,
+        origins
+      });
+      return;
     }
     setDragState({
       kind: "node",
@@ -925,7 +1221,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     });
   }
 
-  function handleNodeClick(nodeId: string) {
+  function handleNodeClick(nodeId: string, event?: React.MouseEvent<HTMLButtonElement>) {
     setContextMenu(null);
     if (linkFromNodeId && linkFromNodeId !== nodeId) {
       const current = detailRef.current;
@@ -955,13 +1251,17 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
         draft.edges.push(nextEdge);
       });
       setSelectedEdgeId(nextEdge.id);
-      setSelectedNodeId("");
+      clearNodeSelection();
       setLinkFromNodeId("");
       return;
     }
 
-    setSelectedNodeId(nodeId);
-    setSelectedEdgeId("");
+    if (event?.shiftKey || event?.metaKey || event?.ctrlKey) {
+      toggleNodeInSelection(nodeId);
+      return;
+    }
+
+    setSingleNodeSelection(nodeId);
   }
 
   function openContextMenu(
@@ -977,12 +1277,11 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
       edgeId: payload?.edgeId
     });
     if (payload?.nodeId) {
-      setSelectedNodeId(payload.nodeId);
-      setSelectedEdgeId("");
+      setSingleNodeSelection(payload.nodeId);
     }
     if (payload?.edgeId) {
       setSelectedEdgeId(payload.edgeId);
-      setSelectedNodeId("");
+      clearNodeSelection();
     }
   }
 
@@ -1011,16 +1310,38 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     mutateDocument((draft) => {
       draft.groups.push(nextGroup);
     });
-    setSelectedNodeId(node.id);
+    setSingleNodeSelection(node.id);
     setStatusMessage("已基于当前节点创建分组");
   }
 
   function createGroupFromSelectedNode() {
-    if (!selectedNode) {
+    if (selectedNodes.length === 0) {
+      return;
+    }
+    if (selectedNodes.length === 1) {
+      createGroupForNode(selectedNodes[0]);
       return;
     }
 
-    createGroupForNode(selectedNode);
+    const left = Math.min(...selectedNodes.map((node) => node.x));
+    const top = Math.min(...selectedNodes.map((node) => node.y));
+    const right = Math.max(...selectedNodes.map((node) => node.x + node.width));
+    const bottom = Math.max(...selectedNodes.map((node) => node.y + node.height));
+    const nextGroup: GraphGroupPayload = {
+      id: randomId("group"),
+      title: `${selectedNodes[0].title} 等 ${selectedNodes.length} 个节点`,
+      nodeIds: selectedNodes.map((node) => node.id),
+      x: Math.max(0, left - 36),
+      y: Math.max(0, top - 46),
+      width: right - left + 72,
+      height: bottom - top + 88,
+      collapsed: false
+    };
+
+    mutateDocument((draft) => {
+      draft.groups.push(nextGroup);
+    });
+    setStatusMessage(`已为 ${selectedNodes.length} 个节点创建分组`);
   }
 
   function toggleGroupCollapse(groupId: string) {
@@ -1051,7 +1372,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
       },
       { captureHistory: false, status: `已定位到节点：${node.title}` }
     );
-    setSelectedNodeId(node.id);
+    setSingleNodeSelection(node.id);
   }
 
   function handleLocateNode() {
@@ -1445,7 +1766,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
               <button className="icon-button" disabled={!graphDetail} onClick={() => createNode("material")} title="新建资料节点" type="button">
                 <BookOpen size={16} />
               </button>
-              <button className="icon-button" disabled={!selectedNode} onClick={createGroupFromSelectedNode} title="基于当前节点创建分组" type="button">
+              <button className="icon-button" disabled={selectedNodeIds.length === 0} onClick={createGroupFromSelectedNode} title="基于选中节点创建分组" type="button">
                 <Layers3 size={16} />
               </button>
             </div>
@@ -1471,7 +1792,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
               </button>
               <button
                 className={linkFromNodeId ? "icon-button active" : "icon-button"}
-                disabled={!selectedNode}
+                disabled={selectedNodeIds.length !== 1 || !selectedNode}
                 onClick={() => setLinkFromNodeId((current) => (current ? "" : selectedNodeId))}
                 title="连接选中节点"
                 type="button"
@@ -1480,20 +1801,10 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
               </button>
               <button
                 className="icon-button"
-                disabled={!selectedNode && !selectedEdge}
+                disabled={selectedNodeIds.length === 0 && !selectedEdge}
                 onClick={() => {
-                  if (selectedNodeId) {
-                    mutateDocument((draft) => {
-                      draft.nodes = draft.nodes.filter((node) => node.id !== selectedNodeId);
-                      draft.edges = draft.edges.filter(
-                        (edge) => edge.sourceNodeId !== selectedNodeId && edge.targetNodeId !== selectedNodeId
-                      );
-                      draft.groups = draft.groups.map((group) => ({
-                        ...group,
-                        nodeIds: group.nodeIds.filter((nodeId) => nodeId !== selectedNodeId)
-                      }));
-                    });
-                    setSelectedNodeId("");
+                  if (selectedNodeIds.length > 0) {
+                    deleteSelectedNodes(selectedNodeIds);
                     return;
                   }
 
@@ -1576,6 +1887,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
               {graphDetail ? (
                 <small>
                   版本 {graphDetail.currentVersion} · {graphDetail.nodeCount} 节点 · {graphDetail.edgeCount} 连线
+                  {selectedNodeIds.length > 1 ? ` · 已选 ${selectedNodeIds.length} 个节点` : ""}
                 </small>
               ) : null}
             </div>
@@ -1653,15 +1965,15 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
                         className={[
                           "graph-node",
                           `type-${node.type}`,
-                          selectedNodeId === node.id ? "active" : "",
+                          selectedNodeIds.includes(node.id) ? "active" : "",
                           linkFromNodeId === node.id ? "linking" : ""
                         ].join(" ").trim()}
                         key={node.id}
-                        onClick={() => handleNodeClick(node.id)}
+                        onClick={(event) => handleNodeClick(node.id, event)}
                         onContextMenu={(event) => openContextMenu(event, { nodeId: node.id })}
                         onPointerDown={(event) => handleNodePointerDown(event, node)}
                         style={{
-                          ...buildNodeStyle(node, selectedNodeId === node.id),
+                          ...buildNodeStyle(node, selectedNodeIds.includes(node.id)),
                           width: node.width,
                           height: node.height,
                           transform: `translate(${node.x}px, ${node.y}px)`
@@ -1688,6 +2000,18 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
                     ) : null}
                   </div>
 
+                  {selectionBox ? (
+                    <div
+                      className="graph-selection-box"
+                      style={{
+                        left: selectionBox.left,
+                        top: selectionBox.top,
+                        width: selectionBox.width,
+                        height: selectionBox.height
+                      }}
+                    />
+                  ) : null}
+
                   <svg className="graph-arrow-defs" width="0" height="0" aria-hidden="true">
                     <defs>
                       <marker id="graph-arrow" markerHeight="8" markerWidth="8" orient="auto-start-reverse" refX="7" refY="4">
@@ -1712,7 +2036,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
                       ))}
                       {visibleNodes.map((node) => (
                         <span
-                          className={selectedNodeId === node.id ? "graph-minimap-node active" : "graph-minimap-node"}
+                          className={selectedNodeIds.includes(node.id) ? "graph-minimap-node active" : "graph-minimap-node"}
                           key={node.id}
                           style={{
                             left: node.x * minimapScale,
@@ -2118,7 +2442,55 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
               </div>
             </div>
 
-            {selectedNode ? (
+            {selectedNodes.length > 1 ? (
+              <div className="graph-form-stack">
+                <article className="graph-meta-card">
+                  <strong>已选中 {selectedNodes.length} 个节点</strong>
+                  <p>可以直接批量拖动、按 Delete 删除，或用上方工具栏把它们整理进同一个分组。</p>
+                </article>
+                <div className="graph-inline-actions">
+                  <button className="secondary-button" onClick={createGroupFromSelectedNode} type="button">
+                    <Layers3 size={16} />
+                    为选中节点建组
+                  </button>
+                  <button className="secondary-button" onClick={() => alignSelectedNodes("left")} type="button">
+                    宸﹀榻?
+                  </button>
+                  <button className="secondary-button" onClick={() => alignSelectedNodes("top")} type="button">
+                    椤堕儴瀵归綈
+                  </button>
+                  <button className="secondary-button" onClick={() => alignSelectedNodes("center")} type="button">
+                    姘村钩灞呬腑
+                  </button>
+                  <button className="secondary-button" onClick={() => alignSelectedNodes("middle")} type="button">
+                    鍨傜洿灞呬腑
+                  </button>
+                  <button className="secondary-button" disabled={selectedNodes.length < 3} onClick={() => distributeSelectedNodes("horizontal")} type="button">
+                    妯悜鍧囧垎
+                  </button>
+                  <button className="secondary-button" disabled={selectedNodes.length < 3} onClick={() => distributeSelectedNodes("vertical")} type="button">
+                    绾靛悜鍧囧垎
+                  </button>
+                  <button className="secondary-button" onClick={() => deleteSelectedNodes(selectedNodeIds)} type="button">
+                    <Trash2 size={16} />
+                    删除选中节点
+                  </button>
+                  <button className="ghost-button" onClick={clearNodeSelection} type="button">
+                    清空选择
+                  </button>
+                </div>
+                <div className="graph-meta-grid">
+                  <article className="graph-meta-card muted">
+                    <strong>覆盖范围</strong>
+                    <p>{selectedNodes.map((node) => buildNodeTitle(node)).slice(0, 3).join("、")}{selectedNodes.length > 3 ? " ..." : ""}</p>
+                  </article>
+                  <article className="graph-meta-card muted">
+                    <strong>批量提示</strong>
+                    <p>按住 Shift 在空白处拖动可框选，按住 Shift 或 Ctrl 点击节点可增减选择。</p>
+                  </article>
+                </div>
+              </div>
+            ) : selectedNode ? (
               <div className="graph-form-stack">
                 <label>
                   <span>节点标题</span>
@@ -2327,10 +2699,10 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
               </div>
             ) : null}
 
-            {!selectedNode && !selectedEdge ? (
+            {selectedNodes.length === 0 && !selectedEdge ? (
               <article className="graph-meta-card muted">
                 <strong>操作提示</strong>
-                <p>点击节点可编辑标题、笔记和样式，点击连线可改关系标签。拖动画布空白区域可以平移，滚轮可以缩放。</p>
+                <p>点击节点可编辑标题、笔记和样式，点击连线可改关系标签。按住 Shift 在空白处拖动可框选多个节点，滚轮可以缩放。</p>
               </article>
             ) : null}
           </div>
