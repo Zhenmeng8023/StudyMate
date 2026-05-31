@@ -348,8 +348,10 @@ function readSession(): AuthPayload | null {
           </button>
         </header>
 
-        <p class="notice">{{ notice }}</p>
-        <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
+        <div class="status-stack">
+          <p class="notice">{{ notice }}</p>
+          <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
+        </div>
 
         <template v-if="activeView === 'dashboard'">
           <div class="card-grid">
@@ -422,13 +424,37 @@ function readSession(): AuthPayload | null {
 }
 
 .admin-shell {
+  --admin-bg-0: #eef3f6;
+  --admin-bg-1: #e6edf3;
+  --admin-surface: rgba(255, 255, 255, 0.92);
+  --admin-surface-strong: rgba(255, 255, 255, 0.97);
+  --admin-surface-soft: rgba(243, 248, 251, 0.94);
+  --admin-line: rgba(57, 74, 91, 0.14);
+  --admin-line-strong: rgba(57, 74, 91, 0.22);
+  --admin-text: #18212b;
+  --admin-text-soft: #556474;
+  --admin-text-muted: #7d8895;
+  --admin-accent: #246a61;
+  --admin-accent-soft: rgba(36, 106, 97, 0.12);
+  --admin-danger: #b14e4c;
+  --admin-shadow-lg: 0 24px 56px rgba(29, 41, 57, 0.12);
+  --admin-shadow-sm: 0 12px 28px rgba(29, 41, 57, 0.08);
+  --admin-shell-max: 1520px;
+  --admin-radius-lg: 20px;
+  --admin-radius-md: 16px;
+  --admin-radius-sm: 12px;
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: 288px minmax(0, 1fr);
+  gap: 24px;
   min-height: 100vh;
-  padding: 20px;
-  color: #1f2520;
-  background: #f5f1e7;
+  width: min(var(--admin-shell-max), calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0;
+  color: var(--admin-text);
+  background:
+    radial-gradient(circle at top left, rgba(36, 106, 97, 0.08), transparent 24%),
+    radial-gradient(circle at top right, rgba(86, 121, 161, 0.08), transparent 20%),
+    linear-gradient(180deg, #f7fafc 0%, #edf2f6 100%);
 }
 
 .login-card,
@@ -437,32 +463,39 @@ function readSession(): AuthPayload | null {
 .metric-card,
 .moderation-card,
 .placeholder-card {
-  border: 1px solid rgba(57, 58, 52, 0.12);
-  border-radius: 8px;
-  background: rgba(255, 252, 246, 0.94);
-  box-shadow: 0 10px 24px rgba(61, 47, 24, 0.06);
+  border: 1px solid var(--admin-line);
+  border-radius: var(--admin-radius-lg);
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow-lg);
+  backdrop-filter: blur(18px);
 }
 
 .login-card {
   display: grid;
-  gap: 16px;
-  width: min(480px, 100%);
+  gap: 18px;
+  width: min(520px, 100%);
   margin: auto;
-  padding: 28px;
+  padding: 32px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 251, 0.98));
 }
 
 .sidebar {
   display: grid;
   align-content: start;
   gap: 18px;
-  padding: 20px;
+  padding: 22px 18px 18px;
+  position: sticky;
+  top: 24px;
+  height: fit-content;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(243, 248, 251, 0.95));
 }
 
 .admin-main {
   display: grid;
   align-content: start;
   gap: 18px;
-  padding: 22px;
+  padding: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 249, 251, 0.94));
 }
 
 .brand-block span,
@@ -472,7 +505,7 @@ function readSession(): AuthPayload | null {
 .moderation-card p,
 .moderation-meta span,
 .placeholder-card p {
-  color: #697167;
+  color: var(--admin-text-soft);
 }
 
 .brand-block strong,
@@ -481,7 +514,7 @@ function readSession(): AuthPayload | null {
 .moderation-head strong,
 .placeholder-card strong,
 .login-card h1 {
-  font-family: "Iowan Old Style", "STZhongsong", "Songti SC", serif;
+  font-weight: 700;
 }
 
 .nav-stack,
@@ -493,6 +526,21 @@ function readSession(): AuthPayload | null {
   gap: 12px;
 }
 
+.brand-block {
+  display: grid;
+  gap: 4px;
+  padding: 4px 6px 2px;
+}
+
+.brand-block strong {
+  font-size: 15px;
+  letter-spacing: 0.01em;
+}
+
+.brand-block span {
+  font-size: 12px;
+}
+
 .nav-item,
 .primary-button,
 .secondary-button {
@@ -500,38 +548,42 @@ function readSession(): AuthPayload | null {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 14px;
-  border: 0;
-  border-radius: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--admin-radius-sm);
   cursor: pointer;
   font: inherit;
+  transition: 180ms ease;
 }
 
 .nav-item {
   justify-content: space-between;
-  color: #4d564b;
-  background: rgba(255, 255, 255, 0.56);
+  color: var(--admin-text-soft);
+  background: rgba(255, 255, 255, 0.76);
 }
 
 .nav-item.active {
-  color: #1f2520;
-  background: rgba(41, 88, 70, 0.1);
+  color: var(--admin-text);
+  border-color: rgba(36, 106, 97, 0.16);
+  background: linear-gradient(135deg, rgba(36, 106, 97, 0.12), rgba(255, 255, 255, 0.9));
 }
 
 .primary-button {
-  color: #f6f3ec;
-  background: linear-gradient(135deg, #285645 0%, #3a6d59 100%);
+  color: #f7fbfc;
+  background: linear-gradient(135deg, #245f76 0%, #246a61 100%);
+  box-shadow: 0 12px 24px rgba(36, 106, 97, 0.18);
 }
 
 .secondary-button {
-  color: #1f2520;
-  background: rgba(255, 255, 255, 0.58);
+  color: var(--admin-text);
+  border-color: var(--admin-line);
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .secondary-button.danger {
   color: #fff7f5;
-  background: linear-gradient(135deg, #9f5246 0%, #b05f52 100%);
+  background: linear-gradient(135deg, #a74d4b 0%, #b85d59 100%);
 }
 
 .topbar,
@@ -545,6 +597,11 @@ function readSession(): AuthPayload | null {
   flex-wrap: wrap;
 }
 
+.status-stack {
+  display: grid;
+  gap: 10px;
+}
+
 .card-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -556,11 +613,13 @@ function readSession(): AuthPayload | null {
 .metric-card,
 .moderation-card,
 .placeholder-card {
-  padding: 16px;
+  padding: 18px;
+  background: var(--admin-surface-strong);
+  box-shadow: var(--admin-shadow-sm);
 }
 
 .metric-card strong {
-  font-size: 30px;
+  font-size: 32px;
 }
 
 .moderation-card,
@@ -581,16 +640,19 @@ label {
 input {
   min-height: 44px;
   padding: 0 14px;
-  border: 1px solid rgba(57, 58, 52, 0.12);
-  border-radius: 8px;
+  border: 1px solid var(--admin-line);
+  border-radius: var(--admin-radius-sm);
+  color: var(--admin-text);
+  background: rgba(255, 255, 255, 0.88);
   font: inherit;
 }
 
 .eyebrow {
   margin: 0 0 6px;
-  color: #697167;
+  color: var(--admin-accent);
   font-size: 13px;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .notice,
@@ -598,8 +660,76 @@ input {
   margin: 0;
 }
 
+.notice {
+  padding: 12px 14px;
+  border: 1px solid var(--admin-line);
+  border-radius: var(--admin-radius-sm);
+  background: rgba(255, 255, 255, 0.72);
+}
+
 .error-text {
-  color: #a94d40;
+  padding: 12px 14px;
+  border: 1px solid rgba(177, 78, 76, 0.16);
+  border-radius: var(--admin-radius-sm);
+  color: var(--admin-danger);
+  background: rgba(177, 78, 76, 0.08);
+}
+
+.topbar {
+  min-height: 76px;
+  padding: 16px 18px;
+  border: 1px solid var(--admin-line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 8px 24px rgba(29, 41, 57, 0.06);
+  backdrop-filter: blur(18px);
+  position: sticky;
+  top: 24px;
+  z-index: 4;
+}
+
+.topbar h2 {
+  margin: 4px 0 0;
+  font-size: 28px;
+}
+
+.metric-card {
+  gap: 10px;
+}
+
+.metric-card p,
+.placeholder-card p,
+.moderation-card p {
+  line-height: 1.65;
+}
+
+.moderation-head span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--admin-line);
+  border-radius: 999px;
+  color: var(--admin-text-muted);
+  background: var(--admin-surface-soft);
+}
+
+.moderation-meta {
+  padding-top: 2px;
+  border-top: 1px dashed rgba(57, 74, 91, 0.14);
+}
+
+.placeholder-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 251, 0.96));
+}
+
+.secondary-button:hover,
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.secondary-button.danger:hover {
+  filter: brightness(1.02);
 }
 
 @media (max-width: 1100px) {
@@ -607,6 +737,16 @@ input {
   .card-grid,
   .card-grid.narrow {
     grid-template-columns: 1fr;
+  }
+
+  .admin-shell {
+    width: calc(100% - 20px);
+    padding: 14px 0;
+  }
+
+  .sidebar,
+  .topbar {
+    position: static;
   }
 }
 </style>
