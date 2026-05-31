@@ -128,6 +128,13 @@ type SelectionBox = {
   height: number;
 } | null;
 
+type AlignmentGuide = {
+  orientation: "vertical" | "horizontal";
+  position: number;
+  start: number;
+  end: number;
+};
+
 function cloneDocument(document: GraphDocumentPayload): GraphDocumentPayload {
   return {
     ...document,
@@ -328,6 +335,103 @@ function buildSelectionBox(startX: number, startY: number, currentX: number, cur
   };
 }
 
+function buildNodeBounds(node: Pick<GraphNodePayload, "x" | "y" | "width" | "height">) {
+  return {
+    left: node.x,
+    top: node.y,
+    right: node.x + node.width,
+    bottom: node.y + node.height,
+    centerX: node.x + node.width / 2,
+    centerY: node.y + node.height / 2,
+    width: node.width,
+    height: node.height
+  };
+}
+
+function buildCombinedBounds(nodes: Array<Pick<GraphNodePayload, "x" | "y" | "width" | "height">>) {
+  const left = Math.min(...nodes.map((node) => node.x));
+  const top = Math.min(...nodes.map((node) => node.y));
+  const right = Math.max(...nodes.map((node) => node.x + node.width));
+  const bottom = Math.max(...nodes.map((node) => node.y + node.height));
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    centerX: (left + right) / 2,
+    centerY: (top + bottom) / 2,
+    width: right - left,
+    height: bottom - top
+  };
+}
+
+function resolveAlignmentGuides(
+  movingBounds: ReturnType<typeof buildNodeBounds>,
+  stationaryNodes: GraphNodePayload[],
+  threshold = 10
+) {
+  let bestVertical: { adjustment: number; guide: AlignmentGuide } | null = null;
+  let bestHorizontal: { adjustment: number; guide: AlignmentGuide } | null = null;
+
+  for (const node of stationaryNodes) {
+    const target = buildNodeBounds(node);
+    const verticalPairs = [
+      [movingBounds.left, target.left],
+      [movingBounds.centerX, target.centerX],
+      [movingBounds.right, target.right]
+    ];
+    const horizontalPairs = [
+      [movingBounds.top, target.top],
+      [movingBounds.centerY, target.centerY],
+      [movingBounds.bottom, target.bottom]
+    ];
+
+    for (const [current, desired] of verticalPairs) {
+      const adjustment = desired - current;
+      if (Math.abs(adjustment) > threshold) {
+        continue;
+      }
+      const candidate = {
+        adjustment,
+        guide: {
+          orientation: "vertical" as const,
+          position: desired,
+          start: Math.max(0, Math.min(movingBounds.top, target.top) - 28),
+          end: Math.min(stageHeight, Math.max(movingBounds.bottom, target.bottom) + 28)
+        }
+      };
+      if (!bestVertical || Math.abs(candidate.adjustment) < Math.abs(bestVertical.adjustment)) {
+        bestVertical = candidate;
+      }
+    }
+
+    for (const [current, desired] of horizontalPairs) {
+      const adjustment = desired - current;
+      if (Math.abs(adjustment) > threshold) {
+        continue;
+      }
+      const candidate = {
+        adjustment,
+        guide: {
+          orientation: "horizontal" as const,
+          position: desired,
+          start: Math.max(0, Math.min(movingBounds.left, target.left) - 28),
+          end: Math.min(stageWidth, Math.max(movingBounds.right, target.right) + 28)
+        }
+      };
+      if (!bestHorizontal || Math.abs(candidate.adjustment) < Math.abs(bestHorizontal.adjustment)) {
+        bestHorizontal = candidate;
+      }
+    }
+  }
+
+  return {
+    deltaX: bestVertical?.adjustment ?? 0,
+    deltaY: bestHorizontal?.adjustment ?? 0,
+    guides: [bestVertical?.guide, bestHorizontal?.guide].filter((guide): guide is AlignmentGuide => Boolean(guide))
+  };
+}
+
 function projectClientPointToWorld(
   stage: HTMLDivElement,
   viewport: GraphDocumentPayload["viewport"],
@@ -440,6 +544,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
   const [focusPreview, setFocusPreview] = useState<FocusPreview | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const [selectionBox, setSelectionBox] = useState<SelectionBox>(null);
+  const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([]);
   const detailRef = useRef<GraphDetailPayload | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [selectedDraftDeckId, setSelectedDraftDeckId] = useState("");
@@ -504,6 +609,27 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     () => selectedNodeIds.map((nodeId) => nodeMap.get(nodeId)).filter((node): node is GraphNodePayload => Boolean(node)),
     [nodeMap, selectedNodeIds]
   );
+  const batchTone = useMemo(() => {
+    if (selectedNodes.length < 2) {
+      return null;
+    }
+    const tone = getNodeTone(selectedNodes[0]);
+    return selectedNodes.every((node) => getNodeTone(node) === tone) ? tone : null;
+  }, [selectedNodes]);
+  const batchEmphasis = useMemo(() => {
+    if (selectedNodes.length < 2) {
+      return null;
+    }
+    const emphasis = getNodeEmphasis(selectedNodes[0]);
+    return selectedNodes.every((node) => getNodeEmphasis(node) === emphasis) ? emphasis : null;
+  }, [selectedNodes]);
+  const batchSizePreset = useMemo(() => {
+    if (selectedNodes.length < 2) {
+      return null;
+    }
+    const preset = resolveNodeSizePreset(selectedNodes[0]);
+    return selectedNodes.every((node) => resolveNodeSizePreset(node) === preset) ? preset : null;
+  }, [selectedNodes]);
   const selectedEdge = selectedEdgeId ? document?.edges.find((edge) => edge.id === selectedEdgeId) ?? null : null;
   const selectedNodeSourceTarget = selectedNode ? buildNodeSourceTarget(selectedNode) : "";
   const visibleNodes = useMemo(
@@ -539,6 +665,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     setValidationIssues([]);
     setCardDrafts([]);
     setSelectionBox(null);
+    setAlignmentGuides([]);
   }
 
   function replaceGraphSummary(summary: GraphSummaryPayload) {
@@ -709,6 +836,30 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
         const position = positions[node.id];
         return position ? { ...node, ...position } : node;
       });
+    });
+  }
+
+  function applyBatchTone(tone: Parameters<typeof patchNodeAppearance>[1]["tone"]) {
+    mutateDocument((draft) => {
+      draft.nodes = draft.nodes.map((node) =>
+        selectedNodeIds.includes(node.id) ? patchNodeAppearance(node, { tone }) : node
+      );
+    });
+  }
+
+  function applyBatchEmphasis(emphasis: Parameters<typeof patchNodeAppearance>[1]["emphasis"]) {
+    mutateDocument((draft) => {
+      draft.nodes = draft.nodes.map((node) =>
+        selectedNodeIds.includes(node.id) ? patchNodeAppearance(node, { emphasis }) : node
+      );
+    });
+  }
+
+  function applyBatchSizePreset(preset: Parameters<typeof resizeNodeToPreset>[1]) {
+    mutateDocument((draft) => {
+      draft.nodes = draft.nodes.map((node) =>
+        selectedNodeIds.includes(node.id) ? resizeNodeToPreset(node, preset) : node
+      );
     });
   }
 
@@ -895,8 +1046,26 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
       }
 
       if (currentDrag.kind === "node") {
-        const nextX = currentDrag.originX + (event.clientX - currentDrag.pointerX) / current.document.viewport.zoom;
-        const nextY = currentDrag.originY + (event.clientY - currentDrag.pointerY) / current.document.viewport.zoom;
+        const rawDeltaX = (event.clientX - currentDrag.pointerX) / current.document.viewport.zoom;
+        const rawDeltaY = (event.clientY - currentDrag.pointerY) / current.document.viewport.zoom;
+        const movingNode = current.document.nodes.find((node) => node.id === currentDrag.nodeId);
+        const stationaryNodes = current.document.nodes.filter(
+          (node) => node.id !== currentDrag.nodeId && !hiddenNodeIds.has(node.id)
+        );
+        const snap =
+          movingNode && stationaryNodes.length > 0
+            ? resolveAlignmentGuides(
+                buildNodeBounds({
+                  ...movingNode,
+                  x: currentDrag.originX + rawDeltaX,
+                  y: currentDrag.originY + rawDeltaY
+                }),
+                stationaryNodes
+              )
+            : { deltaX: 0, deltaY: 0, guides: [] };
+        const nextX = currentDrag.originX + rawDeltaX + snap.deltaX;
+        const nextY = currentDrag.originY + rawDeltaY + snap.deltaY;
+        setAlignmentGuides(snap.guides);
         mutateDocument(
           (draft) => {
             draft.nodes = draft.nodes.map((node) =>
@@ -915,8 +1084,28 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
       }
 
       if (currentDrag.kind === "multi-node") {
-        const deltaX = (event.clientX - currentDrag.pointerX) / current.document.viewport.zoom;
-        const deltaY = (event.clientY - currentDrag.pointerY) / current.document.viewport.zoom;
+        const rawDeltaX = (event.clientX - currentDrag.pointerX) / current.document.viewport.zoom;
+        const rawDeltaY = (event.clientY - currentDrag.pointerY) / current.document.viewport.zoom;
+        const movingNodes = current.document.nodes.filter((node) => Boolean(currentDrag.origins[node.id]));
+        const stationaryNodes = current.document.nodes.filter(
+          (node) => !currentDrag.origins[node.id] && !hiddenNodeIds.has(node.id)
+        );
+        const snap =
+          movingNodes.length > 0 && stationaryNodes.length > 0
+            ? resolveAlignmentGuides(
+                buildCombinedBounds(
+                  movingNodes.map((node) => ({
+                    ...node,
+                    x: currentDrag.origins[node.id].x + rawDeltaX,
+                    y: currentDrag.origins[node.id].y + rawDeltaY
+                  }))
+                ),
+                stationaryNodes
+              )
+            : { deltaX: 0, deltaY: 0, guides: [] };
+        const deltaX = rawDeltaX + snap.deltaX;
+        const deltaY = rawDeltaY + snap.deltaY;
+        setAlignmentGuides(snap.guides);
         mutateDocument(
           (draft) => {
             draft.nodes = draft.nodes.map((node) => {
@@ -937,6 +1126,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
       }
 
       if (currentDrag.kind === "marquee") {
+        setAlignmentGuides([]);
         if (!stageRef.current) {
           return;
         }
@@ -957,6 +1147,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
         return;
       }
 
+      setAlignmentGuides([]);
       const nextViewport = {
         x: currentDrag.originX + event.clientX - currentDrag.pointerX,
         y: currentDrag.originY + event.clientY - currentDrag.pointerY
@@ -1000,6 +1191,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
         setSelectedEdgeId("");
         setSelectionBox(null);
       }
+      setAlignmentGuides([]);
       setDragState(null);
     }
 
@@ -1079,6 +1271,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
       if (event.key === "Escape") {
         setLinkFromNodeId("");
         setSelectionBox(null);
+        setAlignmentGuides([]);
       }
     }
 
@@ -1146,6 +1339,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     clearNodeSelection();
     setSelectedEdgeId("");
     setLinkFromNodeId("");
+    setAlignmentGuides([]);
     if (event.shiftKey && stageRef.current) {
       const rect = stageRef.current.getBoundingClientRect();
       const startX = event.clientX - rect.left;
@@ -1946,7 +2140,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   setSelectedEdgeId(edge.id);
-                                  setSelectedNodeId("");
+                                  clearNodeSelection();
                                 }}
                                 onContextMenu={(event) => openContextMenu(event, { edgeId: edge.id })}
                               />
@@ -1998,6 +2192,25 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
                         <span>{focusPreview.label}</span>
                       </div>
                     ) : null}
+                    {alignmentGuides.map((guide, index) => (
+                      <div
+                        className={guide.orientation === "vertical" ? "graph-alignment-guide vertical" : "graph-alignment-guide horizontal"}
+                        key={`${guide.orientation}-${guide.position}-${index}`}
+                        style={
+                          guide.orientation === "vertical"
+                            ? {
+                                left: guide.position,
+                                top: guide.start,
+                                height: Math.max(0, guide.end - guide.start)
+                              }
+                            : {
+                                top: guide.position,
+                                left: guide.start,
+                                width: Math.max(0, guide.end - guide.start)
+                              }
+                        }
+                      />
+                    ))}
                   </div>
 
                   {selectionBox ? (
@@ -2103,7 +2316,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
                             className="graph-context-item"
                             onClick={() => {
                               setLinkFromNodeId((current) => (current === contextMenu.nodeId ? "" : contextMenu.nodeId || ""));
-                              setSelectedNodeId(contextMenu.nodeId || "");
+                              setSingleNodeSelection(contextMenu.nodeId || "");
                               setContextMenu(null);
                             }}
                             type="button"
@@ -2478,6 +2691,62 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
                   <button className="ghost-button" onClick={clearNodeSelection} type="button">
                     清空选择
                   </button>
+                </div>
+                <div className="graph-form-stack tight">
+                  <div>
+                    <span className="graph-field-label">批量颜色</span>
+                    <div className="graph-style-swatches">
+                      {graphNodeToneOptions.map((option) => (
+                        <button
+                          aria-label={`批量切换到${option.label}`}
+                          className={batchTone === option.value ? "graph-style-swatch active" : "graph-style-swatch"}
+                          key={option.value}
+                          onClick={() => applyBatchTone(option.value)}
+                          style={{
+                            background: getNodeToneTokens({
+                              ...selectedNodes[0],
+                              metadata: {
+                                ...(selectedNodes[0].metadata ?? {}),
+                                appearance: { ...(selectedNodes[0].metadata?.appearance ?? {}), tone: option.value }
+                              }
+                            }).exportFill
+                          }}
+                          title={option.label}
+                          type="button"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="graph-field-label">批量强调</span>
+                    <div className="graph-segmented compact">
+                      {graphNodeEmphasisOptions.map((option) => (
+                        <button
+                          className={batchEmphasis === option.value ? "ghost-button active" : "ghost-button"}
+                          key={option.value}
+                          onClick={() => applyBatchEmphasis(option.value)}
+                          type="button"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="graph-field-label">批量尺寸</span>
+                    <div className="graph-segmented compact">
+                      {graphNodeSizePresetOptions.map((option) => (
+                        <button
+                          className={batchSizePreset === option.value ? "ghost-button active" : "ghost-button"}
+                          key={option.value}
+                          onClick={() => applyBatchSizePreset(option.value)}
+                          type="button"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 <div className="graph-meta-grid">
                   <article className="graph-meta-card muted">
