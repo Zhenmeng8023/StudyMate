@@ -37,3 +37,15 @@
 - Added v1 search/admin/share closure: `GET /api/v1/search` grouped MySQL fallback, `share_links` migration with owner APIs and public token resolve, and admin governance APIs for users, reports, tags, AI tasks/usage, audit logs, and files.
 - Added user-facing `/share/:token` read-only page and moved search UI to backend grouped results.
 - Added SM-2 scheduler interface boundary so v1 keeps SM-2 while later schedulers can be swapped without changing route contracts.
+
+## v1.0.0 - 2026-06-01
+
+### Added
+
+- Release-ready web user site, web admin, and backend API scope for v1.0.0.
+- `NOTE_READ_MODEL=mysql_primary|mongo_primary`, note document backfill, PDF annotation `rects`, graph performance regression fixture, grouped MySQL fallback search, share links, and admin governance APIs.
+- Coverage scripts, zh-CN source dictionaries, en-US placeholder dictionaries, release checklist, environment matrix, migration order, demo steps, rollback steps, and known non-blockers.
+
+### Verification
+
+- Final gate requires `npm run ci`, `npm run test:coverage`, secret scan, diff review, release smoke flow, and local annotated tag `v1.0.0`.

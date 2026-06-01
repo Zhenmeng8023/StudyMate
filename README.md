@@ -113,3 +113,9 @@ go test ./...
 - 搜索入口为 `GET /api/v1/search?q=&types=&limit=`，返回 `type/id/title/summary/url/source` 分组结果；未登录只搜公开资料和社区，登录后扩展到私有笔记、图谱和卡片。
 - 分享链路新增 `share_links` 迁移和 `/api/v1/share-links` 创建/列表/撤销接口，公开 `/api/v1/share/:token` 返回只读解析结果；用户端提供 `/share/:token` 只读页。
 - 管理后台 `/api/v1/admin/*` 已接真实治理模块：users、reports、tags、ai/tasks、ai/usage、audit-logs、files，前端后台按模块读取 API 数据。
+
+## v1.0.0 发布与回滚
+
+- 发布清单位于 `docs/planning/versions/v1.0.0-release.md`，包含环境变量矩阵、MySQL/Mongo 迁移顺序、演示数据步骤、回滚步骤和已知非阻塞项。
+- 最终发布闸门：`npm run ci`、`npm run test:coverage`、secret scan、diff review、release smoke flow，以及本地 annotated tag `v1.0.0`。
+- 本地可以创建 tag；除非明确授权，不推送 commit 或 tag 到远端。

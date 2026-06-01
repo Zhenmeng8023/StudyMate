@@ -217,3 +217,9 @@ npm run verify:docs
 - 用户端搜索页已改为消费后端 grouped payload；公开请求只返回公开内容，登录请求包含当前用户私有学习数据。
 - `share_links` 表和分享 API 已接入，支持 owner 创建/列表/撤销，以及公开 token 只读解析页 `/share/:token`。
 - 后台治理 API 已覆盖 users、reports、tags、AI tasks/usage、audit logs、files；管理端视图按模块读取真实 API 数据。
+
+## E 阶段发布收口
+
+- `docs/planning/versions/v1.0.0-release.md` 已补齐 release checklist、env var matrix、migration order、demo data steps、rollback steps 和 known non-blockers。
+- `CHANGELOG.md` 已新增 `v1.0.0 - 2026-06-01`。
+- 最终验证必须记录 `npm run ci`、覆盖率汇总、secret scan、diff review、release smoke flow 和本地 annotated tag。

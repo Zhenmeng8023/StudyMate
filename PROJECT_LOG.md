@@ -1470,3 +1470,23 @@
 
 ### 后续影响
 - E 阶段可以在已有搜索、分享和后台治理接口上补发布清单、回滚步骤、覆盖率汇总、secret scan 和本地 `v1.0.0` 标签。
+
+## 2026-06-01 23:20:00 +08:00 | v1.0.0-rc | 发布与回滚收口
+
+### 任务内容
+- 按 E 阶段要求补齐 release checklist、env var matrix、migration order、demo data steps、rollback steps 和 known non-blockers。
+- 将 `CHANGELOG.md` 标记为 `v1.0.0 - 2026-06-01`。
+- 准备最终验证：完整 CI、覆盖率汇总、secret scan、diff review、release smoke flow 和本地 tag。
+
+### 完成结果
+- `docs/planning/versions/v1.0.0-release.md` 已成为 v1 发布/回滚主文档。
+- README、开发说明、版本计划、路线图、变更记录和项目日志已同步发布门禁。
+
+### 验证结果
+- `npm run ci` 通过：lint/docs/typecheck、前后台构建、前后台 Vitest、graph-core 测试、Playwright public shell、后端 `go test ./...` 和最终文档同步均通过。
+- `npm run test:coverage` 通过：frontend-user statements 52.3%，frontend-admin statements 30.13%，graph-core line 97.55%，backend `go test ./... -cover` 完成。前后台总体覆盖率尚未达到 80%，作为 v1 已知覆盖率缺口记录，后续以重点变更包逐步补齐。
+- Secret scan 完成：命中项为发布文档中的扫描示例/env 名称、测试用 `"secret"` 字符串、token 变量名和 CSS 类名，没有发现真实生产密钥。
+- `git diff --check` 通过；release smoke flow 由本轮 CI 中的构建、Playwright public shell 和后端测试覆盖。
+
+### 后续影响
+- 本阶段完成后 `master` 可进入本地 `v1.0.0` 标签；除非用户明确批准，不推送 commit 或 tag 到远端。

@@ -241,3 +241,9 @@ go test ./...
 - 分享目标白名单为 `material,note,graph,deck`，模式为 `private,public,token`。创建时会校验 owner，公开解析只返回只读摘要和目标 URL，不暴露可写接口。
 - 管理后台治理 API 位于 `/api/v1/admin/users`、`/reports`、`/tags`、`/ai/tasks`、`/ai/usage`、`/audit-logs`、`/files`，全部要求 admin token。
 - 复习调度在 `backend/internal/modules/card/service` 中通过 `Scheduler` 接口隔离；v1 默认实现仍是 SM-2。
+
+## v1.0.0 Release Gate
+
+- 发布操作说明位于 `docs/planning/versions/v1.0.0-release.md`。
+- 最终验证顺序：`npm run ci`、`npm run test:coverage`、secret scan、`git diff --check`、release smoke flow、本地 `git tag -a v1.0.0`。
+- 回滚优先恢复上一版应用工件；`004_share_links.sql` 是 additive migration，只有确认需要清理分享链表时才执行 `.down.sql`。

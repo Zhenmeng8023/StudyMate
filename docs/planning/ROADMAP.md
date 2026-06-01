@@ -132,3 +132,8 @@
 - `/api/v1/search` 已提供 MySQL fallback 分组搜索，用户端搜索页改为后端搜索。
 - `/api/v1/share-links` 与 `/api/v1/share/:token` 已提供 generic share link 和只读解析页。
 - 管理后台 users/reports/tags/AI/audit/files 模块已经从占位入口升级为真实 API 数据面。
+
+## E 阶段当前完成
+
+- v1.0.0 发布清单、环境变量矩阵、迁移顺序、演示数据步骤、回滚步骤和非阻塞项已集中到 `docs/planning/versions/v1.0.0-release.md`。
+- `CHANGELOG.md` 已标记 `v1.0.0 - 2026-06-01`；最终只创建本地 tag，不推送远端。
