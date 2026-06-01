@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import {
-  AuthSession,
-  GraphSummaryPayload,
-  MaterialPayload,
-  NotePayload,
-  PostSummary,
-  listGraphs,
-  listMaterials,
-  listNotes,
-  listPosts
-} from "../../api/client";
+import { AuthSession, SearchGroupPayload, SearchResponsePayload, searchAll } from "../../api/client";
+
+const groupLabels: Record<string, string> = {
+  material: "资料",
+  post: "社区",
+  note: "笔记",
+  graph: "图谱",
+  card: "卡片"
+};
 
 function useSearchKeyword() {
   const location = useLocation();
@@ -20,47 +18,49 @@ function useSearchKeyword() {
   }, [location.search]);
 }
 
-function includesKeyword(values: Array<string | undefined>, keyword: string) {
-  return values.some((value) => value?.toLowerCase().includes(keyword));
+function emptySearchResponse(query: string): SearchResponsePayload {
+  return {
+    query,
+    total: 0,
+    groups: ["material", "post", "note", "graph", "card"].map((type) => ({
+      type,
+      count: 0,
+      results: []
+    }))
+  };
 }
 
 export function SearchWorkspacePage(props: { session: AuthSession | null }) {
   const keyword = useSearchKeyword();
-  const [materials, setMaterials] = useState<MaterialPayload[]>([]);
-  const [posts, setPosts] = useState<PostSummary[]>([]);
-  const [notes, setNotes] = useState<NotePayload[]>([]);
-  const [graphs, setGraphs] = useState<GraphSummaryPayload[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("正在加载搜索索引...");
+  const [payload, setPayload] = useState<SearchResponsePayload>(() => emptySearchResponse(""));
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("输入关键词后开始搜索。");
 
   useEffect(() => {
     let canceled = false;
 
-    async function loadSearchSources() {
-      setLoading(true);
-      setMessage("正在加载搜索索引...");
-      try {
-        const [materialItems, postItems, noteItems, graphItems] = await Promise.all([
-          listMaterials(),
-          listPosts(),
-          props.session ? listNotes(props.session) : Promise.resolve([]),
-          props.session ? listGraphs(props.session) : Promise.resolve([])
-        ]);
+    async function runSearch() {
+      if (!keyword) {
+        setPayload(emptySearchResponse(""));
+        setMessage("在顶部搜索框输入关键词并按回车。");
+        return;
+      }
 
+      setLoading(true);
+      setMessage("正在搜索资料、社区，以及你可访问的笔记、图谱和卡片。");
+      try {
+        const nextPayload = await searchAll(props.session, { query: keyword, limit: 8 });
         if (canceled) {
           return;
         }
-
-        setMaterials(materialItems);
-        setPosts(postItems);
-        setNotes(noteItems);
-        setGraphs(graphItems);
-        setMessage("搜索数据已同步");
+        setPayload(nextPayload);
+        setMessage(`搜索完成，共 ${nextPayload.total} 条结果。`);
       } catch (error) {
         if (canceled) {
           return;
         }
-        setMessage(error instanceof Error ? error.message : "搜索数据加载失败");
+        setPayload(emptySearchResponse(keyword));
+        setMessage(error instanceof Error ? error.message : "搜索失败");
       } finally {
         if (!canceled) {
           setLoading(false);
@@ -68,56 +68,22 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
       }
     }
 
-    void loadSearchSources();
+    void runSearch();
     return () => {
       canceled = true;
     };
-  }, [props.session]);
+  }, [keyword, props.session]);
 
-  const normalized = keyword.toLowerCase();
-
-  const materialResults = useMemo(() => {
-    if (!normalized) {
-      return [];
-    }
-    return materials.filter((item) =>
-      includesKeyword([item.title, item.description, item.category, ...item.tags], normalized)
-    );
-  }, [materials, normalized]);
-
-  const postResults = useMemo(() => {
-    if (!normalized) {
-      return [];
-    }
-    return posts.filter((item) => includesKeyword([item.title, item.body, item.authorName], normalized));
-  }, [normalized, posts]);
-
-  const noteResults = useMemo(() => {
-    if (!normalized) {
-      return [];
-    }
-    return notes.filter((item) =>
-      includesKeyword([item.title, item.summary, item.content, item.folderName, ...item.tags], normalized)
-    );
-  }, [normalized, notes]);
-
-  const graphResults = useMemo(() => {
-    if (!normalized) {
-      return [];
-    }
-    return graphs.filter((item) => includesKeyword([item.title, item.description], normalized));
-  }, [graphs, normalized]);
-
-  const totalResults = materialResults.length + postResults.length + noteResults.length + graphResults.length;
+  const groups = payload.groups.length ? payload.groups : emptySearchResponse(keyword).groups;
 
   return (
     <>
       <header className="workspace-header">
         <div>
           <p className="eyebrow">全站搜索</p>
-          <h1>{keyword ? `“${keyword}”` : "输入关键词开始搜索"}</h1>
+          <h1>{keyword ? `"${keyword}"` : "输入关键词开始搜索"}</h1>
           <p className="header-copy">
-            当前搜索覆盖帖子、资料，以及已登录用户可访问的笔记和图谱。
+            v1 搜索通过后端 MySQL fallback 返回分组结果；登录后会附带你的私有笔记、图谱和卡片。
           </p>
         </div>
       </header>
@@ -127,85 +93,33 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
           <div className="section-frame-head">
             <div>
               <p className="eyebrow">结果概览</p>
-              <h2>{loading ? "加载中" : `${totalResults} 条结果`}</h2>
+              <h2>{loading ? "加载中" : `${payload.total} 条结果`}</h2>
             </div>
           </div>
           <p className="panel-copy">{message}</p>
-          {!keyword ? <p className="panel-copy">在顶部搜索框输入关键词并按回车。</p> : null}
         </section>
 
         <section className="search-section-grid">
-          <article className="section-frame slim">
-            <div className="section-frame-head">
-              <div>
-                <p className="eyebrow">资料</p>
-                <h2>{materialResults.length}</h2>
+          {groups.map((group: SearchGroupPayload) => (
+            <article className="section-frame slim" key={group.type}>
+              <div className="section-frame-head">
+                <div>
+                  <p className="eyebrow">{groupLabels[group.type] ?? group.type}</p>
+                  <h2>{group.count}</h2>
+                </div>
               </div>
-            </div>
-            <div className="search-result-list">
-              {materialResults.slice(0, 8).map((item) => (
-                <Link className="search-result-card" key={item.id} to="/materials">
-                  <strong>{item.title}</strong>
-                  <span>{item.category || "资料"}</span>
-                  <p>{item.description}</p>
-                </Link>
-              ))}
-            </div>
-          </article>
-
-          <article className="section-frame slim">
-            <div className="section-frame-head">
-              <div>
-                <p className="eyebrow">社区</p>
-                <h2>{postResults.length}</h2>
+              <div className="search-result-list">
+                {group.results.map((item) => (
+                  <Link className="search-result-card" key={`${item.type}:${item.id}`} to={item.url}>
+                    <strong>{item.title}</strong>
+                    <span>{item.source}</span>
+                    <p>{item.summary}</p>
+                  </Link>
+                ))}
+                {keyword && group.results.length === 0 ? <p className="panel-copy">暂无匹配结果。</p> : null}
               </div>
-            </div>
-            <div className="search-result-list">
-              {postResults.slice(0, 8).map((item) => (
-                <Link className="search-result-card" key={item.id} to={`/community?selected=${item.id}`}>
-                  <strong>{item.title}</strong>
-                  <span>{item.authorName}</span>
-                  <p>{item.body}</p>
-                </Link>
-              ))}
-            </div>
-          </article>
-
-          <article className="section-frame slim">
-            <div className="section-frame-head">
-              <div>
-                <p className="eyebrow">笔记</p>
-                <h2>{noteResults.length}</h2>
-              </div>
-            </div>
-            <div className="search-result-list">
-              {noteResults.slice(0, 8).map((item) => (
-                <Link className="search-result-card" key={item.id} to={`/notes?selected=${item.id}`}>
-                  <strong>{item.title}</strong>
-                  <span>{item.folderName || "笔记"}</span>
-                  <p>{item.summary || item.content}</p>
-                </Link>
-              ))}
-            </div>
-          </article>
-
-          <article className="section-frame slim">
-            <div className="section-frame-head">
-              <div>
-                <p className="eyebrow">图谱</p>
-                <h2>{graphResults.length}</h2>
-              </div>
-            </div>
-            <div className="search-result-list">
-              {graphResults.slice(0, 8).map((item) => (
-                <Link className="search-result-card" key={item.id} to="/graph">
-                  <strong>{item.title}</strong>
-                  <span>{item.nodeCount} 节点 · {item.edgeCount} 连线</span>
-                  <p>{item.description}</p>
-                </Link>
-              ))}
-            </div>
-          </article>
+            </article>
+          ))}
         </section>
       </div>
     </>

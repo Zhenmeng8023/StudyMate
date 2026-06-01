@@ -20,6 +20,7 @@ type Service struct {
 	auditLogs  *adminrepo.AuditLogRepository
 	aiTasks    *aiservice.Service
 	now        func() time.Time
+	scheduler  Scheduler
 }
 
 func NewService(repository *cardrepo.Repository, auditLogs *adminrepo.AuditLogRepository, aiTasks *aiservice.Service) *Service {
@@ -28,6 +29,7 @@ func NewService(repository *cardrepo.Repository, auditLogs *adminrepo.AuditLogRe
 		auditLogs:  auditLogs,
 		aiTasks:    aiTasks,
 		now:        time.Now,
+		scheduler:  SM2Scheduler{},
 	}
 }
 
@@ -164,7 +166,7 @@ func (s *Service) ReviewCard(ownerUserID string, cardID string, request carddto.
 	}
 
 	now := s.now().UTC()
-	nextSchedule, ok := ApplySM2Schedule(*schedule, request.Rating, now)
+	nextSchedule, ok := s.scheduler.Apply(*schedule, request.Rating, now)
 	if !ok {
 		return nil, apperrors.New(http.StatusBadRequest, "invalid_review_rating", "评分必须是 again、hard、good 或 easy")
 	}

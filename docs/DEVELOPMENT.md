@@ -232,3 +232,12 @@ go test ./...
 - 文档、UI 文案、日志默认使用中文。
 - 代码标识符、包名、命令、API 路径、第三方工具名保留英文。
 - 如果终端里出现一串明显不属于正常中文的乱码，要先区分是终端显示编码问题，还是文件本身真的被错误转码。
+
+## Search/Admin/Share v1 接口
+
+- 搜索入口为 `GET /api/v1/search?q=&types=&limit=`。`types` 支持 `material,post,note,graph,card`；未登录请求只返回公开资料和社区内容，带 Bearer token 后会返回当前用户可访问的私有笔记、图谱和卡片。
+- 用户端搜索页只消费后端 grouped payload，不再在浏览器中拉全量资料、帖子、笔记和图谱做本地过滤。
+- 分享入口为受保护的 `GET/POST /api/v1/share-links` 与 `DELETE /api/v1/share-links/:id`，公开解析为 `GET /api/v1/share/:token`；`share_links` 表由 `004_share_links.sql` 创建，`.down.sql` 可回滚。
+- 分享目标白名单为 `material,note,graph,deck`，模式为 `private,public,token`。创建时会校验 owner，公开解析只返回只读摘要和目标 URL，不暴露可写接口。
+- 管理后台治理 API 位于 `/api/v1/admin/users`、`/reports`、`/tags`、`/ai/tasks`、`/ai/usage`、`/audit-logs`、`/files`，全部要求 admin token。
+- 复习调度在 `backend/internal/modules/card/service` 中通过 `Scheduler` 接口隔离；v1 默认实现仍是 SM-2。

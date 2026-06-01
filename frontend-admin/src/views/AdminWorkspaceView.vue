@@ -45,22 +45,15 @@ interface ApiResponse<T> {
   };
 }
 
-type AdminView =
-  | "dashboard"
-  | "moderation"
-  | "materials"
-  | "community"
-  | "users"
-  | "graph"
-  | "ai"
-  | "system"
-  | "audit";
+type AdminView = "dashboard" | "moderation" | "materials" | "community" | "users" | "graph" | "ai" | "system" | "audit";
 
 type AdminNavItem = {
   key: AdminView;
   label: string;
   badge?: string;
 };
+
+type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
 
 const sessionKey = "studymate.admin.session";
 
@@ -73,9 +66,11 @@ const session = ref<AuthPayload | null>(readSession());
 const profile = ref<AuthUser | null>(session.value?.user ?? null);
 const moderationItems = ref<ModerationItem[]>([]);
 const overview = ref<OverviewPayload | null>(null);
+const governanceRows = ref<GovernanceRecord[]>([]);
+const governanceSummary = ref<GovernanceRecord | null>(null);
 const loading = ref(false);
 const errorMessage = ref("");
-const notice = ref("登录后会同步运营概览和审核队列。");
+const notice = ref("登录后会同步运营概览、审核队列和治理模块。");
 const activeView = ref<AdminView>("dashboard");
 
 const loggedIn = computed(() => Boolean(session.value));
@@ -84,17 +79,13 @@ const pendingMaterials = computed(() => moderationItems.value.filter((item) => i
 
 const navItems = computed<AdminNavItem[]>(() => [
   { key: "dashboard", label: "概览" },
-  {
-    key: "moderation",
-    label: "内容审核",
-    badge: moderationItems.value.length ? String(moderationItems.value.length) : ""
-  },
-  { key: "materials", label: "资料管理" },
-  { key: "community", label: "社区管理" },
-  { key: "users", label: "用户管理" },
-  { key: "graph", label: "图谱模板" },
+  { key: "moderation", label: "内容审核", badge: moderationItems.value.length ? String(moderationItems.value.length) : "" },
+  { key: "materials", label: "资料治理" },
+  { key: "community", label: "举报处理" },
+  { key: "users", label: "用户治理" },
+  { key: "graph", label: "标签治理" },
   { key: "ai", label: "AI 任务" },
-  { key: "system", label: "系统配置" },
+  { key: "system", label: "文件治理" },
   { key: "audit", label: "审计日志" }
 ]);
 
@@ -117,19 +108,19 @@ const overviewCards = computed(() => [
   {
     label: "帖子总量",
     value: String(overview.value?.postCount ?? 0),
-    helper: "社区规模已接真实数据，AI 指标后续扩展。"
+    helper: "社区规模已接真实数据，举报和审核走同一治理面板。"
   }
 ]);
 
-const placeholderModules = {
-  materials: ["分类校正", "标签治理", "附件巡检"],
-  community: ["话题治理", "举报处理", "推荐策略"],
-  users: ["角色权限", "账号封禁", "活跃统计"],
-  graph: ["模板审核", "推荐位管理", "模板分类"],
-  ai: ["任务队列", "失败重试", "用量统计"],
-  system: ["存储配置", "审核策略", "系统偏好"],
-  audit: ["操作日志", "状态追踪", "问题回放"]
-} as const;
+const governanceConfig: Record<Exclude<AdminView, "dashboard" | "moderation">, { endpoint: string; empty: string }> = {
+  materials: { endpoint: "/api/v1/admin/files?limit=20", empty: "暂无文件治理记录。" },
+  community: { endpoint: "/api/v1/admin/reports?limit=20", empty: "暂无举报记录。" },
+  users: { endpoint: "/api/v1/admin/users?limit=20", empty: "暂无用户记录。" },
+  graph: { endpoint: "/api/v1/admin/tags?limit=20", empty: "暂无标签记录。" },
+  ai: { endpoint: "/api/v1/admin/ai/tasks?limit=20", empty: "暂无 AI 任务。" },
+  system: { endpoint: "/api/v1/admin/files?limit=20", empty: "暂无文件记录。" },
+  audit: { endpoint: "/api/v1/admin/audit-logs?limit=20", empty: "暂无审计日志。" }
+};
 
 if (session.value) {
   void Promise.all([refreshProfile(), loadModeration(), loadOverview()]);
@@ -140,22 +131,11 @@ async function login() {
   errorMessage.value = "";
 
   try {
-    const payload = await fetch("/api/v1/admin/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(form)
-    });
-    const data = (await payload.json()) as ApiResponse<AuthPayload>;
-    if (!payload.ok || !data.success) {
-      throw new Error(data.error?.message ?? "管理员登录失败");
-    }
-
-    session.value = data.data;
-    profile.value = data.data.user;
-    window.localStorage.setItem(sessionKey, JSON.stringify(data.data));
-    notice.value = "后台已进入治理模式，正在同步概览和审核队列。";
+    const data = await post<AuthPayload>("/api/v1/admin/login", form);
+    session.value = data;
+    profile.value = data.user;
+    window.localStorage.setItem(sessionKey, JSON.stringify(data));
+    notice.value = "后台已进入治理模式，正在同步真实数据。";
     await Promise.all([refreshProfile(), loadModeration(), loadOverview()]);
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "管理员登录失败";
@@ -170,17 +150,7 @@ async function refreshProfile() {
   }
 
   try {
-    const payload = await fetch("/api/v1/admin/me", {
-      headers: {
-        Authorization: `Bearer ${session.value.accessToken}`
-      }
-    });
-    const data = (await payload.json()) as ApiResponse<AuthUser>;
-    if (!payload.ok || !data.success) {
-      throw new Error(data.error?.message ?? "读取管理员资料失败");
-    }
-
-    profile.value = data.data;
+    profile.value = await get<AuthUser>("/api/v1/admin/me");
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "读取管理员资料失败";
   }
@@ -192,17 +162,7 @@ async function loadOverview() {
   }
 
   try {
-    const payload = await fetch("/api/v1/admin/overview", {
-      headers: {
-        Authorization: `Bearer ${session.value.accessToken}`
-      }
-    });
-    const data = (await payload.json()) as ApiResponse<OverviewPayload>;
-    if (!payload.ok || !data.success) {
-      throw new Error(data.error?.message ?? "读取后台概览失败");
-    }
-
-    overview.value = data.data;
+    overview.value = await get<OverviewPayload>("/api/v1/admin/overview");
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "读取后台概览失败";
   }
@@ -217,20 +177,34 @@ async function loadModeration() {
   errorMessage.value = "";
 
   try {
-    const payload = await fetch("/api/v1/admin/moderation", {
-      headers: {
-        Authorization: `Bearer ${session.value.accessToken}`
-      }
-    });
-    const data = (await payload.json()) as ApiResponse<ModerationItem[]>;
-    if (!payload.ok || !data.success) {
-      throw new Error(data.error?.message ?? "读取审核队列失败");
-    }
-
-    moderationItems.value = data.data;
-    notice.value = `当前共有 ${data.data.length} 条待处理内容。`;
+    moderationItems.value = await get<ModerationItem[]>("/api/v1/admin/moderation");
+    notice.value = `当前共有 ${moderationItems.value.length} 条待处理内容。`;
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "读取审核队列失败";
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function loadGovernance(view: AdminView) {
+  if (!session.value || view === "dashboard" || view === "moderation") {
+    return;
+  }
+
+  loading.value = true;
+  errorMessage.value = "";
+  governanceRows.value = [];
+  governanceSummary.value = null;
+
+  try {
+    const config = governanceConfig[view];
+    governanceRows.value = await get<GovernanceRecord[]>(config.endpoint);
+    if (view === "ai") {
+      governanceSummary.value = await get<GovernanceRecord>("/api/v1/admin/ai/usage");
+    }
+    notice.value = `已加载 ${governanceRows.value.length} 条治理记录。`;
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : "读取治理模块失败";
   } finally {
     loading.value = false;
   }
@@ -245,23 +219,9 @@ async function moderate(item: ModerationItem, action: "approve" | "reject" | "hi
   errorMessage.value = "";
 
   try {
-    const payload = await fetch(
-      `/api/v1/admin/moderation/${item.type === "post" ? "posts" : "materials"}/${item.id}/${action}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.value.accessToken}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ reason: "" })
-      }
-    );
-    const data = (await payload.json()) as ApiResponse<{ status: string }>;
-    if (!payload.ok || !data.success) {
-      throw new Error(data.error?.message ?? "更新审核状态失败");
-    }
-
-    notice.value = `“${item.title}”已更新为 ${data.data.status}。`;
+    const path = `/api/v1/admin/moderation/${item.type === "post" ? "posts" : "materials"}/${item.id}/${action}`;
+    const data = await post<{ status: string }>(path, { reason: "" });
+    notice.value = `"${item.title}" 已更新为 ${data.status}。`;
     await Promise.all([loadModeration(), loadOverview()]);
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "更新审核状态失败";
@@ -270,14 +230,50 @@ async function moderate(item: ModerationItem, action: "approve" | "reject" | "hi
   }
 }
 
+function switchView(view: AdminView) {
+  activeView.value = view;
+  void loadGovernance(view);
+}
+
 function logout() {
   session.value = null;
   profile.value = null;
   moderationItems.value = [];
   overview.value = null;
+  governanceRows.value = [];
+  governanceSummary.value = null;
   activeView.value = "dashboard";
   window.localStorage.removeItem(sessionKey);
   notice.value = "后台会话已清空。";
+}
+
+async function get<T>(path: string) {
+  const payload = await fetch(path, {
+    headers: {
+      Authorization: `Bearer ${session.value?.accessToken ?? ""}`
+    }
+  });
+  return readResponse<T>(payload);
+}
+
+async function post<T>(path: string, body: unknown) {
+  const payload = await fetch(path, {
+    method: "POST",
+    headers: {
+      Authorization: session.value ? `Bearer ${session.value.accessToken}` : "",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+  return readResponse<T>(payload);
+}
+
+async function readResponse<T>(payload: Response) {
+  const data = (await payload.json()) as ApiResponse<T>;
+  if (!payload.ok || !data.success) {
+    throw new Error(data.error?.message ?? "请求失败");
+  }
+  return data.data;
 }
 
 function readSession(): AuthPayload | null {
@@ -291,6 +287,13 @@ function readSession(): AuthPayload | null {
   } catch {
     return null;
   }
+}
+
+function formatCell(value: string | number | boolean | null | undefined) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+  return String(value);
 }
 </script>
 
@@ -328,7 +331,7 @@ function readSession(): AuthPayload | null {
             :key="item.key"
             :class="activeView === item.key ? 'nav-item active' : 'nav-item'"
             type="button"
-            @click="activeView = item.key"
+            @click="switchView(item.key)"
           >
             <span>{{ item.label }}</span>
             <small v-if="item.badge">{{ item.badge }}</small>
@@ -344,8 +347,8 @@ function readSession(): AuthPayload | null {
             <p class="eyebrow">运营面板</p>
             <h2>{{ navItems.find((item) => item.key === activeView)?.label }}</h2>
           </div>
-          <button class="secondary-button" :disabled="loading" type="button" @click="loadModeration">
-            刷新审核队列
+          <button class="secondary-button" :disabled="loading" type="button" @click="activeView === 'moderation' ? loadModeration() : loadGovernance(activeView)">
+            刷新当前模块
           </button>
         </header>
 
@@ -382,7 +385,7 @@ function readSession(): AuthPayload | null {
             <article v-for="item in moderationItems" :key="item.id" class="moderation-card">
               <div class="moderation-head">
                 <strong>{{ item.title }}</strong>
-                <span>{{ item.type }} · {{ item.status }}</span>
+                <span>{{ item.type }} / {{ item.status }}</span>
               </div>
               <p>{{ item.summary }}</p>
               <div class="moderation-meta">
@@ -399,14 +402,22 @@ function readSession(): AuthPayload | null {
         </template>
 
         <template v-else>
+          <div v-if="governanceSummary" class="card-grid narrow">
+            <article v-for="(value, key) in governanceSummary" :key="key" class="metric-card">
+              <span>{{ key }}</span>
+              <strong>{{ value }}</strong>
+              <p>来自 /api/v1/admin/ai/usage。</p>
+            </article>
+          </div>
+
           <div class="placeholder-list">
-            <article
-              v-for="item in placeholderModules[activeView as keyof typeof placeholderModules]"
-              :key="item"
-              class="placeholder-card"
-            >
-              <strong>{{ item }}</strong>
-              <p>当前页面已保留模块入口，后续继续接真实数据流。</p>
+            <article v-if="!governanceRows.length" class="placeholder-card">
+              <strong>{{ governanceConfig[activeView as keyof typeof governanceConfig].empty }}</strong>
+              <p>模块已经接入真实 API；当前没有可显示记录。</p>
+            </article>
+            <article v-for="(row, index) in governanceRows" :key="index" class="placeholder-card">
+              <strong>{{ formatCell(row.title ?? row.name ?? row.originalName ?? row.username ?? row.action ?? row.id) }}</strong>
+              <p v-for="(value, key) in row" :key="key">{{ key }}: {{ formatCell(value) }}</p>
             </article>
           </div>
         </template>

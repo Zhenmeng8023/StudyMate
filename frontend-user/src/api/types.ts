@@ -407,3 +407,50 @@ export interface AiDraftPayload {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface SearchResultPayload {
+  type: string;
+  id: string;
+  title: string;
+  summary: string;
+  url: string;
+  source: string;
+}
+
+export interface SearchGroupPayload {
+  type: string;
+  count: number;
+  results: SearchResultPayload[];
+}
+
+export interface SearchResponsePayload {
+  query: string;
+  total: number;
+  groups: SearchGroupPayload[];
+}
+
+export interface ShareLinkPayload {
+  id: string;
+  ownerUserId: string;
+  targetType: string;
+  targetId: string;
+  mode: string;
+  token: string;
+  status: string;
+  url: string;
+  expiresAt?: string;
+  createdAt: string;
+  revokedAt?: string;
+}
+
+export interface ShareResolvePayload {
+  token: string;
+  mode: string;
+  targetType: string;
+  targetId: string;
+  title: string;
+  summary: string;
+  url: string;
+  readOnly: boolean;
+  metadata: Record<string, unknown>;
+}

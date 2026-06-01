@@ -1447,3 +1447,26 @@
 - 文件创建完成。
 ### 后续影响
 - 后续每一步重要工作都可以追溯到对应版本记录。
+
+## 2026-06-01 22:50:00 +08:00 | v0.0.76 | 收口 Review/AI、Search/Admin/Share
+
+### 任务内容
+- 按 D 阶段要求补齐复习调度边界、后端搜索、分享链接和后台治理模块。
+- 保持 SM-2 作为 v1 默认调度算法，但让调度器具备可替换接口。
+- 将搜索和后台占位页接到真实 API，避免 v1 发布时仍依赖浏览器端全量过滤或静态占位。
+
+### 完成结果
+- `backend/internal/modules/card/service` 新增 `Scheduler` 接口与 `SM2Scheduler` 默认实现，`ReviewCard` 通过接口计算下一次到期时间。
+- 新增 `backend/internal/modules/search`，注册 `GET /api/v1/search?q=&types=&limit=`，支持公开资料/社区与登录后的私有 note/graph/card 分组结果。
+- 新增 `backend/internal/modules/share` 与 `004_share_links.sql`，支持 share link 创建、列表、撤销和公开 token 只读解析；用户端新增 `/share/:token` 页面。
+- 后台新增 `/api/v1/admin/users`、`/reports`、`/tags`、`/ai/tasks`、`/ai/usage`、`/audit-logs`、`/files`，管理端按模块读取真实治理数据。
+- 用户端搜索页改为消费后端 grouped payload；API barrel 增加 search/share 域模块。
+
+### 验证结果
+- `cd backend; go test ./...` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-admin run typecheck` 通过。
+- `npm run ci` 通过：覆盖 lint/docs/typecheck、用户端和后台构建、前后台 Vitest、graph-core 测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+
+### 后续影响
+- E 阶段可以在已有搜索、分享和后台治理接口上补发布清单、回滚步骤、覆盖率汇总、secret scan 和本地 `v1.0.0` 标签。

@@ -29,3 +29,11 @@
 - 建立 CI 与前端测试基线。
 - 拆分用户端、图谱工作区和管理端超大文件。
 - 收口阅读/笔记、图谱、复习/AI、搜索/后台治理与分享。
+
+## D milestone update
+
+### Added
+
+- Added v1 search/admin/share closure: `GET /api/v1/search` grouped MySQL fallback, `share_links` migration with owner APIs and public token resolve, and admin governance APIs for users, reports, tags, AI tasks/usage, audit logs, and files.
+- Added user-facing `/share/:token` read-only page and moved search UI to backend grouped results.
+- Added SM-2 scheduler interface boundary so v1 keeps SM-2 while later schedulers can be swapped without changing route contracts.

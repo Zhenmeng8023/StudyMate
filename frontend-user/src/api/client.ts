@@ -8,3 +8,5 @@ export * from "./reader";
 export * from "./graphs";
 export * from "./review";
 export * from "./ai";
+export * from "./search";
+export * from "./share";

@@ -14,6 +14,7 @@ import { GraphPage, ReviewPage, ReviewWorkspaceRoute } from "../pages/GraphRevie
 import { AiPage } from "../pages/AiPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { SearchWorkspacePage } from "../modules/search/SearchWorkspacePage";
+import { SharePage } from "../pages/SharePage";
 
 export function RequireAuth(props: { session: AuthSession | null; children: ReactNode }) {
   const location = useLocation();
@@ -75,6 +76,7 @@ export function App() {
         <Route element={<MaterialsPage session={session} />} path="materials" />
         <Route element={<CommunityPage />} path="community" />
         <Route element={<SearchWorkspacePage session={session} />} path="search" />
+        <Route element={<SharePage />} path="share/:token" />
       </Route>
       <Route element={<ProtectedShellRoute onLogout={() => void handleLogout()} session={session} />}>
         <Route element={<ReaderPage session={session as AuthSession} />} path="reader" />

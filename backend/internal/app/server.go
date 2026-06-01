@@ -49,6 +49,13 @@ import (
 	readerrepo "studymate/backend/internal/modules/reader/repository"
 	readerrouter "studymate/backend/internal/modules/reader/router"
 	readerservice "studymate/backend/internal/modules/reader/service"
+	searchhandler "studymate/backend/internal/modules/search/handler"
+	searchrouter "studymate/backend/internal/modules/search/router"
+	searchservice "studymate/backend/internal/modules/search/service"
+	sharehandler "studymate/backend/internal/modules/share/handler"
+	sharerepo "studymate/backend/internal/modules/share/repository"
+	sharerouter "studymate/backend/internal/modules/share/router"
+	shareservice "studymate/backend/internal/modules/share/service"
 	userhandler "studymate/backend/internal/modules/user/handler"
 	userrepo "studymate/backend/internal/modules/user/repository"
 	userrouter "studymate/backend/internal/modules/user/router"
@@ -93,6 +100,7 @@ func NewServer(cfg config.Config) (*Server, error) {
 	graphDocumentRepository := graphrepo.NewDocumentRepository(deps.Mongo)
 	readerRepository := readerrepo.NewRepository(deps.SQL)
 	cardRepository := cardrepo.NewRepository(deps.SQL)
+	shareRepository := sharerepo.NewRepository(deps.SQL)
 
 	authService := authservice.NewService(
 		userRepository,
@@ -110,7 +118,10 @@ func NewServer(cfg config.Config) (*Server, error) {
 	readerService := readerservice.NewService(readerRepository, materialRepository, auditRepository, aiService)
 	cardService := cardservice.NewService(cardRepository, auditRepository, aiService)
 	graphService := graphservice.NewService(graphRepository, graphDocumentRepository, auditRepository, cardService, aiService)
+	searchService := searchservice.NewService(deps.SQL)
+	shareService := shareservice.NewService(shareRepository, deps.SQL, auditRepository)
 	adminModerationService := adminservice.NewService(
+		deps.SQL,
 		auditRepository,
 		communityRepository,
 		materialRepository,
@@ -153,6 +164,8 @@ func NewServer(cfg config.Config) (*Server, error) {
 	graphHandler := graphhandler.NewHandler(graphService)
 	readerHandler := readerhandler.NewHandler(readerService)
 	cardHandler := cardhandler.NewHandler(cardService)
+	searchHandler := searchhandler.NewHandler(searchService, tokenManager)
+	shareHandler := sharehandler.NewHandler(shareService)
 
 	server.registerRoutes(
 		tokenManager,
@@ -168,6 +181,8 @@ func NewServer(cfg config.Config) (*Server, error) {
 		graphHandler,
 		readerHandler,
 		cardHandler,
+		searchHandler,
+		shareHandler,
 	)
 
 	return server, nil
@@ -191,6 +206,8 @@ func (s *Server) registerRoutes(
 	graphHandler *graphhandler.Handler,
 	readerHandler *readerhandler.Handler,
 	cardHandler *cardhandler.Handler,
+	searchHandler *searchhandler.Handler,
+	shareHandler *sharehandler.Handler,
 ) {
 	s.router.GET("/health", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -214,6 +231,8 @@ func (s *Server) registerRoutes(
 	authrouter.RegisterPublicRoutes(authGroup, authHandler)
 	communityrouter.RegisterPublicRoutes(authGroup, communityHandler)
 	materialrouter.RegisterPublicRoutes(authGroup, materialHandler)
+	searchrouter.RegisterRoutes(authGroup, searchHandler)
+	sharerouter.RegisterPublicRoutes(authGroup, shareHandler)
 
 	protected := api.Group("")
 	protected.Use(middleware.Authenticate(tokenManager))
@@ -227,6 +246,7 @@ func (s *Server) registerRoutes(
 	graphrouter.RegisterRoutes(protected, graphHandler)
 	readerrouter.RegisterRoutes(protected, readerHandler)
 	cardrouter.RegisterRoutes(protected, cardHandler)
+	sharerouter.RegisterProtectedRoutes(protected, shareHandler)
 
 	adminrouter.RegisterRoutes(api, adminHandler, moderationHandler, tokenManager)
 }

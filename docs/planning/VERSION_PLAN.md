@@ -209,3 +209,11 @@ npm run verify:docs
 - 数据结构变化必须同步迁移、回滚或兼容策略。
 - AI 生成内容必须进入用户确认流。
 - 安全边界覆盖鉴权、权限、文件访问、AI 用量和后台操作。
+
+## D 阶段当前完成
+
+- SM-2 已通过 `Scheduler` 接口包裹，保持 v1 可解释默认算法，同时给后续替换调度器留下稳定边界。
+- `GET /api/v1/search?q=&types=&limit=` 已接入 MySQL fallback，响应按 `material/post/note/graph/card` 分组，每条结果包含 `type/id/title/summary/url/source`。
+- 用户端搜索页已改为消费后端 grouped payload；公开请求只返回公开内容，登录请求包含当前用户私有学习数据。
+- `share_links` 表和分享 API 已接入，支持 owner 创建/列表/撤销，以及公开 token 只读解析页 `/share/:token`。
+- 后台治理 API 已覆盖 users、reports、tags、AI tasks/usage、audit logs、files；管理端视图按模块读取真实 API 数据。

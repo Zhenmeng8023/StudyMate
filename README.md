@@ -106,3 +106,10 @@ go test ./...
 - 覆盖率门禁：每个里程碑继续运行 `npm run ci`；发布前追加运行 `npm run test:coverage`，变更包的重点代码需要达到 80% 聚焦覆盖率或在 `PROJECT_LOG.md` 说明缺口。
 - 拆分边界：用户端 API client 已按域拆入 `frontend-user/src/api/*.ts`，全局样式已拆入 `frontend-user/src/styles/`，图谱控制器通用 helper 已移入 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`。
 - Reader/Notes 收口：`go run ./cmd/backfill-note-documents` 可将历史 MySQL 笔记正文回填到 Mongo `note_documents`；PDF 批注新增兼容字段 `rects`，前端会展示资料、PDF 页与坐标片段来源。
+
+## v1.0.0 D 阶段补充
+
+- 复习调度保留 SM-2 默认算法，但通过后端 `Scheduler` 接口隔离，后续替换算法不需要改变公开 route contract。
+- 搜索入口为 `GET /api/v1/search?q=&types=&limit=`，返回 `type/id/title/summary/url/source` 分组结果；未登录只搜公开资料和社区，登录后扩展到私有笔记、图谱和卡片。
+- 分享链路新增 `share_links` 迁移和 `/api/v1/share-links` 创建/列表/撤销接口，公开 `/api/v1/share/:token` 返回只读解析结果；用户端提供 `/share/:token` 只读页。
+- 管理后台 `/api/v1/admin/*` 已接真实治理模块：users、reports、tags、ai/tasks、ai/usage、audit-logs、files，前端后台按模块读取 API 数据。

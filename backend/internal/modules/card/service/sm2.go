@@ -15,6 +15,16 @@ const (
 	reviewRatingEasy  = "easy"
 )
 
+type Scheduler interface {
+	Apply(current cardmodel.CardSchedule, rating string, reviewedAt time.Time) (cardmodel.CardSchedule, bool)
+}
+
+type SM2Scheduler struct{}
+
+func (SM2Scheduler) Apply(current cardmodel.CardSchedule, rating string, reviewedAt time.Time) (cardmodel.CardSchedule, bool) {
+	return ApplySM2Schedule(current, rating, reviewedAt)
+}
+
 func NormalizeReviewRating(value string) string {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case reviewRatingAgain:

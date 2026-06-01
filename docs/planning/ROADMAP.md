@@ -125,3 +125,10 @@
 - CI 全绿。
 - 完整测试通过。
 - 文档可以指导第三方启动、演示和回滚。
+
+## D 阶段当前完成
+
+- 复习调度已形成 `Scheduler` 接口，v1 默认 SM-2 不再直接绑死在服务方法中。
+- `/api/v1/search` 已提供 MySQL fallback 分组搜索，用户端搜索页改为后端搜索。
+- `/api/v1/share-links` 与 `/api/v1/share/:token` 已提供 generic share link 和只读解析页。
+- 管理后台 users/reports/tags/AI/audit/files 模块已经从占位入口升级为真实 API 数据面。
