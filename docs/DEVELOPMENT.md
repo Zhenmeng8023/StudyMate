@@ -7,6 +7,9 @@
 - 变更包要求 80% 聚焦覆盖率；如果某个模块暂时无法达到，需要在 `PROJECT_LOG.md` 写明原因、风险和补测计划。
 - `zh-CN` 是源语言。用户端字典位于 `frontend-user/src/i18n/dictionary.ts`，管理端字典位于 `frontend-admin/src/i18n/dictionary.ts`。
 - `en-US` 目前只保留占位文案，测试会校验占位字典与 `zh-CN` 字典键保持一致。
+- 用户端 API client 以 `frontend-user/src/api/client.ts` 作为稳定 barrel，新增接口按 auth、materials、notes、reader、graphs、review、ai 等域拆分到同目录文件。
+- 用户端全局样式由 `frontend-user/src/styles.css` 统一导入 `frontend-user/src/styles/` 下的分层 CSS 文件，新增样式应优先落到对应分层文件。
+- 图谱工作区的通用几何、导出、来源分组和焦点导航 helper 位于 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`；后续继续拆更细的交互 hooks。
 
 ## 环境要求
 

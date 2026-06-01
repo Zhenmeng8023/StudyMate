@@ -104,3 +104,4 @@ go test ./...
 - `NOTE_READ_MODEL=mongo_primary` 会优先读取 MongoDB `note_documents.html`，当内容文档缺失或读取失败时回退 MySQL。
 - 本地化先以 `zh-CN` 为源语言，用户端和管理端已建立 `en-US` 占位字典框架；v1.0.0 不要求完整英文翻译。
 - 覆盖率门禁：每个里程碑继续运行 `npm run ci`；发布前追加运行 `npm run test:coverage`，变更包的重点代码需要达到 80% 聚焦覆盖率或在 `PROJECT_LOG.md` 说明缺口。
+- 拆分边界：用户端 API client 已按域拆入 `frontend-user/src/api/*.ts`，全局样式已拆入 `frontend-user/src/styles/`，图谱控制器通用 helper 已移入 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`。

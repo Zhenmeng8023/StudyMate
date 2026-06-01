@@ -8,6 +8,7 @@
 
 - 新增 `test:coverage` 发布门禁脚本，覆盖用户端、管理端、图谱核心和 Go 后端覆盖率汇总。
 - 新增用户端与管理端 `zh-CN` 源字典和 `en-US` 占位字典框架，并通过测试校验字典键一致。
+- 新增用户端 API 域文件、分层 CSS 文件和图谱工作区 helper 文件，降低后续 v1 收口时的单文件维护压力。
 - 新增 `docs/design/UPGRADE_DESIGN.md` 作为升级设计主入口，并保留根目录设计说明兼容入口。
 - 新增 v1.0 路线图、版本计划、图谱产品化说明、PR 模板、CI 骨架和文档同步脚本。
 - 新增根脚本 `lint`、`test:user`、`test:admin`、`test:e2e`、`verify:docs`、`ci`。

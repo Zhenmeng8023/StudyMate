@@ -17,6 +17,21 @@
 ### 后续影响
 - B 阶段可以在已有覆盖率和字典框架保护下继续拆分超大文件。
 - 发布前需要额外运行 `npm run test:coverage` 并记录覆盖率缺口。
+## 2026-06-01 22:18:00 +08:00 | v0.0.74 | 拆分 API client、全局样式和图谱工作区 helper
+### 任务内容
+- 按 B 阶段要求继续降低超大文件维护风险。
+- 优先处理用户端 API client、全局样式和图谱控制器中可安全抽离的纯 helper。
+### 完成结果
+- `frontend-user/src/api/client.ts` 改为稳定 barrel，接口实现按 auth、files、community、materials、notes、reader、graphs、review、ai 域拆分。
+- `frontend-user/src/styles.css` 改为导入入口，样式按 app、workspace、graph、reader-notes、search-review、responsive 分层。
+- `useGraphWorkspaceController.tsx` 抽出图谱文档、几何、来源分组、导出和焦点导航 helper 到 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`。
+- 保留现有页面导入路径和路由行为。
+### 验证结果
+- `npm run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 图谱 hook 仍承载大量交互与 UI 组合，C 阶段继续把 autosave、selection、AI draft 和面板渲染下沉到更细模块。
 
 ## 2026-06-01 21:36:28 +08:00 | v0.0.72 | 拆分用户端主应用、图谱入口和管理端入口
 ### 任务内容
