@@ -2721,7 +2721,6 @@ function ShellFrame(props: { session: AuthSession | null; onLogout: () => void; 
   const location = useLocation();
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState(() => new URLSearchParams(location.search).get("q") || "");
-  const shouldHardLeaveGraph = location.pathname.startsWith("/graph");
   const contextCards = useMemo<ContextCard[]>(() => {
     if (location.pathname.startsWith("/materials")) {
       return [
@@ -2789,7 +2788,6 @@ function ShellFrame(props: { session: AuthSession | null; onLogout: () => void; 
                 <NavLink
                   className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
                   key={item.to}
-                  reloadDocument={shouldHardLeaveGraph && item.to !== "/graph"}
                   to={item.to}
                 >
                   <Icon size={18} />
@@ -2806,7 +2804,6 @@ function ShellFrame(props: { session: AuthSession | null; onLogout: () => void; 
                 <Link
                   className="quiet-action"
                   key={item.label}
-                  reloadDocument={shouldHardLeaveGraph && item.to !== "/graph"}
                   to={item.requiresAuth && !props.session ? "/login" : item.to}
                 >
                   <strong>{item.label}</strong>

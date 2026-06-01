@@ -2,6 +2,27 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-01 20:05:00 +08:00 | v0.0.69 | 移除图谱离页整页刷新兜底以恢复侧边栏流畅切换
+### 任务内容
+- 用户反馈其他页面之间切换流畅，但从图谱切到别的页面像刷新了一次。
+- 在 `v0.0.67` 已经修复空查询参数触发假 AI 落点循环后，收回此前为兜底加在图谱离页上的 `reloadDocument`。
+### 完成结果
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 移除 `shouldHardLeaveGraph`
+  - 移除侧边栏主导航和快速动作上仅针对 `/graph` 离页的 `reloadDocument`
+  - 图谱离开时重新走 React Router SPA 切换，不再表现为浏览器级刷新
+- 保留图谱页内已经补好的根因修复：
+  - 空查询参数不会被解析成假 AI 预计落点
+  - AI 预计落点消费后会清理 React Router state
+  - 图谱拖拽异常中断时会释放全局 pointer 状态
+### 验证结果
+- `npm run typecheck`
+- `npm run build:user`
+- `npm --workspace @studymate/graph-core run test`
+### 后续影响
+- 图谱页离开体验回到和其他模块一致的单页应用切换。
+- 如果后续仍出现图谱切页问题，应继续修具体运行态泄漏，而不是恢复整页刷新兜底。
+
 ## 2026-06-01 18:06:00 +08:00 | v0.0.68 | 增加图谱来源关系摘要以补齐内容到图谱的可见链路
 ### 任务内容
 - 继续按照 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 推进下一步功能实现。
