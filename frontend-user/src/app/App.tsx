@@ -16,7 +16,7 @@ import {
   Upload,
   UserRound
 } from "lucide-react";
-import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, NavLink, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { GraphWorkspacePage } from "../modules/graph/GraphWorkspacePage";
 import { PdfReaderPane } from "../modules/reader/PdfReaderPane";
 import { ReviewWorkspacePage } from "../modules/review/ReviewWorkspacePage";
@@ -464,20 +464,19 @@ function findSimilarGraphTitles(title: string, graphDetail: GraphDetailPayload |
 }
 
 function buildGraphFocusLink(
-  graphId: string,
   node: { title: string; x: number; y: number; width: number; height: number },
   graphDetail: GraphDetailPayload | null
 ) {
   const placement = estimateAiDraftNodePlacement(node, graphDetail);
-  const params = new URLSearchParams({
-    graphId,
-    focusX: String(placement.x),
-    focusY: String(placement.y),
-    focusWidth: String(Math.round(node.width)),
-    focusHeight: String(Math.round(node.height)),
-    focusLabel: node.title
-  });
-  return `/graph?${params.toString()}`;
+  return {
+    focusPreview: {
+      x: placement.x,
+      y: placement.y,
+      width: Math.round(node.width),
+      height: Math.round(node.height),
+      label: node.title
+    }
+  };
 }
 
 function WorkspaceHeader(props: {
@@ -2568,7 +2567,7 @@ function AiPage(props: { session: AuthSession }) {
                                   </span>
                                   {selectedGraphId ? (
                                     <span>
-                                      <Link to={buildGraphFocusLink(selectedGraphId, item, selectedGraphDetail)}>
+                                      <Link state={{ graphId: selectedGraphId, ...buildGraphFocusLink(item, selectedGraphDetail) }} to="/graph">
                                         去目标图谱查看落点
                                       </Link>
                                     </span>
@@ -2722,6 +2721,7 @@ function ShellFrame(props: { session: AuthSession | null; onLogout: () => void; 
   const location = useLocation();
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState(() => new URLSearchParams(location.search).get("q") || "");
+  const shouldHardLeaveGraph = location.pathname.startsWith("/graph");
   const contextCards = useMemo<ContextCard[]>(() => {
     if (location.pathname.startsWith("/materials")) {
       return [
@@ -2786,7 +2786,12 @@ function ShellFrame(props: { session: AuthSession | null; onLogout: () => void; 
               }
 
               return (
-                <NavLink className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")} key={item.to} to={item.to}>
+                <NavLink
+                  className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
+                  key={item.to}
+                  reloadDocument={shouldHardLeaveGraph && item.to !== "/graph"}
+                  to={item.to}
+                >
                   <Icon size={18} />
                   <span>{item.label}</span>
                 </NavLink>
@@ -2798,7 +2803,12 @@ function ShellFrame(props: { session: AuthSession | null; onLogout: () => void; 
             <p className="eyebrow">快速动作</p>
             <div className="sidebar-action-list">
               {quickActions.map((item) => (
-                <Link className="quiet-action" key={item.label} to={item.requiresAuth && !props.session ? "/login" : item.to}>
+                <Link
+                  className="quiet-action"
+                  key={item.label}
+                  reloadDocument={shouldHardLeaveGraph && item.to !== "/graph"}
+                  to={item.requiresAuth && !props.session ? "/login" : item.to}
+                >
                   <strong>{item.label}</strong>
                   <small>{item.description}</small>
                 </Link>
@@ -2850,6 +2860,26 @@ function ShellFrame(props: { session: AuthSession | null; onLogout: () => void; 
   );
 }
 
+function PublicShellRoute(props: { session: AuthSession | null; onLogout: () => void }) {
+  const location = useLocation();
+  return (
+    <ShellFrame onLogout={props.onLogout} session={props.session}>
+      <Outlet key={location.pathname} />
+    </ShellFrame>
+  );
+}
+
+function ProtectedShellRoute(props: { session: AuthSession | null; onLogout: () => void }) {
+  const location = useLocation();
+  return (
+    <RequireAuth session={props.session}>
+      <ShellFrame onLogout={props.onLogout} session={props.session}>
+        <Outlet key={location.pathname} />
+      </ShellFrame>
+    </RequireAuth>
+  );
+}
+
 export function App() {
   const [session, setSession] = useState<AuthSession | null>(() => readSession());
   const navigate = useNavigate();
@@ -2876,108 +2906,21 @@ export function App() {
     <Routes>
       <Route element={<LoginPage onLogin={handleSession} />} path="/login" />
       <Route element={<RegisterPage onRegister={handleSession} />} path="/register" />
-      <Route
-        element={
-          <ShellFrame onLogout={() => void handleLogout()} session={session}>
-            <DashboardPage session={session} />
-          </ShellFrame>
-        }
-        path="/"
-      />
-      <Route
-        element={
-          <ShellFrame onLogout={() => void handleLogout()} session={session}>
-            <MaterialsPage session={session} />
-          </ShellFrame>
-        }
-        path="/materials"
-      />
-      <Route
-        element={
-          <ShellFrame onLogout={() => void handleLogout()} session={session}>
-            <CommunityPage />
-          </ShellFrame>
-        }
-        path="/community"
-      />
-      <Route
-        element={
-          <ShellFrame onLogout={() => void handleLogout()} session={session}>
-            <SearchWorkspacePage session={session} />
-          </ShellFrame>
-        }
-        path="/search"
-      />
-      <Route
-        element={
-          <RequireAuth session={session}>
-            <ShellFrame onLogout={() => void handleLogout()} session={session}>
-              <ReaderPage session={session as AuthSession} />
-            </ShellFrame>
-          </RequireAuth>
-        }
-        path="/reader"
-      />
-      <Route
-        element={
-          <RequireAuth session={session}>
-            <ShellFrame onLogout={() => void handleLogout()} session={session}>
-              <ReaderPage session={session as AuthSession} />
-            </ShellFrame>
-          </RequireAuth>
-        }
-        path="/reader/:materialId"
-      />
-      <Route
-        element={
-          <RequireAuth session={session}>
-            <ShellFrame onLogout={() => void handleLogout()} session={session}>
-              <NotesPage session={session as AuthSession} />
-            </ShellFrame>
-          </RequireAuth>
-        }
-        path="/notes"
-      />
-      <Route
-        element={
-          <RequireAuth session={session}>
-            <ShellFrame onLogout={() => void handleLogout()} session={session}>
-              <GraphPage session={session as AuthSession} />
-            </ShellFrame>
-          </RequireAuth>
-        }
-        path="/graph"
-      />
-      <Route
-        element={
-          <RequireAuth session={session}>
-            <ShellFrame onLogout={() => void handleLogout()} session={session}>
-              <ReviewWorkspaceRoute session={session!} />
-            </ShellFrame>
-          </RequireAuth>
-        }
-        path="/review"
-      />
-      <Route
-        element={
-          <RequireAuth session={session}>
-            <ShellFrame onLogout={() => void handleLogout()} session={session}>
-              <AiPage session={session as AuthSession} />
-            </ShellFrame>
-          </RequireAuth>
-        }
-        path="/ai"
-      />
-      <Route
-        element={
-          <RequireAuth session={session}>
-            <ShellFrame onLogout={() => void handleLogout()} session={session}>
-              <SettingsPage session={session as AuthSession} />
-            </ShellFrame>
-          </RequireAuth>
-        }
-        path="/settings"
-      />
+      <Route element={<PublicShellRoute onLogout={() => void handleLogout()} session={session} />}>
+        <Route element={<DashboardPage session={session} />} index />
+        <Route element={<MaterialsPage session={session} />} path="materials" />
+        <Route element={<CommunityPage />} path="community" />
+        <Route element={<SearchWorkspacePage session={session} />} path="search" />
+      </Route>
+      <Route element={<ProtectedShellRoute onLogout={() => void handleLogout()} session={session} />}>
+        <Route element={<ReaderPage session={session as AuthSession} />} path="reader" />
+        <Route element={<ReaderPage session={session as AuthSession} />} path="reader/:materialId" />
+        <Route element={<NotesPage session={session as AuthSession} />} path="notes" />
+        <Route element={<GraphPage session={session as AuthSession} />} path="graph" />
+        <Route element={<ReviewWorkspaceRoute session={session!} />} path="review" />
+        <Route element={<AiPage session={session as AuthSession} />} path="ai" />
+        <Route element={<SettingsPage session={session as AuthSession} />} path="settings" />
+      </Route>
     </Routes>
   );
 }

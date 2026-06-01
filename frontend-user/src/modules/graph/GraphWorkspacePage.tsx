@@ -21,6 +21,11 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  buildSourceSwimlaneLayout,
+  parseGraphFocusPreviewSearch,
+  summarizeGraphSourceReferences
+} from "@studymate/graph-core";
+import {
   AuthSession,
   DeckPayload,
   DiagramTemplatePayload,
@@ -113,6 +118,11 @@ type FocusPreview = {
   label: string;
 };
 
+type GraphFocusNavigationState = {
+  graphId?: string;
+  focusPreview?: FocusPreview | null;
+};
+
 type ContextMenuState =
   | {
       x: number;
@@ -161,7 +171,8 @@ function cloneDocument(document: GraphDocumentPayload): GraphDocumentPayload {
     })),
     groups: document.groups.map((group) => ({
       ...group,
-      nodeIds: [...group.nodeIds]
+      nodeIds: [...group.nodeIds],
+      metadata: group.metadata ? { ...group.metadata } : undefined
     })),
     theme: document.theme ? { ...document.theme } : {},
     metadata: document.metadata ? { ...document.metadata } : {}
@@ -317,24 +328,30 @@ function buildGroupStyle(group: GraphGroupPayload) {
   };
 }
 
-function focusPreviewArea(
-  preview: FocusPreview,
-  detail: GraphDetailPayload,
-  stage: HTMLDivElement,
-  apply: (updater: (draft: GraphDocumentPayload) => void) => void
-) {
+function buildFocusPreviewViewport(preview: FocusPreview, detail: GraphDetailPayload, stage: HTMLDivElement) {
   const viewportWidth = stage.clientWidth;
   const viewportHeight = stage.clientHeight;
   const zoom = detail.document.viewport.zoom;
   const centerX = preview.x + preview.width / 2;
   const centerY = preview.y + preview.height / 2;
-  const nextX = viewportWidth / 2 - centerX * zoom;
-  const nextY = viewportHeight / 2 - centerY * zoom;
+  return {
+    x: viewportWidth / 2 - centerX * zoom,
+    y: viewportHeight / 2 - centerY * zoom,
+    zoom
+  };
+}
 
-  apply((draft) => {
-    draft.viewport.x = nextX;
-    draft.viewport.y = nextY;
-  });
+function buildClearedFocusNavigationLocation(pathname: string, search: string) {
+  const params = new URLSearchParams(search);
+  for (const key of ["graphId", "focusX", "focusY", "focusWidth", "focusHeight", "focusLabel"]) {
+    params.delete(key);
+  }
+
+  const nextSearch = params.toString();
+  return {
+    pathname,
+    search: nextSearch ? `?${nextSearch}` : ""
+  };
 }
 
 function buildSelectionBox(startX: number, startY: number, currentX: number, currentY: number): SelectionBox {
@@ -367,6 +384,10 @@ function getSourceBucketLabel(node: GraphNodePayload) {
     return "自由节点";
   }
   return getNodeSourceLabel(node.source.type);
+}
+
+function isGeneratedSourceSwimlaneGroup(group: GraphGroupPayload) {
+  return group.metadata?.layoutKind === "source-swimlane";
 }
 
 function buildSourceGroupDefinitions(nodes: GraphNodePayload[]) {
@@ -625,20 +646,18 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
   const [showKeyboardGuide, setShowKeyboardGuide] = useState(false);
   const detailRef = useRef<GraphDetailPayload | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
+  const consumedFocusRef = useRef("");
   const [selectedDraftDeckId, setSelectedDraftDeckId] = useState("");
+  const navigationState = (location.state as GraphFocusNavigationState | null) ?? null;
   const focusSearch = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const requestedGraphId = focusSearch.get("graphId") || "";
+  const requestedGraphId = navigationState?.graphId || focusSearch.get("graphId") || "";
+  const requestedFocusKey = navigationState?.focusPreview ? `state:${location.key}` : location.search;
   const requestedFocus = useMemo(() => {
-    const x = Number(focusSearch.get("focusX"));
-    const y = Number(focusSearch.get("focusY"));
-    const width = Number(focusSearch.get("focusWidth"));
-    const height = Number(focusSearch.get("focusHeight"));
-    const label = focusSearch.get("focusLabel") || "AI 预计落点";
-    if (![x, y, width, height].every((value) => Number.isFinite(value))) {
-      return null;
+    if (navigationState?.focusPreview) {
+      return navigationState.focusPreview;
     }
-    return { x, y, width, height, label };
-  }, [focusSearch]);
+    return parseGraphFocusPreviewSearch(focusSearch);
+  }, [focusSearch, navigationState?.focusPreview]);
 
   useEffect(() => {
     detailRef.current = graphDetail;
@@ -729,6 +748,10 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
   const visibleNodes = useMemo(
     () => (document?.nodes ?? []).filter((node) => !hiddenNodeIds.has(node.id)),
     [document?.nodes, hiddenNodeIds]
+  );
+  const sourceReferenceSummary = useMemo(
+    () => summarizeGraphSourceReferences(document?.nodes ?? []),
+    [document?.nodes]
   );
   const minimapViewport = useMemo(() => {
     if (!document || stageViewport.width === 0 || stageViewport.height === 0) {
@@ -1047,6 +1070,44 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     setStatusMessage("已按来源类型为选中节点建立分组");
   }
 
+  function createSourceSwimlanesFromSelection() {
+    if (selectedNodes.length < 2) {
+      return;
+    }
+
+    const anchorX = Math.min(...selectedNodes.map((node) => node.x));
+    const anchorY = Math.min(...selectedNodes.map((node) => node.y));
+    const layout = buildSourceSwimlaneLayout(selectedNodes, {
+      anchorX,
+      anchorY,
+      stageWidth,
+      stageHeight,
+      makeGroupId: () => randomId("swimlane")
+    });
+    const layoutNodes = new Map(layout.nodes.map((node) => [node.id, node]));
+    const selectedNodeSet = new Set(selectedNodeIds);
+
+    mutateDocument((draft) => {
+      draft.nodes = draft.nodes.map((node) => {
+        const nextNode = layoutNodes.get(node.id);
+        return nextNode ? { ...node, x: nextNode.x, y: nextNode.y } : node;
+      });
+      draft.groups = draft.groups.filter(
+        (group) => !(isGeneratedSourceSwimlaneGroup(group) && group.nodeIds.some((nodeId) => selectedNodeSet.has(nodeId)))
+      );
+      draft.groups.push(
+        ...layout.groups.map((group) => ({
+          ...group,
+          nodeIds: [...group.nodeIds],
+          metadata: group.metadata ? { ...group.metadata } : undefined
+        }))
+      );
+    });
+    setSelectedNodeIds(layout.nodes.map((node) => node.id));
+    setSelectedNodeId("");
+    setStatusMessage(`已生成 ${layout.laneCount} 条来源泳道`);
+  }
+
   function applyBatchTone(tone: Parameters<typeof patchNodeAppearance>[1]["tone"]) {
     mutateDocument((draft) => {
       draft.nodes = draft.nodes.map((node) =>
@@ -1080,6 +1141,23 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     const draft = cloneDocument(current.document);
     mutator(draft);
     applyDocument(draft, options);
+  }
+
+  function previewViewport(nextViewport: GraphDocumentPayload["viewport"], status: string) {
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
+
+    const nextDocument = cloneDocument(current.document);
+    nextDocument.viewport = {
+      ...nextDocument.viewport,
+      ...nextViewport
+    };
+    const nextDetail = rebuildDetail(current, nextDocument);
+    detailRef.current = nextDetail;
+    setGraphDetail(nextDetail);
+    setStatusMessage(status);
   }
 
   async function loadSnapshots(graphId: string) {
@@ -1156,19 +1234,22 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     if (requestedGraphId && graphDetail.id !== requestedGraphId) {
       return;
     }
+    if (requestedFocusKey && consumedFocusRef.current === requestedFocusKey) {
+      return;
+    }
 
-    focusPreviewArea(requestedFocus, graphDetail, stageRef.current, (updater) =>
-      mutateDocument(updater, { captureHistory: false, status: `已定位到 ${requestedFocus.label}` })
-    );
+    consumedFocusRef.current = requestedFocusKey;
+
+    previewViewport(buildFocusPreviewViewport(requestedFocus, graphDetail, stageRef.current), `已定位到 ${requestedFocus.label}`);
     setFocusPreview(requestedFocus);
+    navigate(buildClearedFocusNavigationLocation(location.pathname, location.search), { replace: true, state: null });
 
     const timer = window.setTimeout(() => {
       setFocusPreview(null);
-      navigate({ pathname: location.pathname }, { replace: true });
     }, 2600);
 
     return () => window.clearTimeout(timer);
-  }, [graphDetail, location.pathname, navigate, requestedFocus, requestedGraphId]);
+  }, [graphDetail, location.pathname, location.search, navigate, requestedFocus, requestedFocusKey, requestedGraphId]);
 
   async function openGraph(graphId: string) {
     if (detailRef.current?.id === graphId) {
@@ -1247,7 +1328,18 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     }
 
     const currentDrag = dragState;
+    function clearActiveDrag() {
+      setAlignmentGuides([]);
+      setSelectionBox(null);
+      setDragState(null);
+    }
+
     function handlePointerMove(event: PointerEvent) {
+      if ((event.buttons & 1) !== 1) {
+        clearActiveDrag();
+        return;
+      }
+
       const current = detailRef.current;
       if (!current) {
         return;
@@ -1399,15 +1491,18 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
         setSelectedEdgeId("");
         setSelectionBox(null);
       }
-      setAlignmentGuides([]);
-      setDragState(null);
+      clearActiveDrag();
     }
 
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", clearActiveDrag);
+    window.addEventListener("blur", clearActiveDrag);
     return () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", clearActiveDrag);
+      window.removeEventListener("blur", clearActiveDrag);
     };
   }, [dragState, hiddenNodeIds, selectionBox]);
 
@@ -2953,6 +3048,59 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
           <div className="graph-rail-section">
             <div className="section-frame-head compact">
               <div>
+                <p className="eyebrow">来源关系</p>
+                <h2>图谱引用</h2>
+              </div>
+            </div>
+
+            {sourceReferenceSummary.totalReferences > 0 ? (
+              <div className="graph-form-stack">
+                <div className="graph-meta-grid">
+                  <article className="graph-meta-card muted">
+                    <strong>{sourceReferenceSummary.totalReferences}</strong>
+                    <p>个来源对象</p>
+                  </article>
+                  <article className="graph-meta-card muted">
+                    <strong>{sourceReferenceSummary.totalLinkedNodes}</strong>
+                    <p>个节点带来源</p>
+                  </article>
+                </div>
+                <div className="graph-source-summary-list">
+                  {sourceReferenceSummary.typeBuckets.map((bucket) => (
+                    <span className="graph-source-summary-pill" key={bucket.type}>
+                      {bucket.label} · {bucket.referenceCount} 来源 / {bucket.nodeCount} 节点
+                    </span>
+                  ))}
+                </div>
+                <div className="graph-source-reference-list">
+                  {sourceReferenceSummary.references.slice(0, 5).map((reference) => (
+                    <article className="graph-source-reference-item" key={reference.key}>
+                      <div>
+                        <strong>{reference.label}</strong>
+                        <span>{reference.nodeCount} 个节点 · {reference.type}</span>
+                      </div>
+                      {reference.excerpt ? <p>{reference.excerpt}</p> : null}
+                    </article>
+                  ))}
+                  {sourceReferenceSummary.references.length > 5 ? (
+                    <article className="graph-meta-card muted">
+                      <strong>还有 {sourceReferenceSummary.references.length - 5} 个来源</strong>
+                      <p>可通过节点详情回到具体资料、笔记或批注上下文。</p>
+                    </article>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <article className="graph-meta-card muted">
+                <strong>暂无来源引用</strong>
+                <p>从资料、笔记或批注生成节点后，这里会显示图谱和原始学习内容的关系。</p>
+              </article>
+            )}
+          </div>
+
+          <div className="graph-rail-section">
+            <div className="section-frame-head compact">
+              <div>
                 <p className="eyebrow">选中内容</p>
                 <h2>节点与连线</h2>
               </div>
@@ -2970,22 +3118,22 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
                     为选中节点建组
                   </button>
                   <button className="secondary-button" onClick={() => alignSelectedNodes("left")} type="button">
-                    宸﹀榻?
+                    左对齐
                   </button>
                   <button className="secondary-button" onClick={() => alignSelectedNodes("top")} type="button">
-                    椤堕儴瀵归綈
+                    顶部对齐
                   </button>
                   <button className="secondary-button" onClick={() => alignSelectedNodes("center")} type="button">
-                    姘村钩灞呬腑
+                    水平居中
                   </button>
                   <button className="secondary-button" onClick={() => alignSelectedNodes("middle")} type="button">
-                    鍨傜洿灞呬腑
+                    垂直居中
                   </button>
                   <button className="secondary-button" disabled={selectedNodes.length < 3} onClick={() => distributeSelectedNodes("horizontal")} type="button">
-                    妯悜鍧囧垎
+                    横向均分
                   </button>
                   <button className="secondary-button" disabled={selectedNodes.length < 3} onClick={() => distributeSelectedNodes("vertical")} type="button">
-                    绾靛悜鍧囧垎
+                    纵向均分
                   </button>
                   <button className="secondary-button" onClick={() => deleteSelectedNodes(selectedNodeIds)} type="button">
                     <Trash2 size={16} />
@@ -3067,6 +3215,9 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
                       </button>
                       <button className="secondary-button" onClick={() => organizeSelectedNodesBySource("type-rows")} type="button">
                         按来源分行
+                      </button>
+                      <button className="secondary-button" onClick={createSourceSwimlanesFromSelection} type="button">
+                        生成来源泳道
                       </button>
                       <button className="ghost-button" onClick={createSourceGroupsFromSelection} type="button">
                         生成来源分组

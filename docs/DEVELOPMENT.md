@@ -157,6 +157,9 @@ npm --workspace frontend-admin run dev -- --port 8004
 - 阅读器进度、书签、批注
 - 富文本笔记、版本历史、版本恢复
 - 笔记正文双写到 MongoDB `note_documents / note_snapshots`
+- 图谱工作区创建、保存、搜索定位、分组折叠、快照恢复、Markdown/Mermaid 导入、PNG/SVG 导出
+- 图谱多选整理支持对齐、均分、批量样式、按来源分行/分列、生成来源分组和来源泳道
+- 图谱右侧栏展示来源关系摘要，可看到资料、批注、笔记、卡片等来源对象和关联节点数
 - 社区公开内容浏览
 
 ### 管理端

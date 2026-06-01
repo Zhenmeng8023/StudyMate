@@ -210,6 +210,7 @@ export interface GraphGroupPayload {
   width: number;
   height: number;
   collapsed: boolean;
+  metadata?: Record<string, unknown>;
 }
 
 export interface GraphViewportPayload {

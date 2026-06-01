@@ -41,14 +41,15 @@ type GraphEdgePayload struct {
 }
 
 type GraphGroupPayload struct {
-	ID        string   `json:"id" bson:"id"`
-	Title     string   `json:"title" bson:"title"`
-	NodeIDs   []string `json:"nodeIds" bson:"node_ids"`
-	X         float64  `json:"x" bson:"x"`
-	Y         float64  `json:"y" bson:"y"`
-	Width     float64  `json:"width" bson:"width"`
-	Height    float64  `json:"height" bson:"height"`
-	Collapsed bool     `json:"collapsed" bson:"collapsed"`
+	ID        string         `json:"id" bson:"id"`
+	Title     string         `json:"title" bson:"title"`
+	NodeIDs   []string       `json:"nodeIds" bson:"node_ids"`
+	X         float64        `json:"x" bson:"x"`
+	Y         float64        `json:"y" bson:"y"`
+	Width     float64        `json:"width" bson:"width"`
+	Height    float64        `json:"height" bson:"height"`
+	Collapsed bool           `json:"collapsed" bson:"collapsed"`
+	Metadata  map[string]any `json:"metadata,omitempty" bson:"metadata,omitempty"`
 }
 
 type GraphViewportPayload struct {

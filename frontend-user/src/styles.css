@@ -139,6 +139,7 @@ textarea {
   padding: 18px 16px 16px;
   border-radius: var(--radius-lg);
   position: sticky;
+  z-index: 5;
   top: var(--shell-padding);
   height: fit-content;
   background: var(--surface-soft);
@@ -1408,6 +1409,7 @@ textarea {
 .graph-meta-grid,
 .graph-issue-list,
 .graph-card-draft-list,
+.graph-source-reference-list,
 .graph-snapshot-list {
   display: grid;
   gap: 10px;
@@ -1420,6 +1422,7 @@ textarea {
 .graph-template-card,
 .graph-group-item,
 .graph-snapshot-item,
+.graph-source-reference-item,
 .graph-card-draft,
 .graph-issue-item {
   display: grid;
@@ -1444,11 +1447,17 @@ textarea {
 
 .graph-template-card span,
 .graph-group-item span,
+.graph-source-reference-item span,
 .graph-card-draft small,
 .graph-card-draft p,
+.graph-source-reference-item p,
 .graph-issue-item span {
   color: var(--text-2);
   font-size: 13px;
+}
+
+.graph-source-reference-item p {
+  margin: 0;
 }
 
 .graph-card-draft label {

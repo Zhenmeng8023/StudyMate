@@ -1030,7 +1030,22 @@ index(owner_user_id, created_at)
       "metadata": {}
     }
   ],
-  "groups": [],
+  "groups": [
+    {
+      "id": "group_uuid",
+      "title": "资料来源泳道",
+      "node_ids": ["node_uuid"],
+      "x": 80,
+      "y": 80,
+      "width": 296,
+      "height": 260,
+      "collapsed": false,
+      "metadata": {
+        "layoutKind": "source-swimlane",
+        "sourceKey": "material"
+      }
+    }
+  ],
   "theme": {},
   "updated_at": "datetime"
 }
