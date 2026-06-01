@@ -3,6 +3,7 @@ import {
   BookOpen,
   Download,
   FileDown,
+  Keyboard,
   Layers3,
   Link2,
   MousePointer2,
@@ -133,6 +134,16 @@ type AlignmentGuide = {
   position: number;
   start: number;
   end: number;
+  match: "start" | "center" | "end";
+  label: string;
+};
+
+type SourceOrganizerMode = "type-columns" | "type-rows";
+
+type SourceGroupDefinition = {
+  key: string;
+  title: string;
+  nodeIds: string[];
 };
 
 function cloneDocument(document: GraphDocumentPayload): GraphDocumentPayload {
@@ -335,6 +346,67 @@ function buildSelectionBox(startX: number, startY: number, currentX: number, cur
   };
 }
 
+function isTypingElement(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+  return tagName === "input" || tagName === "textarea" || tagName === "select" || target.isContentEditable;
+}
+
+function getSourceBucketKey(node: GraphNodePayload) {
+  if (!node.source?.type) {
+    return "free";
+  }
+  return node.source.type;
+}
+
+function getSourceBucketLabel(node: GraphNodePayload) {
+  if (!node.source?.type) {
+    return "自由节点";
+  }
+  return getNodeSourceLabel(node.source.type);
+}
+
+function buildSourceGroupDefinitions(nodes: GraphNodePayload[]) {
+  const groups = new Map<string, SourceGroupDefinition>();
+  for (const node of nodes) {
+    const key = getSourceBucketKey(node);
+    const current = groups.get(key);
+    if (current) {
+      current.nodeIds.push(node.id);
+      continue;
+    }
+    groups.set(key, {
+      key,
+      title: `${getSourceBucketLabel(node)}分组`,
+      nodeIds: [node.id]
+    });
+  }
+  return [...groups.values()];
+}
+
+function getAlignmentLabel(orientation: AlignmentGuide["orientation"], match: AlignmentGuide["match"]) {
+  if (orientation === "vertical") {
+    if (match === "start") {
+      return "左边对齐";
+    }
+    if (match === "center") {
+      return "垂直中线对齐";
+    }
+    return "右边对齐";
+  }
+
+  if (match === "start") {
+    return "顶边对齐";
+  }
+  if (match === "center") {
+    return "水平中线对齐";
+  }
+  return "底边对齐";
+}
+
 function buildNodeBounds(node: Pick<GraphNodePayload, "x" | "y" | "width" | "height">) {
   return {
     left: node.x,
@@ -370,23 +442,24 @@ function resolveAlignmentGuides(
   stationaryNodes: GraphNodePayload[],
   threshold = 10
 ) {
+  type AxisMatch = AlignmentGuide["match"];
   let bestVertical: { adjustment: number; guide: AlignmentGuide } | null = null;
   let bestHorizontal: { adjustment: number; guide: AlignmentGuide } | null = null;
 
   for (const node of stationaryNodes) {
     const target = buildNodeBounds(node);
-    const verticalPairs = [
-      [movingBounds.left, target.left],
-      [movingBounds.centerX, target.centerX],
-      [movingBounds.right, target.right]
+    const verticalPairs: Array<[number, number, AxisMatch]> = [
+      [movingBounds.left, target.left, "start"],
+      [movingBounds.centerX, target.centerX, "center"],
+      [movingBounds.right, target.right, "end"]
     ];
-    const horizontalPairs = [
-      [movingBounds.top, target.top],
-      [movingBounds.centerY, target.centerY],
-      [movingBounds.bottom, target.bottom]
+    const horizontalPairs: Array<[number, number, AxisMatch]> = [
+      [movingBounds.top, target.top, "start"],
+      [movingBounds.centerY, target.centerY, "center"],
+      [movingBounds.bottom, target.bottom, "end"]
     ];
 
-    for (const [current, desired] of verticalPairs) {
+    for (const [current, desired, match] of verticalPairs) {
       const adjustment = desired - current;
       if (Math.abs(adjustment) > threshold) {
         continue;
@@ -397,7 +470,9 @@ function resolveAlignmentGuides(
           orientation: "vertical" as const,
           position: desired,
           start: Math.max(0, Math.min(movingBounds.top, target.top) - 28),
-          end: Math.min(stageHeight, Math.max(movingBounds.bottom, target.bottom) + 28)
+          end: Math.min(stageHeight, Math.max(movingBounds.bottom, target.bottom) + 28),
+          match,
+          label: getAlignmentLabel("vertical", match)
         }
       };
       if (!bestVertical || Math.abs(candidate.adjustment) < Math.abs(bestVertical.adjustment)) {
@@ -405,7 +480,7 @@ function resolveAlignmentGuides(
       }
     }
 
-    for (const [current, desired] of horizontalPairs) {
+    for (const [current, desired, match] of horizontalPairs) {
       const adjustment = desired - current;
       if (Math.abs(adjustment) > threshold) {
         continue;
@@ -416,7 +491,9 @@ function resolveAlignmentGuides(
           orientation: "horizontal" as const,
           position: desired,
           start: Math.max(0, Math.min(movingBounds.left, target.left) - 28),
-          end: Math.min(stageWidth, Math.max(movingBounds.right, target.right) + 28)
+          end: Math.min(stageWidth, Math.max(movingBounds.right, target.right) + 28),
+          match,
+          label: getAlignmentLabel("horizontal", match)
         }
       };
       if (!bestHorizontal || Math.abs(candidate.adjustment) < Math.abs(bestHorizontal.adjustment)) {
@@ -545,6 +622,7 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const [selectionBox, setSelectionBox] = useState<SelectionBox>(null);
   const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([]);
+  const [showKeyboardGuide, setShowKeyboardGuide] = useState(false);
   const detailRef = useRef<GraphDetailPayload | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [selectedDraftDeckId, setSelectedDraftDeckId] = useState("");
@@ -630,6 +708,22 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
     const preset = resolveNodeSizePreset(selectedNodes[0]);
     return selectedNodes.every((node) => resolveNodeSizePreset(node) === preset) ? preset : null;
   }, [selectedNodes]);
+  const selectedSourceSummary = useMemo(() => {
+    if (selectedNodes.length < 2) {
+      return [];
+    }
+    const counts = new Map<string, { label: string; count: number }>();
+    for (const node of selectedNodes) {
+      const key = getSourceBucketKey(node);
+      const current = counts.get(key);
+      if (current) {
+        current.count += 1;
+        continue;
+      }
+      counts.set(key, { label: getSourceBucketLabel(node), count: 1 });
+    }
+    return [...counts.values()];
+  }, [selectedNodes]);
   const selectedEdge = selectedEdgeId ? document?.edges.find((edge) => edge.id === selectedEdgeId) ?? null : null;
   const selectedNodeSourceTarget = selectedNode ? buildNodeSourceTarget(selectedNode) : "";
   const visibleNodes = useMemo(
@@ -652,6 +746,10 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
       height: height * minimapScale
     };
   }, [document, stageViewport.height, stageViewport.width]);
+  const alignmentHintLabels = useMemo(
+    () => [...new Set(alignmentGuides.map((guide) => guide.label))],
+    [alignmentGuides]
+  );
 
   function resetHistory(nextDetail: GraphDetailPayload) {
     setGraphDetail(nextDetail);
@@ -837,6 +935,116 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
         return position ? { ...node, ...position } : node;
       });
     });
+  }
+
+  function organizeSelectedNodesBySource(mode: SourceOrganizerMode) {
+    if (selectedNodes.length < 2) {
+      return;
+    }
+
+    const grouped = buildSourceGroupDefinitions(selectedNodes)
+      .map((group) => ({
+        ...group,
+        nodes: selectedNodes
+          .filter((node) => group.nodeIds.includes(node.id))
+          .sort((left, right) => {
+            const sourceLabelDiff = (left.source?.label || left.title).localeCompare(right.source?.label || right.title, "zh-CN");
+            return sourceLabelDiff === 0 ? left.title.localeCompare(right.title, "zh-CN") : sourceLabelDiff;
+          })
+      }))
+      .filter((group) => group.nodes.length > 0);
+
+    if (grouped.length === 0) {
+      return;
+    }
+
+    const anchorLeft = Math.min(...selectedNodes.map((node) => node.x));
+    const anchorTop = Math.min(...selectedNodes.map((node) => node.y));
+    const laneGap = 72;
+    const itemGap = 24;
+    const placements = new Map<string, { x: number; y: number }>();
+    let laneOffset = 0;
+
+    for (const group of grouped) {
+      if (mode === "type-columns") {
+        let columnHeight = 0;
+        let columnWidth = 0;
+        for (const node of group.nodes) {
+          placements.set(node.id, {
+            x: anchorLeft + laneOffset,
+            y: anchorTop + columnHeight
+          });
+          columnHeight += node.height + itemGap;
+          columnWidth = Math.max(columnWidth, node.width);
+        }
+        laneOffset += columnWidth + laneGap;
+        continue;
+      }
+
+      let rowWidth = 0;
+      let rowHeight = 0;
+      for (const node of group.nodes) {
+        placements.set(node.id, {
+          x: anchorLeft + rowWidth,
+          y: anchorTop + laneOffset
+        });
+        rowWidth += node.width + itemGap;
+        rowHeight = Math.max(rowHeight, node.height);
+      }
+      laneOffset += rowHeight + laneGap;
+    }
+
+    mutateDocument((draft) => {
+      draft.nodes = draft.nodes.map((node) => {
+        const placement = placements.get(node.id);
+        if (!placement) {
+          return node;
+        }
+        return {
+          ...node,
+          x: Math.max(0, Math.min(stageWidth - node.width, Number(placement.x.toFixed(1)))),
+          y: Math.max(0, Math.min(stageHeight - node.height, Number(placement.y.toFixed(1))))
+        };
+      });
+    });
+    setStatusMessage(mode === "type-columns" ? "已按来源类型分列整理选中节点" : "已按来源类型分行整理选中节点");
+  }
+
+  function createSourceGroupsFromSelection() {
+    if (selectedNodes.length < 2) {
+      return;
+    }
+
+    const sourceGroups = buildSourceGroupDefinitions(selectedNodes).filter((group) => group.nodeIds.length > 0);
+    if (sourceGroups.length === 0) {
+      return;
+    }
+
+    mutateDocument((draft) => {
+      const nextGroups: GraphGroupPayload[] = [];
+      for (const sourceGroup of sourceGroups) {
+        const nodes = draft.nodes.filter((node) => sourceGroup.nodeIds.includes(node.id));
+        if (nodes.length === 0) {
+          continue;
+        }
+        const left = Math.min(...nodes.map((node) => node.x));
+        const top = Math.min(...nodes.map((node) => node.y));
+        const right = Math.max(...nodes.map((node) => node.x + node.width));
+        const bottom = Math.max(...nodes.map((node) => node.y + node.height));
+        nextGroups.push({
+          id: randomId("group"),
+          title: sourceGroup.title,
+          nodeIds: [...sourceGroup.nodeIds],
+          x: Math.max(0, left - 28),
+          y: Math.max(0, top - 40),
+          width: Math.min(stageWidth, right - left + 56),
+          height: Math.min(stageHeight, bottom - top + 78),
+          collapsed: false
+        });
+      }
+      draft.groups.push(...nextGroups);
+    });
+    setStatusMessage("已按来源类型为选中节点建立分组");
   }
 
   function applyBatchTone(tone: Parameters<typeof patchNodeAppearance>[1]["tone"]) {
@@ -1205,9 +1413,23 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if ((event.key === "?" || (event.shiftKey && event.key === "/")) && !isTypingElement(event.target)) {
+        event.preventDefault();
+        setShowKeyboardGuide((current) => !current);
+        return;
+      }
+
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
         void saveCurrentGraph("手动保存");
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a" && !isTypingElement(event.target)) {
+        event.preventDefault();
+        setSelectedNodeIds(visibleNodes.map((node) => node.id));
+        setSelectedNodeId(visibleNodes[0]?.id || "");
+        setSelectedEdgeId("");
         return;
       }
 
@@ -1252,6 +1474,10 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
         return;
       }
 
+      if (isTypingElement(event.target)) {
+        return;
+      }
+
       if (event.key === "Delete") {
         if (selectedNodeIds.length > 0) {
           event.preventDefault();
@@ -1265,19 +1491,53 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
             draft.edges = draft.edges.filter((edge) => edge.id !== selectedEdgeId);
           });
           setSelectedEdgeId("");
+          return;
         }
+      }
+
+      if (event.key.toLowerCase() === "f" && selectedNodeIds.length === 1) {
+        event.preventDefault();
+        const node = nodeMap.get(selectedNodeIds[0]);
+        if (node) {
+          focusNode(node);
+        }
+        return;
+      }
+
+      if (event.key.toLowerCase() === "g" && selectedNodeIds.length > 0) {
+        event.preventDefault();
+        createGroupFromSelectedNode();
+        return;
+      }
+
+      if (event.key.toLowerCase() === "l" && selectedNodeIds.length === 1 && selectedNode) {
+        event.preventDefault();
+        setLinkFromNodeId((current) => (current ? "" : selectedNode.id));
+        return;
+      }
+
+      if (event.key === "0" && detailRef.current) {
+        event.preventDefault();
+        mutateDocument(
+          (draft) => {
+            draft.viewport = { x: 140, y: 120, zoom: 1 };
+          },
+          { captureHistory: false, status: "已重置画布视野" }
+        );
+        return;
       }
 
       if (event.key === "Escape") {
         setLinkFromNodeId("");
         setSelectionBox(null);
         setAlignmentGuides([]);
+        setShowKeyboardGuide(false);
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [deleteSelectedNodes, historyFuture, historyPast, selectedEdgeId, selectedNodeIds]);
+  }, [deleteSelectedNodes, historyFuture, historyPast, nodeMap, selectedEdgeId, selectedNode, selectedNodeIds, visibleNodes]);
 
   function createNode(type: "text" | "rich-note" | "material" | "card", source?: GraphNodePayload["source"]) {
     const current = detailRef.current;
@@ -2017,6 +2277,14 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
             </div>
 
             <div className="graph-toolbar-group">
+              <button
+                className={showKeyboardGuide ? "icon-button active" : "icon-button"}
+                onClick={() => setShowKeyboardGuide((current) => !current)}
+                title="快捷键说明"
+                type="button"
+              >
+                <Keyboard size={16} />
+              </button>
               <label className="search-field narrow graph-search-field">
                 <Search size={16} />
                 <input
@@ -2077,13 +2345,24 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
 
           <div className="graph-stage-shell">
             <div className="graph-stage-status">
-              <span>{loading ? "加载中..." : statusMessage}</span>
-              {graphDetail ? (
-                <small>
-                  版本 {graphDetail.currentVersion} · {graphDetail.nodeCount} 节点 · {graphDetail.edgeCount} 连线
-                  {selectedNodeIds.length > 1 ? ` · 已选 ${selectedNodeIds.length} 个节点` : ""}
-                </small>
-              ) : null}
+              <span>{loading ? "正在加载..." : statusMessage}</span>
+              <div className="graph-stage-status-meta">
+                {alignmentHintLabels.length ? (
+                  <div className="graph-alignment-hints">
+                    {alignmentHintLabels.map((label) => (
+                      <span className="graph-alignment-pill" key={label}>
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {graphDetail ? (
+                  <small>
+                    版本 {graphDetail.currentVersion} · {graphDetail.nodeCount} 节点 · {graphDetail.edgeCount} 连线
+                    {selectedNodeIds.length > 1 ? ` · 已选 ${selectedNodeIds.length} 个节点` : ""}
+                  </small>
+                ) : null}
+              </div>
             </div>
 
             <div
@@ -2272,6 +2551,30 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
                       ) : null}
                     </div>
                   </aside>
+                  {showKeyboardGuide ? (
+                    <div className="graph-shortcut-panel">
+                      <div className="graph-shortcut-head">
+                        <strong>快捷键</strong>
+                        <button className="ghost-button" onClick={() => setShowKeyboardGuide(false)} type="button">
+                          关闭
+                        </button>
+                      </div>
+                      <div className="graph-shortcut-list">
+                        <article className="graph-shortcut-item"><kbd>Shift</kbd><span>空白处拖动框选节点</span></article>
+                        <article className="graph-shortcut-item"><kbd>Shift / Ctrl</kbd><span>点击节点增减多选</span></article>
+                        <article className="graph-shortcut-item"><kbd>Ctrl/Cmd + A</kbd><span>全选当前可见节点</span></article>
+                        <article className="graph-shortcut-item"><kbd>Ctrl/Cmd + S</kbd><span>立即保存图谱</span></article>
+                        <article className="graph-shortcut-item"><kbd>Ctrl/Cmd + Z / Y</kbd><span>撤销或重做</span></article>
+                        <article className="graph-shortcut-item"><kbd>F</kbd><span>聚焦单个选中节点</span></article>
+                        <article className="graph-shortcut-item"><kbd>G</kbd><span>为当前选择建立分组</span></article>
+                        <article className="graph-shortcut-item"><kbd>L</kbd><span>进入或退出连线模式</span></article>
+                        <article className="graph-shortcut-item"><kbd>0</kbd><span>重置画布视野</span></article>
+                        <article className="graph-shortcut-item"><kbd>Delete</kbd><span>删除选中节点或连线</span></article>
+                        <article className="graph-shortcut-item"><kbd>?</kbd><span>打开或关闭快捷键面板</span></article>
+                        <article className="graph-shortcut-item"><kbd>Esc</kbd><span>退出连线、框选和提示面板</span></article>
+                      </div>
+                    </div>
+                  ) : null}
                   {contextMenu ? (
                     <div className="graph-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
                       {contextMenu.nodeId ? (
@@ -2749,6 +3052,27 @@ export function GraphWorkspacePage(props: { session: AuthSession }) {
                   </div>
                 </div>
                 <div className="graph-meta-grid">
+                  <article className="graph-meta-card">
+                    <strong>按来源整理</strong>
+                    <div className="graph-source-summary-list">
+                      {selectedSourceSummary.map((item) => (
+                        <span className="graph-source-summary-pill" key={item.label}>
+                          {item.label} · {item.count}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="graph-inline-actions">
+                      <button className="secondary-button" onClick={() => organizeSelectedNodesBySource("type-columns")} type="button">
+                        按来源分列
+                      </button>
+                      <button className="secondary-button" onClick={() => organizeSelectedNodesBySource("type-rows")} type="button">
+                        按来源分行
+                      </button>
+                      <button className="ghost-button" onClick={createSourceGroupsFromSelection} type="button">
+                        生成来源分组
+                      </button>
+                    </div>
+                  </article>
                   <article className="graph-meta-card muted">
                     <strong>覆盖范围</strong>
                     <p>{selectedNodes.map((node) => buildNodeTitle(node)).slice(0, 3).join("、")}{selectedNodes.length > 3 ? " ..." : ""}</p>

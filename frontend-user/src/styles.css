@@ -1108,6 +1108,40 @@ textarea {
   margin-bottom: 12px;
 }
 
+.graph-stage-status-meta,
+.graph-alignment-hints,
+.graph-source-summary-list,
+.graph-shortcut-head,
+.graph-shortcut-item {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.graph-stage-status-meta {
+  justify-content: flex-end;
+}
+
+.graph-alignment-pill,
+.graph-source-summary-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-1);
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.graph-alignment-pill {
+  border-color: rgba(181, 123, 35, 0.26);
+  color: #8b611a;
+  background: rgba(255, 244, 219, 0.88);
+}
+
 .graph-stage {
   position: relative;
   overflow: hidden;
@@ -1409,6 +1443,64 @@ textarea {
 
 .graph-search-field {
   min-width: 220px;
+}
+
+.graph-source-summary-list {
+  margin-top: 8px;
+}
+
+.graph-shortcut-panel {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 7;
+  width: min(340px, calc(100% - 280px));
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(36, 106, 97, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(14px);
+}
+
+.graph-shortcut-head {
+  justify-content: space-between;
+}
+
+.graph-shortcut-list {
+  display: grid;
+  gap: 8px;
+}
+
+.graph-shortcut-item {
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid rgba(57, 74, 91, 0.1);
+  border-radius: 10px;
+  background: rgba(244, 248, 251, 0.72);
+}
+
+.graph-shortcut-item span {
+  flex: 1;
+  color: var(--text-1);
+  font-size: 13px;
+}
+
+.graph-shortcut-item kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(57, 74, 91, 0.18);
+  border-radius: 8px;
+  color: var(--text-0);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .graph-group {
