@@ -10,12 +10,14 @@
 - 新增 v1.0 路线图、版本计划、图谱产品化说明、PR 模板、CI 骨架和文档同步脚本。
 - 新增根脚本 `lint`、`test:user`、`test:admin`、`test:e2e`、`verify:docs`、`ci`。
 - 前台用户端接入 Vitest + React Testing Library，后台管理端接入 Vitest + Vue Test Utils，端到端接入 Playwright。
+- 用户端主应用拆分为 routes、shell、pages、features；图谱和管理端入口文件改为薄壳并建立 components/hooks/state/lib/exporters/importers/router/views 目录边界。
 
 ### Changed
 
 - README 当前阶段更新为真实项目状态：阅读/笔记已闭环，图谱工作区为强 MVP，复习和 AI 部分实现，后台审核主链存在但治理能力不完整。
 - `.gitignore` 重新允许 `PROJECT_LOG.md`、`docs/planning/` 和 `docs/design/` 进入版本治理。
 - GitHub CI 扩展为覆盖 Node 24、Go 1.26、前后台构建、前后台测试、Playwright、图谱核心测试、后端测试和文档同步。
+- 管理端样式从 `App.vue` 内联块迁出到 `components/admin/admin.css`，降低 Vue 视图单文件体积。
 
 ### Planned
 

@@ -195,6 +195,13 @@ go test ./...
 - 提交前运行 `npm run verify:docs`，避免关键文档入口漂移。
 - CI 基线使用 Node 24、Go 1.26、Vitest、React Testing Library、Vue Test Utils、Playwright、`@studymate/graph-core` 测试和后端 `go test ./...`。
 
+## 前端拆分边界
+
+- 用户端路由入口位于 `frontend-user/src/app/routes.tsx`，`frontend-user/src/app/App.tsx` 只保留兼容导出。
+- 用户端工作区壳层位于 `frontend-user/src/app/shell/`，业务页面位于 `frontend-user/src/pages/`，跨页面特性 helper 位于 `frontend-user/src/features/`。
+- 图谱工作区入口 `frontend-user/src/modules/graph/GraphWorkspacePage.tsx` 只做薄壳导出；图谱实现边界按 `components/`、`hooks/`、`state/`、`lib/`、`exporters/`、`importers/` 继续收口。
+- 管理端入口 `frontend-admin/src/App.vue` 只挂载 `views/AdminWorkspaceView.vue`；治理模块路由元数据位于 `frontend-admin/src/router/index.ts`，后台通用组件和样式位于 `frontend-admin/src/components/admin/`。
+
 ## 编码说明
 
 - 项目主语言使用汉语。

@@ -73,6 +73,8 @@ StudyMate
 └── PROJECT_LOG.md
 ```
 
+前台用户端主入口已拆分为 `src/app/routes.tsx`、`src/app/shell/`、`src/pages/` 和 `src/features/`。图谱工作区按 `components/`、`hooks/`、`state/`、`lib/`、`exporters/`、`importers/` 建立边界；后台按 `router/`、`views/`、`components/admin/` 建立边界。
+
 ## 本地地址
 
 - 用户端：`http://localhost:8001/`

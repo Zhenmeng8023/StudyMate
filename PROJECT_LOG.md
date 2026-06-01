@@ -2,6 +2,27 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-01 21:36:28 +08:00 | v0.0.72 | 拆分用户端主应用、图谱入口和管理端入口
+### 任务内容
+- 按 v1.0 发布推进顺序，执行超大文件拆分。
+- 目标是先解除 `frontend-user/src/app/App.tsx`、`frontend-user/src/modules/graph/GraphWorkspacePage.tsx`、`frontend-admin/src/App.vue` 三个入口文件的巨石职责，并建立后续继续细拆的目录边界。
+### 完成结果
+- 将用户端主应用拆成：
+  - [frontend-user/src/app/routes.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/routes.tsx)
+  - [frontend-user/src/app/shell/ShellFrame.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/shell/ShellFrame.tsx)
+  - [frontend-user/src/pages/](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/pages/)
+  - [frontend-user/src/features/ai/aiDrafts.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/features/ai/aiDrafts.ts)
+- `frontend-user/src/app/App.tsx` 改为 1 行兼容导出，原有路由和页面行为保持不变。
+- `frontend-user/src/modules/graph/GraphWorkspacePage.tsx` 改为薄壳导出，图谱实现移入 `components/GraphWorkspaceView.tsx` 和 `hooks/useGraphWorkspaceController.tsx`，并建立 `state/`、`lib/`、`exporters/`、`importers/` 边界。
+- `frontend-admin/src/App.vue` 改为薄壳挂载 `views/AdminWorkspaceView.vue`，新增 `router/index.ts`、`components/admin/AdminModuleBadge.vue` 和 `components/admin/admin.css`。
+- 管理端样式从单文件 Vue 内联样式迁出，`AdminWorkspaceView.vue` 降到 500 行以内。
+- 同步更新 README、开发说明、路线图、版本计划、变更记录和项目日志。
+### 验证结果
+- `npm run ci`
+- CI 脚本内部已覆盖类型检查、文档校验、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...`。
+### 后续影响
+- 后续 reader/notes 与 graph 收口时，应继续把 `useGraphWorkspaceController` 内部的大型状态与操作拆到更细 hooks/lib，而不是再把逻辑塞回入口文件。
+
 ## 2026-06-01 21:09:44 +08:00 | v0.0.71 | 建立 CI 与前端测试基线
 ### 任务内容
 - 按 v1.0 发布推进顺序，完成工程基线第二步：根脚本、前后台单元测试、E2E 测试和 GitHub CI 覆盖。

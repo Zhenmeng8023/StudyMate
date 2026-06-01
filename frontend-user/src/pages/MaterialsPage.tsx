@@ -1,0 +1,342 @@
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { BookOpen, Search, Upload } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import type { AuthSession, FilePayload, MaterialPayload } from "../api/client";
+import { createMaterial, listMaterials, rateMaterial, toggleMaterialFavorite, updateMaterial, uploadFile } from "../api/client";
+import { displayMaterialCategory, displayMaterialDescription, displayMaterialOwner, displayMaterialTags, displayMaterialTitle, formatDate, quickActions, SectionFrame, WorkspaceHeader } from "../app/appShared";
+
+export function MaterialsPage(props: { session: AuthSession | null }) {
+  const [materials, setMaterials] = useState<MaterialPayload[]>([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [search, setSearch] = useState("");
+  const [busy, setBusy] = useState("");
+  const [message, setMessage] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<FilePayload | null>(null);
+  const [draft, setDraft] = useState({
+    title: "",
+    description: "",
+    category: "",
+    tags: "",
+    attachmentFileId: ""
+  });
+  const searchParams = new URLSearchParams(useLocation().search);
+
+  async function loadAll() {
+    const items = await listMaterials();
+    setMaterials(items);
+    setSelectedId((current) => current || searchParams.get("selected") || items[0]?.id || "");
+  }
+
+  useEffect(() => {
+    void loadAll().catch(() => setMaterials([]));
+  }, []);
+
+  const filteredMaterials = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) {
+      return materials;
+    }
+
+    return materials.filter((material) =>
+      [displayMaterialTitle(material), displayMaterialDescription(material), displayMaterialCategory(material)]
+        .join(" ")
+        .toLowerCase()
+        .includes(keyword)
+    );
+  }, [materials, search]);
+
+  const selectedMaterial =
+    filteredMaterials.find((material) => material.id === selectedId) ??
+    materials.find((material) => material.id === selectedId) ??
+    filteredMaterials[0] ??
+    null;
+
+  useEffect(() => {
+    if (selectedMaterial) {
+      setDraft({
+        title: displayMaterialTitle(selectedMaterial),
+        description:
+          displayMaterialDescription(selectedMaterial) === "这份资料的说明还没有整理好。"
+            ? ""
+            : displayMaterialDescription(selectedMaterial),
+        category: displayMaterialCategory(selectedMaterial) === "未分类" ? "" : displayMaterialCategory(selectedMaterial),
+        tags: displayMaterialTags(selectedMaterial).join(", "),
+        attachmentFileId: selectedMaterial.attachmentFileId
+      });
+      setUploadedFile(
+        selectedMaterial.attachmentFileId
+          ? {
+              id: selectedMaterial.attachmentFileId,
+              createdAt: selectedMaterial.createdAt,
+              mimeType: selectedMaterial.attachmentMime,
+              originalName: selectedMaterial.attachmentName,
+              ownerUserId: selectedMaterial.ownerUserId,
+              path: "",
+              size: 0
+            }
+          : null
+      );
+    }
+  }, [selectedMaterial]);
+
+  async function handleUpload() {
+    if (!props.session || !selectedFile) {
+      return;
+    }
+
+    setBusy("upload");
+    setMessage("");
+    try {
+      const payload = await uploadFile(props.session, selectedFile);
+      setUploadedFile(payload);
+      setDraft((current) => ({ ...current, attachmentFileId: payload.id }));
+      setMessage(`已上传 ${payload.originalName}`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "上传失败，请稍后再试。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handleCreate() {
+    if (!props.session) {
+      setMessage("登录后才能创建资料。");
+      return;
+    }
+
+    setBusy("save");
+    setMessage("");
+    try {
+      await createMaterial(props.session, {
+        title: draft.title,
+        description: draft.description,
+        category: draft.category,
+        tags: draft.tags.split(",").map((item) => item.trim()).filter(Boolean),
+        coverFileId: "",
+        attachmentFileId: draft.attachmentFileId
+      });
+      await loadAll();
+      setMessage("资料已提交审核。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "创建资料失败。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handleUpdate() {
+    if (!props.session || !selectedMaterial) {
+      return;
+    }
+
+    setBusy("update");
+    setMessage("");
+    try {
+      await updateMaterial(props.session, selectedMaterial.id, {
+        title: draft.title,
+        description: draft.description,
+        category: draft.category,
+        tags: draft.tags.split(",").map((item) => item.trim()).filter(Boolean),
+        coverFileId: "",
+        attachmentFileId: draft.attachmentFileId
+      });
+      await loadAll();
+      setMessage("资料已更新。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "更新资料失败。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handleFavorite() {
+    if (!props.session || !selectedMaterial) {
+      setMessage("登录后才能收藏资料。");
+      return;
+    }
+
+    setBusy("favorite");
+    try {
+      await toggleMaterialFavorite(props.session, selectedMaterial.id);
+      await loadAll();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "收藏失败。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handleRate(score: number) {
+    if (!props.session || !selectedMaterial) {
+      setMessage("登录后才能评分。");
+      return;
+    }
+
+    setBusy(`rate-${score}`);
+    try {
+      await rateMaterial(props.session, selectedMaterial.id, score);
+      await loadAll();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "评分失败。");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  return (
+    <>
+      <WorkspaceHeader
+        actions={
+          <div className="header-actions">
+            <label className="secondary-button">
+              <Upload size={16} />
+              选择附件
+              <input
+                hidden
+                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                type="file"
+              />
+            </label>
+            <button className="secondary-button" disabled={!props.session || !selectedFile || busy === "upload"} onClick={handleUpload} type="button">
+              {busy === "upload" ? "上传中..." : "上传附件"}
+            </button>
+            <button className="primary-button" disabled={!props.session || busy === "save"} onClick={handleCreate} type="button">
+              新建资料
+            </button>
+          </div>
+        }
+        description="这一版先把资料库做成真正可工作的三栏结构：左侧筛选，中间列表，右侧详情和编辑动作。未实现的高级能力先留位。"
+        eyebrow="资料库"
+        title="把资料管理、阅读入口和编辑动作放到一张桌面上"
+      />
+
+      <div className="library-workspace">
+        <SectionFrame slim subtitle="筛选" title="定位资料">
+          <div className="filter-stack">
+            <label className="search-field inset">
+              <Search size={16} />
+              <input
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="按标题、分类或描述搜索"
+                value={search}
+              />
+            </label>
+            <div className="chip-row">
+              <span className="chip">公开资料 {materials.length}</span>
+              <span className="chip muted">审批仍走管理端</span>
+            </div>
+            <div className="sidebar-action-list">
+              {quickActions.map((item) => (
+                <Link className="quiet-action" key={item.label} to={item.requiresAuth && !props.session ? "/login" : item.to}>
+                  <strong>{item.label}</strong>
+                  <small>{item.description}</small>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </SectionFrame>
+
+        <SectionFrame slim subtitle="结果" title="资料列表">
+          <div className="list-stack">
+            {filteredMaterials.map((material) => (
+              <button
+                className={selectedMaterial?.id === material.id ? "list-row active" : "list-row"}
+                key={material.id}
+                onClick={() => setSelectedId(material.id)}
+                type="button"
+              >
+                <div>
+                  <strong>{displayMaterialTitle(material)}</strong>
+                  <p>{displayMaterialDescription(material)}</p>
+                </div>
+                <span>{displayMaterialCategory(material)}</span>
+              </button>
+            ))}
+          </div>
+        </SectionFrame>
+
+        <SectionFrame
+          action={
+            selectedMaterial?.attachmentFileId ? (
+              <Link className="secondary-button" to={`/reader/${selectedMaterial.id}`}>
+                <BookOpen size={16} />
+                进入阅读
+              </Link>
+            ) : null
+          }
+          subtitle="详情"
+          title={selectedMaterial ? displayMaterialTitle(selectedMaterial) : "选择一份资料"}
+        >
+          {selectedMaterial ? (
+            <div className="detail-stack">
+              <article className="profile-summary">
+                <strong>{displayMaterialCategory(selectedMaterial)}</strong>
+                <span>作者：{displayMaterialOwner(selectedMaterial)}</span>
+                <span>创建于 {formatDate(selectedMaterial.createdAt)}</span>
+                <span>评分 {selectedMaterial.averageRating.toFixed(1)} / 收藏 {selectedMaterial.favoritesCount}</span>
+              </article>
+
+              <div className="chip-row">
+                {displayMaterialTags(selectedMaterial).map((tag) => (
+                  <span className="chip" key={tag}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              <p className="detail-copy">{displayMaterialDescription(selectedMaterial)}</p>
+
+              <div className="detail-actions">
+                <button className="secondary-button" disabled={!props.session || busy === "favorite"} onClick={handleFavorite} type="button">
+                  收藏资料
+                </button>
+                {[3, 4, 5].map((score) => (
+                  <button className="secondary-button" disabled={!props.session || busy === `rate-${score}`} key={score} onClick={() => handleRate(score)} type="button">
+                    {score} 分
+                  </button>
+                ))}
+              </div>
+
+              <div className="form-stack">
+                <label>
+                  <span>标题</span>
+                  <input onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} value={draft.title} />
+                </label>
+                <label>
+                  <span>说明</span>
+                  <input onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} value={draft.description} />
+                </label>
+                <label>
+                  <span>分类</span>
+                  <input onChange={(event) => setDraft((current) => ({ ...current, category: event.target.value }))} value={draft.category} />
+                </label>
+                <label>
+                  <span>标签</span>
+                  <input onChange={(event) => setDraft((current) => ({ ...current, tags: event.target.value }))} value={draft.tags} />
+                </label>
+                <button className="primary-button" disabled={!props.session || busy === "update"} onClick={handleUpdate} type="button">
+                  保存资料信息
+                </button>
+              </div>
+
+              {uploadedFile ? (
+                <article className="upload-summary">
+                  <strong>{uploadedFile.originalName}</strong>
+                  <span>{uploadedFile.mimeType || "未知类型"}</span>
+                  <span>{uploadedFile.id}</span>
+                </article>
+              ) : null}
+            </div>
+          ) : (
+            <article className="placeholder-card">
+              <strong>还没有可展示的资料</strong>
+              <p>先在左侧创建一份材料，或者等管理员通过待审核内容。</p>
+            </article>
+          )}
+          {message ? <p className="muted-copy">{message}</p> : null}
+        </SectionFrame>
+      </div>
+    </>
+  );
+}
