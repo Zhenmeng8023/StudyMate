@@ -14,6 +14,7 @@ type Config struct {
 	Redis     RedisConfig
 	Storage   StorageConfig
 	Bootstrap BootstrapConfig
+	Content   ContentConfig
 }
 
 type AppConfig struct {
@@ -56,6 +57,10 @@ type BootstrapConfig struct {
 	AdminPassword string
 }
 
+type ContentConfig struct {
+	NoteReadModel string
+}
+
 func Load() Config {
 	return Config{
 		App: AppConfig{
@@ -90,6 +95,9 @@ func Load() Config {
 			AdminUsername: getEnv("ADMIN_BOOTSTRAP_USERNAME", ""),
 			AdminEmail:    getEnv("ADMIN_BOOTSTRAP_EMAIL", ""),
 			AdminPassword: getEnv("ADMIN_BOOTSTRAP_PASSWORD", ""),
+		},
+		Content: ContentConfig{
+			NoteReadModel: getEnv("NOTE_READ_MODEL", "mysql_primary"),
 		},
 	}
 }

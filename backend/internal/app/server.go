@@ -106,7 +106,7 @@ func NewServer(cfg config.Config) (*Server, error) {
 	fileService := fileservice.NewService(fileRepository, auditRepository, cfg.Storage.UploadDir)
 	communityService := communityservice.NewService(communityRepository, auditRepository)
 	materialService := materialservice.NewService(materialRepository, auditRepository)
-	noteService := noteservice.NewService(noteRepository, noteDocumentRepository, materialRepository, auditRepository, aiService)
+	noteService := noteservice.NewService(noteRepository, noteDocumentRepository, materialRepository, auditRepository, aiService, cfg.Content.NoteReadModel)
 	readerService := readerservice.NewService(readerRepository, materialRepository, auditRepository, aiService)
 	cardService := cardservice.NewService(cardRepository, auditRepository, aiService)
 	graphService := graphservice.NewService(graphRepository, graphDocumentRepository, auditRepository, cardService, aiService)

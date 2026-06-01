@@ -18,6 +18,11 @@
     "test:user": "npm --workspace frontend-user run test",
     "test:admin": "npm --workspace frontend-admin run test",
     "test:e2e": "npm run build:user && playwright test",
+    "test:coverage": "npm run test:coverage:user && npm run test:coverage:admin && npm run test:coverage:graph && npm run test:coverage:backend",
+    "test:coverage:user": "npm --workspace frontend-user run test:coverage",
+    "test:coverage:admin": "npm --workspace frontend-admin run test:coverage",
+    "test:coverage:graph": "npm --workspace @studymate/graph-core run test:coverage",
+    "test:coverage:backend": "cd backend && go test ./... -cover",
     "verify:docs": "node scripts/verify-doc-sync.mjs",
     "ci": "npm run lint && npm run build:user && npm run build:admin && npm run test:user && npm run test:admin && npm --workspace @studymate/graph-core run test && npm run test:e2e && cd backend && go test ./... && cd .. && npm run verify:docs"
   },
@@ -26,8 +31,9 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@vitest/coverage-v8": "^4.1.7",
     "@vue/test-utils": "^2.4.10",
     "jsdom": "^29.1.1",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.7"
   }
 }

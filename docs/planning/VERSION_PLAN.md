@@ -1,5 +1,12 @@
 # 学伴图谱版本计划
 
+## A 阶段当前收口
+
+- `NOTE_READ_MODEL` 已完成后端配置、读取策略解析、Mongo 当前文档读取和 MySQL 回退路径。
+- 覆盖率脚本已纳入根命令：`npm run test:coverage` 汇总用户端、管理端、图谱核心和 Go 后端覆盖率。
+- 本地化框架以 `zh-CN` 为源语言，先建立 `en-US` 占位字典和键一致性测试，不把完整英文翻译列为 v1.0.0 阻塞项。
+- 后续 B 阶段继续拆分 `useGraphWorkspaceController.tsx`、`frontend-user/src/api/client.ts` 和全局样式文件。
+
 本文档以 [docs/design/UPGRADE_DESIGN.md](../design/UPGRADE_DESIGN.md) 为设计主入口，根目录《学伴项目-设计说明书》保留为兼容入口。当前主线是把 `master` 推进到可发布的 `v1.0.0`。
 
 ## 1. 当前真实状态
@@ -78,6 +85,11 @@
 
 - `note_documents`、`note_snapshots`、`pdf_annotation_documents` 成为真实读写结构。
 - 用户能追溯一条笔记来自哪份资料、哪条批注、哪个 PDF 页。
+
+当前进展：
+
+- `NOTE_READ_MODEL` 已接入后端配置和笔记读取路径，支持 `mysql_primary` 默认策略和 `mongo_primary` 优先读取 `note_documents.html` 后回退 MySQL。
+- 历史内容回填、PDF 批注坐标、跨页高亮和 UI 来源显式展示仍在本阶段后续任务中。
 
 ### C2. 图谱工作区 v1 基线
 

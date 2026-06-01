@@ -26,12 +26,16 @@ const requiredContent = [
   ['docs/planning/ROADMAP.md', 'A. 工程基线与文档治理'],
   ['docs/planning/VERSION_PLAN.md', '建议性能预算'],
   ['docs/planning/VERSION_PLAN.md', 'zh-CN'],
+  ['docs/planning/VERSION_PLAN.md', 'npm run test:coverage'],
+  ['docs/planning/ROADMAP.md', 'test:coverage'],
+  ['docs/DEVELOPMENT.md', 'frontend-user/src/i18n/dictionary.ts'],
   ['docs/planning/versions/v0.6.0-graph-product.md', '强 MVP'],
   ['CHANGELOG.md', 'Unreleased'],
   ['.github/workflows/ci.yml', 'node-version: \'24\''],
   ['.github/workflows/ci.yml', 'npm run test:user'],
   ['.github/workflows/ci.yml', 'npm run test:admin'],
   ['package.json', '"test:e2e"'],
+  ['package.json', '"test:coverage"'],
 ];
 
 const failures = [];

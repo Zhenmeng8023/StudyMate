@@ -103,6 +103,22 @@ func (r *DocumentRepository) UpsertCurrent(note *notemodel.Note) error {
 	return nil
 }
 
+func (r *DocumentRepository) FindCurrent(noteID string) (*NoteDocument, error) {
+	if r == nil || noteID == "" {
+		return nil, mongo.ErrNoDocuments
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), noteDocumentTimeout)
+	defer cancel()
+
+	var document NoteDocument
+	if err := r.documents.FindOne(ctx, bson.M{"note_id": noteID}).Decode(&document); err != nil {
+		return nil, err
+	}
+
+	return &document, nil
+}
+
 func (r *DocumentRepository) CreateSnapshot(note *notemodel.Note, version *notemodel.NoteVersion) error {
 	if r == nil || note == nil || version == nil {
 		return nil

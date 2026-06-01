@@ -1,5 +1,11 @@
 # 学伴图谱 v1.0 路线图
 
+## 当前执行备注
+
+- A 阶段补齐 `NOTE_READ_MODEL` 文档、覆盖率脚本和 `zh-CN` / `en-US` 字典框架后进入提交门禁。
+- 覆盖率命令为 `npm run test:coverage`；每个里程碑仍必须先通过 `npm run ci`。
+- B 阶段从超大文件继续拆分，优先处理图谱控制器、用户端 API client 和全局样式。
+
 本路线图用于把当前 `master` 推进到可发布的 `v1.0.0`。详细拆解见 [VERSION_PLAN.md](VERSION_PLAN.md)，版本说明位于 [versions](versions) 目录。
 
 ## 发布范围

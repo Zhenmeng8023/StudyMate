@@ -4,7 +4,9 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 
+	"go.mongodb.org/mongo-driver/mongo"
 	"gorm.io/gorm"
 	adminrepo "studymate/backend/internal/modules/admin/repository"
 	aidto "studymate/backend/internal/modules/ai/dto"
@@ -23,6 +25,23 @@ type Service struct {
 	materials  *materialrepo.Repository
 	auditLogs  *adminrepo.AuditLogRepository
 	aiTasks    *aiservice.Service
+	readModel  NoteReadModel
+}
+
+type NoteReadModel string
+
+const (
+	NoteReadModelMySQLPrimary NoteReadModel = "mysql_primary"
+	NoteReadModelMongoPrimary NoteReadModel = "mongo_primary"
+)
+
+func ResolveNoteReadModel(value string) NoteReadModel {
+	switch NoteReadModel(strings.TrimSpace(value)) {
+	case NoteReadModelMongoPrimary:
+		return NoteReadModelMongoPrimary
+	default:
+		return NoteReadModelMySQLPrimary
+	}
 }
 
 func NewService(
@@ -31,6 +50,7 @@ func NewService(
 	materials *materialrepo.Repository,
 	auditLogs *adminrepo.AuditLogRepository,
 	aiTasks *aiservice.Service,
+	readModel string,
 ) *Service {
 	return &Service{
 		repository: repository,
@@ -38,6 +58,7 @@ func NewService(
 		materials:  materials,
 		auditLogs:  auditLogs,
 		aiTasks:    aiTasks,
+		readModel:  ResolveNoteReadModel(readModel),
 	}
 }
 
@@ -46,6 +67,8 @@ func (s *Service) ListNotes(ownerUserID string, materialID string) ([]notedto.No
 	if err != nil {
 		return nil, apperrors.Internal("读取笔记列表失败")
 	}
+
+	s.applyReadModelToSummaries(notes)
 
 	return notes, nil
 }
@@ -94,6 +117,7 @@ func (s *Service) CreateNote(ownerUserID string, request notedto.CreateNoteReque
 	})
 
 	result := noterepo.BuildSummary(*note)
+	s.applyReadModelToSummary(&result)
 	return &result, nil
 }
 
@@ -104,6 +128,7 @@ func (s *Service) GetNote(ownerUserID string, noteID string) (*notedto.NoteSumma
 	}
 
 	result := noterepo.BuildSummary(*note)
+	s.applyReadModelToSummary(&result)
 	return &result, nil
 }
 
@@ -139,6 +164,7 @@ func (s *Service) UpdateNote(ownerUserID string, noteID string, request notedto.
 	s.syncMongoContent(note, version)
 
 	result := noterepo.BuildSummary(*note)
+	s.applyReadModelToSummary(&result)
 	return &result, nil
 }
 
@@ -280,6 +306,37 @@ func (s *Service) deleteMongoContent(noteID string) {
 
 	if err := s.documents.DeleteNoteArtifacts(noteID); err != nil {
 		log.Printf("note mongo delete artifacts failed: note=%s err=%v", noteID, err)
+	}
+}
+
+func (s *Service) applyReadModelToSummaries(notes []notedto.NoteSummary) {
+	if s.readModel != NoteReadModelMongoPrimary || s.documents == nil {
+		return
+	}
+
+	for index := range notes {
+		s.applyReadModelToSummary(&notes[index])
+	}
+}
+
+func (s *Service) applyReadModelToSummary(note *notedto.NoteSummary) {
+	if s.readModel != NoteReadModelMongoPrimary || s.documents == nil || note == nil {
+		return
+	}
+
+	document, err := s.documents.FindCurrent(note.ID)
+	if err != nil {
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			log.Printf("note mongo read fallback: note=%s err=%v", note.ID, err)
+		}
+		return
+	}
+
+	if strings.TrimSpace(document.HTML) != "" {
+		note.Content = document.HTML
+	}
+	if strings.TrimSpace(note.Summary) == "" && strings.TrimSpace(document.PlainText) != "" {
+		note.Summary = document.PlainText
 	}
 }
 

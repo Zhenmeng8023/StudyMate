@@ -6,11 +6,14 @@
 
 ### Added
 
+- 新增 `test:coverage` 发布门禁脚本，覆盖用户端、管理端、图谱核心和 Go 后端覆盖率汇总。
+- 新增用户端与管理端 `zh-CN` 源字典和 `en-US` 占位字典框架，并通过测试校验字典键一致。
 - 新增 `docs/design/UPGRADE_DESIGN.md` 作为升级设计主入口，并保留根目录设计说明兼容入口。
 - 新增 v1.0 路线图、版本计划、图谱产品化说明、PR 模板、CI 骨架和文档同步脚本。
 - 新增根脚本 `lint`、`test:user`、`test:admin`、`test:e2e`、`verify:docs`、`ci`。
 - 前台用户端接入 Vitest + React Testing Library，后台管理端接入 Vitest + Vue Test Utils，端到端接入 Playwright。
 - 用户端主应用拆分为 routes、shell、pages、features；图谱和管理端入口文件改为薄壳并建立 components/hooks/state/lib/exporters/importers/router/views 目录边界。
+- 新增 `NOTE_READ_MODEL` 后端读取开关，支持 `mysql_primary` 与 `mongo_primary` 两套笔记正文读取策略。
 
 ### Changed
 

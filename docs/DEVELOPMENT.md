@@ -1,5 +1,13 @@
 # 开发说明
 
+## v1.0.0 覆盖率与本地化门禁
+
+- 完整回归仍以 `npm run ci` 为每个里程碑的硬门禁。
+- 发布前追加运行 `npm run test:coverage`，该命令覆盖用户端 Vitest、管理端 Vitest、`@studymate/graph-core` Node test coverage 和后端 `go test ./... -cover`。
+- 变更包要求 80% 聚焦覆盖率；如果某个模块暂时无法达到，需要在 `PROJECT_LOG.md` 写明原因、风险和补测计划。
+- `zh-CN` 是源语言。用户端字典位于 `frontend-user/src/i18n/dictionary.ts`，管理端字典位于 `frontend-admin/src/i18n/dictionary.ts`。
+- `en-US` 目前只保留占位文案，测试会校验占位字典与 `zh-CN` 字典键保持一致。
+
 ## 环境要求
 
 - Go 1.26+
@@ -194,6 +202,12 @@ go test ./...
 - 每个功能里程碑必须同步更新 `README.md`、本文件、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`CHANGELOG.md`、`PROJECT_LOG.md`。
 - 提交前运行 `npm run verify:docs`，避免关键文档入口漂移。
 - CI 基线使用 Node 24、Go 1.26、Vitest、React Testing Library、Vue Test Utils、Playwright、`@studymate/graph-core` 测试和后端 `go test ./...`。
+
+## 内容读取开关
+
+- `NOTE_READ_MODEL=mysql_primary`：默认策略，笔记读取以 MySQL `notes.content` 为主，MongoDB 继续作为双写内容落点。
+- `NOTE_READ_MODEL=mongo_primary`：笔记读取优先使用 MongoDB `note_documents.html`，当 MongoDB 文档缺失或读取失败时回退 MySQL。
+- 当前开关先覆盖笔记列表和笔记详情的正文读取路径，后续继续接历史回填、PDF 批注坐标和跨页高亮。
 
 ## 前端拆分边界
 

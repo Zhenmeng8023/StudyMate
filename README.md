@@ -97,3 +97,10 @@ npm run verify:docs
 cd backend
 go test ./...
 ```
+
+## v1.0.0 发布门禁补充
+
+- `NOTE_READ_MODEL=mysql_primary` 是默认笔记读取策略，读取以 MySQL `notes.content` 为主，MongoDB 继续作为双写内容落点。
+- `NOTE_READ_MODEL=mongo_primary` 会优先读取 MongoDB `note_documents.html`，当内容文档缺失或读取失败时回退 MySQL。
+- 本地化先以 `zh-CN` 为源语言，用户端和管理端已建立 `en-US` 占位字典框架；v1.0.0 不要求完整英文翻译。
+- 覆盖率门禁：每个里程碑继续运行 `npm run ci`；发布前追加运行 `npm run test:coverage`，变更包的重点代码需要达到 80% 聚焦覆盖率或在 `PROJECT_LOG.md` 说明缺口。
