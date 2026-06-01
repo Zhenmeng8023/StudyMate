@@ -104,10 +104,10 @@ const primaryNavItems: ShellNavItem[] = [
 ];
 
 const quickActions = [
-  { label: "新建资料", description: "把文件上传成可阅读、可引用的学习材料。" },
-  { label: "继续阅读", description: "回到最近读过的资料，沿着批注继续整理。" },
-  { label: "整理笔记", description: "在富文本编辑区里沉淀摘要、观点和待复习内容。" },
-  { label: "进入图谱", description: "把知识点放到统一画布里，后面继续接真正图谱能力。" }
+  { label: "新建资料", description: "把文件上传成可阅读、可引用的学习材料。", to: "/materials" },
+  { label: "继续阅读", description: "回到最近读过的资料，沿着批注继续整理。", to: "/reader", requiresAuth: true },
+  { label: "整理笔记", description: "在富文本编辑区沉淀摘要、观点和待复习内容。", to: "/notes", requiresAuth: true },
+  { label: "进入图谱", description: "把知识点放到统一画布里，继续做关系整理。", to: "/graph", requiresAuth: true }
 ];
 
 const graphPlaceholderColumns = [
@@ -514,9 +514,10 @@ function SectionFrame(props: {
   children: ReactNode;
   action?: ReactNode;
   slim?: boolean;
+  className?: string;
 }) {
   return (
-    <section className={props.slim ? "section-frame slim" : "section-frame"}>
+    <section className={["section-frame", props.slim ? "slim" : "", props.className ?? ""].filter(Boolean).join(" ")}>
       <div className="section-frame-head">
         <div>
           <p className="eyebrow">{props.subtitle}</p>
@@ -742,9 +743,9 @@ function DashboardPage(props: { session: AuthSession | null }) {
     void listNotes(props.session).then(setNotes).catch(() => setNotes([]));
   }, [props.session]);
 
-  const recentMaterials = materials.slice(0, 3);
-  const recentNotes = notes.slice(0, 3);
-  const recentPosts = posts.slice(0, 3);
+  const recentMaterials = materials.slice(0, 4);
+  const recentNotes = notes.slice(0, 4);
+  const recentPosts = posts.slice(0, 4);
 
   return (
     <>
@@ -774,66 +775,112 @@ function DashboardPage(props: { session: AuthSession | null }) {
       </div>
 
       <div className="dashboard-grid">
-        <SectionFrame subtitle="最近资料" title="从资料继续">
-          <div className="list-stack dense">
-            {recentMaterials.map((material) => (
-              <Link className="list-row compact" key={material.id} to={`/materials?selected=${material.id}`}>
-                <div>
-                  <strong>{displayMaterialTitle(material)}</strong>
-                  <p>{displayMaterialDescription(material)}</p>
-                </div>
-                <span>{displayMaterialCategory(material)}</span>
+        <div className="dashboard-main-column">
+          <SectionFrame
+            action={
+              <Link className="bookmark-chip" to="/materials">
+                打开资料库
               </Link>
-            ))}
-          </div>
-        </SectionFrame>
-
-        <SectionFrame subtitle="最近笔记" title="继续整理">
-          <div className="mini-card-grid stacked">
-            {recentNotes.length ? (
-              recentNotes.map((note) => (
-                <article className="mini-card" key={note.id}>
-                  <strong>{displayNoteTitle(note)}</strong>
-                  <p>{displayNoteSummary(note)}</p>
-                  <Link className="secondary-button" to={`/notes?selected=${note.id}`}>
-                    打开笔记
+            }
+            className="dashboard-section dashboard-section-materials"
+            subtitle="最近资料"
+            title="从资料继续"
+          >
+            <div className="list-stack dense">
+              {recentMaterials.length ? (
+                recentMaterials.map((material) => (
+                  <Link className="list-row compact" key={material.id} to={`/materials?selected=${material.id}`}>
+                    <div>
+                      <strong>{displayMaterialTitle(material)}</strong>
+                      <p>{displayMaterialDescription(material)}</p>
+                    </div>
+                    <span>{displayMaterialCategory(material)}</span>
                   </Link>
+                ))
+              ) : (
+                <article className="mini-card tall dashboard-empty-card">
+                  <strong>还没有可继续的资料</strong>
+                  <p>先上传一份学习材料，或者回到资料库整理已有内容。</p>
                 </article>
-              ))
-            ) : (
-              <article className="mini-card tall">
-                <strong>还没有个人笔记</strong>
-                <p>先从资料库进入一份材料，或者直接在笔记页新建一条读书笔记。</p>
-              </article>
-            )}
-          </div>
-        </SectionFrame>
+              )}
+            </div>
+          </SectionFrame>
 
-        <SectionFrame subtitle="高频入口" title="今天先做什么">
-          <div className="mini-card-grid stacked">
-            {quickActions.map((item) => (
-              <article className="mini-card" key={item.label}>
-                <strong>{item.label}</strong>
-                <p>{item.description}</p>
-              </article>
-            ))}
-          </div>
-        </SectionFrame>
-      </div>
-
-      <SectionFrame subtitle="社区动态" title="最近公开分享">
-        <div className="mini-card-grid">
-          {recentPosts.map((post) => (
-            <article className="story-card" key={post.id}>
-              <div className="story-card-head">
-                <strong>{displayPostTitle(post)}</strong>
-                <span>{formatDate(post.createdAt)}</span>
-              </div>
-              <p>{displayPostBody(post).slice(0, 120)}</p>
-            </article>
-          ))}
+          <SectionFrame
+            action={
+              <Link className="bookmark-chip" to="/community">
+                进入社区
+              </Link>
+            }
+            className="dashboard-section dashboard-section-community"
+            subtitle="社区动态"
+            title="最近公开分享"
+          >
+            <div className="story-card-grid">
+              {recentPosts.length ? (
+                recentPosts.map((post) => (
+                  <article className="story-card" key={post.id}>
+                    <div className="story-card-head">
+                      <strong>{displayPostTitle(post)}</strong>
+                      <span>{formatDate(post.createdAt)}</span>
+                    </div>
+                    <p>{displayPostBody(post).slice(0, 120)}</p>
+                  </article>
+                ))
+              ) : (
+                <article className="story-card dashboard-empty-card">
+                  <strong>还没有公开分享</strong>
+                  <p>社区里出现的新内容会先在这里汇总，方便你从学习区直接切过去看。</p>
+                </article>
+              )}
+            </div>
+          </SectionFrame>
         </div>
-      </SectionFrame>
+
+        <div className="dashboard-side-column">
+          <SectionFrame
+            action={
+              <Link className="bookmark-chip" to={props.session ? "/notes" : "/login"}>
+                打开笔记
+              </Link>
+            }
+            className="dashboard-section dashboard-section-notes"
+            subtitle="最近笔记"
+            title="继续整理"
+          >
+            <div className="mini-card-grid stacked">
+              {recentNotes.length ? (
+                recentNotes.map((note) => (
+                  <article className="mini-card" key={note.id}>
+                    <strong>{displayNoteTitle(note)}</strong>
+                    <p>{displayNoteSummary(note)}</p>
+                    <Link className="secondary-button" to={`/notes?selected=${note.id}`}>
+                      打开笔记
+                    </Link>
+                  </article>
+                ))
+              ) : (
+                <article className="mini-card tall dashboard-empty-card">
+                  <strong>还没有个人笔记</strong>
+                  <p>先从资料库进入一份材料，或者直接在笔记页新建一条阅读笔记。</p>
+                </article>
+              )}
+            </div>
+          </SectionFrame>
+
+          <SectionFrame className="dashboard-section dashboard-section-actions" subtitle="高频入口" title="今天先做什么">
+            <div className="dashboard-action-grid">
+              {quickActions.map((item) => (
+                <Link className="mini-card dashboard-action-card" key={item.label} to={item.requiresAuth && !props.session ? "/login" : item.to}>
+                  <strong>{item.label}</strong>
+                  <p>{item.description}</p>
+                  <span className="dashboard-action-link">{item.requiresAuth && !props.session ? "登录后进入" : "立即前往"}</span>
+                </Link>
+              ))}
+            </div>
+          </SectionFrame>
+        </div>
+      </div>
     </>
   );
 }
@@ -1061,10 +1108,10 @@ function MaterialsPage(props: { session: AuthSession | null }) {
             </div>
             <div className="sidebar-action-list">
               {quickActions.map((item) => (
-                <div className="quiet-action" key={item.label}>
+                <Link className="quiet-action" key={item.label} to={item.requiresAuth && !props.session ? "/login" : item.to}>
                   <strong>{item.label}</strong>
                   <small>{item.description}</small>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -2751,10 +2798,10 @@ function ShellFrame(props: { session: AuthSession | null; onLogout: () => void; 
             <p className="eyebrow">快速动作</p>
             <div className="sidebar-action-list">
               {quickActions.map((item) => (
-                <div className="quiet-action" key={item.label}>
+                <Link className="quiet-action" key={item.label} to={item.requiresAuth && !props.session ? "/login" : item.to}>
                   <strong>{item.label}</strong>
                   <small>{item.description}</small>
-                </div>
+                </Link>
               ))}
             </div>
           </article>

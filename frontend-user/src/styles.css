@@ -26,10 +26,10 @@
   --radius-md: 14px;
   --radius-sm: 10px;
   --radius-xs: 8px;
-  --shell-max: 1440px;
-  --shell-padding: 18px;
-  --sidebar-width: 272px;
-  --context-width: 320px;
+  --shell-max: 1860px;
+  --shell-padding: 20px;
+  --sidebar-width: 284px;
+  --context-width: 336px;
   --topbar-height: 64px;
   --panel-blur: blur(8px);
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", sans-serif;
@@ -112,9 +112,9 @@ textarea {
   position: relative;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-  gap: 20px;
+  gap: 24px;
   min-height: 100vh;
-  width: min(var(--shell-max), calc(100% - 28px));
+  width: min(var(--shell-max), calc(100% - 32px));
   margin: 0 auto;
   padding: var(--shell-padding) 0;
 }
@@ -260,9 +260,10 @@ textarea {
 
 .quiet-action {
   display: grid;
-  gap: 3px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  gap: 6px;
+  min-height: 84px;
+  padding: 12px 14px;
+  border-radius: 10px;
   border: 1px solid transparent;
   text-align: left;
   color: var(--text-1);
@@ -304,7 +305,7 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  width: min(480px, 100%);
+  width: min(640px, 100%);
   min-height: 48px;
   padding: 0 14px;
   border: 1px solid var(--line);
@@ -417,8 +418,9 @@ textarea {
 
 .main-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--context-width);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, var(--context-width));
+  gap: 20px;
+  align-items: start;
   min-height: 0;
 }
 
@@ -428,7 +430,7 @@ textarea {
 }
 
 .workspace-surface {
-  padding: 24px;
+  padding: 28px;
   background: var(--surface-strong);
 }
 
@@ -436,7 +438,10 @@ textarea {
   display: grid;
   align-content: start;
   gap: 16px;
-  padding: 20px;
+  height: fit-content;
+  padding: 22px;
+  position: sticky;
+  top: var(--shell-padding);
   background: var(--surface-soft);
   box-shadow: none;
 }
@@ -505,13 +510,14 @@ textarea {
 }
 
 .header-copy {
-  max-width: 920px;
+  max-width: 1040px;
   margin-top: 12px;
 }
 
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .metric-tile {
@@ -534,8 +540,55 @@ textarea {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.95fr);
+  grid-template-columns: minmax(0, 1.38fr) minmax(340px, 0.92fr);
+  gap: 18px;
   align-items: start;
+}
+
+.dashboard-main-column,
+.dashboard-side-column,
+.dashboard-action-grid,
+.story-card-grid {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.dashboard-action-grid {
+  gap: 12px;
+}
+
+.story-card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-section {
+  min-width: 0;
+}
+
+.dashboard-section-materials .list-row.compact {
+  min-height: 112px;
+}
+
+.dashboard-section-notes .mini-card,
+.dashboard-section-actions .dashboard-action-card,
+.story-card-grid .story-card {
+  min-height: 168px;
+}
+
+.dashboard-action-card {
+  align-content: space-between;
+}
+
+.dashboard-action-link {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dashboard-empty-card {
+  align-content: start;
 }
 
 .section-frame {
@@ -1921,6 +1974,10 @@ textarea {
   .review-layout {
     grid-template-columns: 1fr 1fr;
   }
+
+  .story-card-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1120px) {
@@ -1946,6 +2003,12 @@ textarea {
   .mini-card-grid,
   .review-grid,
   .placeholder-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-main-column,
+  .dashboard-side-column,
+  .story-card-grid {
     grid-template-columns: 1fr;
   }
 }
