@@ -424,78 +424,78 @@ function readSession(): AuthPayload | null {
 }
 
 .admin-shell {
-  --admin-bg-0: #eef3f6;
-  --admin-bg-1: #e6edf3;
-  --admin-surface: rgba(255, 255, 255, 0.92);
-  --admin-surface-strong: rgba(255, 255, 255, 0.97);
-  --admin-surface-soft: rgba(243, 248, 251, 0.94);
-  --admin-line: rgba(57, 74, 91, 0.14);
-  --admin-line-strong: rgba(57, 74, 91, 0.22);
-  --admin-text: #18212b;
-  --admin-text-soft: #556474;
-  --admin-text-muted: #7d8895;
-  --admin-accent: #246a61;
-  --admin-accent-soft: rgba(36, 106, 97, 0.12);
-  --admin-danger: #b14e4c;
-  --admin-shadow-lg: 0 24px 56px rgba(29, 41, 57, 0.12);
-  --admin-shadow-sm: 0 12px 28px rgba(29, 41, 57, 0.08);
-  --admin-shell-max: 1520px;
-  --admin-radius-lg: 20px;
-  --admin-radius-md: 16px;
-  --admin-radius-sm: 12px;
+  --admin-bg-0: #f4f5f2;
+  --admin-bg-1: #eceee8;
+  --admin-surface: rgba(255, 255, 255, 0.96);
+  --admin-surface-soft: rgba(247, 248, 244, 0.96);
+  --admin-line: rgba(39, 47, 43, 0.09);
+  --admin-text: #1b211d;
+  --admin-text-soft: #58625c;
+  --admin-text-muted: #818983;
+  --admin-accent: #295846;
+  --admin-accent-soft: rgba(41, 88, 70, 0.1);
+  --admin-danger: #bc5d53;
+  --admin-sidebar: #1b201d;
+  --admin-sidebar-line: rgba(255, 255, 255, 0.08);
+  --admin-sidebar-text: rgba(250, 252, 249, 0.94);
+  --admin-sidebar-muted: rgba(226, 231, 227, 0.64);
+  --admin-shadow-lg: 0 14px 34px rgba(32, 38, 34, 0.08);
+  --admin-shadow-sm: 0 6px 18px rgba(32, 38, 34, 0.05);
+  --admin-shell-max: 1460px;
+  --admin-radius-lg: 18px;
+  --admin-radius-md: 14px;
+  --admin-radius-sm: 10px;
   display: grid;
-  grid-template-columns: 288px minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 20px;
   min-height: 100vh;
-  width: min(var(--admin-shell-max), calc(100% - 32px));
+  width: min(var(--admin-shell-max), calc(100% - 28px));
   margin: 0 auto;
-  padding: 24px 0;
+  padding: 18px 0;
   color: var(--admin-text);
   background:
-    radial-gradient(circle at top left, rgba(36, 106, 97, 0.08), transparent 24%),
-    radial-gradient(circle at top right, rgba(86, 121, 161, 0.08), transparent 20%),
-    linear-gradient(180deg, #f7fafc 0%, #edf2f6 100%);
+    radial-gradient(circle at top left, rgba(41, 88, 70, 0.04), transparent 24%),
+    linear-gradient(180deg, #f9faf7 0%, #f1f3ed 100%);
 }
 
 .login-card,
-.sidebar,
-.admin-main,
 .metric-card,
 .moderation-card,
 .placeholder-card {
   border: 1px solid var(--admin-line);
   border-radius: var(--admin-radius-lg);
   background: var(--admin-surface);
-  box-shadow: var(--admin-shadow-lg);
-  backdrop-filter: blur(18px);
+  box-shadow: var(--admin-shadow-sm);
 }
 
 .login-card {
   display: grid;
-  gap: 18px;
-  width: min(520px, 100%);
+  gap: 16px;
+  width: min(500px, 100%);
   margin: auto;
-  padding: 32px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 251, 0.98));
+  padding: 30px;
 }
 
 .sidebar {
   display: grid;
   align-content: start;
   gap: 18px;
-  padding: 22px 18px 18px;
+  padding: 18px 16px 16px;
   position: sticky;
-  top: 24px;
+  top: 18px;
   height: fit-content;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(243, 248, 251, 0.95));
+  border: 1px solid var(--admin-sidebar-line);
+  border-radius: var(--admin-radius-lg);
+  background: var(--admin-sidebar);
+  box-shadow: none;
 }
 
 .admin-main {
   display: grid;
   align-content: start;
   gap: 18px;
-  padding: 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 249, 251, 0.94));
+  padding: 0;
+  background: transparent;
 }
 
 .brand-block span,
@@ -506,6 +506,17 @@ function readSession(): AuthPayload | null {
 .moderation-meta span,
 .placeholder-card p {
   color: var(--admin-text-soft);
+}
+
+.sidebar .brand-block strong,
+.sidebar .brand-block span,
+.sidebar .nav-item,
+.sidebar .secondary-button {
+  color: var(--admin-sidebar-text);
+}
+
+.sidebar .brand-block span {
+  color: var(--admin-sidebar-muted);
 }
 
 .brand-block strong,
@@ -529,12 +540,13 @@ function readSession(): AuthPayload | null {
 .brand-block {
   display: grid;
   gap: 4px;
-  padding: 4px 6px 2px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--admin-sidebar-line);
 }
 
 .brand-block strong {
   font-size: 15px;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
 }
 
 .brand-block span {
@@ -560,30 +572,37 @@ function readSession(): AuthPayload | null {
 .nav-item {
   justify-content: space-between;
   color: var(--admin-text-soft);
-  background: rgba(255, 255, 255, 0.76);
+  border-color: transparent;
+  background: transparent;
 }
 
 .nav-item.active {
-  color: var(--admin-text);
-  border-color: rgba(36, 106, 97, 0.16);
-  background: linear-gradient(135deg, rgba(36, 106, 97, 0.12), rgba(255, 255, 255, 0.9));
+  color: var(--admin-sidebar-text);
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .primary-button {
-  color: #f7fbfc;
-  background: linear-gradient(135deg, #245f76 0%, #246a61 100%);
-  box-shadow: 0 12px 24px rgba(36, 106, 97, 0.18);
+  color: #f7faf7;
+  background: var(--admin-accent);
+  box-shadow: 0 8px 18px rgba(41, 88, 70, 0.16);
 }
 
 .secondary-button {
   color: var(--admin-text);
   border-color: var(--admin-line);
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .secondary-button.danger {
   color: #fff7f5;
-  background: linear-gradient(135deg, #a74d4b 0%, #b85d59 100%);
+  background: var(--admin-danger);
+}
+
+.sidebar .secondary-button {
+  border-color: var(--admin-sidebar-line);
+  color: var(--admin-sidebar-text);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .topbar,
@@ -614,8 +633,7 @@ function readSession(): AuthPayload | null {
 .moderation-card,
 .placeholder-card {
   padding: 18px;
-  background: var(--admin-surface-strong);
-  box-shadow: var(--admin-shadow-sm);
+  background: var(--admin-surface);
 }
 
 .metric-card strong {
@@ -643,7 +661,7 @@ input {
   border: 1px solid var(--admin-line);
   border-radius: var(--admin-radius-sm);
   color: var(--admin-text);
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.98);
   font: inherit;
 }
 
@@ -664,7 +682,7 @@ input {
   padding: 12px 14px;
   border: 1px solid var(--admin-line);
   border-radius: var(--admin-radius-sm);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .error-text {
@@ -676,21 +694,16 @@ input {
 }
 
 .topbar {
-  min-height: 76px;
-  padding: 16px 18px;
-  border: 1px solid var(--admin-line);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 8px 24px rgba(29, 41, 57, 0.06);
-  backdrop-filter: blur(18px);
-  position: sticky;
-  top: 24px;
-  z-index: 4;
+  min-height: 64px;
+  padding: 4px 0 12px;
+  border-bottom: 1px solid var(--admin-line);
+  background: transparent;
+  box-shadow: none;
 }
 
 .topbar h2 {
-  margin: 4px 0 0;
-  font-size: 28px;
+  margin: 2px 0 0;
+  font-size: 26px;
 }
 
 .metric-card {
@@ -720,7 +733,7 @@ input {
 }
 
 .placeholder-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 251, 0.96));
+  background: var(--admin-surface-soft);
 }
 
 .secondary-button:hover,
@@ -730,6 +743,11 @@ input {
 
 .secondary-button.danger:hover {
   filter: brightness(1.02);
+}
+
+.sidebar .nav-item:hover,
+.sidebar .secondary-button:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 @media (max-width: 1100px) {
@@ -744,8 +762,7 @@ input {
     padding: 14px 0;
   }
 
-  .sidebar,
-  .topbar {
+  .sidebar {
     position: static;
   }
 }

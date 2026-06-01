@@ -1,37 +1,37 @@
 :root {
   color-scheme: light;
-  --bg-0: #eff3f6;
-  --bg-1: #e7edf2;
-  --bg-2: #f8fafc;
-  --surface: rgba(255, 255, 255, 0.88);
-  --surface-strong: rgba(255, 255, 255, 0.96);
-  --surface-soft: rgba(244, 248, 251, 0.88);
-  --surface-muted: rgba(238, 243, 247, 0.86);
-  --line: rgba(57, 74, 91, 0.14);
-  --line-strong: rgba(57, 74, 91, 0.24);
-  --text-0: #18212b;
-  --text-1: #506071;
-  --text-2: #7d8895;
-  --accent: #246a61;
-  --accent-soft: rgba(36, 106, 97, 0.12);
-  --accent-strong: #1d564f;
-  --amber: #b57b23;
-  --amber-soft: rgba(181, 123, 35, 0.12);
-  --danger: #b14e4c;
-  --danger-soft: rgba(177, 78, 76, 0.12);
-  --shadow-lg: 0 24px 56px rgba(29, 41, 57, 0.12);
-  --shadow-sm: 0 10px 26px rgba(29, 41, 57, 0.08);
-  --shadow-xs: 0 4px 14px rgba(29, 41, 57, 0.05);
-  --radius-lg: 20px;
+  --bg-0: #f4f5f2;
+  --bg-1: #eceee8;
+  --bg-2: #ffffff;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-strong: rgba(255, 255, 255, 0.98);
+  --surface-soft: rgba(247, 248, 244, 0.96);
+  --surface-muted: rgba(240, 242, 236, 0.9);
+  --line: rgba(39, 47, 43, 0.09);
+  --line-strong: rgba(39, 47, 43, 0.18);
+  --text-0: #1b211d;
+  --text-1: #535d57;
+  --text-2: #7d8580;
+  --accent: #295846;
+  --accent-soft: rgba(41, 88, 70, 0.1);
+  --accent-strong: #214638;
+  --amber: #b88232;
+  --amber-soft: rgba(184, 130, 50, 0.12);
+  --danger: #bc5d53;
+  --danger-soft: rgba(188, 93, 83, 0.12);
+  --shadow-lg: 0 16px 38px rgba(32, 38, 34, 0.08);
+  --shadow-sm: 0 6px 18px rgba(32, 38, 34, 0.05);
+  --shadow-xs: 0 2px 8px rgba(32, 38, 34, 0.04);
+  --radius-lg: 18px;
   --radius-md: 14px;
   --radius-sm: 10px;
   --radius-xs: 8px;
-  --shell-max: 1600px;
-  --shell-padding: 24px;
-  --sidebar-width: 292px;
-  --context-width: 336px;
-  --topbar-height: 72px;
-  --panel-blur: blur(18px);
+  --shell-max: 1440px;
+  --shell-padding: 18px;
+  --sidebar-width: 272px;
+  --context-width: 320px;
+  --topbar-height: 64px;
+  --panel-blur: blur(8px);
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", sans-serif;
 }
 
@@ -49,9 +49,8 @@ body {
   margin: 0;
   color: var(--text-0);
   background:
-    radial-gradient(circle at top left, rgba(36, 106, 97, 0.08), transparent 28%),
-    radial-gradient(circle at top right, rgba(86, 121, 161, 0.09), transparent 24%),
-    linear-gradient(180deg, #f7fafc 0%, #edf2f6 100%);
+    radial-gradient(circle at top left, rgba(41, 88, 70, 0.05), transparent 22%),
+    linear-gradient(180deg, #f9faf7 0%, #f1f3ed 100%);
   background-attachment: fixed;
 }
 
@@ -103,9 +102,8 @@ textarea {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at top left, rgba(36, 106, 97, 0.08), transparent 24%),
-    radial-gradient(circle at 80% 18%, rgba(78, 101, 153, 0.08), transparent 20%),
-    linear-gradient(180deg, rgba(247, 250, 252, 0.92), rgba(236, 242, 247, 0.92));
+    linear-gradient(180deg, rgba(249, 250, 247, 0.9), rgba(241, 243, 237, 0.94)),
+    radial-gradient(circle at top left, rgba(41, 88, 70, 0.04), transparent 22%);
   pointer-events: none;
   content: "";
 }
@@ -114,9 +112,9 @@ textarea {
   position: relative;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-  gap: 24px;
+  gap: 20px;
   min-height: 100vh;
-  width: min(var(--shell-max), calc(100% - 32px));
+  width: min(var(--shell-max), calc(100% - 28px));
   margin: 0 auto;
   padding: var(--shell-padding) 0;
 }
@@ -130,19 +128,21 @@ textarea {
   z-index: 1;
   border: 1px solid var(--line);
   background: var(--surface);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-sm);
   backdrop-filter: var(--panel-blur);
 }
 
 .primary-sidebar {
   display: grid;
   align-content: start;
-  gap: 20px;
-  padding: 22px 18px 18px;
-  border-radius: 20px;
+  gap: 18px;
+  padding: 18px 16px 16px;
+  border-radius: var(--radius-lg);
   position: sticky;
   top: var(--shell-padding);
   height: fit-content;
+  background: var(--surface-soft);
+  box-shadow: none;
 }
 
 .brand-block {
@@ -155,14 +155,15 @@ textarea {
 .brand-glyph {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  color: #f7fbfc;
-  font-size: 18px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: #f7faf7;
+  font-size: 17px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  background: linear-gradient(135deg, #245f76 0%, #246a61 100%);
+  letter-spacing: 0.02em;
+  background: var(--accent);
+  box-shadow: 0 8px 18px rgba(41, 88, 70, 0.16);
 }
 
 .brand-block strong,
@@ -182,7 +183,7 @@ textarea {
 }
 
 .brand-block strong {
-  font-size: 15px;
+  font-size: 14px;
   letter-spacing: 0.01em;
 }
 
@@ -211,7 +212,7 @@ textarea {
   gap: 12px;
   min-height: 46px;
   padding: 0 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   color: var(--text-1);
   border: 1px solid transparent;
   transition: 180ms ease;
@@ -220,13 +221,13 @@ textarea {
 .nav-item:hover,
 .nav-item.active {
   color: var(--text-0);
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .nav-item.active {
-  border-color: rgba(36, 106, 97, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(36, 106, 97, 0.08);
-  background: linear-gradient(135deg, rgba(36, 106, 97, 0.12), rgba(255, 255, 255, 0.88));
+  border-color: rgba(41, 88, 70, 0.14);
+  background: var(--accent-soft);
+  box-shadow: none;
 }
 
 .nav-item.locked {
@@ -246,14 +247,15 @@ textarea {
 .reader-page-sheet,
 .editor-paper {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 14px;
   background: var(--surface-strong);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .sidebar-card {
   padding: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 251, 0.96));
+  background: var(--surface-strong);
+  box-shadow: none;
 }
 
 .quiet-action {
@@ -264,12 +266,12 @@ textarea {
   border: 1px solid transparent;
   text-align: left;
   color: var(--text-1);
-  background: rgba(246, 249, 251, 0.84);
+  background: rgba(255, 255, 255, 0.56);
 }
 
 .quiet-action:hover {
   border-color: var(--line);
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .quiet-action small {
@@ -281,7 +283,7 @@ textarea {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 20px;
+  gap: 18px;
   min-width: 0;
 }
 
@@ -291,15 +293,11 @@ textarea {
   justify-content: space-between;
   gap: 14px;
   min-height: var(--topbar-height);
-  padding: 14px 18px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: var(--shadow-xs);
-  backdrop-filter: var(--panel-blur);
-  position: sticky;
-  top: var(--shell-padding);
-  z-index: 6;
+  padding: 4px 0 12px;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .search-field {
@@ -310,10 +308,10 @@ textarea {
   min-height: 48px;
   padding: 0 14px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   color: var(--text-2);
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: var(--shadow-sm);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: none;
 }
 
 .search-field.inset {
@@ -388,7 +386,7 @@ textarea {
 .bookmark-chip {
   color: var(--text-1);
   border-color: var(--line);
-  background: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .topbar-link.muted {
@@ -396,16 +394,16 @@ textarea {
 }
 
 .primary-button {
-  color: #f7fbfc;
-  background: linear-gradient(135deg, #245f76 0%, #246a61 100%);
-  box-shadow: 0 12px 24px rgba(36, 106, 97, 0.2);
+  color: #f7faf7;
+  background: var(--accent);
+  box-shadow: 0 8px 18px rgba(41, 88, 70, 0.16);
 }
 
 .secondary-button:hover,
 .topbar-link:hover,
 .filter-chip:hover,
 .bookmark-chip:hover {
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 1);
 }
 
 .icon-button {
@@ -414,24 +412,24 @@ textarea {
   padding: 0;
   color: var(--text-1);
   border-color: var(--line);
-  background: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.94);
 }
 
 .main-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--context-width);
-  gap: 20px;
+  gap: 18px;
   min-height: 0;
 }
 
 .workspace-surface,
 .context-panel {
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
 }
 
 .workspace-surface {
   padding: 24px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 252, 0.94));
+  background: var(--surface-strong);
 }
 
 .context-panel {
@@ -439,19 +437,21 @@ textarea {
   align-content: start;
   gap: 16px;
   padding: 20px;
-  background: linear-gradient(180deg, rgba(250, 252, 253, 0.96), rgba(242, 247, 250, 0.94));
+  background: var(--surface-soft);
+  box-shadow: none;
 }
 
 .context-card {
   display: grid;
   gap: 8px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--surface-strong);
+  box-shadow: none;
 }
 
 .context-card.accent {
-  border-color: rgba(36, 106, 97, 0.18);
-  background: linear-gradient(180deg, rgba(36, 106, 97, 0.08), rgba(255, 255, 255, 0.96));
+  border-color: rgba(41, 88, 70, 0.14);
+  background: rgba(41, 88, 70, 0.06);
 }
 
 .context-card.muted {
@@ -483,10 +483,10 @@ textarea {
 
 .eyebrow {
   margin: 0 0 8px;
-  color: var(--amber);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -500,8 +500,8 @@ textarea {
 .workspace-header h1,
 .auth-lead h1 {
   margin: 0;
-  font-size: clamp(28px, 3vw, 40px);
-  line-height: 1.12;
+  font-size: clamp(30px, 3.2vw, 42px);
+  line-height: 1.14;
 }
 
 .header-copy {
@@ -519,7 +519,7 @@ textarea {
   gap: 10px;
   min-height: 160px;
   padding: 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 252, 0.98));
+  background: var(--surface-strong);
 }
 
 .metric-tile span {
@@ -544,8 +544,8 @@ textarea {
   min-width: 0;
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(247, 250, 252, 0.98), rgba(241, 246, 250, 0.96));
+  border-radius: 16px;
+  background: var(--surface-strong);
 }
 
 .section-frame.slim {
@@ -863,8 +863,8 @@ textarea {
 .auth-feature-list article {
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.58);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .auth-feature-list strong {
@@ -924,7 +924,7 @@ textarea {
   border-radius: 10px;
   color: var(--text-1);
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .ghost-button.active {
@@ -979,7 +979,7 @@ textarea {
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .page-input input {
@@ -1013,8 +1013,8 @@ textarea {
 
 .graph-workspace-grid {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 300px;
-  gap: 16px;
+  grid-template-columns: 252px minmax(0, 1fr) 296px;
+  gap: 18px;
   min-height: 820px;
 }
 
@@ -1028,11 +1028,11 @@ textarea {
 
 .graph-rail-section,
 .graph-stage-shell {
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 14px;
   background: var(--surface-strong);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .section-frame-head.compact {
@@ -1053,11 +1053,11 @@ textarea {
   width: 100%;
   padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   text-align: left;
   color: var(--text-0);
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .graph-list-item span,
@@ -1070,8 +1070,8 @@ textarea {
 }
 
 .graph-list-item.active {
-  border-color: rgba(41, 88, 70, 0.24);
-  background: rgba(41, 88, 70, 0.1);
+  border-color: rgba(41, 88, 70, 0.18);
+  background: rgba(41, 88, 70, 0.08);
 }
 
 .graph-source-item {
@@ -1090,22 +1090,28 @@ textarea {
 
 .graph-toolbar {
   justify-content: space-between;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-strong);
-  box-shadow: var(--shadow-sm);
+  padding: 0 0 14px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  box-shadow: none;
 }
 
-.icon-button.active,
+.icon-button.active {
+  color: #f7faf7;
+  border-color: rgba(41, 88, 70, 0.18);
+  background: var(--accent);
+}
+
 .secondary-button.danger {
   color: #fff7f5;
-  background: linear-gradient(135deg, #9f5246 0%, #b05f52 100%);
+  border-color: rgba(188, 93, 83, 0.14);
+  background: var(--danger);
 }
 
 .graph-stage-status {
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin: 14px 0 12px;
 }
 
 .graph-stage-status-meta,
@@ -1147,12 +1153,12 @@ textarea {
   overflow: hidden;
   min-height: 690px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 14px;
   cursor: grab;
   background:
-    linear-gradient(90deg, rgba(41, 88, 70, 0.04) 1px, transparent 1px),
-    linear-gradient(rgba(41, 88, 70, 0.04) 1px, transparent 1px),
-    rgba(255, 253, 249, 0.84);
+    linear-gradient(90deg, rgba(41, 88, 70, 0.035) 1px, transparent 1px),
+    linear-gradient(rgba(41, 88, 70, 0.035) 1px, transparent 1px),
+    rgba(248, 249, 245, 0.98);
   background-size: 24px 24px, 24px 24px, auto;
 }
 
@@ -1213,17 +1219,17 @@ textarea {
   gap: 8px;
   padding: 14px;
   border: 1px solid rgba(41, 88, 70, 0.15);
-  border-radius: 8px;
+  border-radius: 12px;
   text-align: left;
   color: var(--text-0);
   cursor: grab;
-  background: rgba(255, 252, 247, 0.94);
-  box-shadow: 0 12px 28px rgba(61, 47, 24, 0.08);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 22px rgba(32, 38, 34, 0.08);
 }
 
 .graph-node.active {
   border-color: rgba(41, 88, 70, 0.46);
-  box-shadow: 0 18px 40px rgba(41, 88, 70, 0.18);
+  box-shadow: 0 12px 28px rgba(41, 88, 70, 0.14);
 }
 
 .graph-node.linking {
@@ -1231,15 +1237,15 @@ textarea {
 }
 
 .graph-node.type-material {
-  background: rgba(248, 244, 232, 0.98);
+  background: rgba(249, 247, 239, 0.98);
 }
 
 .graph-node.type-rich-note {
-  background: rgba(245, 249, 244, 0.98);
+  background: rgba(246, 249, 245, 0.98);
 }
 
 .graph-node.type-card {
-  background: rgba(251, 245, 241, 0.98);
+  background: rgba(250, 246, 242, 0.98);
 }
 
 .graph-focus-preview {
@@ -1313,8 +1319,8 @@ textarea {
 .graph-meta-card {
   padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.58);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .graph-meta-card.muted {
@@ -1367,8 +1373,8 @@ textarea {
   gap: 6px;
   padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.58);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .graph-template-card,
@@ -1458,11 +1464,11 @@ textarea {
   display: grid;
   gap: 12px;
   padding: 14px;
-  border: 1px solid rgba(36, 106, 97, 0.18);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(39, 47, 43, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(8px);
 }
 
 .graph-shortcut-head {
@@ -1477,9 +1483,9 @@ textarea {
 .graph-shortcut-item {
   justify-content: space-between;
   padding: 8px 10px;
-  border: 1px solid rgba(57, 74, 91, 0.1);
+  border: 1px solid rgba(39, 47, 43, 0.08);
   border-radius: 10px;
-  background: rgba(244, 248, 251, 0.72);
+  background: rgba(247, 248, 244, 0.82);
 }
 
 .graph-shortcut-item span {
@@ -1506,7 +1512,7 @@ textarea {
 .graph-group {
   position: absolute;
   border: 1px dashed rgba(41, 88, 70, 0.28);
-  border-radius: 18px;
+  border-radius: 20px;
   background: rgba(41, 88, 70, 0.05);
 }
 
@@ -1545,9 +1551,9 @@ textarea {
   gap: 4px;
   padding: 8px;
   border: 1px solid rgba(41, 88, 70, 0.18);
-  border-radius: 8px;
-  background: rgba(255, 252, 247, 0.98);
-  box-shadow: 0 18px 42px rgba(31, 41, 36, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 34px rgba(32, 38, 34, 0.12);
 }
 
 .graph-context-item {
@@ -1555,7 +1561,7 @@ textarea {
   display: flex;
   align-items: center;
   padding: 0 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   text-align: left;
   color: var(--text-0);
 }
@@ -1575,20 +1581,20 @@ textarea {
   width: 236px;
   padding: 10px;
   border: 1px solid rgba(41, 88, 70, 0.14);
-  border-radius: 8px;
-  background: rgba(255, 252, 247, 0.92);
-  box-shadow: var(--shadow-sm);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: none;
 }
 
 .graph-minimap-world {
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(41, 88, 70, 0.12);
-  border-radius: 6px;
+  border-radius: 8px;
   background:
-    linear-gradient(90deg, rgba(41, 88, 70, 0.03) 1px, transparent 1px),
-    linear-gradient(rgba(41, 88, 70, 0.03) 1px, transparent 1px),
-    rgba(255, 255, 255, 0.65);
+    linear-gradient(90deg, rgba(41, 88, 70, 0.025) 1px, transparent 1px),
+    linear-gradient(rgba(41, 88, 70, 0.025) 1px, transparent 1px),
+    rgba(248, 249, 245, 0.98);
   background-size: 12px 12px, 12px 12px, auto;
 }
 
@@ -1666,9 +1672,9 @@ textarea {
   gap: 6px;
   padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.58);
-  box-shadow: var(--shadow-sm);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: none;
 }
 
 .search-result-card span,
@@ -1690,8 +1696,8 @@ textarea {
 .ai-panel-controls {
   padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .ai-filter-grid {
@@ -1766,9 +1772,9 @@ textarea {
   gap: 8px;
   padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.58);
-  box-shadow: var(--shadow-sm);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: none;
 }
 
 .ai-task-card p {
@@ -1831,9 +1837,9 @@ textarea {
 .review-deck-item {
   padding: 16px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.62);
-  box-shadow: var(--shadow-sm);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: none;
 }
 
 .review-flashcard {

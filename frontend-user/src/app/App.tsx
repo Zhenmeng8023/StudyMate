@@ -2764,7 +2764,7 @@ function ShellFrame(props: { session: AuthSession | null; onLogout: () => void; 
           <div className="topbar">
             <form className="search-field" onSubmit={handleSearchSubmit}>
               <Search size={16} />
-              <input onChange={(event) => setSearchText(event.target.value)} placeholder="?????????????" value={searchText} />
+              <input onChange={(event) => setSearchText(event.target.value)} placeholder="搜索资料、笔记或图谱" value={searchText} />
             </form>
             <div className="topbar-actions">
               <button className="icon-button" title="提醒" type="button">
