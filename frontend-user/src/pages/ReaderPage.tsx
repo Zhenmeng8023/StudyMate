@@ -98,7 +98,16 @@ export function ReaderPage(props: { session: AuthSession }) {
         page: readerState.currentPage,
         quote: selection,
         comment: annotationComment,
-        color: "amber"
+        color: "amber",
+        rects: [
+          {
+            page: readerState.currentPage,
+            x: 0,
+            y: 0,
+            width: 1,
+            height: 0.08
+          }
+        ]
       });
       setSelection("");
       setAnnotationComment("");
@@ -325,6 +334,10 @@ export function ReaderPage(props: { session: AuthSession }) {
                 {readerState.annotations.map((annotation) => (
                   <article className="annotation-story" key={annotation.id}>
                     <strong>第 {annotation.page} 页</strong>
+                    <small>
+                      来源：{selectedMaterial ? displayMaterialTitle(selectedMaterial) : "当前资料"} / PDF 第 {annotation.page} 页
+                      {annotation.rects.length ? ` / ${annotation.rects.length} 个坐标片段` : ""}
+                    </small>
                     <p>{displayAnnotationText(annotation)}</p>
                     <button
                       className="secondary-button"

@@ -145,8 +145,17 @@ export interface ReaderAnnotationPayload {
   quote: string;
   comment: string;
   color: string;
+  rects: PdfRectPayload[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PdfRectPayload {
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 export interface ReaderStatePayload {

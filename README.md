@@ -105,3 +105,4 @@ go test ./...
 - 本地化先以 `zh-CN` 为源语言，用户端和管理端已建立 `en-US` 占位字典框架；v1.0.0 不要求完整英文翻译。
 - 覆盖率门禁：每个里程碑继续运行 `npm run ci`；发布前追加运行 `npm run test:coverage`，变更包的重点代码需要达到 80% 聚焦覆盖率或在 `PROJECT_LOG.md` 说明缺口。
 - 拆分边界：用户端 API client 已按域拆入 `frontend-user/src/api/*.ts`，全局样式已拆入 `frontend-user/src/styles/`，图谱控制器通用 helper 已移入 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`。
+- Reader/Notes 收口：`go run ./cmd/backfill-note-documents` 可将历史 MySQL 笔记正文回填到 Mongo `note_documents`；PDF 批注新增兼容字段 `rects`，前端会展示资料、PDF 页与坐标片段来源。

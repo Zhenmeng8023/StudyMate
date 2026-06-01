@@ -7,6 +7,7 @@
 - 本地化框架以 `zh-CN` 为源语言，先建立 `en-US` 占位字典和键一致性测试，不把完整英文翻译列为 v1.0.0 阻塞项。
 - 后续 B 阶段继续拆分 `useGraphWorkspaceController.tsx`、`frontend-user/src/api/client.ts` 和全局样式文件。
 - B 阶段第一批拆分完成：API client 已按域拆分并保留 barrel，CSS 已按 app/workspace/graph/reader-notes/search-review/responsive 分层，图谱通用 helper 已抽到 `workspaceControllerHelpers.ts`。
+- C 阶段第一批收口完成：新增笔记内容回填命令、PDF 批注 `rects` 兼容字段、Reader 来源展示和 200 节点图谱性能回归测试。
 
 本文档以 [docs/design/UPGRADE_DESIGN.md](../design/UPGRADE_DESIGN.md) 为设计主入口，根目录《学伴项目-设计说明书》保留为兼容入口。当前主线是把 `master` 推进到可发布的 `v1.0.0`。
 

@@ -452,6 +452,7 @@ CREATE TABLE IF NOT EXISTS `pdf_annotations` (
   `quote` varchar(1000) NULL,
   `comment` text NULL,
   `color` varchar(32) NULL,
+  `rects` text NULL,
   `mongo_document_id` varchar(64) NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),

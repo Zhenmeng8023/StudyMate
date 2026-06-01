@@ -116,9 +116,63 @@ func BuildAnnotationSummary(annotation readermodel.PDFAnnotation) readerdto.Anno
 		Quote:      annotation.Quote,
 		Comment:    annotation.Comment,
 		Color:      annotation.Color,
+		Rects:      DecodePDFRects(annotation.Rects),
 		CreatedAt:  annotation.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:  annotation.UpdatedAt.Format(time.RFC3339),
 	}
+}
+
+func EncodePDFRects(rects []readerdto.PDFRect) string {
+	if len(rects) == 0 {
+		return "[]"
+	}
+
+	normalized := make([]readerdto.PDFRect, 0, len(rects))
+	for _, rect := range rects {
+		if rect.Page <= 0 || rect.Width <= 0 || rect.Height <= 0 {
+			continue
+		}
+		normalized = append(normalized, readerdto.PDFRect{
+			Page:   rect.Page,
+			X:      clampUnit(rect.X),
+			Y:      clampUnit(rect.Y),
+			Width:  clampUnit(rect.Width),
+			Height: clampUnit(rect.Height),
+		})
+	}
+	if len(normalized) == 0 {
+		return "[]"
+	}
+
+	raw, err := json.Marshal(normalized)
+	if err != nil {
+		return "[]"
+	}
+
+	return string(raw)
+}
+
+func DecodePDFRects(raw string) []readerdto.PDFRect {
+	if raw == "" {
+		return []readerdto.PDFRect{}
+	}
+
+	var rects []readerdto.PDFRect
+	if err := json.Unmarshal([]byte(raw), &rects); err != nil {
+		return []readerdto.PDFRect{}
+	}
+
+	return rects
+}
+
+func clampUnit(value float64) float64 {
+	if value < 0 {
+		return 0
+	}
+	if value > 1 {
+		return 1
+	}
+	return value
 }
 
 func IsNotFound(err error) bool {

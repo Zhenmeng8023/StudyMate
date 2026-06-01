@@ -70,6 +70,13 @@ SET @sql = IF(
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @sql = IF(
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = @schema_name AND table_name = 'pdf_annotations' AND column_name = 'rects') = 1,
+  'ALTER TABLE `pdf_annotations` DROP COLUMN `rects`',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
   (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @schema_name AND table_name = 'pdf_annotations' AND index_name = 'idx_pdf_annotations_user_material_updated_at') = 1,
   'ALTER TABLE `pdf_annotations` DROP INDEX `idx_pdf_annotations_user_material_updated_at`',
   'SELECT 1'

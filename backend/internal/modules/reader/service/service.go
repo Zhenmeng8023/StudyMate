@@ -116,6 +116,7 @@ func (s *Service) CreateAnnotation(userID string, materialID string, request rea
 		Quote:      request.Quote,
 		Comment:    request.Comment,
 		Color:      request.Color,
+		Rects:      readerrepo.EncodePDFRects(request.Rects),
 	}
 
 	if annotation.Color == "" {

@@ -15,6 +15,7 @@ type PDFAnnotation struct {
 	Quote      string    `gorm:"size:1000"`
 	Comment    string    `gorm:"type:text"`
 	Color      string    `gorm:"size:32"`
+	Rects      string    `gorm:"type:text"`
 	CreatedAt  time.Time `gorm:"not null"`
 	UpdatedAt  time.Time `gorm:"not null"`
 }
@@ -26,4 +27,3 @@ func (r *PDFAnnotation) BeforeCreate(_ *gorm.DB) error {
 
 	return nil
 }
-

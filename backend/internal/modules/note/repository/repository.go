@@ -66,6 +66,20 @@ func (r *Repository) ListByOwner(ownerUserID string, materialID string) ([]noted
 	return result, nil
 }
 
+func (r *Repository) ListAllForBackfill(limit int) ([]notemodel.Note, error) {
+	query := r.db.Order("updated_at asc")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	var notes []notemodel.Note
+	if err := query.Find(&notes).Error; err != nil {
+		return nil, err
+	}
+
+	return notes, nil
+}
+
 func (r *Repository) CreateVersion(version *notemodel.NoteVersion) error {
 	return r.db.Create(version).Error
 }

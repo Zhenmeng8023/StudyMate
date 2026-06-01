@@ -145,3 +145,31 @@ test("summarizeGraphSourceReferences deduplicates sources and counts linked node
   assert.equal(noteReference.nodeCount, 2);
   assert.deepEqual(noteReference.nodeIds, ["note-b", "note-copy"]);
 });
+
+test("source swimlane layout handles the v1 release performance fixture", () => {
+  const nodes = Array.from({ length: 200 }, (_, index) => ({
+    id: `node-${index}`,
+    type: "text",
+    title: `Node ${index}`,
+    x: 0,
+    y: 0,
+    width: 180,
+    height: 96,
+    source: {
+      type: index % 5 === 0 ? "material" : index % 5 === 1 ? "annotation" : index % 5 === 2 ? "note" : "card",
+      id: `source-${index % 20}`,
+      label: `Source ${index % 20}`
+    }
+  }));
+
+  const startedAt = performance.now();
+  const result = buildSourceSwimlaneLayout(nodes, {
+    stageWidth: 2400,
+    stageHeight: 1600
+  });
+  const elapsedMs = performance.now() - startedAt;
+
+  assert.equal(result.nodes.length, 200);
+  assert.ok(result.groups.length <= 20);
+  assert.ok(elapsedMs < 200, `expected layout under 200ms, got ${elapsedMs}ms`);
+});

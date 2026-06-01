@@ -26,6 +26,7 @@ import type {
   ProfilePayload,
   ReaderAnnotationPayload,
   ReaderStatePayload,
+  PdfRectPayload,
   ReviewQueuePayload,
   ReviewResultPayload,
   TogglePayload
@@ -62,6 +63,7 @@ export async function createReaderAnnotation(
     quote: string;
     comment: string;
     color: string;
+    rects?: PdfRectPayload[];
   }
 ) {
   return request<ReaderAnnotationPayload>(`/materials/${materialId}/reader/annotations`, {

@@ -32,6 +32,24 @@
 - `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
 ### 后续影响
 - 图谱 hook 仍承载大量交互与 UI 组合，C 阶段继续把 autosave、selection、AI draft 和面板渲染下沉到更细模块。
+## 2026-06-01 22:32:00 +08:00 | v0.0.75 | 收口 Reader/Notes 数据来源与图谱性能回归
+### 任务内容
+- 按 C 阶段要求补齐历史笔记到 Mongo 内容文档的回填路径。
+- 为 PDF 批注增加兼容的归一化坐标字段，并在阅读器 UI 中显示资料、PDF 页和坐标片段来源。
+- 增加图谱大数据量回归用例。
+### 完成结果
+- 新增 `backend/cmd/backfill-note-documents`，支持幂等 upsert 历史 `notes.content` 到 `note_documents`，并支持 `-limit` 分批执行。
+- `pdf_annotations` 新增 `rects` 字段，DTO、模型、仓储编码/解码、新装库迁移、历史库对齐迁移和回滚脚本同步更新。
+- Reader 批注创建时写入基础归一化坐标，批注列表展示资料标题、PDF 页和坐标片段数量。
+- `@studymate/graph-core` 增加 200 节点性能夹具，覆盖 v1 图谱来源泳道布局预算。
+### 验证结果
+- `cd backend; go test ./internal/modules/reader/... ./internal/modules/note/... ./cmd/backfill-note-documents` 通过。
+- `npm run typecheck` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- C 阶段后续可继续加厚图谱治理面板与 Undo/Redo/dirty 状态的 UI 表达。
+- D 阶段可以复用批注来源与 AI draft 链路继续推进复习、搜索、后台和分享。
 
 ## 2026-06-01 21:36:28 +08:00 | v0.0.72 | 拆分用户端主应用、图谱入口和管理端入口
 ### 任务内容

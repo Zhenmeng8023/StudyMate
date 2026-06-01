@@ -11,6 +11,13 @@
 - 用户端全局样式由 `frontend-user/src/styles.css` 统一导入 `frontend-user/src/styles/` 下的分层 CSS 文件，新增样式应优先落到对应分层文件。
 - 图谱工作区的通用几何、导出、来源分组和焦点导航 helper 位于 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`；后续继续拆更细的交互 hooks。
 
+## Reader/Notes 回填与批注坐标
+
+- 历史笔记正文回填命令：`cd backend; go run ./cmd/backfill-note-documents`。
+- 可使用 `-limit 100` 做分批回填；命令是幂等 upsert，会按当前 MySQL `notes` 内容覆盖 Mongo `note_documents` 当前文档。
+- PDF 批注 API 新增 `rects` 字段，坐标使用 0-1 归一化比例；旧客户端只传 `page`、`quote`、`comment` 仍然有效。
+- `pdf_annotations.rects` 已写入新装库 schema、历史库对齐迁移和 003 回滚脚本。
+
 ## 环境要求
 
 - Go 1.26+

@@ -238,6 +238,13 @@ SET @sql = IF(
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @sql = IF(
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = @schema_name AND table_name = 'pdf_annotations' AND column_name = 'rects') = 0,
+  'ALTER TABLE `pdf_annotations` ADD COLUMN `rects` text NULL AFTER `color`',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
   (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = @schema_name AND table_name = 'pdf_annotations' AND index_name = 'idx_pdf_annotations_user_material_updated_at') = 0,
   'ALTER TABLE `pdf_annotations` ADD INDEX `idx_pdf_annotations_user_material_updated_at` (`user_id`, `material_id`, `updated_at`)',
   'SELECT 1'
