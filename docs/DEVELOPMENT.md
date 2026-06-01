@@ -175,9 +175,20 @@ npm --workspace frontend-admin run dev -- --port 8004
 npm run typecheck
 npm run build:user
 npm run build:admin
+npm --workspace @studymate/graph-core run test
+node scripts/verify-doc-sync.mjs
 cd backend
 go test ./...
 ```
+
+## 文档与版本治理
+
+- `docs/design/UPGRADE_DESIGN.md` 是当前升级设计主入口。
+- 根目录 `学伴项目-设计说明书.md` 保留为兼容入口，README 主导航指向 `docs/design/`。
+- `docs/planning/ROADMAP.md` 记录 v1.0 路线图。
+- `docs/planning/VERSION_PLAN.md` 记录当前真实状态、范围取舍、性能预算和里程碑流程。
+- 每个功能里程碑必须同步更新 `README.md`、本文件、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`CHANGELOG.md`、`PROJECT_LOG.md`。
+- 提交前运行 `node scripts/verify-doc-sync.mjs`，避免关键文档入口漂移。
 
 ## 编码说明
 

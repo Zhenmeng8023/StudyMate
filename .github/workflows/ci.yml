@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache-dependency-path: backend/go.sum
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build user app
+        run: npm run build:user
+
+      - name: Build admin app
+        run: npm run build:admin
+
+      - name: Test graph core
+        run: npm --workspace @studymate/graph-core run test
+
+      - name: Test backend
+        working-directory: backend
+        run: go test ./...
+
+      - name: Verify docs
+        run: node scripts/verify-doc-sync.mjs

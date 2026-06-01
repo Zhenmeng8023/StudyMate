@@ -2,6 +2,30 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-01 21:00:51 +08:00 | v0.0.70 | 对齐文档树与 v1.0 发布治理基线
+### 任务内容
+- 按用户要求先修工程基线与文档漂移，把当前 `master` 推进到可发布 `v1.0.0` 的治理轨道。
+- 创建或纳入 `docs/planning/ROADMAP.md`、`docs/planning/VERSION_PLAN.md`、`docs/planning/versions/v0.6.0-graph-product.md`、`docs/design/UPGRADE_DESIGN.md`、`CHANGELOG.md`、`.github/PULL_REQUEST_TEMPLATE.md`、`.github/workflows/ci.yml`、`scripts/verify-doc-sync.mjs`。
+- README 当前阶段必须反映真实状态：阅读/笔记已闭环，图谱为强 MVP，复习和 AI 部分实现，后台审核主链存在但治理能力不完整。
+### 完成结果
+- 更新 [.gitignore](/E:/Code/1108026_rust_go/StudyMate/.gitignore)，重新允许 `PROJECT_LOG.md`、`docs/planning/` 和 `docs/design/` 进入版本治理。
+- 重建 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md)，把主导航指向 `docs/design/UPGRADE_DESIGN.md`，并保留根目录设计说明兼容链接。
+- 重建 [docs/planning/ROADMAP.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/ROADMAP.md) 和 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md)，明确 A-E 执行顺序、1.0 范围取舍、zh-CN 源语言/en-US 占位策略和建议性能预算。
+- 更新 [docs/planning/versions/v0.6.0-graph-product.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/versions/v0.6.0-graph-product.md)，把图谱定位从规划改为强 MVP 后的产品化收口。
+- 复制根目录 [学伴项目-设计说明书.md](/E:/Code/1108026_rust_go/StudyMate/学伴项目-设计说明书.md) 到 [docs/design/UPGRADE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/design/UPGRADE_DESIGN.md)。
+- 新增 [CHANGELOG.md](/E:/Code/1108026_rust_go/StudyMate/CHANGELOG.md)、PR 模板、CI 骨架和文档同步校验脚本。
+- 更新 [docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)，补充文档与版本治理流程。
+### 验证结果
+- `node scripts/verify-doc-sync.mjs`
+- `npm --workspace @studymate/graph-core run test`
+- `npm run typecheck`
+- `npm run build:user`
+- `npm run build:admin`
+- `cd backend; go test ./...`
+### 后续影响
+- 后续每个里程碑都有统一文档同步清单、CI 入口和项目日志记录。
+- 下一步进入 CI 与前端测试基线建设。
+
 ## 2026-06-01 20:05:00 +08:00 | v0.0.69 | 移除图谱离页整页刷新兜底以恢复侧边栏流畅切换
 ### 任务内容
 - 用户反馈其他页面之间切换流畅，但从图谱切到别的页面像刷新了一次。

@@ -19,11 +19,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-PROJECT_LOG.md
-
-# Planning drafts and local design plans
-docs/planning/
-docs/design/
 
 # Generated TypeScript build info
 *.tsbuildinfo
@@ -34,6 +29,7 @@ path/
 
 # Codex local visual artifacts
 .codex-artifacts/
+.codegraph/
 
 # Runtime database files
 storage/*.db

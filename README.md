@@ -1,7 +1,6 @@
 # 学伴图谱
 
-学伴图谱是一个以知识图谱画布为中心的学习平台。  
-它把资料收集、PDF 阅读、批注摘录、富文本笔记、图谱组织、卡片复习、AI 学伴和社区分享串成一条完整学习闭环。
+学伴图谱是一个以知识图谱画布为中心的学习平台。它把资料收集、PDF 阅读、批注摘录、富文本笔记、图谱组织、卡片复习、AI 学伴和社区分享串成一条可治理的学习闭环。
 
 ```text
 资料库 -> 阅读器 -> 批注摘录 -> 笔记沉淀 -> 图谱组织 -> AI 辅助 -> 卡片复习 -> 社区分享
@@ -9,14 +8,13 @@
 
 ## 当前阶段
 
-当前正在推进 `v0.4.0` 的前台体验加厚和前端重构：
+当前目标是把 `master` 推进到可发布的 `v1.0.0`。真实状态如下：
 
-- 资料库已经接回搜索、上传、创建、编辑、收藏、评分和阅读入口。
-- 阅读器已经接回阅读进度、书签和批注。
-- 笔记页已经接回富文本编辑、版本历史和恢复。
-- 后端笔记内容已经开始双写到 MongoDB `note_documents / note_snapshots`。
-- 图谱、复习、AI 学伴和部分后台能力先用高质量占位承接。
-- 管理端已经重建为统一治理后台，并保留真实审核链路。
+- 阅读/笔记主链路已闭环：资料、PDF 阅读、批注、书签、富文本笔记、版本历史和 MongoDB 内容快照已经具备可用基础。
+- 图谱工作区已是强 MVP：支持创建保存、搜索定位、来源泳道、来源摘要、AI 落点预览、Markdown/Mermaid 导入、PNG/SVG 导出和快照恢复基础。
+- 复习和 AI 处于部分实现：已有 Deck/Card、AI task/draft 等基础设施，但调度、确认流、用量治理和失败任务界面仍需收口。
+- 后台审核主链存在：帖子/资料审核可以操作，但用户、举报、标签、AI、审计、文件治理还不是完整可发布治理面。
+- `v1.0.0` 范围只包含 Web 主站、Web 后台和后端 API；课程/LMS、Tauri 桌面端、多人实时协作、PWA 离线和向量搜索不作为 1.0 阻塞项。
 
 ## 技术栈
 
@@ -26,18 +24,25 @@
 - 数据层：MySQL、MongoDB、Redis
 - 阅读：PDF.js / react-pdf
 - 编辑：Tiptap
+- 图谱核心：`@studymate/graph-core`
+
+## 文档导航
+
+- 版本路线：[docs/planning/ROADMAP.md](docs/planning/ROADMAP.md)
+- 版本计划：[docs/planning/VERSION_PLAN.md](docs/planning/VERSION_PLAN.md)
+- 图谱产品化说明：[docs/planning/versions/v0.6.0-graph-product.md](docs/planning/versions/v0.6.0-graph-product.md)
+- 升级设计主文档：[docs/design/UPGRADE_DESIGN.md](docs/design/UPGRADE_DESIGN.md)
+- 旧根目录设计说明兼容入口：[学伴项目-设计说明书.md](学伴项目-设计说明书.md)
+- 开发说明：[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
+- 架构说明：[docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)
+- 数据库设计：[docs/architecture/DATABASE_DESIGN.md](docs/architecture/DATABASE_DESIGN.md)
+- 变更记录：[CHANGELOG.md](CHANGELOG.md)
+- 项目推进日志：[PROJECT_LOG.md](PROJECT_LOG.md)
 
 ## 数据库迁移
 
 - MySQL 迁移目录：`backend/internal/migrations/mysql/`
-- 当前已包含：
-  - `001_init_schema.sql`：基础表结构
-  - `002_seed_baseline.sql`：基础角色、权限、系统配置种子数据
-  - `003_align_current_tables.sql`：补齐历史本地库缺失字段和查询索引
-- 对应回滚文件使用 `.down.sql` 命名，例如：
-  - `001_init_schema.down.sql`
-  - `002_seed_baseline.down.sql`
-  - `003_align_current_tables.down.sql`
+- Mongo 迁移目录：`backend/internal/migrations/mongo/`
 - 后端启动时会自动执行内置 MySQL 迁移脚本。
 - 也可以单独执行迁移命令：
 
@@ -46,11 +51,7 @@ cd backend
 go run ./cmd/migrate
 ```
 
-- Mongo 迁移目录：`backend/internal/migrations/mongo/`
-- 当前已包含：
-  - `001_init_content_collections.js`：内容集合与索引初始化
-  - `001_init_content_collections.down.js`：对应回滚脚本
-- Mongo 迁移当前通过 `mongosh` 手动执行：
+Mongo 内容集合初始化：
 
 ```powershell
 mongosh "mongodb://127.0.0.1:27017/studymate_content" --file "backend/internal/migrations/mongo/001_init_content_collections.js"
@@ -65,6 +66,9 @@ StudyMate
 ├── frontend-admin
 ├── packages
 ├── docs
+│   ├── architecture
+│   ├── design
+│   └── planning
 ├── storage
 └── PROJECT_LOG.md
 ```
@@ -75,18 +79,15 @@ StudyMate
 - 管理端：`http://localhost:8002/`
 - 后端健康检查：`http://localhost:8023/health`
 
-## 关键文档
+## 常用命令
 
-- 开发说明：[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
-- 架构说明：[docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)
-- 开发路线：[docs/planning/ROADMAP.md](docs/planning/ROADMAP.md)
-- 版本规划：[docs/planning/VERSION_PLAN.md](docs/planning/VERSION_PLAN.md)
-- 项目级设计方案：[docs/design/FRONTEND_REBUILD_PLAN.md](docs/design/FRONTEND_REBUILD_PLAN.md)
-- 项目记录：[PROJECT_LOG.md](PROJECT_LOG.md)
-
-## 当前重点
-
-1. 继续加厚 `v0.4.0` 的阅读与笔记体验。
-2. 把管理端和用户端收敛到统一设计系统。
-3. 接通“批注/笔记/资料 -> 图谱节点草稿”的最小闭环。
-4. 为 `v0.5.0` 图谱画布 MVP 预留稳定前端和数据模型骨架。
+```powershell
+npm install
+npm run typecheck
+npm run build:user
+npm run build:admin
+npm --workspace @studymate/graph-core run test
+node scripts/verify-doc-sync.mjs
+cd backend
+go test ./...
+```
