@@ -83,11 +83,15 @@ StudyMate
 
 ```powershell
 npm install
+npm run lint
 npm run typecheck
 npm run build:user
 npm run build:admin
+npm run test:user
+npm run test:admin
+npm run test:e2e
 npm --workspace @studymate/graph-core run test
-node scripts/verify-doc-sync.mjs
+npm run verify:docs
 cd backend
 go test ./...
 ```

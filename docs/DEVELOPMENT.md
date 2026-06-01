@@ -172,11 +172,15 @@ npm --workspace frontend-admin run dev -- --port 8004
 ## 推荐验证命令
 
 ```powershell
+npm run lint
 npm run typecheck
 npm run build:user
 npm run build:admin
+npm run test:user
+npm run test:admin
+npm run test:e2e
 npm --workspace @studymate/graph-core run test
-node scripts/verify-doc-sync.mjs
+npm run verify:docs
 cd backend
 go test ./...
 ```
@@ -188,7 +192,8 @@ go test ./...
 - `docs/planning/ROADMAP.md` 记录 v1.0 路线图。
 - `docs/planning/VERSION_PLAN.md` 记录当前真实状态、范围取舍、性能预算和里程碑流程。
 - 每个功能里程碑必须同步更新 `README.md`、本文件、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`CHANGELOG.md`、`PROJECT_LOG.md`。
-- 提交前运行 `node scripts/verify-doc-sync.mjs`，避免关键文档入口漂移。
+- 提交前运行 `npm run verify:docs`，避免关键文档入口漂移。
+- CI 基线使用 Node 24、Go 1.26、Vitest、React Testing Library、Vue Test Utils、Playwright、`@studymate/graph-core` 测试和后端 `go test ./...`。
 
 ## 编码说明
 

@@ -13,6 +13,21 @@
     "dev:admin": "npm --workspace frontend-admin run dev",
     "build:user": "npm --workspace frontend-user run build",
     "build:admin": "npm --workspace frontend-admin run build",
-    "typecheck": "npm --workspaces --if-present run typecheck"
+    "typecheck": "npm --workspaces --if-present run typecheck",
+    "lint": "npm run typecheck && npm run verify:docs",
+    "test:user": "npm --workspace frontend-user run test",
+    "test:admin": "npm --workspace frontend-admin run test",
+    "test:e2e": "npm run build:user && playwright test",
+    "verify:docs": "node scripts/verify-doc-sync.mjs",
+    "ci": "npm run lint && npm run build:user && npm run build:admin && npm run test:user && npm run test:admin && npm --workspace @studymate/graph-core run test && npm run test:e2e && cd backend && go test ./... && cd .. && npm run verify:docs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@vue/test-utils": "^2.4.10",
+    "jsdom": "^29.1.1",
+    "vitest": "^4.1.8"
   }
 }

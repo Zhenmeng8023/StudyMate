@@ -47,6 +47,8 @@
 
 - 文档同步脚本通过。
 - 当前阶段描述不再夸大或滞后。
+- 根 `package.json` 提供 `lint`、`test:user`、`test:admin`、`test:e2e`、`verify:docs`、`ci`。
+- CI 覆盖 Node 24、Go 1.26、前后台构建、Vitest、Playwright、图谱核心测试、后端测试和文档同步。
 
 ### B. 拆分超大文件
 
@@ -168,6 +170,22 @@
 2. 同步 `README.md`、`docs/DEVELOPMENT.md`、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`CHANGELOG.md`、`PROJECT_LOG.md`。
 3. 运行完整测试。
 4. 测试通过后提交对应 git commit。
+
+当前完整测试基线：
+
+```powershell
+npm run lint
+npm run build:user
+npm run build:admin
+npm run test:user
+npm run test:admin
+npm run test:e2e
+npm --workspace @studymate/graph-core run test
+cd backend
+go test ./...
+cd ..
+npm run verify:docs
+```
 
 ## 6. 版本治理规则
 

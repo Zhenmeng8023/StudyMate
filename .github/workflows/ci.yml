@@ -38,12 +38,24 @@ jobs:
       - name: Build admin app
         run: npm run build:admin
 
+      - name: Test user app
+        run: npm run test:user
+
+      - name: Test admin app
+        run: npm run test:admin
+
       - name: Test graph core
         run: npm --workspace @studymate/graph-core run test
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Test e2e
+        run: npm run test:e2e
 
       - name: Test backend
         working-directory: backend
         run: go test ./...
 
       - name: Verify docs
-        run: node scripts/verify-doc-sync.mjs
+        run: npm run verify:docs

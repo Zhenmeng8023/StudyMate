@@ -2,6 +2,34 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-01 21:09:44 +08:00 | v0.0.71 | 建立 CI 与前端测试基线
+### 任务内容
+- 按 v1.0 发布推进顺序，完成工程基线第二步：根脚本、前后台单元测试、E2E 测试和 GitHub CI 覆盖。
+- 要求保留现有 `go test ./...` 与 `@studymate/graph-core` 测试，并新增用户端 Vitest + React Testing Library、管理端 Vitest + Vue Test Utils、Playwright 端到端测试。
+### 完成结果
+- 更新 [package.json](/E:/Code/1108026_rust_go/StudyMate/package.json)，新增 `lint`、`test:user`、`test:admin`、`test:e2e`、`verify:docs`、`ci`。
+- 更新前后台 package 脚本，分别接入 Vitest 测试入口；用户端新增 `preview` 供 Playwright 使用。
+- 新增 [frontend-user/vitest.config.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/vitest.config.ts)、[frontend-user/src/test/setup.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/test/setup.ts) 和图谱节点外观测试。
+- 新增 [frontend-admin/vitest.config.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-admin/vitest.config.ts)、[frontend-admin/src/test/setup.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-admin/src/test/setup.ts) 和管理端登录页 smoke 测试。
+- 新增 [playwright.config.ts](/E:/Code/1108026_rust_go/StudyMate/playwright.config.ts) 与 [e2e/user-shell.spec.ts](/E:/Code/1108026_rust_go/StudyMate/e2e/user-shell.spec.ts)，覆盖用户端公共工作区加载。
+- 更新 [.github/workflows/ci.yml](/E:/Code/1108026_rust_go/StudyMate/.github/workflows/ci.yml)，CI 覆盖 Node 24、Go 1.26、`npm ci`、类型检查、前后台构建、前后台测试、Playwright、图谱核心测试、后端测试和文档同步。
+- 同步更新 README、开发说明、路线图、版本计划、变更记录和文档同步脚本。
+### 验证结果
+- `npm run ci`
+- CI 脚本内部已覆盖：
+  - `npm run lint`
+  - `npm run build:user`
+  - `npm run build:admin`
+  - `npm run test:user`
+  - `npm run test:admin`
+  - `npm --workspace @studymate/graph-core run test`
+  - `npm run test:e2e`
+  - `cd backend && go test ./...`
+  - `npm run verify:docs`
+### 后续影响
+- 后续拆分超大文件和图谱功能收口时，有前后台最小回归测试与 E2E 壳层保护。
+- CI 已具备发布前质量门禁雏形。
+
 ## 2026-06-01 21:00:51 +08:00 | v0.0.70 | 对齐文档树与 v1.0 发布治理基线
 ### 任务内容
 - 按用户要求先修工程基线与文档漂移，把当前 `master` 推进到可发布 `v1.0.0` 的治理轨道。
