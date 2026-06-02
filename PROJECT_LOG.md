@@ -2,6 +2,22 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-02 12:36:00 +08:00 | v1.1.0-alpha.5 | 补 review/AI 用户端 API 合约测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为复习与 AI 草稿闭环补用户端 API client 合约测试。
+- 覆盖 Deck/Card、今日复习队列、复习回写和 AI tasks/usage/drafts 请求边界。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `frontend-user/src/api/reviewAi.test.ts`。
+- 覆盖 `createDeck` 的认证头、可见性与请求载荷。
+- 覆盖 `bulkCreateDeckCards` 从 AI draft 批量确认成卡片的请求载荷。
+- 覆盖 `getTodayReviewQueue`、`reviewCard`、`listAiTasks`、`getAiUsageSummary`、`listAiDrafts` 的路径与鉴权头。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/api/reviewAi.test.ts` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 后续可继续补 review workspace UI smoke 和后端 card handler/service 测试，逐步把复习闭环从 API 合约推进到端到端用户流。
+
 ## 2026-06-02 12:32:00 +08:00 | v1.1.0-alpha.4 | 收敛公共首页 E2E 代理噪声
 ### 任务内容
 - 继续 v1.1 产品质量与测试硬化，减少公共首页 Playwright smoke 对本地后端的隐式依赖。
