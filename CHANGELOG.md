@@ -10,6 +10,7 @@
 - v1.1 质量硬化新增用户端 review/AI API 合约测试，覆盖 Deck/Card、今日队列、复习回写和 AI drafts/tasks/usage 请求形状。
 - v1.1 质量硬化新增管理端治理页回归测试，覆盖已有 admin session 下 `/api/v1/admin/users?limit=20` 的真实模块加载和鉴权头。
 - v1.1 质量硬化新增后端 search/share/admin handler 测试，并将 search/share handler 依赖改为最小 service interface，便于 fake 注入。
+- v1.1 质量硬化新增后端 card handler 测试，并将 card handler 依赖改为最小 service interface，覆盖卡组创建、今日队列和复习回写入口。
 - v1.1 质量硬化新增 Playwright 搜索页和分享只读页 smoke，前端 E2E 由 1 条扩展为 3 条。
 - v1.1 质量硬化为公共首页 Playwright smoke 增加 API 拦截，移除无本地后端时的 Vite proxy 噪声。
 - 新增 `test:coverage` 发布门禁脚本，覆盖用户端、管理端、图谱核心和 Go 后端覆盖率汇总。

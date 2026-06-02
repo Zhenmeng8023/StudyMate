@@ -2,6 +2,23 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-02 12:39:00 +08:00 | v1.1.0-alpha.6 | 补后端 card handler 边界测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为复习 Card/Deck handler 补边界测试。
+- 让 card handler 可以通过 fake service 做单元测试，不直接依赖真实数据库。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `backend/internal/modules/card/handler/handler_test.go`。
+- 覆盖创建卡组时的认证用户、请求体绑定和 201 响应。
+- 覆盖今日复习队列的 success envelope 与 due item。
+- 覆盖复习回写的 card id、rating 和 elapsedMs 传递。
+- `card/handler` 的 service 依赖改为最小接口，并保留具体 service 的编译期接口断言。
+### 验证结果
+- `cd backend; go test ./internal/modules/card/handler` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 复习闭环已有用户端 API 合约测试和后端 handler 边界测试，后续可继续补 ReviewWorkspace UI smoke 或 service 层数据库 fixture。
+
 ## 2026-06-02 12:36:00 +08:00 | v1.1.0-alpha.5 | 补 review/AI 用户端 API 合约测试
 ### 任务内容
 - 继续 v1.1 产品质量与测试硬化，为复习与 AI 草稿闭环补用户端 API client 合约测试。

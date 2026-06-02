@@ -18,7 +18,7 @@
 - 用户端 search/share API 合约测试，锁定 grouped search、owner share link 和 public read-only resolve 的请求形状。
 - 用户端 review/AI API 合约测试，锁定 Deck/Card、今日队列、复习回写和 AI tasks/usage/drafts 请求形状。
 - 管理端治理页回归测试，锁定已有 session 下概览、审核队列和 `/api/v1/admin/*` 治理模块加载路径。
-- 后端继续补 search/share/admin/review 的 handler/service 边界测试；search/share handler 已切到最小 service interface，admin handler 已补 limit 解析测试。涉及数据库的用例优先用 repository interface 或轻量 fixture，不把真实 MySQL/Mongo 作为单元测试前置条件。
+- 后端继续补 search/share/admin/review 的 handler/service 边界测试；search/share/card handler 已切到最小 service interface，admin handler 已补 limit 解析测试。涉及数据库的用例优先用 repository interface 或轻量 fixture，不把真实 MySQL/Mongo 作为单元测试前置条件。
 - Playwright 已补公共壳层、搜索和分享只读页 smoke，且公共 API 请求已改为测试内拦截；后续继续补后台治理和复习队列 smoke flow。
 
 退出标准：

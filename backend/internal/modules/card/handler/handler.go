@@ -11,12 +11,24 @@ import (
 )
 
 type Handler struct {
-	service *cardservice.Service
+	service cardService
 }
 
-func NewHandler(service *cardservice.Service) *Handler {
+type cardService interface {
+	ListDecks(ownerUserID string) ([]carddto.DeckPayload, error)
+	CreateDeck(ownerUserID string, request carddto.CreateDeckRequest) (*carddto.DeckPayload, error)
+	ListCards(ownerUserID string, deckID string) ([]carddto.CardPayload, error)
+	CreateCard(ownerUserID string, deckID string, request carddto.CreateCardRequest) (*carddto.CardPayload, error)
+	BulkCreateCards(ownerUserID string, deckID string, requests []carddto.CreateCardRequest) ([]carddto.CardPayload, error)
+	TodayQueue(ownerUserID string) (*carddto.ReviewQueuePayload, error)
+	ReviewCard(ownerUserID string, cardID string, request carddto.ReviewCardRequest) (*carddto.ReviewResultPayload, error)
+}
+
+func NewHandler(service cardService) *Handler {
 	return &Handler{service: service}
 }
+
+var _ cardService = (*cardservice.Service)(nil)
 
 func (h *Handler) ListDecks(ctx *gin.Context) {
 	result, err := h.service.ListDecks(ctx.GetString(middleware.ContextUserIDKey))
