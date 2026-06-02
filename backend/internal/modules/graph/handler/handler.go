@@ -5,16 +5,34 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"studymate/backend/internal/middleware"
+	carddto "studymate/backend/internal/modules/card/dto"
 	graphdto "studymate/backend/internal/modules/graph/dto"
-	graphservice "studymate/backend/internal/modules/graph/service"
 	"studymate/backend/internal/pkg/response"
 )
 
-type Handler struct {
-	service *graphservice.Service
+type graphService interface {
+	ListGraphs(ownerUserID string) ([]graphdto.GraphSummaryPayload, error)
+	CreateGraph(ownerUserID string, request graphdto.CreateGraphRequest) (*graphdto.GraphDetailPayload, error)
+	GetGraph(ownerUserID string, graphID string) (*graphdto.GraphDetailPayload, error)
+	UpdateGraph(ownerUserID string, graphID string, request graphdto.UpdateGraphRequest) (*graphdto.GraphSummaryPayload, error)
+	DeleteGraph(ownerUserID string, graphID string) error
+	BatchSave(ownerUserID string, graphID string, request graphdto.GraphBatchSaveRequest) (*graphdto.GraphDetailPayload, error)
+	ListSnapshots(ownerUserID string, graphID string) ([]graphdto.GraphSnapshotPayload, error)
+	RestoreSnapshot(ownerUserID string, graphID string, request graphdto.RestoreGraphRequest) (*graphdto.GraphDetailPayload, error)
+	ImportMarkdown(ownerUserID string, graphID string, request graphdto.ImportGraphRequest) (*graphdto.GraphDetailPayload, error)
+	ImportMermaid(ownerUserID string, graphID string, request graphdto.ImportGraphRequest) (*graphdto.GraphDetailPayload, error)
+	ValidateGraph(ownerUserID string, graphID string) (*graphdto.GraphValidationResponse, error)
+	GenerateCardDrafts(ownerUserID string, graphID string, request graphdto.GraphCardDraftRequest) ([]graphdto.GraphCardDraftPayload, error)
+	CommitCardDrafts(ownerUserID string, graphID string, request graphdto.CommitGraphCardDraftsRequest) ([]carddto.CardPayload, error)
+	CommitGraphChangeDrafts(ownerUserID string, graphID string, request graphdto.CommitGraphChangeDraftsRequest) (*graphdto.GraphDetailPayload, error)
+	ListDiagramTemplates() []graphdto.DiagramTemplatePayload
 }
 
-func NewHandler(service *graphservice.Service) *Handler {
+type Handler struct {
+	service graphService
+}
+
+func NewHandler(service graphService) *Handler {
 	return &Handler{service: service}
 }
 

@@ -17,6 +17,22 @@
 ### 后续影响
 - AI 图谱草稿确认流现在同时具备 API 合约测试和页面级测试保护，后续可继续补后端 graph commit handler/service 的细粒度 fixture。
 
+## 2026-06-02 13:42:00 +08:00 | v1.1.0-alpha.11 | 补后端 graph commit handler 边界测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为后端 graph handler 补图谱变更草稿确认入口测试。
+- 先添加 fake service handler 测试形成编译期 RED，再把 graph handler 从具体 service 依赖收窄为最小接口。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `backend/internal/modules/graph/handler/handler_test.go`。
+- 测试 `POST /graphs/:id/ai/commit-changes` 会传递认证用户、目标 graph id、`draftIds` 和逐草稿 `nodeSelections`。
+- 更新 `backend/internal/modules/graph/handler/handler.go`，允许通过最小 `graphService` interface 注入 fake，同时保留真实 `graphservice.Service` 的路由兼容。
+### 验证结果
+- `cd backend; go test ./internal/modules/graph/handler` 先因 `NewHandler` 只接受具体 service 编译失败，完成 RED。
+- `cd backend; go test ./internal/modules/graph/handler` 在接口收窄后通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 图谱变更草稿确认的前端页面、前端 API 合约和后端 handler 边界均有自动化保护，后续可继续补 graph service/repository fixture。
+
 ## 2026-06-02 13:33:00 +08:00 | v1.1.0-alpha.9 | 补 AiPage 图谱变更草稿确认测试
 ### 任务内容
 - 继续 v1.1 产品质量与测试硬化，为用户端 AiPage 补图谱变更草稿确认页面测试。

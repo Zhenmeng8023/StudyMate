@@ -20,7 +20,7 @@
 - 用户端 ReviewWorkspace 页面级测试，锁定今日队列、翻面和评分回写核心 UI 流。
 - 用户端 AiPage 页面级测试，锁定 AI 卡片草稿确认写入复习 deck、图谱变更草稿确认写入目标图谱的核心 UI 流。
 - 管理端治理页回归测试，锁定已有 session 下概览、审核队列和 `/api/v1/admin/*` 治理模块加载路径。
-- 后端继续补 search/share/admin/review 的 handler/service 边界测试；search/share/card handler 已切到最小 service interface，admin handler 已补 limit 解析测试。涉及数据库的用例优先用 repository interface 或轻量 fixture，不把真实 MySQL/Mongo 作为单元测试前置条件。
+- 后端继续补 search/share/admin/review/graph 的 handler/service 边界测试；search/share/card/graph handler 已切到最小 service interface，admin handler 已补 limit 解析测试。涉及数据库的用例优先用 repository interface 或轻量 fixture，不把真实 MySQL/Mongo 作为单元测试前置条件。
 - Playwright 已补公共壳层、搜索和分享只读页 smoke，且公共 API 请求已改为测试内拦截；后续继续补后台治理和复习队列 smoke flow。
 
 退出标准：

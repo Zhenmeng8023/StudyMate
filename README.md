@@ -11,7 +11,7 @@
 `v1.0.0` 已完成本地发布标签，当前进入 `v1.1` 产品质量与测试硬化阶段。真实状态如下：
 
 - 阅读/笔记主链路已闭环：资料、PDF 阅读、批注、书签、富文本笔记、版本历史和 MongoDB 内容快照已经具备可用基础。
-- 图谱工作区已是强 MVP：支持创建保存、搜索定位、来源泳道、来源摘要、AI 落点预览、Markdown/Mermaid 导入、PNG/SVG 导出和快照恢复基础。
+- 图谱工作区已是强 MVP：支持创建保存、搜索定位、来源泳道、来源摘要、AI 落点预览、Markdown/Mermaid 导入、PNG/SVG 导出和快照恢复基础；`v1.1` 已开始为图谱 AI 变更确认后端 handler 补边界测试。
 - 复习和 AI 已具备 SM-2 调度边界、Deck/Card 与 AI draft 基础闭环；`v1.1` 已开始补 Deck/Card、今日队列、复习回写、AI 草稿/用量/任务 API 合约测试、图谱变更草稿确认 API 合约测试、后端 card handler 边界测试、ReviewWorkspace 页面回归测试，以及 AI 卡片/图谱草稿确认页面测试。
 - 搜索、分享和后台治理已接入真实 API；`v1.1` 正在补充用户端 search/share API 合约测试、后台治理页回归测试、后端 handler 边界测试和更稳定的 Playwright smoke。
 - `v1.x` 范围仍只包含 Web 主站、Web 后台和后端 API；课程/LMS、Tauri 桌面端、多人实时协作、PWA 离线和向量搜索不作为当前阻塞项。
