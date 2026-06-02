@@ -2,6 +2,22 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-02 12:47:00 +08:00 | v1.1.0-alpha.8 | 补 AiPage 草稿确认页面测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为用户端 AiPage 补页面级 AI 卡片草稿确认测试。
+- 覆盖待确认 `card_draft` 写入所选复习 deck 的 UI 流。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `frontend-user/src/pages/AiPage.test.tsx`。
+- 通过 mock API 初始化 AI 草稿、用量摘要、deck 列表和空图谱列表。
+- 测试用户点击“把 1 张待确认卡片草稿写入复习系统”后，`bulkCreateDeckCards` 收到 draftId、front、back、sourceType 和 sourceId。
+- 验证确认完成后显示“已把 1 张 AI 草稿写入复习系统。”。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/pages/AiPage.test.tsx` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- AI 草稿到复习系统的确认流已有 API 合约和页面级测试保护，后续可继续补图谱变更草稿确认流。
+
 ## 2026-06-02 12:43:00 +08:00 | v1.1.0-alpha.7 | 补 ReviewWorkspace 页面级复习回写测试
 ### 任务内容
 - 继续 v1.1 产品质量与测试硬化，为用户端 ReviewWorkspace 补页面级回归测试。

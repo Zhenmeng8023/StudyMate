@@ -9,6 +9,7 @@
 - v1.1 质量硬化新增用户端 search/share API 合约测试，覆盖 grouped search 查询参数、owner share link 创建载荷和 public share token 解析路径。
 - v1.1 质量硬化新增用户端 review/AI API 合约测试，覆盖 Deck/Card、今日队列、复习回写和 AI drafts/tasks/usage 请求形状。
 - v1.1 质量硬化新增 ReviewWorkspace 页面级测试，覆盖今日队列展示、翻面和评分回写。
+- v1.1 质量硬化新增 AiPage 页面级测试，覆盖待确认 AI 卡片草稿写入复习 deck。
 - v1.1 质量硬化新增管理端治理页回归测试，覆盖已有 admin session 下 `/api/v1/admin/users?limit=20` 的真实模块加载和鉴权头。
 - v1.1 质量硬化新增后端 search/share/admin handler 测试，并将 search/share handler 依赖改为最小 service interface，便于 fake 注入。
 - v1.1 质量硬化新增后端 card handler 测试，并将 card handler 依赖改为最小 service interface，覆盖卡组创建、今日队列和复习回写入口。
