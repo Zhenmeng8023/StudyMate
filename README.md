@@ -13,7 +13,7 @@
 - 阅读/笔记主链路已闭环：资料、PDF 阅读、批注、书签、富文本笔记、版本历史和 MongoDB 内容快照已经具备可用基础。
 - 图谱工作区已是强 MVP：支持创建保存、搜索定位、来源泳道、来源摘要、AI 落点预览、Markdown/Mermaid 导入、PNG/SVG 导出和快照恢复基础。
 - 复习和 AI 已具备 SM-2 调度边界、Deck/Card 与 AI draft 基础闭环，后续继续补交互细节、异常态和覆盖率。
-- 搜索、分享和后台治理已接入真实 API；`v1.1` 正在补充用户端 search/share API 合约测试、后台治理页回归测试、后端 handler 边界测试和搜索/分享 Playwright smoke。
+- 搜索、分享和后台治理已接入真实 API；`v1.1` 正在补充用户端 search/share API 合约测试、后台治理页回归测试、后端 handler 边界测试和更稳定的 Playwright smoke。
 - `v1.x` 范围仍只包含 Web 主站、Web 后台和后端 API；课程/LMS、Tauri 桌面端、多人实时协作、PWA 离线和向量搜索不作为当前阻塞项。
 
 ## 技术栈
