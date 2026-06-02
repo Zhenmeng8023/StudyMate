@@ -10,7 +10,7 @@
 - `ReviewWorkspacePage` 已有页面级 Vitest，覆盖今日队列显示、翻面、评分和复习回写；后续 UI 改动应保留这条核心复习流。
 - `AiPage` 已有页面级 Vitest，覆盖待确认卡片草稿写入所选复习 deck，以及图谱变更草稿写入目标图谱；后续 AI 草稿确认 UI 改动应保留 draftId、sourceType、sourceId、draftIds 和 nodeSelections 的传递。
 - 后端 handler 测试优先通过最小 service interface 注入 fake，不直接拉真实数据库；search/share/card/graph/AI handler 已按该模式解耦，admin handler 已补 limit 解析测试。
-- Playwright smoke 已覆盖公共壳层、后端分组搜索页和分享只读页；公共壳层、搜索和分享测试均用 `page.route` 固定 API 响应，避免本地后端成为前端 smoke 的前置条件。
+- Playwright smoke 已覆盖公共壳层、后端分组搜索页、分享只读页和受保护的复习队列回写页；这些测试均用 `page.route` 固定 API 响应，复习页通过 `localStorage` 注入测试 session，避免本地后端成为前端 smoke 的前置条件。
 - `zh-CN` 是源语言。用户端字典位于 `frontend-user/src/i18n/dictionary.ts`，管理端字典位于 `frontend-admin/src/i18n/dictionary.ts`。
 - `en-US` 目前只保留占位文案，测试会校验占位字典与 `zh-CN` 字典键保持一致。
 - 用户端 API client 以 `frontend-user/src/api/client.ts` 作为稳定 barrel，新增接口按 auth、materials、notes、reader、graphs、review、ai 等域拆分到同目录文件。
