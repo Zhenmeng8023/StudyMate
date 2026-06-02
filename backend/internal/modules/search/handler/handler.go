@@ -6,19 +6,26 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	searchdto "studymate/backend/internal/modules/search/dto"
 	searchservice "studymate/backend/internal/modules/search/service"
 	"studymate/backend/internal/pkg/response"
 	"studymate/backend/internal/pkg/security"
 )
 
+type searchService interface {
+	Search(query string, types []string, limit int, userID string) (*searchdto.Response, error)
+}
+
 type Handler struct {
-	service      *searchservice.Service
+	service      searchService
 	tokenManager *security.TokenManager
 }
 
-func NewHandler(service *searchservice.Service, tokenManager *security.TokenManager) *Handler {
+func NewHandler(service searchService, tokenManager *security.TokenManager) *Handler {
 	return &Handler{service: service, tokenManager: tokenManager}
 }
+
+var _ searchService = (*searchservice.Service)(nil)
 
 func (h *Handler) Search(ctx *gin.Context) {
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "20"))

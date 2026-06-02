@@ -11,12 +11,21 @@ import (
 )
 
 type Handler struct {
-	service *shareservice.Service
+	service shareService
 }
 
-func NewHandler(service *shareservice.Service) *Handler {
+type shareService interface {
+	Create(ownerUserID string, request sharedto.CreateLinkRequest) (*sharedto.LinkPayload, error)
+	List(ownerUserID string) ([]sharedto.LinkPayload, error)
+	Revoke(ownerUserID string, linkID string) error
+	Resolve(token string) (*sharedto.PublicResolvePayload, error)
+}
+
+func NewHandler(service shareService) *Handler {
 	return &Handler{service: service}
 }
+
+var _ shareService = (*shareservice.Service)(nil)
 
 func (h *Handler) Create(ctx *gin.Context) {
 	var request sharedto.CreateLinkRequest

@@ -2,6 +2,22 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-02 12:26:00 +08:00 | v1.1.0-alpha.2 | 补后端 search/share/admin handler 边界测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，补后端 search/share/admin 的 handler 层回归测试。
+- 让 search/share handler 可以通过 fake service 做单元测试，不直接依赖真实数据库。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `backend/internal/modules/search/handler/handler_test.go`，覆盖查询参数、类型过滤、limit 传递和错误 envelope。
+- 新增 `backend/internal/modules/share/handler/handler_test.go`，覆盖创建分享链接时的认证用户、请求体绑定和成功响应 envelope。
+- 新增 `backend/internal/modules/admin/handler/handler_test.go`，覆盖后台 limit 查询参数解析。
+- `search/handler` 与 `share/handler` 的 service 依赖改为最小接口，并保留具体 service 的编译期接口断言。
+### 验证结果
+- `cd backend; go test ./internal/modules/search/handler ./internal/modules/share/handler ./internal/modules/admin/handler` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 后续可继续按同一方式补 review/AI/admin service 细粒度测试，并在需要数据库行为时再引入轻量 fixture 或 repository interface。
+
 ## 2026-06-02 12:20:00 +08:00 | v1.1.0-alpha.1 | 加厚 search/share/admin 测试基线
 ### 任务内容
 - 在 `v1.0.0` 本地发布标签之后，按后续里程碑设计进入 v1.1 产品质量与测试硬化。
