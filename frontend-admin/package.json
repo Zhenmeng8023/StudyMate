@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 8002",
+    "preview": "vite preview",
     "build": "vue-tsc -b && vite build",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run --config vitest.config.ts",

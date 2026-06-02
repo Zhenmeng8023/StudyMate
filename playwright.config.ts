@@ -25,12 +25,20 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:4173",
     trace: "on-first-retry"
   },
-  webServer: {
-    command: "npm --workspace frontend-user run preview -- --host 127.0.0.1 --port 4173",
-    url: "http://127.0.0.1:4173",
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000
-  },
+  webServer: [
+    {
+      command: "npm --workspace frontend-user run preview -- --host 127.0.0.1 --port 4173",
+      url: "http://127.0.0.1:4173",
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000
+    },
+    {
+      command: "npm --workspace frontend-admin run preview -- --host 127.0.0.1 --port 4174",
+      url: "http://127.0.0.1:4174",
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000
+    }
+  ],
   projects: [
     {
       name: "chromium",

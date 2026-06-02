@@ -2,6 +2,22 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-02 14:01:58 +08:00 | v1.1.0-alpha.14 | 补后台治理 Playwright smoke
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为管理端后台治理补 Playwright smoke。
+- 让 E2E 同时启动用户端和管理端 preview，覆盖管理端已有 admin session 下的 users 治理模块加载。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `e2e/v1-admin-governance.spec.ts`。
+- 更新 `package.json` 的 `test:e2e`，同时构建用户端和管理端。
+- 新增 `frontend-admin` 的 `preview` 脚本，并把 `playwright.config.ts` 改为同时启动 4173 用户端和 4174 管理端 preview。
+- 后台 smoke 通过 `localStorage` 写入 `studymate.admin.session`，拦截 `/api/v1/admin/me`、`/overview`、`/moderation` 和 `/users?limit=20`，验证 users 模块加载 `alice` 且请求携带 `Bearer admin-token`。
+### 验证结果
+- `npm run test:e2e` 通过，Playwright smoke 从 4 条扩展为 5 条。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、5 条 Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- v1.1 已覆盖公共页、复习队列和后台治理的关键 smoke，后续可继续补 AI 任务治理、资料文件治理或图谱受保护工作流。
+
 ## 2026-06-02 13:55:57 +08:00 | v1.1.0-alpha.13 | 补复习队列 Playwright smoke
 ### 任务内容
 - 继续 v1.1 产品质量与测试硬化，为受保护的用户端 `/review` 复习队列补 Playwright smoke。

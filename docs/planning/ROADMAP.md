@@ -22,7 +22,7 @@
 - 用户端 AiPage 页面级 AI 卡片/图谱草稿确认测试。
 - 管理端治理页真实 API 加载回归测试。
 - 后端 search/share/admin/review/graph/AI 继续补 handler/service 测试；当前已补 search/share/admin/card/graph/AI handler 边界测试。
-- Playwright 当前已覆盖公共壳层、搜索、分享只读页和复习队列回写，并通过测试内 API 拦截降低本地后端耦合；后续覆盖后台治理 smoke flow。
+- Playwright 当前已覆盖公共壳层、搜索、分享只读页、复习队列回写和后台治理用户模块，并通过测试内 API 拦截降低本地后端耦合。
 
 完成标志：
 
