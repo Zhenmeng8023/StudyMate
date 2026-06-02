@@ -18,6 +18,7 @@
 
 - 用户端 search/share API 合约测试。
 - 用户端 review/AI API 合约测试。
+- 用户端 ReviewWorkspace 页面级复习回写测试。
 - 管理端治理页真实 API 加载回归测试。
 - 后端 search/share/admin/review 继续补 handler/service 测试；当前已补 search/share/admin/card handler 边界测试。
 - Playwright 当前已覆盖公共壳层、搜索和分享只读页，并通过测试内 API 拦截降低本地后端耦合；后续覆盖后台治理和复习队列 smoke flow。

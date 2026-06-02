@@ -2,6 +2,22 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-02 12:43:00 +08:00 | v1.1.0-alpha.7 | 补 ReviewWorkspace 页面级复习回写测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为用户端 ReviewWorkspace 补页面级回归测试。
+- 覆盖今日队列展示、显示答案、评分按钮和复习回写调用。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`。
+- 通过 mock API 初始化卡组、卡片列表和今日队列。
+- 测试用户点击“显示答案”后可以看到答案，并点击 `Good` 触发 `reviewCard`。
+- 验证评分后显示“已记录复习”消息并清空今日队列。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/review/ReviewWorkspacePage.test.tsx` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 复习闭环已有 API 合约、后端 handler 和页面级测试保护，后续可以继续补 AI 草稿确认 UI 或后端 service fixture。
+
 ## 2026-06-02 12:39:00 +08:00 | v1.1.0-alpha.6 | 补后端 card handler 边界测试
 ### 任务内容
 - 继续 v1.1 产品质量与测试硬化，为复习 Card/Deck handler 补边界测试。
