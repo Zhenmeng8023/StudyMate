@@ -2,6 +2,22 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-02 13:33:00 +08:00 | v1.1.0-alpha.9 | 补 AiPage 图谱变更草稿确认测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为用户端 AiPage 补图谱变更草稿确认页面测试。
+- 覆盖待确认 `graph_change` 草稿写入所选目标图谱的 UI 流。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 扩展 `frontend-user/src/pages/AiPage.test.tsx`。
+- 通过 mock API 初始化图谱变更草稿、目标图谱列表和目标图谱详情。
+- 测试候选节点在页面中展示，并点击“把 1 条图谱变更写入所选图谱”。
+- 验证 `commitGraphChangeDraftSelection` 收到 `draftIds` 和 `nodeSelections`，保留 `node-a` 与 `node-b` 的节点选择。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/pages/AiPage.test.tsx` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- AI 草稿到复习系统、到目标图谱的两个确认流都有页面级测试保护，后续可继续补后端 AI/graph commit handler/service 测试。
+
 ## 2026-06-02 12:47:00 +08:00 | v1.1.0-alpha.8 | 补 AiPage 草稿确认页面测试
 ### 任务内容
 - 继续 v1.1 产品质量与测试硬化，为用户端 AiPage 补页面级 AI 卡片草稿确认测试。
