@@ -2,6 +2,21 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-02 12:29:00 +08:00 | v1.1.0-alpha.3 | 增加搜索与分享只读页 Playwright smoke
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，补用户端公共搜索和分享只读页的端到端 smoke。
+- 避免依赖本地后端，使用 Playwright route 拦截固定 API 响应。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `e2e/v1-public-flows.spec.ts`。
+- 搜索页 smoke 覆盖 `/search?q=图谱` 调用 grouped backend result 并显示结果卡片。
+- 分享页 smoke 覆盖 `/share/token-1` 调用 public resolve 并显示只读目标、摘要和原始页面链接。
+### 验证结果
+- `npm run test:e2e` 通过，Playwright 从 1 条公共壳层 smoke 扩展为 3 条。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 后续可继续补后台治理和复习队列 Playwright smoke，并把后端代理拒绝日志从公共壳层测试里收敛掉。
+
 ## 2026-06-02 12:26:00 +08:00 | v1.1.0-alpha.2 | 补后端 search/share/admin handler 边界测试
 ### 任务内容
 - 继续 v1.1 产品质量与测试硬化，补后端 search/share/admin 的 handler 层回归测试。
