@@ -17,7 +17,7 @@
 交付：
 
 - 用户端 search/share API 合约测试。
-- 用户端 review/AI API 合约测试。
+- 用户端 review/AI API 合约测试，已覆盖复习闭环和图谱变更草稿确认请求形状。
 - 用户端 ReviewWorkspace 页面级复习回写测试。
 - 用户端 AiPage 页面级 AI 卡片/图谱草稿确认测试。
 - 管理端治理页真实 API 加载回归测试。

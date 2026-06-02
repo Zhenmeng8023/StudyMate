@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   bulkCreateDeckCards,
+  commitGraphChangeDraftSelection,
   createDeck,
   getAiUsageSummary,
   getTodayReviewQueue,
@@ -155,5 +156,59 @@ describe("AI API clients", () => {
         Authorization: "Bearer access-token"
       });
     }
+  });
+
+  it("commits selected graph change drafts with node selections", async () => {
+    const fetchMock = mockApiResponse({
+      id: "graph-1",
+      ownerUserId: "user-1",
+      title: "Knowledge Graph",
+      description: "Course concepts",
+      visibility: "private",
+      status: "active",
+      graphType: "knowledge",
+      mode: "freeform",
+      currentVersion: 2,
+      nodeCount: 3,
+      edgeCount: 1,
+      createdAt: "2026-06-02T12:00:00Z",
+      updatedAt: "2026-06-02T12:10:00Z",
+      document: {
+        graphId: "graph-1",
+        version: 2,
+        schemaVersion: 1,
+        viewport: { x: 0, y: 0, zoom: 1 },
+        nodes: [],
+        edges: [],
+        groups: []
+      }
+    });
+
+    await commitGraphChangeDraftSelection(session, "graph-1", {
+      draftIds: ["draft-1"],
+      nodeSelections: [
+        {
+          draftId: "draft-1",
+          nodeIds: ["node-a", "node-b"]
+        }
+      ]
+    });
+
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toBe("/api/v1/graphs/graph-1/ai/commit-changes");
+    expect(init?.method).toBe("POST");
+    expect(init?.headers).toMatchObject({
+      Authorization: "Bearer access-token",
+      "Content-Type": "application/json"
+    });
+    expect(JSON.parse(String(init?.body))).toEqual({
+      draftIds: ["draft-1"],
+      nodeSelections: [
+        {
+          draftId: "draft-1",
+          nodeIds: ["node-a", "node-b"]
+        }
+      ]
+    });
   });
 });

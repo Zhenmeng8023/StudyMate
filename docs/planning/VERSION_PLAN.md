@@ -16,7 +16,7 @@
 优先交付：
 
 - 用户端 search/share API 合约测试，锁定 grouped search、owner share link 和 public read-only resolve 的请求形状。
-- 用户端 review/AI API 合约测试，锁定 Deck/Card、今日队列、复习回写和 AI tasks/usage/drafts 请求形状。
+- 用户端 review/AI API 合约测试，锁定 Deck/Card、今日队列、复习回写、AI tasks/usage/drafts 和图谱变更草稿确认请求形状。
 - 用户端 ReviewWorkspace 页面级测试，锁定今日队列、翻面和评分回写核心 UI 流。
 - 用户端 AiPage 页面级测试，锁定 AI 卡片草稿确认写入复习 deck、图谱变更草稿确认写入目标图谱的核心 UI 流。
 - 管理端治理页回归测试，锁定已有 session 下概览、审核队列和 `/api/v1/admin/*` 治理模块加载路径。

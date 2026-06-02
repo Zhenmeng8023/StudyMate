@@ -6,7 +6,7 @@
 - 发布前追加运行 `npm run test:coverage`，该命令覆盖用户端 Vitest、管理端 Vitest、`@studymate/graph-core` Node test coverage 和后端 `go test ./... -cover`。
 - 变更包要求 80% 聚焦覆盖率；如果某个模块暂时无法达到，需要在 `PROJECT_LOG.md` 写明原因、风险和补测计划。
 - `v1.1` 质量硬化从 v1 新增接口开始补测：用户端已新增 search/share API 合约测试，管理端已新增治理页真实 API 加载回归测试。后续同类改动应先补最小 RED/GREEN 测试，再进入实现或重构。
-- 用户端 review/AI API 合约测试已覆盖 deck 创建、AI draft 批量确认成卡片、今日复习队列、复习回写、AI tasks/usage/drafts 请求形状。
+- 用户端 review/AI API 合约测试已覆盖 deck 创建、AI draft 批量确认成卡片、今日复习队列、复习回写、AI tasks/usage/drafts 请求形状，以及图谱变更草稿按 `draftIds` / `nodeSelections` 确认写入目标图谱的请求形状。
 - `ReviewWorkspacePage` 已有页面级 Vitest，覆盖今日队列显示、翻面、评分和复习回写；后续 UI 改动应保留这条核心复习流。
 - `AiPage` 已有页面级 Vitest，覆盖待确认卡片草稿写入所选复习 deck，以及图谱变更草稿写入目标图谱；后续 AI 草稿确认 UI 改动应保留 draftId、sourceType、sourceId、draftIds 和 nodeSelections 的传递。
 - 后端 handler 测试优先通过最小 service interface 注入 fake，不直接拉真实数据库；search/share/card handler 已按该模式解耦，admin handler 已补 limit 解析测试。
