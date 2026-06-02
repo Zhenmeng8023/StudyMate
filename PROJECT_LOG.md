@@ -2,20 +2,21 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
-## 2026-06-02 13:37:49 +08:00 | v1.1.0-alpha.10 | 补图谱变更草稿确认 API 合约测试
+## 2026-06-02 13:47:00 +08:00 | v1.1.0-alpha.12 | 补后端 AI handler 边界测试
 ### 任务内容
-- 继续 v1.1 产品质量与测试硬化，为用户端 AI/graph 草稿确认链路补 API client 合约测试。
-- 锁定 `commitGraphChangeDraftSelection` 的 endpoint、HTTP method、鉴权头和请求体。
+- 继续 v1.1 产品质量与测试硬化，为后端 AI handler 补 tasks、usage 和 drafts 读取入口测试。
+- 先添加 fake service handler 测试形成编译期 RED，再把 AI handler 从具体 service 依赖收窄为最小接口。
 - 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
 ### 完成结果
-- 扩展 `frontend-user/src/api/reviewAi.test.ts`。
-- 新增图谱变更草稿确认用例，调用 `/api/v1/graphs/graph-1/ai/commit-changes`。
-- 验证请求体保留 `draftIds` 和逐草稿 `nodeSelections`，确保页面选择的候选节点不会在 API 层被丢失。
+- 新增 `backend/internal/modules/ai/handler/handler_test.go`。
+- 测试 `/ai/tasks`、`/ai/usage`、`/ai/drafts` 均使用认证用户调用 service，并返回 success envelope。
+- 更新 `backend/internal/modules/ai/handler/handler.go`，允许通过最小 `aiService` interface 注入 fake，同时保留真实 AI service 的路由兼容。
 ### 验证结果
-- `npm --workspace frontend-user run test -- --run src/api/reviewAi.test.ts` 通过。
+- `cd backend; go test ./internal/modules/ai/handler` 先因 `NewHandler` 只接受具体 service 编译失败，完成 RED。
+- `cd backend; go test ./internal/modules/ai/handler` 在接口收窄后通过。
 - `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
 ### 后续影响
-- AI 图谱草稿确认流现在同时具备 API 合约测试和页面级测试保护，后续可继续补后端 graph commit handler/service 的细粒度 fixture。
+- AI tasks/usage/drafts 读取入口具备后端 handler 层保护，后续可继续补 AI service repository fixture 或后台 AI 任务治理 smoke。
 
 ## 2026-06-02 13:42:00 +08:00 | v1.1.0-alpha.11 | 补后端 graph commit handler 边界测试
 ### 任务内容
@@ -32,6 +33,21 @@
 - `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
 ### 后续影响
 - 图谱变更草稿确认的前端页面、前端 API 合约和后端 handler 边界均有自动化保护，后续可继续补 graph service/repository fixture。
+
+## 2026-06-02 13:37:49 +08:00 | v1.1.0-alpha.10 | 补图谱变更草稿确认 API 合约测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为用户端 AI/graph 草稿确认链路补 API client 合约测试。
+- 锁定 `commitGraphChangeDraftSelection` 的 endpoint、HTTP method、鉴权头和请求体。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 扩展 `frontend-user/src/api/reviewAi.test.ts`。
+- 新增图谱变更草稿确认用例，调用 `/api/v1/graphs/graph-1/ai/commit-changes`。
+- 验证请求体保留 `draftIds` 和逐草稿 `nodeSelections`，确保页面选择的候选节点不会在 API 层被丢失。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/api/reviewAi.test.ts` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- AI 图谱草稿确认流现在同时具备 API 合约测试和页面级测试保护，后续可继续补后端 graph commit handler/service 的细粒度 fixture。
 
 ## 2026-06-02 13:33:00 +08:00 | v1.1.0-alpha.9 | 补 AiPage 图谱变更草稿确认测试
 ### 任务内容

@@ -14,6 +14,7 @@
 - v1.1 质量硬化新增后端 search/share/admin handler 测试，并将 search/share handler 依赖改为最小 service interface，便于 fake 注入。
 - v1.1 质量硬化新增后端 card handler 测试，并将 card handler 依赖改为最小 service interface，覆盖卡组创建、今日队列和复习回写入口。
 - v1.1 质量硬化新增后端 graph handler 测试，并将 graph handler 依赖改为最小 service interface，覆盖图谱变更草稿确认入口的鉴权用户、graph id、`draftIds` 与 `nodeSelections` 传递。
+- v1.1 质量硬化新增后端 AI handler 测试，并将 AI handler 依赖改为最小 service interface，覆盖 tasks、usage 和 drafts 读取入口的鉴权用户与 success envelope。
 - v1.1 质量硬化新增 Playwright 搜索页和分享只读页 smoke，前端 E2E 由 1 条扩展为 3 条。
 - v1.1 质量硬化为公共首页 Playwright smoke 增加 API 拦截，移除无本地后端时的 Vite proxy 噪声。
 - 新增 `test:coverage` 发布门禁脚本，覆盖用户端、管理端、图谱核心和 Go 后端覆盖率汇总。

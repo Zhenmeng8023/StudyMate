@@ -5,15 +5,21 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"studymate/backend/internal/middleware"
-	aiservice "studymate/backend/internal/modules/ai/service"
+	aidto "studymate/backend/internal/modules/ai/dto"
 	"studymate/backend/internal/pkg/response"
 )
 
-type Handler struct {
-	service *aiservice.Service
+type aiService interface {
+	ListTasks(userID string) ([]aidto.TaskPayload, error)
+	UsageSummary(userID string) (*aidto.UsageSummaryPayload, error)
+	ListDrafts(userID string) ([]aidto.DraftPayload, error)
 }
 
-func NewHandler(service *aiservice.Service) *Handler {
+type Handler struct {
+	service aiService
+}
+
+func NewHandler(service aiService) *Handler {
 	return &Handler{service: service}
 }
 
