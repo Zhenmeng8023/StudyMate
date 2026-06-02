@@ -9,7 +9,24 @@
 - B 阶段第一批拆分完成：API client 已按域拆分并保留 barrel，CSS 已按 app/workspace/graph/reader-notes/search-review/responsive 分层，图谱通用 helper 已抽到 `workspaceControllerHelpers.ts`。
 - C 阶段第一批收口完成：新增笔记内容回填命令、PDF 批注 `rects` 兼容字段、Reader 来源展示和 200 节点图谱性能回归测试。
 
-本文档以 [docs/design/UPGRADE_DESIGN.md](../design/UPGRADE_DESIGN.md) 为设计主入口，根目录《学伴项目-设计说明书》保留为兼容入口。当前主线是把 `master` 推进到可发布的 `v1.0.0`。
+## v1.1 产品质量与测试硬化
+
+`v1.0.0` 已完成本地发布标签。下一阶段不扩大产品范围，先把 v1 新增的搜索、分享、后台治理、复习和 AI 草稿链路补成可持续演进的测试面。
+
+优先交付：
+
+- 用户端 search/share API 合约测试，锁定 grouped search、owner share link 和 public read-only resolve 的请求形状。
+- 管理端治理页回归测试，锁定已有 session 下概览、审核队列和 `/api/v1/admin/*` 治理模块加载路径。
+- 后端继续补 search/share/admin/review 的 handler/service 边界测试；涉及数据库的用例优先用 repository interface 或轻量 fixture，不把真实 MySQL/Mongo 作为单元测试前置条件。
+- Playwright 后续补搜索、分享只读页、后台治理和复习队列 smoke flow。
+
+退出标准：
+
+- 每个 v1 新增公共接口至少有一层 API 或 UI 合约测试。
+- `npm run ci` 持续通过。
+- 覆盖率缺口在 `PROJECT_LOG.md` 记录，发布前用 `npm run test:coverage` 汇总。
+
+本文档以 [docs/design/UPGRADE_DESIGN.md](../design/UPGRADE_DESIGN.md) 为设计主入口，根目录《学伴项目-设计说明书》保留为兼容入口。当前主线是在 `v1.0.0` 可发布基线上推进 v1.1 质量硬化。
 
 ## 1. 当前真实状态
 

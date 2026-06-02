@@ -2,6 +2,22 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-02 12:20:00 +08:00 | v1.1.0-alpha.1 | 加厚 search/share/admin 测试基线
+### 任务内容
+- 在 `v1.0.0` 本地发布标签之后，按后续里程碑设计进入 v1.1 产品质量与测试硬化。
+- 优先为 v1 新增的搜索、分享和后台治理入口补自动化回归测试。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `frontend-user/src/api/searchShare.test.ts`，覆盖 grouped search 查询参数、鉴权头、owner share link 创建载荷和 public token resolve 编码路径。
+- 新增 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，覆盖已有 admin session 下治理页加载 `/api/v1/admin/users?limit=20` 并携带 Bearer token。
+- README 当前阶段从 v1.0.0 发布推进更新为 v1.1 质量硬化；版本计划和路线图新增 v1.1 测试硬化退出标准。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/api/searchShare.test.ts` 通过。
+- `npm --workspace frontend-admin run test -- --run src/views/AdminWorkspaceView.test.ts` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 后续可继续补后端 search/share/admin/review handler/service 测试，并追加 Playwright 搜索、分享只读页、后台治理和复习队列 smoke flow。
+
 ## 2026-06-01 22:03:47 +08:00 | v0.0.73 | 收口 NOTE_READ_MODEL、覆盖率门禁与本地化框架
 ### 任务内容
 - 按 v1.0.0 A 阶段要求，完成当前未提交的 `NOTE_READ_MODEL` 读取开关收口。

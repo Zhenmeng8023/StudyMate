@@ -6,6 +6,8 @@
 
 ### Added
 
+- v1.1 质量硬化新增用户端 search/share API 合约测试，覆盖 grouped search 查询参数、owner share link 创建载荷和 public share token 解析路径。
+- v1.1 质量硬化新增管理端治理页回归测试，覆盖已有 admin session 下 `/api/v1/admin/users?limit=20` 的真实模块加载和鉴权头。
 - 新增 `test:coverage` 发布门禁脚本，覆盖用户端、管理端、图谱核心和 Go 后端覆盖率汇总。
 - 新增用户端与管理端 `zh-CN` 源字典和 `en-US` 占位字典框架，并通过测试校验字典键一致。
 - 新增用户端 API 域文件、分层 CSS 文件和图谱工作区 helper 文件，降低后续 v1 收口时的单文件维护压力。

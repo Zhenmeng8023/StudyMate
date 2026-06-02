@@ -5,6 +5,7 @@
 - 完整回归仍以 `npm run ci` 为每个里程碑的硬门禁。
 - 发布前追加运行 `npm run test:coverage`，该命令覆盖用户端 Vitest、管理端 Vitest、`@studymate/graph-core` Node test coverage 和后端 `go test ./... -cover`。
 - 变更包要求 80% 聚焦覆盖率；如果某个模块暂时无法达到，需要在 `PROJECT_LOG.md` 写明原因、风险和补测计划。
+- `v1.1` 质量硬化从 v1 新增接口开始补测：用户端已新增 search/share API 合约测试，管理端已新增治理页真实 API 加载回归测试。后续同类改动应先补最小 RED/GREEN 测试，再进入实现或重构。
 - `zh-CN` 是源语言。用户端字典位于 `frontend-user/src/i18n/dictionary.ts`，管理端字典位于 `frontend-admin/src/i18n/dictionary.ts`。
 - `en-US` 目前只保留占位文案，测试会校验占位字典与 `zh-CN` 字典键保持一致。
 - 用户端 API client 以 `frontend-user/src/api/client.ts` 作为稳定 barrel，新增接口按 auth、materials、notes、reader、graphs、review、ai 等域拆分到同目录文件。

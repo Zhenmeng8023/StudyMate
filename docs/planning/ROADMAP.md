@@ -8,7 +8,24 @@
 - B 阶段第一批已完成 API client 域拆分、CSS 分层和图谱 helper 抽取；图谱交互 hook 后续随 C 阶段继续下沉。
 - C 阶段先完成 reader/notes 数据收口：历史笔记可回填到 Mongo，批注坐标具备兼容字段，来源信息可在阅读器侧展示。
 
-本路线图用于把当前 `master` 推进到可发布的 `v1.0.0`。详细拆解见 [VERSION_PLAN.md](VERSION_PLAN.md)，版本说明位于 [versions](versions) 目录。
+本路线图已完成 `v1.0.0` 本地发布标签，当前用于指导 v1.1 质量硬化和后续设计方案推进。详细拆解见 [VERSION_PLAN.md](VERSION_PLAN.md)，版本说明位于 [versions](versions) 目录。
+
+## v1.1 当前里程碑：产品质量与测试硬化
+
+目标：不扩大 v1 范围，先把 search/share/admin/review/AI 这些新增入口变成可回归、可审计、可继续重构的质量基线。
+
+交付：
+
+- 用户端 search/share API 合约测试。
+- 管理端治理页真实 API 加载回归测试。
+- 后端 search/share/admin/review 继续补 handler/service 测试。
+- Playwright 后续覆盖搜索、分享只读页、后台治理和复习队列 smoke flow。
+
+完成标志：
+
+- v1 新增公共接口至少有一层自动化保护。
+- 每个测试硬化里程碑继续同步 README、开发说明、版本计划、路线图、变更记录和项目日志。
+- `npm run ci` 持续通过。
 
 ## 发布范围
 

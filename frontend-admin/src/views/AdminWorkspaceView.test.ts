@@ -1,0 +1,89 @@
+import { flushPromises, mount } from "@vue/test-utils";
+import { describe, expect, it, vi } from "vitest";
+import AdminWorkspaceView from "./AdminWorkspaceView.vue";
+
+function apiPayload<T>(data: T) {
+  return new Response(JSON.stringify({ success: true, data }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" }
+  });
+}
+
+describe("AdminWorkspaceView governance modules", () => {
+  it("loads the real users governance API from an existing admin session", async () => {
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "值班管理员",
+          role: "admin"
+        }
+      })
+    );
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "值班管理员",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/overview") {
+        return apiPayload({
+          userCount: 12,
+          postCount: 4,
+          materialCount: 5,
+          graphCount: 6,
+          pendingModerationCount: 1
+        });
+      }
+      if (path === "/api/v1/admin/moderation") {
+        return apiPayload([]);
+      }
+      if (path === "/api/v1/admin/users?limit=20") {
+        expect(init?.headers).toMatchObject({
+          Authorization: "Bearer admin-token"
+        });
+        return apiPayload([
+          {
+            id: "user-1",
+            username: "alice",
+            email: "alice@example.test",
+            role: "student",
+            status: "active"
+          }
+        ]);
+      }
+      return apiPayload([]);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    const usersButton = wrapper.findAll("button").find((button) => button.text() === "用户治理");
+    expect(usersButton).toBeTruthy();
+    await usersButton?.trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/users?limit=20",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer admin-token"
+        })
+      })
+    );
+    expect(wrapper.text()).toContain("alice");
+    expect(wrapper.text()).toContain("已加载 1 条治理记录。");
+  });
+});
