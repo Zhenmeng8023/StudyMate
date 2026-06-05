@@ -3,6 +3,29 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-05 20:24:42 +08:00 | v1.1.0-alpha.30 | 拆出图谱画布 Stage 纯视图组件
+### 任务内容
+- 继续推进 StudyMate 图谱工作区 Project Graph 对标计划，优先拆分 `useGraphWorkspaceController.tsx` 的画布 JSX，避免继续把 stage status、world、minimap 和空态渲染堆在大型 controller 中。
+- 保留现有节点、边、分组、框选、小地图、右键菜单、键盘指南和选择态行为，只把视图表面下沉到可测试组件。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，拆出 `GraphStageStatus`、`GraphStageCanvas`、`GraphStageMinimap` 和 `GraphStageEmptyState`。
+- `GraphStageCanvas` 只接收文档、选中态、画布测量引用和事件回调；节点/边/分组 mutation、历史、保存和导入导出仍留在 controller，避免拆分时改变业务状态机。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把 stage status/world/minimap/empty state 渲染替换为纯视图组件调用，controller 从 2785 行降到 2609 行。
+- 新增 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`，覆盖状态条 aria-live、对齐提示、小地图选中态、空态提示，以及节点点击、边选择和分组折叠回调委托。
+- 更新 `docs/planning/VERSION_PLAN.md` 与 `docs/planning/versions/v0.6.0-graph-product.md`，同步记录 stage 纯视图组件已拆出，右侧详情 rail 和画布交互状态机仍是后续拆分重点。
+### 验证结果
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceStageChrome GraphWorkspaceShell` 通过，2 个文件、6 个用例全部通过。
+- `npm run lint` 通过，包含全工作区 typecheck 和文档同步验证。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，26 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，23 个文件、73 个用户端用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 画布渲染表面现在具备独立组件测试保护，后续可以继续把 pointer drag、marquee、多选、context menu 和 detail rail 分别拆成更小 hook/component。
+- 当前没有引入 WebGL/Pixi、CRDT、Tauri 或 `.prg` 兼容，仍沿现有 Web 图谱架构做局部演进。
+
 ## 2026-06-05 10:28:51 +08:00 | v1.1.0-alpha.29 | 补齐图谱工具栏扩展节点类型入口
 ### 任务内容
 - 对齐 Project Graph 级节点编辑体验要求，把概念、笔记、资料、卡片、AI、图片、URL、公式、PDF 锚点九类 StudyMate 节点从散落在 controller 里的默认值收敛为统一配置。

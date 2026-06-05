@@ -6,7 +6,6 @@ import {
   Keyboard,
   Layers3,
   Link2,
-  MousePointer2,
   Plus,
   Redo2,
   ScanSearch,
@@ -67,7 +66,6 @@ import {
   validateGraph
 } from "../../../api/client";
 import {
-  buildNodeStyle,
   getNodeDetail,
   getNodeEmphasis,
   getNodeTone,
@@ -85,6 +83,10 @@ import {
   GraphSettingsPanel,
   GraphValidationIssueList
 } from "../components/GraphWorkspacePanels";
+import {
+  GraphStageCanvas,
+  GraphStageStatus
+} from "../components/GraphWorkspaceStageChrome";
 import {
   GraphWorkspaceHeader,
   GraphWorkspaceSourceRail,
@@ -138,10 +140,7 @@ import {
   autosaveDelayMs,
   buildClearedFocusNavigationLocation,
   buildCombinedBounds,
-  buildEdgeLabelPosition,
-  buildEdgePath,
   buildFocusPreviewViewport,
-  buildGroupStyle,
   buildNodeBounds,
   buildNodeTitle,
   buildSelectionBox,
@@ -1845,213 +1844,45 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
           />
 
           <div className="graph-stage-shell">
-            <div className="graph-stage-status">
-              <span>{loading ? "正在加载..." : statusMessage}</span>
-              <div className="graph-stage-status-meta">
-                {alignmentHintLabels.length ? (
-                  <div className="graph-alignment-hints">
-                    {alignmentHintLabels.map((label) => (
-                      <span className="graph-alignment-pill" key={label}>
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                {graphDetail ? (
-                  <small>
-                    版本 {graphDetail.currentVersion} · {graphDetail.nodeCount} 节点 · {graphDetail.edgeCount} 连线
-                    {selectedNodeIds.length > 1 ? ` · 已选 ${selectedNodeIds.length} 个节点` : ""}
-                  </small>
-                ) : null}
-              </div>
-            </div>
+            <GraphStageStatus
+              alignmentHintLabels={alignmentHintLabels}
+              graphDetail={graphDetail}
+              loading={loading}
+              selectedNodeCount={selectedNodeIds.length}
+              statusMessage={statusMessage}
+            />
 
-            <div
-              className="graph-stage"
-              onContextMenu={(event) => openContextMenu(event)}
-              onPointerDown={handleCanvasPointerDown}
+            <GraphStageCanvas
+              alignmentGuides={alignmentGuides}
+              document={document}
+              focusPreview={focusPreview}
+              graphDetail={graphDetail}
+              hiddenNodeIds={hiddenNodeIds}
+              linkFromNodeId={linkFromNodeId}
+              minimapViewport={minimapViewport}
+              nodeMap={nodeMap}
+              onCanvasContextMenu={(event) => openContextMenu(event)}
+              onCanvasPointerDown={handleCanvasPointerDown}
+              onEdgeContextMenu={(event, edge) => openContextMenu(event, { edgeId: edge.id })}
+              onEdgeSelect={(event, edge) => {
+                event.stopPropagation();
+                setSelectedEdgeId(edge.id);
+                clearNodeSelection();
+              }}
+              onNodeClick={(event, node) => handleNodeClick(node.id, event)}
+              onNodeContextMenu={(event, node) => openContextMenu(event, { nodeId: node.id })}
+              onNodePointerDown={handleNodePointerDown}
+              onToggleGroupCollapse={toggleGroupCollapse}
               onWheel={handleWheel}
-              ref={stageRef}
+              scale={minimapScale}
+              selectedEdgeId={selectedEdgeId}
+              selectedNodeIds={selectedNodeIds}
+              selectionBox={selectionBox}
+              stageHeight={stageHeight}
+              stageRef={stageRef}
+              stageWidth={stageWidth}
+              visibleNodes={visibleNodes}
             >
-              {graphDetail && document ? (
-                <>
-                  <div
-                    className="graph-world"
-                    style={{
-                      width: stageWidth,
-                      height: stageHeight,
-                      transform: `translate(${document.viewport.x}px, ${document.viewport.y}px) scale(${document.viewport.zoom})`
-                    }}
-                  >
-                    {document.groups.map((group) => (
-                      <div
-                        className={group.collapsed ? "graph-group collapsed" : "graph-group"}
-                        key={group.id}
-                        style={buildGroupStyle(group)}
-                      >
-                        <div className="graph-group-head">
-                          <strong>{group.title}</strong>
-                          <button
-                            className="ghost-button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              toggleGroupCollapse(group.id);
-                            }}
-                            type="button"
-                          >
-                            {group.collapsed ? "展开" : "折叠"}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-
-                    <svg className="graph-edge-layer" viewBox={`0 0 ${stageWidth} ${stageHeight}`}>
-                      {document.edges
-                        .filter((edge) => !hiddenNodeIds.has(edge.sourceNodeId) && !hiddenNodeIds.has(edge.targetNodeId))
-                        .map((edge) => {
-                          const labelPoint = buildEdgeLabelPosition(edge, nodeMap);
-                          const isActive = selectedEdgeId === edge.id;
-                          return (
-                            <g key={edge.id}>
-                              <path
-                                className={isActive ? "graph-edge active" : "graph-edge"}
-                                d={buildEdgePath(edge, nodeMap)}
-                                markerEnd="url(#graph-arrow)"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setSelectedEdgeId(edge.id);
-                                  clearNodeSelection();
-                                }}
-                                onContextMenu={(event) => openContextMenu(event, { edgeId: edge.id })}
-                              />
-                              {edge.label ? (
-                                <text className="graph-edge-label" x={labelPoint.x} y={labelPoint.y}>
-                                  {edge.label}
-                                </text>
-                              ) : null}
-                            </g>
-                          );
-                        })}
-                    </svg>
-
-                    {visibleNodes.map((node) => (
-                      <button
-                        className={[
-                          "graph-node",
-                          `type-${node.type}`,
-                          selectedNodeIds.includes(node.id) ? "active" : "",
-                          linkFromNodeId === node.id ? "linking" : ""
-                        ].join(" ").trim()}
-                        key={node.id}
-                        onClick={(event) => handleNodeClick(node.id, event)}
-                        onContextMenu={(event) => openContextMenu(event, { nodeId: node.id })}
-                        onPointerDown={(event) => handleNodePointerDown(event, node)}
-                        style={{
-                          ...buildNodeStyle(node, selectedNodeIds.includes(node.id)),
-                          width: node.width,
-                          height: node.height,
-                          transform: `translate(${node.x}px, ${node.y}px)`
-                        }}
-                        type="button"
-                      >
-                        <span className="graph-node-type">{node.type}</span>
-                        <strong>{buildNodeTitle(node)}</strong>
-                        {node.source?.label ? <small>{node.source.label}</small> : <small>自由节点</small>}
-                      </button>
-                    ))}
-
-                    {focusPreview ? (
-                      <div
-                        className="graph-focus-preview"
-                        style={{
-                          width: focusPreview.width,
-                          height: focusPreview.height,
-                          transform: `translate(${focusPreview.x}px, ${focusPreview.y}px)`
-                        }}
-                      >
-                        <span>{focusPreview.label}</span>
-                      </div>
-                    ) : null}
-                    {alignmentGuides.map((guide, index) => (
-                      <div
-                        className={guide.orientation === "vertical" ? "graph-alignment-guide vertical" : "graph-alignment-guide horizontal"}
-                        key={`${guide.orientation}-${guide.position}-${index}`}
-                        style={
-                          guide.orientation === "vertical"
-                            ? {
-                                left: guide.position,
-                                top: guide.start,
-                                height: Math.max(0, guide.end - guide.start)
-                              }
-                            : {
-                                top: guide.position,
-                                left: guide.start,
-                                width: Math.max(0, guide.end - guide.start)
-                              }
-                        }
-                      />
-                    ))}
-                  </div>
-
-                  {selectionBox ? (
-                    <div
-                      className="graph-selection-box"
-                      style={{
-                        left: selectionBox.left,
-                        top: selectionBox.top,
-                        width: selectionBox.width,
-                        height: selectionBox.height
-                      }}
-                    />
-                  ) : null}
-
-                  <svg className="graph-arrow-defs" width="0" height="0" aria-hidden="true">
-                    <defs>
-                      <marker id="graph-arrow" markerHeight="8" markerWidth="8" orient="auto-start-reverse" refX="7" refY="4">
-                        <path d="M0,0 L8,4 L0,8 z" fill="currentColor" />
-                      </marker>
-                    </defs>
-                  </svg>
-
-                  <aside className="graph-minimap">
-                    <div className="graph-minimap-world" style={{ width: stageWidth * minimapScale, height: stageHeight * minimapScale }}>
-                      {document.groups.map((group) => (
-                        <div
-                          className={group.collapsed ? "graph-minimap-group collapsed" : "graph-minimap-group"}
-                          key={group.id}
-                          style={{
-                            left: group.x * minimapScale,
-                            top: group.y * minimapScale,
-                            width: group.width * minimapScale,
-                            height: group.height * minimapScale
-                          }}
-                        />
-                      ))}
-                      {visibleNodes.map((node) => (
-                        <span
-                          className={selectedNodeIds.includes(node.id) ? "graph-minimap-node active" : "graph-minimap-node"}
-                          key={node.id}
-                          style={{
-                            left: node.x * minimapScale,
-                            top: node.y * minimapScale,
-                            width: Math.max(6, node.width * minimapScale),
-                            height: Math.max(6, node.height * minimapScale)
-                          }}
-                        />
-                      ))}
-                      {minimapViewport ? (
-                        <div
-                          className="graph-minimap-viewport"
-                          style={{
-                            left: minimapViewport.left,
-                            top: minimapViewport.top,
-                            width: minimapViewport.width,
-                            height: minimapViewport.height
-                          }}
-                        />
-                      ) : null}
-                    </div>
-                  </aside>
                   {showKeyboardGuide ? <GraphKeyboardGuidePanel onClose={() => setShowKeyboardGuide(false)} /> : null}
                   {contextMenu ? (
                     <GraphContextMenuPanel
@@ -2135,14 +1966,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                       }}
                     />
                   ) : null}
-                </>
-              ) : (
-                <div className="graph-stage-empty">
-                  <MousePointer2 size={18} />
-                  <span>正在准备图谱画布...</span>
-                </div>
-              )}
-            </div>
+            </GraphStageCanvas>
           </div>
         </section>
 
