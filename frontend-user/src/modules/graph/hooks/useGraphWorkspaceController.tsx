@@ -1,11 +1,9 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Download,
-  FileDown,
   Keyboard,
   Plus,
   Redo2,
-  ScanSearch,
   Search,
   Trash2,
   Undo2,
@@ -86,6 +84,7 @@ import {
 } from "../components/GraphWorkspaceShell";
 import { GraphWorkspaceSourceSummary } from "../components/GraphWorkspaceSourceSummary";
 import { GraphWorkspaceSelectionPanel } from "../components/GraphWorkspaceSelectionPanel";
+import { GraphWorkspaceImportPanel } from "../components/GraphWorkspaceImportPanel";
 
 import {
   applyGraphDocumentChange,
@@ -2031,58 +2030,18 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             <GraphSettingsPanel sections={settingsSections} />
           </div>
 
-          <div className="graph-rail-section">
-            <div className="section-frame-head compact">
-              <div>
-                <p className="eyebrow">导入与校验</p>
-                <h2>Phase 5 / 8</h2>
-              </div>
-            </div>
-
-            <div className="graph-segmented">
-              <button
-                className={importMode === "markdown" ? "ghost-button active" : "ghost-button"}
-                onClick={() => setImportMode("markdown")}
-                type="button"
-              >
-                Markdown
-              </button>
-              <button
-                className={importMode === "mermaid" ? "ghost-button active" : "ghost-button"}
-                onClick={() => setImportMode("mermaid")}
-                type="button"
-              >
-                Mermaid
-              </button>
-              <button
-                className={importMode === "json" ? "ghost-button active" : "ghost-button"}
-                onClick={() => setImportMode("json")}
-                type="button"
-              >
-                JSON
-              </button>
-            </div>
-
-            <textarea
-              className="graph-import-input"
-              onChange={(event) => setImportSource(event.target.value)}
-              rows={8}
-              value={importSource}
-            />
-
-            <div className="graph-inline-actions">
-              <button className="secondary-button" disabled={!graphDetail || saving} onClick={() => void handleImport()} type="button">
-                <FileDown size={16} />
-                导入草稿
-              </button>
-              <button className="secondary-button" disabled={!graphDetail} onClick={() => void handleValidateGraph()} type="button">
-                <ScanSearch size={16} />
-                校验图谱
-              </button>
-            </div>
-
-            <GraphValidationIssueList issues={validationIssues} />
-          </div>
+          <GraphWorkspaceImportPanel
+            canImport={Boolean(graphDetail)}
+            canValidate={Boolean(graphDetail)}
+            importMode={importMode}
+            importSource={importSource}
+            onImport={() => void handleImport()}
+            onImportModeChange={setImportMode}
+            onImportSourceChange={setImportSource}
+            onValidate={() => void handleValidateGraph()}
+            saving={saving}
+            validationIssues={validationIssues}
+          />
 
           <GraphWorkspaceRecoveryPanel
             canGenerateCards={Boolean(selectedNode)}

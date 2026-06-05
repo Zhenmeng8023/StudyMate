@@ -3,6 +3,28 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 00:42:51 +08:00 | v1.1.0-alpha.34 | 拆出图谱导入与校验面板
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把右侧 rail 中的 Markdown/Mermaid/JSON 导入、导入文本区、导入按钮、校验按钮和验证结果列表从 `useGraphWorkspaceController.tsx` 中拆出。
+- 保留现有导入模式、导入源文本、保存中禁用、校验图谱和验证面板展示行为，不改变 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/components/GraphWorkspaceImportPanel.tsx`，承接导入格式 segmented control、可访问 textarea、导入/校验操作和 `GraphValidationIssueList`。
+- 新增 `GraphWorkspaceImportPanel.test.tsx`，覆盖导入模式切换、导入内容变更、导入/校验回调、保存中禁用和验证问题展示。
+- 更新 `useGraphWorkspaceController.tsx`，把导入与校验 JSX 替换为 `GraphWorkspaceImportPanel` 调用，controller 继续下降到 2012 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- GraphWorkspaceImportPanel` 先红后绿，最终 3 个组件用例通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceImportPanel GraphWorkspacePage GraphWorkspacePanels` 通过，3 个文件、14 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，27 个用户端测试文件、87 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- 导入与校验 UI 已成为独立组件，后续可以继续把 `handleImport` / JSON-Mermaid-Markdown 分支下沉到 `useGraphImportExport`，进一步减少 controller 中的副作用逻辑。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 00:34:54 +08:00 | v1.1.0-alpha.33 | 拆出图谱节点与连线详情面板
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 拆分，优先把右侧 rail 中的“选中内容 / 节点与连线”详情编辑区从 `useGraphWorkspaceController.tsx` 中下沉为纯视图组件。
