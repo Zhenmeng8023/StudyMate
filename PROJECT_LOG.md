@@ -3,6 +3,28 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 07:41:41 +08:00 | v1.1.0-alpha.36 | 拆出图谱导入导出执行 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 和 Phase 5 拆分，把 Markdown/Mermaid 远端导入、StudyMate JSON 本地导入、PNG/SVG/JSON 导出和导出失败状态从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有 Graph API、`.smtg` / `application/vnd.studymate.graph+json` 文件合约、JSON 导入校验和 Markdown/Mermaid 导入后快照刷新行为。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphImportExport.ts`，统一管理 JSON/Markdown/Mermaid 导入、PNG/SVG/JSON 导出、安全文件名和导入导出状态提示。
+- 新增 `useGraphImportExport.test.tsx`，覆盖 JSON 导入成功、JSON 阻断错误、Markdown 远端导入并刷新快照、PNG/SVG/JSON 安全文件名导出，以及空内容/下载/PNG 渲染失败状态。
+- 更新 `useGraphWorkspaceController.tsx`，移除本地导入导出函数体，改为转发 `useGraphImportExport` 操作；controller 从 1938 行继续下降到 1857 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphImportExport` 先红后绿，最终 5 个 hook 用例通过。
+- `npm --workspace frontend-user run test -- useGraphImportExport GraphWorkspacePage GraphWorkspaceImportPanel graphFileImportExport graphCanvasExport` 通过，5 个文件、23 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，29 个用户端测试文件、95 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- 导入导出执行逻辑已经形成独立边界，后续可以继续拆 keyboard/context menu/selection 状态机，并把文件成熟度测试扩展到更大图导出耗时与失败场景。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 07:25:40 +08:00 | v1.1.0-alpha.35 | 拆出图谱保存与快照持久化 Hook
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 拆分，把保存、保存状态、自动保存生命周期、离页保护、快照列表加载和快照恢复从 `useGraphWorkspaceController.tsx` 中拆到独立 hook。

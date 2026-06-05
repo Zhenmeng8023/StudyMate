@@ -46,8 +46,6 @@ import {
   deleteGraph,
   generateGraphCardDrafts,
   getGraph,
-  importGraphMarkdown,
-  importGraphMermaid,
   listDecks,
   listDiagramTemplates,
   listGraphs,
@@ -91,12 +89,6 @@ import {
   undoGraphDocument
 } from "../lib/graphHistory";
 import {
-  buildGraphImportSourceTargets,
-  buildGraphJsonExport,
-  parseGraphJsonImport,
-  toGraphValidationIssues
-} from "../lib/graphFileImportExport";
-import {
   buildGraphNodeDraft,
   getGraphNodeTypeOption,
   graphNodeTypeOptions,
@@ -106,7 +98,6 @@ import {
   getGraphNodeMetadataEditorFields,
   patchGraphNodeMetadataField
 } from "../lib/graphNodeMetadata";
-import { renderGraphPngBlobFromSvg } from "../lib/graphCanvasExport";
 import { resolveGraphKeyboardShortcut } from "../lib/graphKeyboardShortcuts";
 import { buildSnapshotListFailureState } from "../lib/graphPersistenceState";
 import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
@@ -124,12 +115,9 @@ import {
   buildNodeBounds,
   buildSelectionBox,
   buildSourceGroupDefinitions,
-  buildSvgExport,
   clampZoom,
   cloneDocument,
   defaultNodePosition,
-  downloadBlob,
-  downloadTextFile,
   findHiddenNodeIds,
   getSourceBucketKey,
   getSourceBucketLabel,
@@ -157,6 +145,7 @@ import {
   useGraphContextMenuDismiss,
   useGraphStageMeasurement
 } from "./useGraphWorkspaceEffects";
+import { useGraphImportExport } from "./useGraphImportExport";
 import { useGraphWorkspacePersistence } from "./useGraphWorkspacePersistence";
 
 export function useGraphWorkspaceController(props: { session: AuthSession }) {
@@ -295,6 +284,23 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     onReplaceGraphSummary: replaceGraphSummary,
     onResetHistory: resetHistory,
     onStatusMessage: setStatusMessage,
+    session: props.session
+  });
+  const graphImportExport = useGraphImportExport({
+    graphDetail,
+    hiddenNodeIds,
+    importMode,
+    importSource,
+    loadSnapshots,
+    materials,
+    nodeMap,
+    notes,
+    onApplyDocument: applyDocument,
+    onResetHistory: resetHistory,
+    onSaveStateChange: setSaveState,
+    onSavingChange: setSaving,
+    onStatusMessage: setStatusMessage,
+    onValidationIssuesChange: setValidationIssues,
     session: props.session
   });
   const settingsSections = useMemo(
@@ -1445,48 +1451,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     );
   }
 
-  async function handleExportPng() {
-    if (!graphDetail) {
-      return;
-    }
-
-    try {
-      const svg = buildSvgExport(graphDetail, nodeMap, hiddenNodeIds);
-      const blob = await renderGraphPngBlobFromSvg(svg, {
-        background: "#f9f6ef",
-        height: stageHeight,
-        width: stageWidth
-      });
-
-      const safeName = graphDetail.title.replace(/[\\/:*?"<>|]/g, "-");
-      downloadBlob(`${safeName || "graph"}.png`, blob);
-      setStatusMessage("已导出 PNG 图谱");
-    } catch {
-      setStatusMessage("导出 PNG 失败");
-    }
-  }
-
-  function handleExportSvg() {
-    if (!graphDetail) {
-      return;
-    }
-
-    const svg = buildSvgExport(graphDetail, nodeMap, hiddenNodeIds);
-    const safeName = graphDetail.title.replace(/[\\/:*?"<>|]/g, "-");
-    downloadTextFile(`${safeName || "graph"}.svg`, svg, "image/svg+xml;charset=utf-8");
-    setStatusMessage("已导出 SVG 图谱");
-  }
-
-  function handleExportJson() {
-    if (!graphDetail) {
-      return;
-    }
-
-    const exported = buildGraphJsonExport(graphDetail);
-    downloadTextFile(exported.filename, exported.content, exported.mimeType);
-    setStatusMessage("已导出 StudyMate 图谱 JSON");
-  }
-
   function duplicateNode(nodeId: string) {
     const current = detailRef.current;
     if (!current) {
@@ -1507,63 +1471,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setSelectedNodeId(result.node.id);
     setSelectedEdgeId("");
     setStatusMessage("已复制节点");
-  }
-
-  async function handleImport() {
-    if (!graphDetail) {
-      return;
-    }
-
-    if (!importSource.trim()) {
-      setStatusMessage("先填写 Markdown、Mermaid 或 StudyMate JSON 内容");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      if (importMode === "json") {
-        const imported = parseGraphJsonImport(importSource, graphDetail.document, {
-          sourceTargets: buildGraphImportSourceTargets({
-            currentDocument: graphDetail.document,
-            materials,
-            notes
-          })
-        });
-        const issues = toGraphValidationIssues(imported.issues);
-        const errors = issues.filter((issue) => issue.severity === "error");
-        setValidationIssues(issues);
-        if (errors.length > 0) {
-          setSaveState("failed");
-          setStatusMessage(`导入 JSON 失败：发现 ${errors.length} 条结构错误`);
-          return;
-        }
-
-        applyDocument(imported.document, {
-          captureHistory: true,
-          label: "导入 StudyMate 图谱 JSON",
-          status: issues.length ? `已导入 JSON，另有 ${issues.length} 条校验提示` : "已导入 StudyMate 图谱 JSON"
-        });
-        return;
-      }
-
-      const payload =
-        importMode === "markdown"
-          ? await importGraphMarkdown(props.session, graphDetail.id, importSource)
-          : await importGraphMermaid(props.session, graphDetail.id, importSource);
-      const normalized = {
-        ...payload,
-        document: normalizeDocument(payload.id, payload.currentVersion, payload.document)
-      };
-      resetHistory(normalized, importMode === "markdown" ? "导入 Markdown 大纲" : "导入 Mermaid 草稿");
-      await loadSnapshots(normalized.id);
-      setSaveState("saved");
-      setStatusMessage(importMode === "markdown" ? "已导入 Markdown 大纲" : "已导入 Mermaid 草稿");
-    } catch (error) {
-      setSaveState("failed");
-      setStatusMessage(error instanceof Error ? error.message : "导入图谱失败");
-    } finally {
-      setSaving(false);
-    }
   }
 
   async function handleValidateGraph() {
@@ -1735,9 +1642,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             onCreateGroup={createGroupFromSelectedNode}
             onCreateNode={() => createNode(quickNodeType)}
             onDeleteSelection={deleteSelectedGraphItems}
-            onExportJson={handleExportJson}
-            onExportPng={() => void handleExportPng()}
-            onExportSvg={handleExportSvg}
+            onExportJson={graphImportExport.exportJson}
+            onExportPng={() => void graphImportExport.exportPng()}
+            onExportSvg={graphImportExport.exportSvg}
             onLocateNode={handleLocateNode}
             onQuickNodeTypeChange={setQuickNodeType}
             onRedo={redoCurrentGraph}
@@ -1844,7 +1751,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                         setContextMenu(null);
                       }}
                       onExportPng={() => {
-                        void handleExportPng();
+                        void graphImportExport.exportPng();
                         setContextMenu(null);
                       }}
                       onFocusNode={() => {
@@ -1955,7 +1862,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             canValidate={Boolean(graphDetail)}
             importMode={importMode}
             importSource={importSource}
-            onImport={() => void handleImport()}
+            onImport={() => void graphImportExport.importGraph()}
             onImportModeChange={setImportMode}
             onImportSourceChange={setImportSource}
             onValidate={() => void handleValidateGraph()}

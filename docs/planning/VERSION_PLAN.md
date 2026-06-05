@@ -151,6 +151,7 @@
 - 右侧 rail 的“节点与连线”详情编辑区已拆成 `GraphWorkspaceSelectionPanel` 纯视图组件，覆盖单节点 metadata、边详情、多选批量整理、分组标题/折叠和空态提示；`useGraphWorkspaceController.tsx` 继续下降到约 2049 行，后续重点转向画布 pointer drag、marquee、多选状态机和 import/export hook。
 - 右侧 rail 的“导入与校验”区已拆成 `GraphWorkspaceImportPanel` 纯视图组件，覆盖 Markdown/Mermaid/JSON 模式、导入文本区、导入/校验按钮和验证问题展示；`useGraphWorkspaceController.tsx` 继续下降到约 2012 行，后续可把导入执行分支下沉为 `useGraphImportExport`。
 - 保存、自动保存、离页保护、快照列表和快照恢复已拆成 `useGraphWorkspacePersistence`，新增 hook 级测试覆盖保存成功、快照恢复成功和快照 API 失败；`useGraphWorkspaceController.tsx` 继续下降到约 1938 行，后续继续拆 keyboard/context menu/selection 与 import/export 执行分支。
+- Markdown/Mermaid 远端导入、StudyMate JSON 本地导入和 PNG/SVG/JSON 导出已拆成 `useGraphImportExport`，新增 hook 测试覆盖 JSON 阻断错误、远端导入刷新快照、安全文件名和导出失败状态；`useGraphWorkspaceController.tsx` 继续下降到约 1857 行，后续重点转向 keyboard/context menu/selection 状态机。
 
 退出标准：
 
