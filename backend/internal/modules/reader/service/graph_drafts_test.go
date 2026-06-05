@@ -37,4 +37,14 @@ func TestBuildGraphDraftFromAnnotations(t *testing.T) {
 	if !ok || len(nodes) < 2 {
 		t.Fatalf("expected at least 2 nodes, got %#v", draft.Metadata["nodes"])
 	}
+	annotationNode := nodes[1]
+	if annotationNode.Source == nil || annotationNode.Source.Type != "annotation" || annotationNode.Source.ID != "annotation-1" {
+		t.Fatalf("expected annotation source on first annotation node, got %#v", annotationNode.Source)
+	}
+	if annotationNode.Metadata["materialId"] != "material-1" || annotationNode.Metadata["annotationId"] != "annotation-1" {
+		t.Fatalf("expected material and annotation ids in metadata, got %#v", annotationNode.Metadata)
+	}
+	if page, ok := annotationNode.Metadata["page"].(int); !ok || page != 12 {
+		t.Fatalf("expected page 12 in metadata, got %#v", annotationNode.Metadata["page"])
+	}
 }

@@ -9,6 +9,7 @@ import (
 	aidto "studymate/backend/internal/modules/ai/dto"
 	aiservice "studymate/backend/internal/modules/ai/service"
 	carddto "studymate/backend/internal/modules/card/dto"
+	materialmodel "studymate/backend/internal/modules/material/model"
 	materialrepo "studymate/backend/internal/modules/material/repository"
 	readerdto "studymate/backend/internal/modules/reader/dto"
 	readermodel "studymate/backend/internal/modules/reader/model"
@@ -16,14 +17,37 @@ import (
 	"studymate/backend/internal/pkg/apperrors"
 )
 
-type Service struct {
-	repository *readerrepo.Repository
-	materials  *materialrepo.Repository
-	auditLogs  *adminrepo.AuditLogRepository
-	aiTasks    *aiservice.Service
+type readerRepository interface {
+	GetProgress(userID string, materialID string) (*readermodel.ReadingProgress, error)
+	SaveProgress(progress *readermodel.ReadingProgress) error
+	CreateProgress(progress *readermodel.ReadingProgress) error
+	ListAnnotations(userID string, materialID string) ([]readerdto.AnnotationSummary, error)
+	CreateAnnotation(annotation *readermodel.PDFAnnotation) error
+	FindAnnotation(userID string, materialID string, annotationID string) (*readermodel.PDFAnnotation, error)
+	DeleteAnnotation(annotation *readermodel.PDFAnnotation) error
 }
 
-func NewService(repository *readerrepo.Repository, materials *materialrepo.Repository, auditLogs *adminrepo.AuditLogRepository, aiTasks *aiservice.Service) *Service {
+type materialLookup interface {
+	FindByID(materialID string) (*materialmodel.Material, error)
+}
+
+type auditLogWriter interface {
+	Create(actorID string, action string, target string, metadata map[string]any) error
+}
+
+type aiDraftRecorder interface {
+	RecordReaderCardDrafts(userID string, materialID string, drafts []carddto.CardDraftPayload) ([]carddto.CardDraftPayload, error)
+	RecordReaderGraphDrafts(userID string, materialID string, drafts []aidto.DraftPayload) ([]aidto.DraftPayload, error)
+}
+
+type Service struct {
+	repository readerRepository
+	materials  materialLookup
+	auditLogs  auditLogWriter
+	aiTasks    aiDraftRecorder
+}
+
+func NewService(repository readerRepository, materials materialLookup, auditLogs auditLogWriter, aiTasks aiDraftRecorder) *Service {
 	return &Service{
 		repository: repository,
 		materials:  materials,
@@ -31,6 +55,11 @@ func NewService(repository *readerrepo.Repository, materials *materialrepo.Repos
 		aiTasks:    aiTasks,
 	}
 }
+
+var _ readerRepository = (*readerrepo.Repository)(nil)
+var _ materialLookup = (*materialrepo.Repository)(nil)
+var _ auditLogWriter = (*adminrepo.AuditLogRepository)(nil)
+var _ aiDraftRecorder = (*aiservice.Service)(nil)
 
 func (s *Service) GetState(userID string, materialID string) (*readerdto.ReaderStateResponse, error) {
 	if err := s.ensureReadable(materialID); err != nil {
@@ -127,11 +156,13 @@ func (s *Service) CreateAnnotation(userID string, materialID string, request rea
 		return nil, apperrors.Internal("保存阅读批注失败")
 	}
 
-	_ = s.auditLogs.Create(userID, "reader.annotation.create", "annotation", map[string]any{
-		"annotationId": annotation.ID,
-		"materialId":   materialID,
-		"page":         annotation.Page,
-	})
+	if s.auditLogs != nil {
+		_ = s.auditLogs.Create(userID, "reader.annotation.create", "annotation", map[string]any{
+			"annotationId": annotation.ID,
+			"materialId":   materialID,
+			"page":         annotation.Page,
+		})
+	}
 
 	result := readerrepo.BuildAnnotationSummary(*annotation)
 	return &result, nil

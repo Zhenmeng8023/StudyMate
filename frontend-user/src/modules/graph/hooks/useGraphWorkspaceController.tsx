@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
   Download,
@@ -21,9 +21,20 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  appendGraphEdgeToDocument,
+  buildGraphMinimapViewport,
   buildSourceSwimlaneLayout,
+  centerGraphViewportOnRect,
+  clearGraphNodeSelection,
+  createGraphGroupForNodes,
+  duplicateGraphNodeInDocument,
   parseGraphFocusPreviewSearch,
-  summarizeGraphSourceReferences
+  removeGraphNodesFromDocument,
+  selectGraphNodesInRect,
+  setGraphNodeSelection,
+  summarizeGraphSourceReferences,
+  toggleGraphGroupCollapse,
+  toggleGraphNodeSelection
 } from "@studymate/graph-core";
 import {
   AuthSession,
@@ -70,7 +81,39 @@ import {
   resizeNodeToPreset,
   resolveNodeSizePreset
 } from "../nodeAppearance";
+import {
+  GraphContextMenuPanel,
+  GraphKeyboardGuidePanel,
+  GraphSettingsPanel,
+  GraphValidationIssueList
+} from "../components/GraphWorkspacePanels";
 
+import {
+  applyGraphDocumentChange,
+  createEmptyGraphHistoryState,
+  markGraphHistorySaved,
+  redoGraphDocument,
+  resetGraphHistoryState,
+  type GraphHistoryState,
+  undoGraphDocument
+} from "../lib/graphHistory";
+import {
+  buildGraphJsonExport,
+  parseGraphJsonImport,
+  toGraphValidationIssues
+} from "../lib/graphFileImportExport";
+import { resolveGraphKeyboardShortcut } from "../lib/graphKeyboardShortcuts";
+import {
+  buildGraphBeforeUnloadMessage,
+  buildGraphSaveFailureState,
+  buildGraphSaveSuccessState,
+  buildSnapshotListFailureState,
+  buildSnapshotRestoreFailureState,
+  buildSnapshotRestoreSuccessState,
+  formatGraphSaveStateLabel
+} from "../lib/graphPersistenceState";
+import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
+import { buildGraphSourceBacklink, buildGraphSourceBacklinkFromSource } from "../lib/graphSourceBacklinks";
 import {
   autosaveDelayMs,
   buildClearedFocusNavigationLocation,
@@ -80,7 +123,6 @@ import {
   buildFocusPreviewViewport,
   buildGroupStyle,
   buildNodeBounds,
-  buildNodeSourceTarget,
   buildNodeTitle,
   buildSelectionBox,
   buildSourceGroupDefinitions,
@@ -115,6 +157,8 @@ import {
   type SelectionBox,
   type SourceOrganizerMode
 } from "../lib/workspaceControllerHelpers";
+import type { GraphWorkspaceSaveState } from "../state/types";
+import { shouldAutosaveGraph } from "./useGraphAutosaveBoundary";
 
 export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const location = useLocation();
@@ -132,13 +176,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedEdgeId, setSelectedEdgeId] = useState("");
   const [linkFromNodeId, setLinkFromNodeId] = useState("");
-  const [historyPast, setHistoryPast] = useState<GraphDocumentPayload[]>([]);
-  const [historyFuture, setHistoryFuture] = useState<GraphDocumentPayload[]>([]);
+  const [historyState, setHistoryState] = useState<GraphHistoryState>(createEmptyGraphHistoryState);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [dirty, setDirty] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("正在加载图谱工作台...");
+  const [saveState, setSaveState] = useState<GraphWorkspaceSaveState>("idle");
+  const [statusMessage, setStatusMessage] = useState("正在加载图谱工作区...");
   const [graphSearch, setGraphSearch] = useState("");
   const [importMode, setImportMode] = useState<ImportMode>("markdown");
   const [importSource, setImportSource] = useState("# 学习主题\n## 核心概念\n## 待复习问题");
@@ -149,6 +192,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([]);
   const [showKeyboardGuide, setShowKeyboardGuide] = useState(false);
   const detailRef = useRef<GraphDetailPayload | null>(null);
+  const historyRef = useRef<GraphHistoryState>(createEmptyGraphHistoryState());
   const stageRef = useRef<HTMLDivElement | null>(null);
   const consumedFocusRef = useRef("");
   const [selectedDraftDeckId, setSelectedDraftDeckId] = useState("");
@@ -166,6 +210,10 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   useEffect(() => {
     detailRef.current = graphDetail;
   }, [graphDetail]);
+
+  useEffect(() => {
+    historyRef.current = historyState;
+  }, [historyState]);
 
   useEffect(() => {
     if (!contextMenu) {
@@ -248,7 +296,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     return [...counts.values()];
   }, [selectedNodes]);
   const selectedEdge = selectedEdgeId ? document?.edges.find((edge) => edge.id === selectedEdgeId) ?? null : null;
-  const selectedNodeSourceTarget = selectedNode ? buildNodeSourceTarget(selectedNode) : "";
+  const selectedNodeSourceBacklink = selectedNode ? buildGraphSourceBacklink(selectedNode) : null;
+  const contextMenuNode = contextMenu?.nodeId ? nodeMap.get(contextMenu.nodeId) ?? null : null;
+  const contextMenuSourceBacklink = contextMenuNode ? buildGraphSourceBacklink(contextMenuNode) : null;
   const visibleNodes = useMemo(
     () => (document?.nodes ?? []).filter((node) => !hiddenNodeIds.has(node.id)),
     [document?.nodes, hiddenNodeIds]
@@ -257,32 +307,41 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     () => summarizeGraphSourceReferences(document?.nodes ?? []),
     [document?.nodes]
   );
+  const saveStateLabel = formatGraphSaveStateLabel(saveState);
+  const settingsSections = useMemo(
+    () =>
+      buildGraphSettingsSections({
+        autosaveDelayMs,
+        edgeCount: document?.edges.length ?? 0,
+        groupCount: document?.groups.length ?? 0,
+        nodeCount: document?.nodes.length ?? 0,
+        saveState
+      }),
+    [document?.edges.length, document?.groups.length, document?.nodes.length, saveState]
+  );
   const minimapViewport = useMemo(() => {
-    if (!document || stageViewport.width === 0 || stageViewport.height === 0) {
-      return null;
-    }
-
-    const left = Math.max(0, -document.viewport.x / document.viewport.zoom);
-    const top = Math.max(0, -document.viewport.y / document.viewport.zoom);
-    const width = Math.min(stageWidth, stageViewport.width / document.viewport.zoom);
-    const height = Math.min(stageHeight, stageViewport.height / document.viewport.zoom);
-    return {
-      left: left * minimapScale,
-      top: top * minimapScale,
-      width: width * minimapScale,
-      height: height * minimapScale
-    };
+    return document
+      ? buildGraphMinimapViewport({
+          viewport: document.viewport,
+          stage: stageViewport,
+          world: { width: stageWidth, height: stageHeight },
+          scale: minimapScale
+        })
+      : null;
   }, [document, stageViewport.height, stageViewport.width]);
   const alignmentHintLabels = useMemo(
     () => [...new Set(alignmentGuides.map((guide) => guide.label))],
     [alignmentGuides]
   );
+  const historyPast = historyState.past;
+  const historyFuture = historyState.future;
+  const dirty = historyState.dirty;
 
   function resetHistory(nextDetail: GraphDetailPayload) {
     setGraphDetail(nextDetail);
-    setHistoryPast([]);
-    setHistoryFuture([]);
-    setDirty(false);
+    const nextHistory = resetGraphHistoryState(historyRef.current);
+    historyRef.current = nextHistory;
+    setHistoryState(nextHistory);
     setSelectedNodeId("");
     setSelectedNodeIds([]);
     setSelectedEdgeId("");
@@ -308,42 +367,33 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    const normalized = normalizeDocument(current.id, current.currentVersion, nextDocument);
-    if (options?.captureHistory !== false) {
-      setHistoryPast((past) => [...past.slice(-(maxHistoryEntries - 1)), cloneDocument(current.document)]);
-      setHistoryFuture([]);
-    }
-
-    const nextDetail = rebuildDetail(current, normalized);
-    detailRef.current = nextDetail;
-    setGraphDetail(nextDetail);
-    replaceGraphSummary(nextDetail);
-    setDirty(true);
+    const result = applyGraphDocumentChange(current, nextDocument, historyRef.current, options);
+    detailRef.current = result.detail;
+    historyRef.current = result.history;
+    setGraphDetail(result.detail);
+    replaceGraphSummary(result.detail);
+    setHistoryState(result.history);
+    setSaveState("dirty");
     setStatusMessage(options?.status ?? "图谱有未保存的更改");
   }
 
   function setSingleNodeSelection(nodeId: string) {
-    setSelectedNodeId(nodeId);
-    setSelectedNodeIds(nodeId ? [nodeId] : []);
+    const nextSelection = setGraphNodeSelection({ selectedNodeId, selectedNodeIds }, nodeId);
+    setSelectedNodeId(nextSelection.selectedNodeId);
+    setSelectedNodeIds(nextSelection.selectedNodeIds);
     setSelectedEdgeId("");
   }
 
   function clearNodeSelection() {
-    setSelectedNodeId("");
-    setSelectedNodeIds([]);
+    const nextSelection = clearGraphNodeSelection({ selectedNodeId, selectedNodeIds });
+    setSelectedNodeId(nextSelection.selectedNodeId);
+    setSelectedNodeIds(nextSelection.selectedNodeIds);
   }
 
   function toggleNodeInSelection(nodeId: string) {
-    setSelectedNodeIds((current) => {
-      if (current.includes(nodeId)) {
-        const next = current.filter((item) => item !== nodeId);
-        setSelectedNodeId(next[0] || "");
-        return next;
-      }
-      const next = [...current, nodeId];
-      setSelectedNodeId(nodeId);
-      return next;
-    });
+    const nextSelection = toggleGraphNodeSelection({ selectedNodeId, selectedNodeIds }, nodeId);
+    setSelectedNodeId(nextSelection.selectedNodeId);
+    setSelectedNodeIds(nextSelection.selectedNodeIds);
     setSelectedEdgeId("");
   }
 
@@ -352,16 +402,10 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    mutateDocument((draft) => {
-      draft.nodes = draft.nodes.filter((node) => !nodeIds.includes(node.id));
-      draft.edges = draft.edges.filter(
-        (edge) => !nodeIds.includes(edge.sourceNodeId) && !nodeIds.includes(edge.targetNodeId)
-      );
-      draft.groups = draft.groups.map((group) => ({
-        ...group,
-        nodeIds: group.nodeIds.filter((nodeId) => !nodeIds.includes(nodeId))
-      }));
-    });
+    const current = detailRef.current;
+    if (current) {
+      applyDocument(removeGraphNodesFromDocument(current.document, nodeIds));
+    }
     clearNodeSelection();
     setLinkFromNodeId("");
   }
@@ -668,8 +712,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     try {
       const payload = await listGraphSnapshots(props.session, graphId);
       setSnapshots(payload);
+      return true;
     } catch {
       setSnapshots([]);
+      const snapshotState = buildSnapshotListFailureState();
+      setStatusMessage(snapshotState.statusMessage);
+      return false;
     }
   }
 
@@ -704,8 +752,8 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
           document: normalizeDocument(created.id, created.currentVersion, created.document)
         };
         resetHistory(normalized);
-        await loadSnapshots(created.id);
-        setStatusMessage("已创建第一张图谱");
+        const snapshotsLoaded = await loadSnapshots(created.id);
+        setStatusMessage(snapshotsLoaded ? "已创建第一张图谱" : buildSnapshotListFailureState().statusMessage);
         return;
       }
 
@@ -718,8 +766,8 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         document: normalizeDocument(first.id, first.currentVersion, first.document)
       };
       resetHistory(normalized);
-      await loadSnapshots(initialGraphId);
-      setStatusMessage("图谱工作台已就绪");
+      const snapshotsLoaded = await loadSnapshots(initialGraphId);
+      setStatusMessage(snapshotsLoaded ? "图谱工作台已就绪" : buildSnapshotListFailureState().statusMessage);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "加载图谱工作台失败");
     } finally {
@@ -773,8 +821,8 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         )
       };
       resetHistory(normalized);
-      await loadSnapshots(graphId);
-      setStatusMessage("已切换到目标图谱");
+      const snapshotsLoaded = await loadSnapshots(graphId);
+      setStatusMessage(snapshotsLoaded ? "已切换到目标图谱" : buildSnapshotListFailureState().statusMessage);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "切换图谱失败");
     } finally {
@@ -789,6 +837,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     }
 
     setSaving(true);
+    setSaveState("pending");
     setStatusMessage("正在保存图谱...");
     try {
       const payload = await batchSaveGraph(props.session, current.id, {
@@ -804,18 +853,38 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       detailRef.current = normalized;
       setGraphDetail(normalized);
       replaceGraphSummary(normalized);
-      setDirty(false);
-      await loadSnapshots(normalized.id);
-      setStatusMessage("图谱已保存");
+      const nextHistory = markGraphHistorySaved(historyRef.current);
+      historyRef.current = nextHistory;
+      setHistoryState(nextHistory);
+      const snapshotsLoaded = await loadSnapshots(normalized.id);
+      const successState = buildGraphSaveSuccessState();
+      setSaveState(successState.saveState);
+      setStatusMessage(snapshotsLoaded ? successState.statusMessage : buildSnapshotListFailureState().statusMessage);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "保存图谱失败");
+      const failedState = buildGraphSaveFailureState(error);
+      setSaveState(failedState.saveState);
+      setStatusMessage(failedState.statusMessage);
     } finally {
       setSaving(false);
     }
   }
 
   useEffect(() => {
-    if (!dirty || !graphDetail) {
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      const message = buildGraphBeforeUnloadMessage({ dirty, saving });
+      if (!message) {
+        return;
+      }
+      event.preventDefault();
+      event.returnValue = message;
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [dirty, saving]);
+
+  useEffect(() => {
+    if (!shouldAutosaveGraph(dirty, saving) || !graphDetail) {
       return;
     }
 
@@ -982,14 +1051,13 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
           currentDrag.currentX + stageRef.current.getBoundingClientRect().left,
           currentDrag.currentY + stageRef.current.getBoundingClientRect().top
         );
-        const left = Math.min(rectStart.x, rectEnd.x);
-        const right = Math.max(rectStart.x, rectEnd.x);
-        const top = Math.min(rectStart.y, rectEnd.y);
-        const bottom = Math.max(rectStart.y, rectEnd.y);
-        const matched = (detailRef.current.document.nodes ?? [])
-          .filter((node) => !hiddenNodeIds.has(node.id))
-          .filter((node) => node.x < right && node.x + node.width > left && node.y < bottom && node.y + node.height > top)
-          .map((node) => node.id);
+        const matched = selectGraphNodesInRect(detailRef.current.document.nodes ?? [], {
+          left: rectStart.x,
+          right: rectEnd.x,
+          top: rectStart.y,
+          bottom: rectEnd.y,
+          hiddenNodeIds
+        });
         setSelectedNodeIds(matched);
         setSelectedNodeId(matched[0] || "");
         setSelectedEdgeId("");
@@ -1012,125 +1080,114 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.key === "?" || (event.shiftKey && event.key === "/")) && !isTypingElement(event.target)) {
-        event.preventDefault();
-        setShowKeyboardGuide((current) => !current);
-        return;
-      }
+      const action = resolveGraphKeyboardShortcut(event, {
+        isTyping: isTypingElement(event.target),
+        selectedNodeCount: selectedNodeIds.length,
+        hasSelectedEdge: Boolean(selectedEdgeId),
+        hasDocument: Boolean(detailRef.current)
+      });
 
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
-        event.preventDefault();
-        void saveCurrentGraph("手动保存");
-        return;
-      }
+      switch (action) {
+        case "toggle-keyboard-guide":
+          event.preventDefault();
+          setShowKeyboardGuide((current) => !current);
+          break;
+        case "save":
+          event.preventDefault();
+          void saveCurrentGraph("手动保存");
+          break;
+        case "select-all":
+          event.preventDefault();
+          setSelectedNodeIds(visibleNodes.map((node) => node.id));
+          setSelectedNodeId(visibleNodes[0]?.id || "");
+          setSelectedEdgeId("");
+          break;
+        case "undo": {
+          event.preventDefault();
+          const current = detailRef.current;
+          if (!current) {
+            return;
+          }
 
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a" && !isTypingElement(event.target)) {
-        event.preventDefault();
-        setSelectedNodeIds(visibleNodes.map((node) => node.id));
-        setSelectedNodeId(visibleNodes[0]?.id || "");
-        setSelectedEdgeId("");
-        return;
-      }
-
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
-        event.preventDefault();
-        if (!detailRef.current || historyPast.length === 0) {
-          return;
+          const result = undoGraphDocument(current, historyRef.current);
+          if (!result) {
+            return;
+          }
+          detailRef.current = result.detail;
+          historyRef.current = result.history;
+          setGraphDetail(result.detail);
+          replaceGraphSummary(result.detail);
+          setHistoryState(result.history);
+          setSaveState("dirty");
+          setStatusMessage("已撤销，等待保存");
+          break;
         }
+        case "redo": {
+          event.preventDefault();
+          const current = detailRef.current;
+          if (!current) {
+            return;
+          }
 
-        const previous = historyPast[historyPast.length - 1];
-        const current = detailRef.current;
-        setHistoryPast((past) => past.slice(0, -1));
-        setHistoryFuture((future) => [cloneDocument(current.document), ...future].slice(0, maxHistoryEntries));
-        const nextDetail = rebuildDetail(current, cloneDocument(previous));
-        detailRef.current = nextDetail;
-        setGraphDetail(nextDetail);
-        replaceGraphSummary(nextDetail);
-        setDirty(true);
-        setStatusMessage("已撤销，等待保存");
-        return;
-      }
-
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        (event.key.toLowerCase() === "y" || (event.shiftKey && event.key.toLowerCase() === "z"))
-      ) {
-        event.preventDefault();
-        if (!detailRef.current || historyFuture.length === 0) {
-          return;
+          const result = redoGraphDocument(current, historyRef.current);
+          if (!result) {
+            return;
+          }
+          detailRef.current = result.detail;
+          historyRef.current = result.history;
+          setGraphDetail(result.detail);
+          replaceGraphSummary(result.detail);
+          setHistoryState(result.history);
+          setSaveState("dirty");
+          setStatusMessage("已重做，等待保存");
+          break;
         }
-
-        const [next, ...rest] = historyFuture;
-        const current = detailRef.current;
-        setHistoryPast((past) => [...past.slice(-(maxHistoryEntries - 1)), cloneDocument(current.document)]);
-        setHistoryFuture(rest);
-        const nextDetail = rebuildDetail(current, cloneDocument(next));
-        detailRef.current = nextDetail;
-        setGraphDetail(nextDetail);
-        replaceGraphSummary(nextDetail);
-        setDirty(true);
-        setStatusMessage("已重做，等待保存");
-        return;
-      }
-
-      if (isTypingElement(event.target)) {
-        return;
-      }
-
-      if (event.key === "Delete") {
-        if (selectedNodeIds.length > 0) {
+        case "delete-nodes":
           event.preventDefault();
           deleteSelectedNodes(selectedNodeIds);
-          return;
-        }
-
-        if (selectedEdgeId) {
+          break;
+        case "delete-edge":
           event.preventDefault();
           mutateDocument((draft) => {
             draft.edges = draft.edges.filter((edge) => edge.id !== selectedEdgeId);
           });
           setSelectedEdgeId("");
-          return;
+          break;
+        case "focus-selection": {
+          event.preventDefault();
+          const node = nodeMap.get(selectedNodeIds[0]);
+          if (node) {
+            focusNode(node);
+          }
+          break;
         }
-      }
-
-      if (event.key.toLowerCase() === "f" && selectedNodeIds.length === 1) {
-        event.preventDefault();
-        const node = nodeMap.get(selectedNodeIds[0]);
-        if (node) {
-          focusNode(node);
-        }
-        return;
-      }
-
-      if (event.key.toLowerCase() === "g" && selectedNodeIds.length > 0) {
-        event.preventDefault();
-        createGroupFromSelectedNode();
-        return;
-      }
-
-      if (event.key.toLowerCase() === "l" && selectedNodeIds.length === 1 && selectedNode) {
-        event.preventDefault();
-        setLinkFromNodeId((current) => (current ? "" : selectedNode.id));
-        return;
-      }
-
-      if (event.key === "0" && detailRef.current) {
-        event.preventDefault();
-        mutateDocument(
-          (draft) => {
-            draft.viewport = { x: 140, y: 120, zoom: 1 };
-          },
-          { captureHistory: false, status: "已重置画布视野" }
-        );
-        return;
-      }
-
-      if (event.key === "Escape") {
-        setLinkFromNodeId("");
-        setSelectionBox(null);
-        setAlignmentGuides([]);
-        setShowKeyboardGuide(false);
+        case "group-selection":
+          event.preventDefault();
+          createGroupFromSelectedNode();
+          break;
+        case "toggle-link-mode":
+          event.preventDefault();
+          if (selectedNode) {
+            setLinkFromNodeId((current) => (current ? "" : selectedNode.id));
+          }
+          break;
+        case "reset-viewport":
+          event.preventDefault();
+          mutateDocument(
+            (draft) => {
+              draft.viewport = { x: 140, y: 120, zoom: 1 };
+            },
+            { captureHistory: false, status: "已重置画布视野" }
+          );
+          break;
+        case "escape":
+          setLinkFromNodeId("");
+          setSelectionBox(null);
+          setAlignmentGuides([]);
+          setShowKeyboardGuide(false);
+          break;
+        case "none":
+          break;
       }
     }
 
@@ -1138,7 +1195,10 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [deleteSelectedNodes, historyFuture, historyPast, nodeMap, selectedEdgeId, selectedNode, selectedNodeIds, visibleNodes]);
 
-  function createNode(type: "text" | "rich-note" | "material" | "card", source?: GraphNodePayload["source"]) {
+  function createNode(
+    type: "text" | "rich-note" | "material" | "card" | "ai" | "image" | "url" | "formula" | "pdf-anchor",
+    source?: GraphNodePayload["source"]
+  ) {
     const current = detailRef.current;
     if (!current) {
       return;
@@ -1149,7 +1209,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       text: "新概念",
       "rich-note": source?.label || "笔记节点",
       material: source?.label || "资料节点",
-      card: source?.label || "复习卡片"
+      card: source?.label || "复习卡片",
+      ai: source?.label || "AI 理解节点",
+      image: source?.label || "图片节点",
+      url: source?.label || "URL 节点",
+      formula: source?.label || "公式节点",
+      "pdf-anchor": source?.label || "PDF 锚点"
     };
 
     const nextNode: GraphNodePayload = {
@@ -1243,8 +1308,13 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setSelectedEdgeId("");
     const currentDetail = detailRef.current;
     if (currentDetail) {
-      setHistoryPast((past) => [...past.slice(-(maxHistoryEntries - 1)), cloneDocument(currentDetail.document)]);
-      setHistoryFuture([]);
+      const nextHistory = {
+        ...historyRef.current,
+        past: [...historyRef.current.past.slice(-(maxHistoryEntries - 1)), cloneDocument(currentDetail.document)],
+        future: []
+      };
+      historyRef.current = nextHistory;
+      setHistoryState(nextHistory);
     }
     if (nextSelection.length > 1) {
       const origins = Object.fromEntries(
@@ -1282,15 +1352,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         return;
       }
 
-      const exists = current.document.edges.some(
-        (edge) => edge.sourceNodeId === linkFromNodeId && edge.targetNodeId === nodeId
-      );
-      if (exists) {
-        setStatusMessage("这两个节点之间已经有连线了");
-        setLinkFromNodeId("");
-        return;
-      }
-
       const nextEdge: GraphEdgePayload = {
         id: randomId("edge"),
         kind: "straight",
@@ -1300,9 +1361,14 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         metadata: {}
       };
 
-      mutateDocument((draft) => {
-        draft.edges.push(nextEdge);
-      });
+      const result = appendGraphEdgeToDocument(current.document, nextEdge);
+      if (!result.created) {
+        setStatusMessage(result.reason === "duplicate" ? "这两个节点之间已经有连线" : "无法在这两个节点之间创建连线");
+        setLinkFromNodeId("");
+        return;
+      }
+
+      applyDocument(result.document);
       setSelectedEdgeId(nextEdge.id);
       clearNodeSelection();
       setLinkFromNodeId("");
@@ -1349,20 +1415,20 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   }
 
   function createGroupForNode(node: GraphNodePayload) {
-    const nextGroup: GraphGroupPayload = {
-      id: randomId("group"),
-      title: `${node.title} 分组`,
-      nodeIds: [node.id],
-      x: Math.max(0, node.x - 36),
-      y: Math.max(0, node.y - 46),
-      width: node.width + 72,
-      height: node.height + 88,
-      collapsed: false
-    };
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
 
-    mutateDocument((draft) => {
-      draft.groups.push(nextGroup);
+    const result = createGraphGroupForNodes(current.document, [node.id], {
+      makeGroupId: () => randomId("group"),
+      title: `${node.title} 分组`
     });
+    if (!result.group) {
+      return;
+    }
+
+    applyDocument(result.document);
     setSingleNodeSelection(node.id);
     setStatusMessage("已基于当前节点创建分组");
   }
@@ -1376,36 +1442,33 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    const left = Math.min(...selectedNodes.map((node) => node.x));
-    const top = Math.min(...selectedNodes.map((node) => node.y));
-    const right = Math.max(...selectedNodes.map((node) => node.x + node.width));
-    const bottom = Math.max(...selectedNodes.map((node) => node.y + node.height));
-    const nextGroup: GraphGroupPayload = {
-      id: randomId("group"),
-      title: `${selectedNodes[0].title} 等 ${selectedNodes.length} 个节点`,
-      nodeIds: selectedNodes.map((node) => node.id),
-      x: Math.max(0, left - 36),
-      y: Math.max(0, top - 46),
-      width: right - left + 72,
-      height: bottom - top + 88,
-      collapsed: false
-    };
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
 
-    mutateDocument((draft) => {
-      draft.groups.push(nextGroup);
+    const result = createGraphGroupForNodes(current.document, selectedNodeIds, {
+      makeGroupId: () => randomId("group"),
+      title: `${selectedNodes[0].title} 等 ${selectedNodes.length} 个节点`
     });
+    if (!result.group) {
+      return;
+    }
+
+    applyDocument(result.document);
     setStatusMessage(`已为 ${selectedNodes.length} 个节点创建分组`);
   }
 
   function toggleGroupCollapse(groupId: string) {
-    mutateDocument(
-      (draft) => {
-        draft.groups = draft.groups.map((group) =>
-          group.id === groupId ? { ...group, collapsed: !group.collapsed } : group
-        );
-      },
-      { status: "已切换分组折叠状态" }
-    );
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
+    const nextDocument = toggleGraphGroupCollapse(current.document, groupId);
+    if (nextDocument === current.document) {
+      return;
+    }
+    applyDocument(nextDocument, { status: "已切换分组折叠状态" });
   }
 
   function focusNode(node: GraphNodePayload) {
@@ -1413,17 +1476,23 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    const viewportWidth = stageRef.current.clientWidth;
-    const viewportHeight = stageRef.current.clientHeight;
-    const nextX = viewportWidth / 2 - (node.x + node.width / 2) * detailRef.current.document.viewport.zoom;
-    const nextY = viewportHeight / 2 - (node.y + node.height / 2) * detailRef.current.document.viewport.zoom;
+    const nextViewport = centerGraphViewportOnRect({
+      rect: node,
+      stage: {
+        width: stageRef.current.clientWidth,
+        height: stageRef.current.clientHeight
+      },
+      zoom: detailRef.current.document.viewport.zoom
+    });
 
     mutateDocument(
       (draft) => {
-        draft.viewport.x = nextX;
-        draft.viewport.y = nextY;
+        draft.viewport = {
+          ...draft.viewport,
+          ...nextViewport
+        };
       },
-      { captureHistory: false, status: `已定位到节点：${node.title}` }
+      { captureHistory: false, status: `已定位到节点 ${node.title}` }
     );
     setSingleNodeSelection(node.id);
   }
@@ -1506,26 +1575,34 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setStatusMessage("已导出 SVG 图谱");
   }
 
-  function duplicateNode(nodeId: string) {
-    const source = detailRef.current?.document.nodes.find((node) => node.id === nodeId);
-    if (!source) {
+  function handleExportJson() {
+    if (!graphDetail) {
       return;
     }
 
-    const duplicated: GraphNodePayload = {
-      ...source,
-      id: randomId("node"),
-      title: `${buildNodeTitle(source)} 副本`,
-      x: Math.min(stageWidth - source.width, source.x + 36),
-      y: Math.min(stageHeight - source.height, source.y + 28),
-      source: source.source ? { ...source.source } : null,
-      metadata: source.metadata ? { ...source.metadata } : {}
-    };
+    const exported = buildGraphJsonExport(graphDetail);
+    downloadTextFile(exported.filename, exported.content, exported.mimeType);
+    setStatusMessage("已导出 StudyMate 图谱 JSON");
+  }
 
-    mutateDocument((draft) => {
-      draft.nodes.push(duplicated);
+  function duplicateNode(nodeId: string) {
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
+
+    const result = duplicateGraphNodeInDocument(current.document, nodeId, {
+      makeNodeId: () => randomId("node"),
+      titleSuffix: " 副本",
+      stageWidth,
+      stageHeight
     });
-    setSelectedNodeId(duplicated.id);
+    if (!result.node) {
+      return;
+    }
+
+    applyDocument(result.document);
+    setSelectedNodeId(result.node.id);
     setSelectedEdgeId("");
     setStatusMessage("已复制节点");
   }
@@ -1536,12 +1613,30 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     }
 
     if (!importSource.trim()) {
-      setStatusMessage("先填写 Markdown 或 Mermaid 内容");
+      setStatusMessage("先填写 Markdown、Mermaid 或 StudyMate JSON 内容");
       return;
     }
 
     setSaving(true);
     try {
+      if (importMode === "json") {
+        const imported = parseGraphJsonImport(importSource, graphDetail.document);
+        const issues = toGraphValidationIssues(imported.issues);
+        const errors = issues.filter((issue) => issue.severity === "error");
+        setValidationIssues(issues);
+        if (errors.length > 0) {
+          setSaveState("failed");
+          setStatusMessage(`导入 JSON 失败：发现 ${errors.length} 条结构错误`);
+          return;
+        }
+
+        applyDocument(imported.document, {
+          captureHistory: true,
+          status: issues.length ? `已导入 JSON，另有 ${issues.length} 条校验提示` : "已导入 StudyMate 图谱 JSON"
+        });
+        return;
+      }
+
       const payload =
         importMode === "markdown"
           ? await importGraphMarkdown(props.session, graphDetail.id, importSource)
@@ -1552,8 +1647,10 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       };
       resetHistory(normalized);
       await loadSnapshots(normalized.id);
+      setSaveState("saved");
       setStatusMessage(importMode === "markdown" ? "已导入 Markdown 大纲" : "已导入 Mermaid 草稿");
     } catch (error) {
+      setSaveState("failed");
       setStatusMessage(error instanceof Error ? error.message : "导入图谱失败");
     } finally {
       setSaving(false);
@@ -1573,10 +1670,14 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         document: normalizeDocument(payload.id, payload.currentVersion, payload.document)
       };
       resetHistory(normalized);
-      await loadSnapshots(normalized.id);
-      setStatusMessage(`已恢复到快照版本 ${versionNumber}`);
+      const snapshotsLoaded = await loadSnapshots(normalized.id);
+      const successState = buildSnapshotRestoreSuccessState(versionNumber);
+      setSaveState(successState.saveState);
+      setStatusMessage(snapshotsLoaded ? successState.statusMessage : buildSnapshotListFailureState().statusMessage);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "恢复图谱快照失败");
+      const failedState = buildSnapshotRestoreFailureState(error);
+      setSaveState(failedState.saveState);
+      setStatusMessage(failedState.statusMessage);
     } finally {
       setSaving(false);
     }
@@ -1613,11 +1714,11 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
 
   async function handleCommitCardDrafts() {
     if (!graphDetail || cardDrafts.length === 0) {
-      setStatusMessage("先生成卡片草稿，再确认写入卡组。");
+      setStatusMessage("先生成卡片草稿，再确认写入卡组");
       return;
     }
     if (!selectedDraftDeckId) {
-      setStatusMessage("先选择一个目标卡组。");
+      setStatusMessage("先选择一个目标卡组");
       return;
     }
 
@@ -1673,6 +1774,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       replaceGraphSummary(payload);
       resetHistory(normalized);
       await loadSnapshots(normalized.id);
+      setSaveState("saved");
       setStatusMessage("已创建新图谱");
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "创建图谱失败");
@@ -1721,7 +1823,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
           <p className="eyebrow">图谱画布</p>
           <h1>把资料、笔记和复习线索组织到同一张学习地图里</h1>
           <p className="header-copy">
-            当前工作台已经跨到图谱产品化阶段：支持分组、搜索定位、快照恢复、Markdown/Mermaid 导入、SVG 导出和卡片草稿生成。
+            当前工作台已经跨到图谱产品化阶段：支持分组、搜索定位、快照恢复、Markdown/Mermaid/JSON 导入、SVG/PNG/JSON 导出和卡片草稿生成。
           </p>
         </div>
         <div className="header-actions">
@@ -1733,6 +1835,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             <Save size={16} />
             {saving ? "保存中..." : "保存"}
           </button>
+          <span className={`graph-save-state ${saveState}`} aria-label={`图谱保存状态：${saveStateLabel}`}>
+            {saveStateLabel}
+          </span>
         </div>
       </header>
 
@@ -1792,8 +1897,8 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
           <div className="graph-rail-section">
             <div className="section-frame-head compact">
               <div>
-                <p className="eyebrow">工程模板</p>
-                <h2>Diagram 模式</h2>
+                <p className="eyebrow">学习模板</p>
+                <h2>闭环模板</h2>
               </div>
             </div>
             <div className="graph-template-list">
@@ -1906,6 +2011,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
               </button>
               <button className="icon-button" disabled={!graphDetail} onClick={handleExportSvg} title="导出 SVG" type="button">
                 <FileDown size={16} />
+              </button>
+              <button className="icon-button" disabled={!graphDetail} onClick={handleExportJson} title="导出 StudyMate JSON" type="button">
+                JSON
               </button>
               <button
                 className="icon-button"
@@ -2150,199 +2258,88 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                       ) : null}
                     </div>
                   </aside>
-                  {showKeyboardGuide ? (
-                    <div className="graph-shortcut-panel">
-                      <div className="graph-shortcut-head">
-                        <strong>快捷键</strong>
-                        <button className="ghost-button" onClick={() => setShowKeyboardGuide(false)} type="button">
-                          关闭
-                        </button>
-                      </div>
-                      <div className="graph-shortcut-list">
-                        <article className="graph-shortcut-item"><kbd>Shift</kbd><span>空白处拖动框选节点</span></article>
-                        <article className="graph-shortcut-item"><kbd>Shift / Ctrl</kbd><span>点击节点增减多选</span></article>
-                        <article className="graph-shortcut-item"><kbd>Ctrl/Cmd + A</kbd><span>全选当前可见节点</span></article>
-                        <article className="graph-shortcut-item"><kbd>Ctrl/Cmd + S</kbd><span>立即保存图谱</span></article>
-                        <article className="graph-shortcut-item"><kbd>Ctrl/Cmd + Z / Y</kbd><span>撤销或重做</span></article>
-                        <article className="graph-shortcut-item"><kbd>F</kbd><span>聚焦单个选中节点</span></article>
-                        <article className="graph-shortcut-item"><kbd>G</kbd><span>为当前选择建立分组</span></article>
-                        <article className="graph-shortcut-item"><kbd>L</kbd><span>进入或退出连线模式</span></article>
-                        <article className="graph-shortcut-item"><kbd>0</kbd><span>重置画布视野</span></article>
-                        <article className="graph-shortcut-item"><kbd>Delete</kbd><span>删除选中节点或连线</span></article>
-                        <article className="graph-shortcut-item"><kbd>?</kbd><span>打开或关闭快捷键面板</span></article>
-                        <article className="graph-shortcut-item"><kbd>Esc</kbd><span>退出连线、框选和提示面板</span></article>
-                      </div>
-                    </div>
-                  ) : null}
+                  {showKeyboardGuide ? <GraphKeyboardGuidePanel onClose={() => setShowKeyboardGuide(false)} /> : null}
                   {contextMenu ? (
-                    <div className="graph-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
-                      {contextMenu.nodeId ? (
-                        <>
-                          <button
-                            className="graph-context-item"
-                            onClick={() => {
-                              const node = nodeMap.get(contextMenu.nodeId || "");
-                              if (node) {
-                                focusNode(node);
-                              }
-                              setContextMenu(null);
-                            }}
-                            type="button"
-                          >
-                            聚焦节点
-                          </button>
-                          <button
-                            className="graph-context-item"
-                            onClick={() => {
-                              duplicateNode(contextMenu.nodeId || "");
-                              setContextMenu(null);
-                            }}
-                            type="button"
-                          >
-                            复制节点
-                          </button>
-                          <button
-                            className="graph-context-item"
-                            onClick={() => {
-                              const node = nodeMap.get(contextMenu.nodeId || "");
-                              if (node) {
-                                createGroupForNode(node);
-                              }
-                              setContextMenu(null);
-                            }}
-                            type="button"
-                          >
-                            建立分组
-                          </button>
-                          <button
-                            className="graph-context-item"
-                            onClick={() => {
-                              setLinkFromNodeId((current) => (current === contextMenu.nodeId ? "" : contextMenu.nodeId || ""));
-                              setSingleNodeSelection(contextMenu.nodeId || "");
-                              setContextMenu(null);
-                            }}
-                            type="button"
-                          >
-                            {linkFromNodeId === contextMenu.nodeId ? "取消连线起点" : "设为连线起点"}
-                          </button>
-                          {(() => {
-                            const node = nodeMap.get(contextMenu.nodeId || "");
-                            const target = node ? buildNodeSourceTarget(node) : "";
-                            if (!target) {
-                              return null;
-                            }
-                            return (
-                              <button
-                                className="graph-context-item"
-                                onClick={() => {
-                                  navigate(target);
-                                  setContextMenu(null);
-                                }}
-                                type="button"
-                              >
-                                打开来源
-                              </button>
-                            );
-                          })()}
-                          <button
-                            className="graph-context-item danger"
-                            onClick={() => {
-                              const nodeId = contextMenu.nodeId || "";
-                              mutateDocument((draft) => {
-                                draft.nodes = draft.nodes.filter((node) => node.id !== nodeId);
-                                draft.edges = draft.edges.filter(
-                                  (edge) => edge.sourceNodeId !== nodeId && edge.targetNodeId !== nodeId
-                                );
-                                draft.groups = draft.groups.map((group) => ({
-                                  ...group,
-                                  nodeIds: group.nodeIds.filter((item) => item !== nodeId)
-                                }));
-                              });
-                              setSelectedNodeId("");
-                              setContextMenu(null);
-                            }}
-                            type="button"
-                          >
-                            删除节点
-                          </button>
-                        </>
-                      ) : contextMenu.edgeId ? (
-                        <>
-                          <button
-                            className="graph-context-item"
-                            onClick={() => {
-                              mutateDocument((draft) => {
-                                draft.edges = draft.edges.map((edge) =>
-                                  edge.id === contextMenu.edgeId
-                                    ? { ...edge, kind: edge.kind === "curve" ? "straight" : "curve" }
-                                    : edge
-                                );
-                              });
-                              setContextMenu(null);
-                            }}
-                            type="button"
-                          >
-                            切换直线/曲线
-                          </button>
-                          <button
-                            className="graph-context-item danger"
-                            onClick={() => {
-                              mutateDocument((draft) => {
-                                draft.edges = draft.edges.filter((edge) => edge.id !== contextMenu.edgeId);
-                              });
-                              setSelectedEdgeId("");
-                              setContextMenu(null);
-                            }}
-                            type="button"
-                          >
-                            删除连线
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            className="graph-context-item"
-                            onClick={() => {
-                              createNode("text");
-                              setContextMenu(null);
-                            }}
-                            type="button"
-                          >
-                            新建概念节点
-                          </button>
-                          <button
-                            className="graph-context-item"
-                            onClick={() => {
-                              createNode("rich-note");
-                              setContextMenu(null);
-                            }}
-                            type="button"
-                          >
-                            新建笔记节点
-                          </button>
-                          <button
-                            className="graph-context-item"
-                            onClick={() => {
-                              createNode("material");
-                              setContextMenu(null);
-                            }}
-                            type="button"
-                          >
-                            新建资料节点
-                          </button>
-                          <button
-                            className="graph-context-item"
-                            onClick={() => {
-                              void handleExportPng();
-                              setContextMenu(null);
-                            }}
-                            type="button"
-                          >
-                            导出 PNG
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    <GraphContextMenuPanel
+                      contextMenu={contextMenu}
+                      hasSourceTarget={Boolean(contextMenuSourceBacklink)}
+                      isLinkStartSelected={linkFromNodeId === contextMenu.nodeId}
+                      onCreateCanvasMaterialNode={() => {
+                        createNode("material");
+                        setContextMenu(null);
+                      }}
+                      onCreateCanvasNoteNode={() => {
+                        createNode("rich-note");
+                        setContextMenu(null);
+                      }}
+                      onCreateCanvasTextNode={() => {
+                        createNode("text");
+                        setContextMenu(null);
+                      }}
+                      onCreateGroup={() => {
+                        if (contextMenuNode) {
+                          createGroupForNode(contextMenuNode);
+                        }
+                        setContextMenu(null);
+                      }}
+                      onDeleteEdge={() => {
+                        mutateDocument((draft) => {
+                          draft.edges = draft.edges.filter((edge) => edge.id !== contextMenu.edgeId);
+                        });
+                        setSelectedEdgeId("");
+                        setContextMenu(null);
+                      }}
+                      onDeleteNode={() => {
+                        const nodeId = contextMenu.nodeId || "";
+                        mutateDocument((draft) => {
+                          draft.nodes = draft.nodes.filter((node) => node.id !== nodeId);
+                          draft.edges = draft.edges.filter(
+                            (edge) => edge.sourceNodeId !== nodeId && edge.targetNodeId !== nodeId
+                          );
+                          draft.groups = draft.groups.map((group) => ({
+                            ...group,
+                            nodeIds: group.nodeIds.filter((item) => item !== nodeId)
+                          }));
+                        });
+                        setSelectedNodeId("");
+                        setContextMenu(null);
+                      }}
+                      onDuplicateNode={() => {
+                        duplicateNode(contextMenu.nodeId || "");
+                        setContextMenu(null);
+                      }}
+                      onExportPng={() => {
+                        void handleExportPng();
+                        setContextMenu(null);
+                      }}
+                      onFocusNode={() => {
+                        if (contextMenuNode) {
+                          focusNode(contextMenuNode);
+                        }
+                        setContextMenu(null);
+                      }}
+                      onOpenSource={() => {
+                        if (contextMenuSourceBacklink) {
+                          navigate(contextMenuSourceBacklink.target);
+                        }
+                        setContextMenu(null);
+                      }}
+                      onToggleEdgeKind={() => {
+                        mutateDocument((draft) => {
+                          draft.edges = draft.edges.map((edge) =>
+                            edge.id === contextMenu.edgeId
+                              ? { ...edge, kind: edge.kind === "curve" ? "straight" : "curve" }
+                              : edge
+                          );
+                        });
+                        setContextMenu(null);
+                      }}
+                      onToggleLinkStart={() => {
+                        setLinkFromNodeId((current) => (current === contextMenu.nodeId ? "" : contextMenu.nodeId || ""));
+                        setSingleNodeSelection(contextMenu.nodeId || "");
+                        setContextMenu(null);
+                      }}
+                    />
                   ) : null}
                 </>
               ) : (
@@ -2375,10 +2372,13 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                         return;
                       }
                       const nextDetail = { ...current, title: event.target.value };
+                      const nextHistory = { ...historyRef.current, dirty: true };
                       detailRef.current = nextDetail;
+                      historyRef.current = nextHistory;
                       setGraphDetail(nextDetail);
+                      setHistoryState(nextHistory);
+                      setSaveState("dirty");
                       replaceGraphSummary(nextDetail);
-                      setDirty(true);
                     }}
                     value={graphDetail.title}
                   />
@@ -2392,10 +2392,13 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                         return;
                       }
                       const nextDetail = { ...current, description: event.target.value };
+                      const nextHistory = { ...historyRef.current, dirty: true };
                       detailRef.current = nextDetail;
+                      historyRef.current = nextHistory;
                       setGraphDetail(nextDetail);
+                      setHistoryState(nextHistory);
+                      setSaveState("dirty");
                       replaceGraphSummary(nextDetail);
-                      setDirty(true);
                     }}
                     rows={4}
                     value={graphDetail.description}
@@ -2407,6 +2410,16 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                 </button>
               </div>
             ) : null}
+          </div>
+
+          <div className="graph-rail-section">
+            <div className="section-frame-head compact">
+              <div>
+                <p className="eyebrow">设置</p>
+                <h2>偏好与说明</h2>
+              </div>
+            </div>
+            <GraphSettingsPanel sections={settingsSections} />
           </div>
 
           <div className="graph-rail-section">
@@ -2432,6 +2445,13 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
               >
                 Mermaid
               </button>
+              <button
+                className={importMode === "json" ? "ghost-button active" : "ghost-button"}
+                onClick={() => setImportMode("json")}
+                type="button"
+              >
+                JSON
+              </button>
             </div>
 
             <textarea
@@ -2452,21 +2472,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
               </button>
             </div>
 
-            {validationIssues.length ? (
-              <div className="graph-issue-list">
-                {validationIssues.map((issue) => (
-                  <article className={`graph-issue-item ${issue.severity}`} key={`${issue.ruleType}-${issue.targetId || issue.message}`}>
-                    <strong>{issue.ruleType}</strong>
-                    <span>{issue.message}</span>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <article className="graph-meta-card muted">
-                <strong>校验结果</strong>
-                <p>这里会显示悬空连线、空标题等图谱结构问题。</p>
-              </article>
-            )}
+            <GraphValidationIssueList issues={validationIssues} />
           </div>
 
           <div className="graph-rail-section">
@@ -2556,36 +2562,44 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                 <h2>图谱引用</h2>
               </div>
             </div>
-
-            {sourceReferenceSummary.totalReferences > 0 ? (
+            {sourceReferenceSummary.references.length || sourceReferenceSummary.isolatedNodeCount ? (
               <div className="graph-form-stack">
-                <div className="graph-meta-grid">
-                  <article className="graph-meta-card muted">
-                    <strong>{sourceReferenceSummary.totalReferences}</strong>
-                    <p>个来源对象</p>
-                  </article>
-                  <article className="graph-meta-card muted">
-                    <strong>{sourceReferenceSummary.totalLinkedNodes}</strong>
-                    <p>个节点带来源</p>
-                  </article>
-                </div>
                 <div className="graph-source-summary-list">
                   {sourceReferenceSummary.typeBuckets.map((bucket) => (
                     <span className="graph-source-summary-pill" key={bucket.type}>
                       {bucket.label} · {bucket.referenceCount} 来源 / {bucket.nodeCount} 节点
                     </span>
                   ))}
+                  {sourceReferenceSummary.isolatedNodeCount ? (
+                    <span className="graph-source-summary-pill warning">
+                      孤立/无来源 · {sourceReferenceSummary.isolatedNodeCount} 节点
+                    </span>
+                  ) : null}
                 </div>
                 <div className="graph-source-reference-list">
-                  {sourceReferenceSummary.references.slice(0, 5).map((reference) => (
-                    <article className="graph-source-reference-item" key={reference.key}>
-                      <div>
-                        <strong>{reference.label}</strong>
-                        <span>{reference.nodeCount} 个节点 · {reference.type}</span>
-                      </div>
-                      {reference.excerpt ? <p>{reference.excerpt}</p> : null}
-                    </article>
-                  ))}
+                  {sourceReferenceSummary.references.slice(0, 5).map((reference) => {
+                    const backlink = buildGraphSourceBacklinkFromSource({
+                      type: reference.type,
+                      id: reference.id,
+                      label: reference.label,
+                      excerpt: reference.excerpt
+                    });
+                    return (
+                      <article className="graph-source-reference-item" key={reference.key}>
+                        <div>
+                          <strong>{reference.label}</strong>
+                          <span>{reference.nodeCount} 个节点 · {backlink?.sourceTypeLabel ?? reference.type}</span>
+                        </div>
+                        {reference.excerpt ? <p>{reference.excerpt}</p> : null}
+                        {backlink ? (
+                          <button className="ghost-button compact" onClick={() => navigate(backlink.target)} type="button">
+                            <Link2 size={14} />
+                            {backlink.actionLabel}
+                          </button>
+                        ) : null}
+                      </article>
+                    );
+                  })}
                   {sourceReferenceSummary.references.length > 5 ? (
                     <article className="graph-meta-card muted">
                       <strong>还有 {sourceReferenceSummary.references.length - 5} 个来源</strong>
@@ -2653,7 +2667,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                     <div className="graph-style-swatches">
                       {graphNodeToneOptions.map((option) => (
                         <button
-                          aria-label={`批量切换到${option.label}`}
+                          aria-label={`批量切换为${option.label}`}
                           className={batchTone === option.value ? "graph-style-swatch active" : "graph-style-swatch"}
                           key={option.value}
                           onClick={() => applyBatchTone(option.value)}
@@ -2773,7 +2787,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                     <div className="graph-style-swatches">
                       {graphNodeToneOptions.map((option) => (
                         <button
-                          aria-label={`切换到${option.label}色`}
+                          aria-label={`切换为${option.label}色`}
                           className={getNodeTone(selectedNode) === option.value ? "graph-style-swatch active" : "graph-style-swatch"}
                           key={option.value}
                           onClick={() =>
@@ -2846,15 +2860,11 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                 <div className="graph-meta-card">
                   <strong>来源</strong>
                   <p>{selectedNode.source?.label || "当前节点是自由创建的概念节点"}</p>
-                  {selectedNodeSourceTarget ? (
+                  {selectedNodeSourceBacklink ? (
                     <div className="graph-inline-actions">
-                      <button className="ghost-button" onClick={() => navigate(selectedNodeSourceTarget)} type="button">
+                      <button className="ghost-button" onClick={() => navigate(selectedNodeSourceBacklink.target)} type="button">
                         <Link2 size={14} />
-                        {selectedNode.source?.type === "material"
-                          ? "回到阅读器"
-                          : selectedNode.source?.type === "note"
-                            ? "回到笔记"
-                            : "去复习页"}
+                        {selectedNodeSourceBacklink.actionLabel}
                       </button>
                     </div>
                   ) : null}

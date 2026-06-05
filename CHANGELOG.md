@@ -19,6 +19,9 @@
 - v1.1 质量硬化新增 Playwright 复习队列 smoke，通过测试 session 和 API 拦截覆盖 `/review` 到期卡片翻面、Good 评分与回写请求。
 - v1.1 质量硬化新增 Playwright 后台治理 smoke，并让 E2E 同时启动用户端与管理端 preview，覆盖管理端 users 模块加载和 admin token 传递。
 - v1.1 质量硬化为公共首页 Playwright smoke 增加 API 拦截，移除无本地后端时的 Vite proxy 噪声。
+- v1.1 质量硬化为后端 search service 增加 `SearchIndexer` 抽象与分组查询测试，默认实现仍保持 MySQL fallback，不改变现有 `/api/v1/search` 契约。
+- v1.1 图谱工作区新增 `graphHistory.ts` 及回归测试，把 history/autosave/undo-redo 状态转移从 `useGraphWorkspaceController.tsx` 继续下沉为可复用纯逻辑。
+- v1.1 阅读器链路新增 Reader API 合约测试、`ReaderPage` 书签/批注来源回归测试，以及后端 `reader/handler`、`reader/service` 边界测试；`reader/handler` 与 `reader/service` 同步收窄为最小依赖接口以支持 fake 注入，不改变现有 `/api/v1/materials/:id/reader*` 契约。
 - 新增 `test:coverage` 发布门禁脚本，覆盖用户端、管理端、图谱核心和 Go 后端覆盖率汇总。
 - 新增用户端与管理端 `zh-CN` 源字典和 `en-US` 占位字典框架，并通过测试校验字典键一致。
 - 新增用户端 API 域文件、分层 CSS 文件和图谱工作区 helper 文件，降低后续 v1 收口时的单文件维护压力。

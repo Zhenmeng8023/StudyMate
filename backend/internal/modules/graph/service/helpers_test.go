@@ -61,6 +61,76 @@ func TestValidateDocumentFindsDanglingEdges(t *testing.T) {
 	}
 }
 
+func TestValidateDocumentFindsProductizationIssues(t *testing.T) {
+	issues := ValidateDocument(graphdto.GraphDocumentPayload{
+		Nodes: []graphdto.GraphNodePayload{
+			{
+				ID:     "node-1",
+				Type:   "concept",
+				Title:  "重复标题",
+				Width:  240,
+				Height: 120,
+				Source: &graphdto.GraphNodeSourcePayload{Type: "note", ID: "note-1"},
+			},
+			{
+				ID:     "node-2",
+				Type:   "concept",
+				Title:  "重复标题",
+				Width:  24,
+				Height: 12,
+				Source: &graphdto.GraphNodeSourcePayload{Type: "material"},
+			},
+			{ID: "node-3", Type: "concept", Title: "孤立节点", Width: 240, Height: 120},
+		},
+		Edges: []graphdto.GraphEdgePayload{
+			{ID: "edge-1", SourceNodeID: "node-1", TargetNodeID: "missing-node"},
+			{ID: "edge-2", SourceNodeID: "node-1", TargetNodeID: "node-2"},
+		},
+		Groups: []graphdto.GraphGroupPayload{
+			{ID: "group-empty", Title: "空分组", NodeIDs: []string{}, Width: 200, Height: 100},
+			{ID: "group-collapsed", Title: "折叠分组", NodeIDs: []string{"node-1"}, Width: 200, Height: 100, Collapsed: true},
+		},
+	})
+
+	seen := map[string]bool{}
+	for _, issue := range issues {
+		seen[issue.RuleType] = true
+	}
+	for _, rule := range []string{
+		"duplicate_title",
+		"invalid_node_size",
+		"invalid_source_target",
+		"missing_source",
+		"isolated_node",
+		"dangling_edge",
+		"empty_group",
+		"cross_collapsed_group_edge",
+	} {
+		if !seen[rule] {
+			t.Fatalf("expected rule %s in issues, got %#v", rule, issues)
+		}
+	}
+}
+
+func TestListLearningDiagramTemplates(t *testing.T) {
+	templates := NewService(nil, nil, nil, nil, nil).ListDiagramTemplates()
+	if len(templates) != 4 {
+		t.Fatalf("expected 4 learning templates, got %d", len(templates))
+	}
+	expected := []string{"learning-material-map", "book-notes-map", "concept-network", "review-card-prep"}
+	for index, template := range templates {
+		if template.ID != expected[index] {
+			t.Fatalf("expected template %s at index %d, got %s", expected[index], index, template.ID)
+		}
+		if template.Mode != "learning" {
+			t.Fatalf("expected learning mode, got %s", template.Mode)
+		}
+		if len(template.SampleLines) < 3 {
+			t.Fatalf("expected sample lines for template %s", template.ID)
+		}
+	}
+}
+
 func TestBuildCardDraftsFromSelection(t *testing.T) {
 	document := graphdto.GraphDocumentPayload{
 		Nodes: []graphdto.GraphNodePayload{

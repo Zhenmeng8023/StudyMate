@@ -22,6 +22,9 @@
 - 用户端 AiPage 页面级 AI 卡片/图谱草稿确认测试。
 - 管理端治理页真实 API 加载回归测试。
 - 后端 search/share/admin/review/graph/AI 继续补 handler/service 测试；当前已补 search/share/admin/card/graph/AI handler 边界测试。
+- 后端 search service 已抽出 `SearchIndexer` 边界，默认保持 MySQL fallback；后续 adapter 切换不作为当前阻塞项。
+- Reader 链路已补到用户端 API 合约、`ReaderPage` 书签/批注来源回归，以及后端 `reader/handler`、`reader/service` 的鉴权、请求体、资料可见性和批注选择边界测试，后续继续向 notes 来源追踪闭环推进。
+- 图谱工作区已开始把 `useGraphWorkspaceController.tsx` 的 history/autosave/undo-redo 状态迁到独立 helper，并新增状态回归测试锁定行为。
 - Playwright 当前已覆盖公共壳层、搜索、分享只读页、复习队列回写和后台治理用户模块，并通过测试内 API 拦截降低本地后端耦合。
 
 完成标志：
@@ -100,6 +103,7 @@
 
 - 保留搜索定位、来源泳道、来源摘要、AI 落点预览、Markdown/Mermaid 导入、PNG/SVG 导出。
 - 新增图谱模板、验证规则面板、autosave/dirty 策略、Undo/Redo 边界、来源反链、键盘可达菜单、无障碍标签和设置面板。
+- 当前优先从 history/autosave/undo-redo 状态机继续拆分大控制器，再沿同一边界下沉数据加载、交互和设置面板逻辑。
 - 增加 200 节点、300 边、20 分组的性能回归用例。
 
 完成标志：

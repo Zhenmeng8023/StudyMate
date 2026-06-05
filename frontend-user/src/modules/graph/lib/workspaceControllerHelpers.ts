@@ -1,3 +1,8 @@
+import {
+  centerGraphViewportOnRect,
+  clampGraphZoom,
+  projectClientPointToGraph
+} from "@studymate/graph-core";
 import type {
   GraphDetailPayload,
   GraphDocumentPayload,
@@ -44,7 +49,7 @@ export type DragState =
       currentY: number;
     };
 
-export type ImportMode = "markdown" | "mermaid";
+export type ImportMode = "markdown" | "mermaid" | "json";
 
 export type FocusPreview = {
   x: number;
@@ -158,7 +163,7 @@ export function rebuildDetail(detail: GraphDetailPayload, document: GraphDocumen
 }
 
 export function clampZoom(value: number) {
-  return Math.max(0.55, Math.min(1.8, Number(value.toFixed(2))));
+  return clampGraphZoom(value);
 }
 
 export function randomId(prefix: string) {
@@ -265,16 +270,14 @@ export function buildGroupStyle(group: GraphGroupPayload) {
 }
 
 export function buildFocusPreviewViewport(preview: FocusPreview, detail: GraphDetailPayload, stage: HTMLDivElement) {
-  const viewportWidth = stage.clientWidth;
-  const viewportHeight = stage.clientHeight;
-  const zoom = detail.document.viewport.zoom;
-  const centerX = preview.x + preview.width / 2;
-  const centerY = preview.y + preview.height / 2;
-  return {
-    x: viewportWidth / 2 - centerX * zoom,
-    y: viewportHeight / 2 - centerY * zoom,
-    zoom
-  };
+  return centerGraphViewportOnRect({
+    rect: preview,
+    stage: {
+      width: stage.clientWidth,
+      height: stage.clientHeight
+    },
+    zoom: detail.document.viewport.zoom
+  });
 }
 
 export function buildClearedFocusNavigationLocation(pathname: string, search: string) {
@@ -473,12 +476,15 @@ export function projectClientPointToWorld(
   clientY: number
 ) {
   const rect = stage.getBoundingClientRect();
-  const localX = clientX - rect.left;
-  const localY = clientY - rect.top;
-  return {
-    x: (localX - viewport.x) / viewport.zoom,
-    y: (localY - viewport.y) / viewport.zoom
-  };
+  return projectClientPointToGraph({
+    clientX,
+    clientY,
+    stageRect: {
+      left: rect.left,
+      top: rect.top
+    },
+    viewport
+  });
 }
 
 export function downloadTextFile(filename: string, content: string, mimeType: string) {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import type { AuthSession, CardDraftPayload, DeckPayload, MaterialPayload, ReaderStatePayload } from "../api/client";
 import { bulkCreateDeckCards, createReaderAnnotation, deleteReaderAnnotation, generateAnnotationCardDrafts, generateAnnotationGraphDrafts, getReaderState, listDecks, listMaterials, updateReaderProgress } from "../api/client";
 import { PdfReaderPane } from "../modules/reader/PdfReaderPane";
@@ -7,6 +7,8 @@ import { buildCardInputsFromDrafts, displayAnnotationText, displayMaterialDescri
 
 export function ReaderPage(props: { session: AuthSession }) {
   const params = useParams();
+  const location = useLocation();
+  const requestedPage = parseReaderPageQuery(location.search);
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
   const [decks, setDecks] = useState<DeckPayload[]>([]);
   const [selectedId, setSelectedId] = useState(params.materialId ?? "");
@@ -42,8 +44,10 @@ export function ReaderPage(props: { session: AuthSession }) {
       return;
     }
 
-    void getReaderState(props.session, selectedMaterial.id).then(setReaderState).catch(() => {
-      setReaderState({
+    void getReaderState(props.session, selectedMaterial.id).then((state) => {
+      setReaderState(applyRequestedReaderPage(state, requestedPage));
+    }).catch(() => {
+      setReaderState(applyRequestedReaderPage({
         materialId: selectedMaterial.id,
         currentPage: 1,
         totalPages: 0,
@@ -51,10 +55,10 @@ export function ReaderPage(props: { session: AuthSession }) {
         bookmarks: [],
         lastReadAt: selectedMaterial.updatedAt,
         annotations: []
-      });
+      }, requestedPage));
     });
     setAnnotationDrafts([]);
-  }, [props.session, selectedMaterial]);
+  }, [props.session, requestedPage, selectedMaterial]);
 
   async function persistProgress(nextPage: number, totalPages: number) {
     if (!selectedMaterial || !readerState) {
@@ -421,4 +425,23 @@ export function ReaderPage(props: { session: AuthSession }) {
       </div>
     </>
   );
+}
+
+function parseReaderPageQuery(search: string) {
+  const raw = new URLSearchParams(search).get("page");
+  const page = raw ? Number(raw) : 0;
+  return Number.isFinite(page) && page > 0 ? Math.round(page) : 0;
+}
+
+function applyRequestedReaderPage(state: ReaderStatePayload, requestedPage: number): ReaderStatePayload {
+  if (!requestedPage) {
+    return state;
+  }
+
+  const maxPage = state.totalPages > 0 ? state.totalPages : requestedPage;
+  const currentPage = Math.max(1, Math.min(maxPage, requestedPage));
+  return {
+    ...state,
+    currentPage
+  };
 }

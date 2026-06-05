@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	aidto "studymate/backend/internal/modules/ai/dto"
@@ -182,13 +183,77 @@ func BuildDocumentFromMermaid(graphID string, version int64, source string) (gra
 func ValidateDocument(document graphdto.GraphDocumentPayload) []graphdto.GraphValidationIssuePayload {
 	issues := make([]graphdto.GraphValidationIssuePayload, 0)
 	nodeMap := make(map[string]graphdto.GraphNodePayload, len(document.Nodes))
+	titleMap := make(map[string][]string)
+	connectedNodeIDs := make(map[string]struct{})
 	for _, node := range document.Nodes {
-		nodeMap[node.ID] = node
+		nodeID := strings.TrimSpace(node.ID)
+		if nodeID == "" {
+			issues = append(issues, graphdto.GraphValidationIssuePayload{
+				RuleType: "missing_node_id",
+				Message:  "节点 ID 不能为空",
+				Severity: "error",
+			})
+			continue
+		}
+		if _, exists := nodeMap[nodeID]; exists {
+			issues = append(issues, graphdto.GraphValidationIssuePayload{
+				RuleType: "duplicate_node_id",
+				Message:  "节点 ID 重复",
+				TargetID: nodeID,
+				Severity: "error",
+			})
+		}
+		nodeMap[nodeID] = node
 		if strings.TrimSpace(node.Title) == "" {
 			issues = append(issues, graphdto.GraphValidationIssuePayload{
 				RuleType: "empty_node_title",
 				Message:  "节点标题不能为空",
-				TargetID: node.ID,
+				TargetID: nodeID,
+				Severity: "warning",
+			})
+		} else {
+			titleKey := strings.ToLower(strings.TrimSpace(node.Title))
+			titleMap[titleKey] = append(titleMap[titleKey], nodeID)
+		}
+		if node.Width < 80 || node.Height < 48 || node.Width > 1200 || node.Height > 900 {
+			issues = append(issues, graphdto.GraphValidationIssuePayload{
+				RuleType: "invalid_node_size",
+				Message:  "节点尺寸不在允许范围内",
+				TargetID: nodeID,
+				Severity: "error",
+			})
+		}
+		if node.Source == nil || strings.TrimSpace(node.Source.ID) == "" {
+			issues = append(issues, graphdto.GraphValidationIssuePayload{
+				RuleType: "missing_source",
+				Message:  "节点缺少可追溯来源",
+				TargetID: nodeID,
+				Severity: "warning",
+			})
+		}
+		if node.Source != nil {
+			sourceType := strings.TrimSpace(node.Source.Type)
+			sourceID := strings.TrimSpace(node.Source.ID)
+			if (sourceType == "" && sourceID != "") || (sourceType != "" && sourceID == "") {
+				issues = append(issues, graphdto.GraphValidationIssuePayload{
+					RuleType: "invalid_source_target",
+					Message:  "来源类型和来源 ID 必须同时存在",
+					TargetID: nodeID,
+					Severity: "error",
+				})
+			}
+		}
+	}
+
+	for _, nodeIDs := range titleMap {
+		if len(nodeIDs) <= 1 {
+			continue
+		}
+		for _, nodeID := range nodeIDs {
+			issues = append(issues, graphdto.GraphValidationIssuePayload{
+				RuleType: "duplicate_title",
+				Message:  "存在重复标题节点",
+				TargetID: nodeID,
 				Severity: "warning",
 			})
 		}
@@ -202,6 +267,8 @@ func ValidateDocument(document graphdto.GraphDocumentPayload) []graphdto.GraphVa
 				TargetID: edge.ID,
 				Severity: "error",
 			})
+		} else {
+			connectedNodeIDs[edge.SourceNodeID] = struct{}{}
 		}
 		if _, ok := nodeMap[edge.TargetNodeID]; !ok {
 			issues = append(issues, graphdto.GraphValidationIssuePayload{
@@ -210,8 +277,87 @@ func ValidateDocument(document graphdto.GraphDocumentPayload) []graphdto.GraphVa
 				TargetID: edge.ID,
 				Severity: "error",
 			})
+		} else {
+			connectedNodeIDs[edge.TargetNodeID] = struct{}{}
+		}
+		if rawTargets, ok := edge.Metadata["targetNodeIds"].([]any); ok {
+			for _, rawTarget := range rawTargets {
+				targetID, ok := rawTarget.(string)
+				if !ok {
+					targetID = ""
+				}
+				if _, exists := nodeMap[strings.TrimSpace(targetID)]; !exists {
+					issues = append(issues, graphdto.GraphValidationIssuePayload{
+						RuleType: "dangling_edge",
+						Message:  "多目标连线包含不存在的目标节点",
+						TargetID: edge.ID,
+						Severity: "error",
+					})
+				}
+			}
 		}
 	}
+
+	collapsedGroupByNodeID := make(map[string]string)
+	for _, group := range document.Groups {
+		if len(group.NodeIDs) == 0 {
+			issues = append(issues, graphdto.GraphValidationIssuePayload{
+				RuleType: "empty_group",
+				Message:  "分组内没有节点",
+				TargetID: group.ID,
+				Severity: "warning",
+			})
+		}
+		for _, nodeID := range group.NodeIDs {
+			if _, exists := nodeMap[nodeID]; !exists {
+				issues = append(issues, graphdto.GraphValidationIssuePayload{
+					RuleType: "invalid_group_node",
+					Message:  "分组引用了不存在的节点",
+					TargetID: group.ID,
+					Severity: "error",
+				})
+			}
+			if group.Collapsed {
+				collapsedGroupByNodeID[nodeID] = group.ID
+			}
+		}
+	}
+
+	for _, edge := range document.Edges {
+		sourceGroup := collapsedGroupByNodeID[edge.SourceNodeID]
+		targetGroup := collapsedGroupByNodeID[edge.TargetNodeID]
+		if (sourceGroup != "" || targetGroup != "") && sourceGroup != targetGroup {
+			issues = append(issues, graphdto.GraphValidationIssuePayload{
+				RuleType: "cross_collapsed_group_edge",
+				Message:  "连线跨过折叠分组边界",
+				TargetID: edge.ID,
+				Severity: "warning",
+			})
+		}
+	}
+
+	for _, node := range document.Nodes {
+		if _, connected := connectedNodeIDs[node.ID]; !connected {
+			issues = append(issues, graphdto.GraphValidationIssuePayload{
+				RuleType: "isolated_node",
+				Message:  "节点没有任何连线",
+				TargetID: node.ID,
+				Severity: "info",
+			})
+		}
+	}
+
+	sort.SliceStable(issues, func(left, right int) bool {
+		leftRank := validationSeverityRank(issues[left].Severity)
+		rightRank := validationSeverityRank(issues[right].Severity)
+		if leftRank != rightRank {
+			return leftRank < rightRank
+		}
+		if issues[left].RuleType != issues[right].RuleType {
+			return issues[left].RuleType < issues[right].RuleType
+		}
+		return issues[left].TargetID < issues[right].TargetID
+	})
 
 	return issues
 }
@@ -411,6 +557,19 @@ func decodeDraftMetadata(metadata map[string]any, target any) error {
 		return fmt.Errorf("decode draft metadata: %w", err)
 	}
 	return nil
+}
+
+func validationSeverityRank(severity string) int {
+	switch severity {
+	case "error":
+		return 0
+	case "warning":
+		return 1
+	case "info":
+		return 2
+	default:
+		return 3
+	}
 }
 
 func parseMermaidNode(raw string) (string, string) {

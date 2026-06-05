@@ -1,0 +1,101 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import type { GraphValidationIssuePayload } from "../../../api/client";
+import {
+  GraphContextMenuPanel,
+  GraphKeyboardGuidePanel,
+  GraphSettingsPanel,
+  GraphValidationIssueList
+} from "./GraphWorkspacePanels";
+
+describe("GraphWorkspacePanels", () => {
+  it("renders the keyboard guide as a dismissible dialog", () => {
+    const onClose = vi.fn();
+
+    render(<GraphKeyboardGuidePanel onClose={onClose} />);
+
+    expect(screen.getByRole("dialog", { name: "图谱快捷键" })).toBeInTheDocument();
+    expect(screen.getByText("Ctrl/Cmd + Z / Y")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "关闭快捷键说明" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders node context actions and only shows open-source when available", () => {
+    const actions = {
+      onCreateCanvasMaterialNode: vi.fn(),
+      onCreateCanvasNoteNode: vi.fn(),
+      onCreateCanvasTextNode: vi.fn(),
+      onCreateGroup: vi.fn(),
+      onDeleteEdge: vi.fn(),
+      onDeleteNode: vi.fn(),
+      onDuplicateNode: vi.fn(),
+      onExportPng: vi.fn(),
+      onFocusNode: vi.fn(),
+      onOpenSource: vi.fn(),
+      onToggleEdgeKind: vi.fn(),
+      onToggleLinkStart: vi.fn()
+    };
+
+    render(
+      <GraphContextMenuPanel
+        contextMenu={{ edgeId: "", nodeId: "node-1", x: 120, y: 80 }}
+        hasSourceTarget
+        isLinkStartSelected={false}
+        {...actions}
+      />
+    );
+
+    expect(screen.getByRole("menu", { name: "图谱上下文菜单" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "打开来源" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "删除节点" }));
+    expect(actions.onDeleteNode).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders validation issues and falls back to the empty-state copy", () => {
+    const issues: GraphValidationIssuePayload[] = [
+      {
+        message: "节点标题为空",
+        ruleType: "empty_title",
+        severity: "warning",
+        targetId: "node-1"
+      }
+    ];
+
+    const { rerender } = render(<GraphValidationIssueList issues={issues} />);
+    expect(screen.getByText("发现 1 个警告")).toBeInTheDocument();
+    expect(screen.getByText("empty_title")).toBeInTheDocument();
+    expect(screen.getByText("节点标题为空")).toBeInTheDocument();
+
+    rerender(<GraphValidationIssueList issues={[]} />);
+    expect(screen.getByText("验证结果")).toBeInTheDocument();
+    expect(screen.getByText("这里会显示悬空连线、空标题等图谱结构问题。")).toBeInTheDocument();
+  });
+
+  it("renders settings sections as a compact panel", () => {
+    render(
+      <GraphSettingsPanel
+        sections={[
+          {
+            key: "autosave",
+            eyebrow: "自动保存",
+            title: "保存状态",
+            items: ["自动保存间隔约 8 秒。"]
+          },
+          {
+            key: "performance",
+            eyebrow: "性能提示",
+            title: "已达到基准规模",
+            tone: "warning",
+            items: ["当前 200 节点 / 300 边 / 20 分组。"]
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByRole("region", { name: "图谱设置" })).toBeInTheDocument();
+    expect(screen.getByText("自动保存")).toBeInTheDocument();
+    expect(screen.getByText("已达到基准规模")).toBeInTheDocument();
+  });
+});

@@ -21,7 +21,10 @@
 - 用户端 AiPage 页面级测试，锁定 AI 卡片草稿确认写入复习 deck、图谱变更草稿确认写入目标图谱的核心 UI 流。
 - 管理端治理页回归测试，锁定已有 session 下概览、审核队列和 `/api/v1/admin/*` 治理模块加载路径。
 - 后端继续补 search/share/admin/review/graph/AI 的 handler/service 边界测试；search/share/card/graph/AI handler 已切到最小 service interface，admin handler 已补 limit 解析测试。涉及数据库的用例优先用 repository interface 或轻量 fixture，不把真实 MySQL/Mongo 作为单元测试前置条件。
-- Playwright 已补公共壳层、搜索、分享只读页、复习队列和后台治理 smoke，且 API 请求已改为测试内拦截；后续继续按同样方式补高风险受保护工作流。
+- 后端 search service 已新增 `SearchIndexer` 抽象，默认仍走 MySQL fallback；这一层只提供可替换边界，不引入新的搜索引擎依赖。
+- 图谱工作区已新增 `graphHistory.ts`，并把 `@studymate/graph-core` 扩展为覆盖文档规范化、验证规则、`.smtg` JSON 导入导出、学习模板、history label 和 200 节点性能 fixture 的纯逻辑边界；大型控制器后续继续拆数据加载、画布交互、validation/draft 与设置面板逻辑。
+- Reader 当前已补 `frontend-user/src/api/reader.test.ts`、`frontend-user/src/pages/ReaderPage.test.tsx`、`backend/internal/modules/reader/handler/handler_test.go` 和 `backend/internal/modules/reader/service/service_test.go`，锁定进度回写、书签、批注 `rects`、来源展示，以及鉴权、请求体、资料可见性与批注选择边界。
+- Playwright 已补公共壳层、搜索、分享只读页、复习队列、后台治理和图谱 200 节点工作区 smoke，且 API 请求已改为测试内拦截；后续继续按同样方式补高风险受保护工作流。
 
 退出标准：
 
@@ -92,6 +95,7 @@
 - 业务组件单文件不超过 500 行，复杂画布组件不超过 800 行。
 - 行为保持一致，完整测试通过。
 - 当前入口拆分已完成：用户端 App、图谱入口、管理端 App 都改为薄壳；后续图谱 v1 收口继续把大型 hook 内部拆到更细的 state/lib/components。
+- 当前已先把图谱 history/autosave/undo-redo 状态从大型 hook 中抽出一层；后续继续沿这条边界拆数据加载、画布交互、draft/import/export/validation 与键盘/设置面板。
 
 ### C1. 阅读器与笔记收口
 
@@ -123,6 +127,7 @@
 - AI 落点预览
 - Markdown/Mermaid 导入
 - PNG/SVG 导出
+- StudyMate `.smtg` / `application/vnd.studymate.graph+json` 导入导出
 
 新增能力：
 
@@ -134,6 +139,11 @@
 - 键盘可达菜单
 - 无障碍标签
 - 更清晰的设置面板
+
+当前补强：
+- graph-core 已沉淀文档规范化、验证规则、学习模板、history label、JSON 文件格式和 200/300/20 基准夹具。
+- 后端 `ValidateGraph` 已扩展孤立节点、缺来源、重复标题、悬挂边、跨折叠分组边、空分组、非法尺寸和来源 target 规则。
+- 用户端工作区已接入 JSON 导入导出、明确保存状态、离页保护、学习模板展示和图谱 E2E smoke；`.prg` 兼容仍作为后续转换器计划，不进入当前范围。
 
 退出标准：
 

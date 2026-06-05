@@ -1,7 +1,216 @@
+﻿
 # StudyMate 项目记录
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-05 10:09:20 +08:00 | v1.1.0-alpha.26 | 补图谱工作区保存、快照与 JSON 导入失败页面回归
+### 任务内容
+- 延续 autosave/dirty/snapshot 产品化切片，把上一轮纯逻辑状态 helper 推进到真实工作区 UI 回归测试。
+- 覆盖保存失败、快照恢复失败、快照列表失败和 StudyMate JSON 导入校验失败，确保用户可见状态明确且不误触远程保存。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，通过 mock graph API 渲染真实 `GraphWorkspacePage`。
+- 覆盖批量保存失败时展示错误消息和 `保存失败` 状态。
+- 覆盖快照恢复失败时展示错误消息和 `保存失败` 状态。
+- 覆盖快照列表加载失败时仍可继续编辑，并保留“暂时无法恢复历史版本”的提示。
+- 覆盖 JSON 导入结构错误时展示失败状态，不调用 `batchSaveGraph` 远程保存。
+- 修复 `loadGraphWorkspace` / `openGraph` 在快照列表加载失败后又用“工作台已就绪/已切换”覆盖失败提示的问题。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/GraphWorkspacePage.test.tsx` 先暴露快照列表失败提示被覆盖的问题，修复后通过，4 个页面级用例全部通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 通过，4 个文件、16 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱工作区保存/快照/导入失败路径现在具备真实 UI 回归保护；下一步适合补键盘/来源反链/卡片草稿流程的页面级用例，或继续拆 controller 的加载/store 边界。
+
+## 2026-06-05 10:01:08 +08:00 | v1.1.0-alpha.25 | 抽出图谱保存、离页保护与快照恢复状态边界
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把 autosave/dirty/snapshot 相关状态文案从大型 controller 中下沉为可测试 helper。
+- 强化保存状态的可读性，确保保存成功/失败、快照恢复成功/失败、快照列表加载失败和离页保护都有明确状态表达。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphPersistenceState.ts` 与测试，覆盖离页保护文案、保存成功/失败状态、快照恢复成功/失败状态、快照列表失败提示和保存状态中文标签。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，保存和快照恢复路径复用 persistence helper；快照恢复成功进入 `saved`，失败进入 `failed`。
+- `loadSnapshots` 现在返回加载是否成功；保存或恢复后如果快照列表加载失败，会保留“可继续编辑但暂时无法恢复历史版本”的清晰提示。
+- 顶部保存状态从英文枚举 `idle/dirty/pending/saved/failed` 改为中文可读标签，并同步更新 `aria-label`。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphPersistenceState.test.ts` 先因 helper 缺失失败，补实现后通过；新增保存状态 label 测试也先失败后转绿。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/lib/graphSettingsPanel.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 通过，4 个文件、14 个用例全部通过。
+### 后续影响
+- autosave/dirty/snapshot 状态边界已经具备纯逻辑测试保护；下一步适合继续补图谱工作区页面级测试，覆盖保存失败、快照恢复失败和离页保护的真实 UI 行为。
+
+## 2026-06-05 09:55:04 +08:00 | v1.1.0-alpha.24 | 加强图谱验证面板与来源孤立节点摘要
+### 任务内容
+- 继续完善知识图谱工作区的 validation panel 与 source summary，让验证结果不再只是平铺 issue，来源摘要也能显示孤立/无来源节点情况。
+- 按 TDD 先补 graph-core 来源摘要测试和前端 validation panel helper 测试，再实现并回接工作区面板。
+### 完成结果
+- 扩展 `packages/graph-core/src/index.ts` 的 `summarizeGraphSourceReferences`，新增 `isolatedNodeCount`、`isolatedNodeIds`、`missingSourceNodeCount` 和 `missingSourceNodeIds`，并在 `sourceSwimlaneLayout.test.ts` 覆盖自由节点统计。
+- 新增 `frontend-user/src/modules/graph/lib/graphValidationPanel.ts` 与测试，按 severity 和 ruleType 汇总验证结果，生成错误/警告/提示计数和规则分组。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspacePanels.tsx`，`GraphValidationIssueList` 先显示验证摘要与规则分组，再保留原有 issue 明细和空状态。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，来源摘要面板显示“孤立/无来源”节点数量，即使当前图谱没有任何来源引用也能展示这一状态。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 先因来源摘要缺少孤立节点字段失败，补实现后通过，26 个 graph-core 测试全部通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphValidationPanel.test.ts` 先因 helper 缺失失败，补实现后通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/components/GraphWorkspacePanels.test.tsx src/modules/graph/lib/graphValidationPanel.test.ts` 先因验证面板未显示摘要失败，补实现后通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphValidationPanel.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx src/modules/graph/lib/graphSettingsPanel.test.ts src/modules/graph/lib/graphSourceBacklinks.test.ts` 通过，4 个文件、11 个用例全部通过。
+### 后续影响
+- 验证面板与来源摘要现在都具备更明确的产品状态表达；下一步适合继续拆 autosave/dirty/snapshot 流程，补保存失败和快照恢复失败的前端测试。
+
+## 2026-06-05 09:48:40 +08:00 | v1.1.0-alpha.23 | 收敛图谱设置面板配置与渲染边界
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把设置面板中的显示偏好、导入导出、自动保存、性能提示和快捷键说明收敛为结构化配置与可复用组件。
+- 按 TDD 先补设置配置和面板组件测试，再实现并接入工作区右侧栏。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphSettingsPanel.ts` 与测试，固定设置面板五类 product section，并根据节点/边/分组数量和保存状态生成自动保存与性能提示。
+- 扩展 `frontend-user/src/modules/graph/components/GraphWorkspacePanels.tsx`，新增 `GraphSettingsPanel` 组件，避免继续在大型 controller 中硬编码设置说明 JSX。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，根据当前图谱规模、保存状态和 autosave delay 生成 settings sections，并在右侧栏展示“设置 / 偏好与说明”区块。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphSettingsPanel.test.ts` 先因 helper 缺失失败，补实现后通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/components/GraphWorkspacePanels.test.tsx` 先因 `GraphSettingsPanel` 未导出失败，补实现后通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphSettingsPanel.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx src/modules/graph/lib/graphSourceBacklinks.test.ts src/modules/graph/lib/graphKeyboardShortcuts.test.ts` 通过，4 个文件、13 个用例全部通过。
+### 后续影响
+- 设置说明已经从 controller 中下沉为可测试边界；下一步适合继续把 validation panel 和 autosave/snapshot 流程拆为独立模块，并补更完整的工作区交互测试。
+
+## 2026-06-05 09:42:46 +08:00 | v1.1.0-alpha.22 | 补齐图谱来源反链到批注、PDF 页和 AI 草稿
+### 任务内容
+- 继续完善知识图谱学习闭环，让图谱节点和来源摘要面板可以更稳定地回到资料、笔记、PDF 批注、卡片和 AI 上下文。
+- 按 TDD 先补前端来源反链 helper 测试和后端 reader graph draft metadata 测试，再实现并回接图谱工作区与 ReaderPage。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphSourceBacklinks.ts` 与测试，统一解析 material、note、card、annotation、pdf-anchor、ai_draft、ai_task 等来源类型的跳转目标与按钮文案。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，右键菜单、节点详情和来源摘要列表都复用同一来源反链 helper；可解析来源会直接显示“回到阅读器/回到批注/查看 AI 草稿”等入口。
+- 更新 `backend/internal/modules/reader/service/graph_drafts.go` 与测试，让从 PDF 批注生成的图谱草稿节点带上 `materialId`、`annotationId` 和 `page` metadata，避免批注节点只有 annotation id 而无法回到原资料页。
+- 更新 `frontend-user/src/pages/ReaderPage.tsx` 与测试，支持 `/reader/:materialId?page=...&annotation=...` 这类从图谱反链进入的初始 PDF 页落点。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphSourceBacklinks.test.ts` 先因 helper 缺失失败，补实现后通过。
+- `cd backend; go test ./internal/modules/reader/service` 先因批注节点 metadata 缺少 `materialId/page/annotationId` 失败，补实现后通过。
+- `npm --workspace frontend-user run test -- --run src/pages/ReaderPage.test.tsx` 先因 page query 未生效失败，补实现后通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphSourceBacklinks.test.ts src/modules/graph/lib/graphKeyboardShortcuts.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx src/pages/ReaderPage.test.tsx` 通过，5 个文件、17 个用例全部通过。
+### 后续影响
+- 图谱来源反链已经覆盖学习闭环里的关键对象；后续可继续把 settings panel、validation panel 和 autosave/snapshot 边界从 controller 中拆出，并补 UI smoke 覆盖来源按钮实际点击。
+
+## 2026-06-05 01:00:00 +08:00 | v1.1.0-alpha.21 | 抽出图谱工作区键盘快捷键意图解析
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把 keydown 事件中的快捷键规则抽成可测试的意图解析 helper。
+- 保留原有保存、撤销/重做、全选、删除、聚焦、分组、连线、重置视野和 Escape 行为，只把按键判断从 React effect 中移出。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphKeyboardShortcuts.test.ts`，覆盖输入框内外的保存/history/全选/删除/焦点/分组/连线/视野重置/Escape 规则。
+- 新增 `frontend-user/src/modules/graph/lib/graphKeyboardShortcuts.ts`，导出 `resolveGraphKeyboardShortcut` 和明确的 shortcut action union。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让 keydown effect 先解析 action 再执行 UI 副作用，减少大型 hook 内部条件分支。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphKeyboardShortcuts.test.ts` 先因 helper 文件缺失失败，补实现后通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphKeyboardShortcuts.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 通过，4 个文件、15 个用例全部通过。
+### 后续影响
+- 快捷键规则已具备单元测试保护；后续可继续把 source backlinks、settings panel、导入/保存边界从 controller 中拆成更小模块。
+
+## 2026-06-05 00:56:07 +08:00 | v1.1.0-alpha.20 | 下沉图谱节点、边与分组 mutation 纯逻辑
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把删除节点、创建连线、复制节点、创建分组和折叠分组的文档 mutation 下沉到 `@studymate/graph-core`。
+- 按 TDD 先补 graph-core mutation 测试，再实现不可变 helper 并回接用户端 controller。
+### 完成结果
+- 新增 `packages/graph-core/test/graphMutations.test.ts`，覆盖删除节点时清理边和分组、连线去重、复制节点 metadata/source 拷贝与舞台边界钳制、按选中节点 bounds 创建分组、分组折叠切换。
+- 扩展 `packages/graph-core/src/index.ts`，新增 `removeGraphNodesFromDocument`、`appendGraphNodeToDocument`、`appendGraphEdgeToDocument`、`duplicateGraphNodeInDocument`、`createGraphGroupForNodes` 和 `toggleGraphGroupCollapse`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让删除、连线、复制、分组和折叠操作复用 graph-core mutation helper，继续减少 controller 内部手写文档改写分支。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 先因 mutation helper 未导出失败，补实现后通过，26 个 graph-core 测试全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 通过。
+### 后续影响
+- 节点/边/分组的核心文档 mutation 已具备 UI 无关测试保护；下一步适合继续拆 keyboard shortcut 规则、settings/source panel 逻辑和剩余导入/保存边界。
+
+## 2026-06-05 00:47:28 +08:00 | v1.1.0-alpha.19 | 下沉图谱 viewport 与 minimap 相机逻辑
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把 viewport/camera/minimap 的坐标投影与视野计算下沉到 `@studymate/graph-core`。
+- 按 TDD 先补 graph-core viewport 测试，再实现纯逻辑 helper 并回接用户端 controller 与 workspace helper。
+### 完成结果
+- 新增 `packages/graph-core/test/graphViewport.test.ts`，覆盖 zoom clamp、矩形居中、client point 到图谱坐标投影、minimap viewport 映射和不可测舞台尺寸兜底。
+- 扩展 `packages/graph-core/src/index.ts`，新增 `GraphViewport`、`GraphRect`、`GraphStageSize`、`clampGraphZoom`、`centerGraphViewportOnRect`、`projectClientPointToGraph` 和 `buildGraphMinimapViewport`。
+- 更新 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts` 与 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让缩放限制、聚焦节点、拖拽投影和 minimap 视口复用 graph-core helper。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 通过，21 个 graph-core 测试全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 通过。
+### 后续影响
+- viewport/camera 已成为可复用纯逻辑边界；下一步适合继续拆 node/edge/group mutations、keyboard shortcut 规则和 settings/source panel 逻辑。
+
+## 2026-06-05 00:40:55 +08:00 | v1.1.0-alpha.18 | 下沉图谱 selection 与 marquee 纯逻辑
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把 selection / marquee 命中逻辑从大型 hook 中下沉到 `@studymate/graph-core`。
+- 按 TDD 先补 graph-core 选择态测试，再实现并回接用户端 controller。
+### 完成结果
+- 新增 `packages/graph-core/test/graphSelection.test.ts`，覆盖单选、清空、多选 toggle、空 ID 忽略、框选矩形反向归一和隐藏节点过滤。
+- 扩展 `packages/graph-core/src/index.ts`，新增 `GraphSelectionState`、`createGraphSelectionState`、`setGraphNodeSelection`、`clearGraphNodeSelection`、`toggleGraphNodeSelection` 和 `selectGraphNodesInRect`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让单选、清空、增减选择和框选命中复用 graph-core helper，减少 hook 内部手写状态分支。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 先因 selection helper 未导出失败，补实现后通过，16 个 graph-core 测试全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 通过。
+### 后续影响
+- selection / marquee 已成为可复用纯逻辑边界；下一步可继续按同样方式拆 camera/viewport、node/edge/group mutations 和 keyboard shortcut 规则。
+
+## 2026-06-05 00:29:33 +08:00 | v1.1.0-alpha.17 | 图谱工作区 JSON 文件、验证规则与 200 节点 smoke
+### 任务内容
+- 延续图谱产品化收口，按 TDD 先补 `@studymate/graph-core` 纯逻辑测试，再实现文档规范化、验证规则、`.smtg` 导入导出、学习模板、history label 和基准夹具。
+- 在不破坏现有 Graph API 合约的前提下，扩展后端 `ValidateGraph` 规则和学习模板内容。
+- 用户端接入 StudyMate JSON 导入导出、明确 `idle/dirty/pending/saved/failed` 保存状态、离页保护和图谱 200 节点 E2E smoke。
+### 完成结果
+- 新增 `packages/graph-core/test/graphProductization.test.ts`，覆盖 normalize、validate、SMTG JSON 往返、history label、四类学习模板和 200/300/20 基准夹具。
+- 扩展 `packages/graph-core/src/index.ts`，新增 graph document clone/normalize、`validateGraphDocument`、`serializeStudymateGraphJson`、`parseStudymateGraphJson`、history state、学习模板、基准数据和安全文件名能力。
+- 扩展 `backend/internal/modules/graph/service/helpers.go` 与测试，验证孤立节点、缺来源、重复标题、悬挂边、跨折叠分组边、空分组、非法尺寸和无效来源 target；模板从 UML/ERD/C4 替换为学习资料梳理、读书笔记、概念网络、复习卡片准备。
+- 新增 `frontend-user/src/modules/graph/lib/graphFileImportExport.ts` 与测试，接入 `.smtg` / `application/vnd.studymate.graph+json` 导入导出；工作区新增 JSON 导入模式、JSON 导出按钮、保存状态、离页前保护和更清晰的学习模板文案。
+- 新增 `e2e/v1-graph-workspace.spec.ts`，通过拦截 API 加载 200 节点、300 边、20 分组图谱，验证图谱工作区可打开并展示 JSON 导出入口。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 先因新增 API 未导出失败，补实现后通过，12 个测试全部通过。
+- `go test ./internal/modules/graph/service` 先因验证规则和模板仍为旧实现失败，补实现后通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts` 先因 helper 缺失失败，补实现后通过。
+- `npm run test:user` 通过，用户端 11 个测试文件、30 个用例全部通过。
+- `npm run build:user` 与 `npm run build:admin` 通过。
+- `npx playwright test e2e/v1-graph-workspace.spec.ts` 通过，确认 200 节点图谱 smoke 可用。
+- `npm run test:e2e` 通过，6 条 Playwright smoke 全部通过。
+### 后续影响
+- 图谱核心能力已经从大 hook 中继续外移到可测试纯逻辑边界；后续适合继续拆 `useGraphWorkspaceController.tsx` 的数据加载、画布交互、validation/draft 和 settings 面板。
+- `.prg` 兼容、多目标边 UI、复杂自动布局、插件市场、CRDT、Tauri 和 WebGL/Pixi 重写仍按计划延后；如需要 Project Graph 文件兼容，应以后续转换器版本实现。
+
+## 2026-06-02 23:08:40 +08:00 | v1.1.0-alpha.16 | 补 Reader API、页面、handler 与 service 测试硬化
+### 任务内容
+- 延续 v1.1 产品质量与测试硬化，围绕阅读器链路补齐用户端 API 合约测试、页面回归测试和后端 handler / service 边界测试。
+- 继续遵循 TDD：先让后端 `reader/handler`、`reader/service` 的 fake 依赖测试因注入边界不足而编译失败，再收窄依赖接口并重跑目标测试。
+- 同步更新 README、路线图、版本计划、变更记录和项目日志，并在切片完成后补跑完整 CI 与覆盖率汇总。
+### 完成结果
+- 新增 `frontend-user/src/api/reader.test.ts`，覆盖 `getReaderState`、`updateReaderProgress`、`createReaderAnnotation`、`deleteReaderAnnotation`、`generateAnnotationCardDrafts` 和 `generateAnnotationGraphDrafts` 的鉴权头、路径与请求体。
+- 新增 `frontend-user/src/pages/ReaderPage.test.tsx`，覆盖阅读进度回写、添加书签、保存批注后刷新状态，以及资料标题、PDF 页码和 `rects` 坐标片段来源展示。
+- 新增 `backend/internal/modules/reader/handler/handler_test.go`，覆盖 `UpdateProgress`、`CreateAnnotation` 和 `GenerateGraphDrafts` 的鉴权用户、material id、请求体与 success envelope。
+- 新增 `backend/internal/modules/reader/service/service_test.go`，覆盖空批注拒绝、默认颜色与审计记录、批注选择缺口和资料可见性边界。
+- 更新 `backend/internal/modules/reader/handler/handler.go` 与 `backend/internal/modules/reader/service/service.go`，将对具体 `Service` / repository / material / audit / AI service 的依赖收窄为最小接口，并保留编译期断言，便于后续继续补 fake 或 fixture 测试。
+### 验证结果
+- `cd backend; go test ./internal/modules/reader/handler` 先因 `NewHandler` 只接收具体 service 而无法注入 fake service，形成编译期 RED；收窄为 `readerService` interface 后通过。
+- `cd backend; go test ./internal/modules/reader/service` 先因 `NewService` 只接收具体 repository / material / audit 依赖而无法注入 fake，形成编译期 RED；收窄为最小接口后通过。
+- `npm --workspace frontend-user run test -- --run src/api/reader.test.ts src/pages/ReaderPage.test.tsx` 通过，覆盖 Reader API 合约与页面回归 5 个用例。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、5 条 Playwright E2E、后端 `go test ./...` 和最终文档同步。
+- `npm run test:coverage` 通过；当前覆盖率缺口更新为：`frontend-user` 汇总 `46.18%`、`frontend-admin` 汇总 `60.27%`，后端 `reader/service` 提升到 `40.6%`，但仍与 `note/service`、`card/service`、`graph/service`、`share/service` 等 service/repository 包一起构成主要缺口。
+### 后续影响
+- Reader 链路现在具备 API client、页面层、handler 层和 service 层的自动化保护，后续可继续向 `note/service` 及来源追踪闭环补 fake / repository fixture 测试。
+- 前端与后端整体覆盖率仍明显低于 80%，后续优先继续补 `ReaderPage.tsx`、`appShared.tsx`、`workspaceControllerHelpers.ts` 以及 reader/note/card/graph service 层的细粒度回归。
+
+## 2026-06-02 22:42:39 +08:00 | v1.1.0-alpha.15 | 抽出 SearchIndexer 与图谱 history 状态机
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，在不改变现有公开 API 契约的前提下，为后端搜索链路补可替换索引边界。
+- 继续拆分 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，优先把 history/autosave/undo-redo 状态转移抽成可测试纯逻辑。
+- 同步更新 README、路线图、版本计划、变更记录和项目日志，并重新跑 CI 与覆盖率汇总。
+### 完成结果
+- 新增 `backend/internal/modules/search/service/indexer.go`，引入内部 `SearchIndexer` 抽象，默认实现仍为 MySQL fallback，不改变 `GET /api/v1/search` 路由契约。
+- 扩展 `backend/internal/modules/search/service/service_test.go`，补 grouped search 通过 fake indexer 聚合结果、limit 默认值与错误透传测试。
+- 新增 `frontend-user/src/modules/graph/lib/graphHistory.ts` 与 `frontend-user/src/modules/graph/lib/graphHistory.test.ts`，锁定 history 捕获、reset、undo/redo 与 saved 状态转移。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把 history/autosave/undo-redo 状态切到 `graphHistory.ts` 与 `shouldAutosaveGraph` 边界上，继续缩小大控制器内部职责。
+### 验证结果
+- `go test ./internal/modules/search/service` 先因缺少 `NewServiceWithIndexer` 编译失败，完成 RED；补实现后通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphHistory.test.ts` 先因缺少 `graphHistory.ts` 失败，补实现后通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、5 条 Playwright E2E、后端 `go test ./...` 和最终文档同步。
+- `npm run test:coverage` 通过；当时覆盖率缺口记录为：`frontend-user` 汇总 `44.49%`、`frontend-admin` 汇总 `60.27%`，后端 `search/service` 提升到 `56.4%`，但 `share/service`、`reader/service`、`note/service`、`card/service`、`graph/service` 等 service/repository 仍需继续补 fixture 测试。
+### 后续影响
+- 搜索链路现在已经具备保持 MySQL fallback 不变的同时切换后续 adapter 的边界，下一步适合继续补 `search/share` service 层 fake 或 repository fixture。
+- 图谱工作区已经先把 history/autosave/undo-redo 这一组状态从大控制器中拎出来，后续可沿同一方式继续下沉数据加载、画布交互、validation/draft 与设置面板逻辑。
 ## 2026-06-02 14:01:58 +08:00 | v1.1.0-alpha.14 | 补后台治理 Playwright smoke
 ### 任务内容
 - 继续 v1.1 产品质量与测试硬化，为管理端后台治理补 Playwright smoke。

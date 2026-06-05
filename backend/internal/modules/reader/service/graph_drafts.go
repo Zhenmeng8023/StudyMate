@@ -62,8 +62,11 @@ func BuildGraphDraftFromAnnotations(materialTitle string, materialID string, ann
 				Excerpt: truncateReaderText(core, 160),
 			},
 			Metadata: map[string]any{
-				"detail": truncateReaderText(core, 160),
-				"origin": "reader_annotation",
+				"annotationId": annotation.ID,
+				"detail":       truncateReaderText(core, 160),
+				"materialId":   materialID,
+				"origin":       "reader_annotation",
+				"page":         annotation.Page,
 			},
 		})
 		edges = append(edges, graphdto.GraphEdgePayload{

@@ -5,18 +5,31 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"studymate/backend/internal/middleware"
+	aidto "studymate/backend/internal/modules/ai/dto"
+	carddto "studymate/backend/internal/modules/card/dto"
 	readerdto "studymate/backend/internal/modules/reader/dto"
 	readerservice "studymate/backend/internal/modules/reader/service"
 	"studymate/backend/internal/pkg/response"
 )
 
-type Handler struct {
-	service *readerservice.Service
+type readerService interface {
+	GetState(ownerUserID string, materialID string) (*readerdto.ReaderStateResponse, error)
+	UpdateProgress(ownerUserID string, materialID string, request readerdto.UpdateProgressRequest) (*readerdto.ReaderStateResponse, error)
+	CreateAnnotation(ownerUserID string, materialID string, request readerdto.CreateAnnotationRequest) (*readerdto.AnnotationSummary, error)
+	DeleteAnnotation(ownerUserID string, materialID string, annotationID string) error
+	GenerateCardDrafts(ownerUserID string, materialID string, annotationIDs []string) ([]carddto.CardDraftPayload, error)
+	GenerateGraphDrafts(ownerUserID string, materialID string, annotationIDs []string) ([]aidto.DraftPayload, error)
 }
 
-func NewHandler(service *readerservice.Service) *Handler {
+type Handler struct {
+	service readerService
+}
+
+func NewHandler(service readerService) *Handler {
 	return &Handler{service: service}
 }
+
+var _ readerService = (*readerservice.Service)(nil)
 
 func (h *Handler) GetState(ctx *gin.Context) {
 	result, err := h.service.GetState(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"))
@@ -66,7 +79,7 @@ func (h *Handler) DeleteAnnotation(ctx *gin.Context) {
 		return
 	}
 
-	response.Success(ctx, http.StatusOK, gin.H{"message": "批注已删除"})
+	response.Success(ctx, http.StatusOK, gin.H{"message": "annotation deleted"})
 }
 
 func (h *Handler) GenerateCardDrafts(ctx *gin.Context) {

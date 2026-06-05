@@ -130,6 +130,10 @@ test("summarizeGraphSourceReferences deduplicates sources and counts linked node
   ]);
 
   assert.equal(summary.totalLinkedNodes, 4);
+  assert.equal(summary.isolatedNodeCount, 1);
+  assert.deepEqual(summary.isolatedNodeIds, ["free-c"]);
+  assert.equal(summary.missingSourceNodeCount, 1);
+  assert.deepEqual(summary.missingSourceNodeIds, ["free-c"]);
   assert.equal(summary.totalReferences, 3);
   assert.deepEqual(
     summary.typeBuckets.map((bucket) => [bucket.type, bucket.referenceCount, bucket.nodeCount]),
