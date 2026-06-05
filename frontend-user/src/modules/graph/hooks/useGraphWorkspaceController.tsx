@@ -3,8 +3,6 @@ import {
   Download,
   FileDown,
   Keyboard,
-  Layers3,
-  Link2,
   Plus,
   Redo2,
   ScanSearch,
@@ -64,13 +62,8 @@ import {
   validateGraph
 } from "../../../api/client";
 import {
-  getNodeDetail,
   getNodeEmphasis,
   getNodeTone,
-  getNodeToneTokens,
-  graphNodeEmphasisOptions,
-  graphNodeSizePresetOptions,
-  graphNodeToneOptions,
   patchNodeAppearance,
   resizeNodeToPreset,
   resolveNodeSizePreset
@@ -92,6 +85,7 @@ import {
   GraphWorkspaceToolbar
 } from "../components/GraphWorkspaceShell";
 import { GraphWorkspaceSourceSummary } from "../components/GraphWorkspaceSourceSummary";
+import { GraphWorkspaceSelectionPanel } from "../components/GraphWorkspaceSelectionPanel";
 
 import {
   applyGraphDocumentChange,
@@ -116,7 +110,6 @@ import {
 } from "../lib/graphNodeTypes";
 import {
   getGraphNodeMetadataEditorFields,
-  getGraphNodeMetadataField,
   patchGraphNodeMetadataField
 } from "../lib/graphNodeMetadata";
 import { renderGraphPngBlobFromSvg } from "../lib/graphCanvasExport";
@@ -142,7 +135,6 @@ import {
   buildCombinedBounds,
   buildFocusPreviewViewport,
   buildNodeBounds,
-  buildNodeTitle,
   buildSelectionBox,
   buildSourceGroupDefinitions,
   buildSvgExport,
@@ -152,7 +144,6 @@ import {
   downloadBlob,
   downloadTextFile,
   findHiddenNodeIds,
-  getNodeSourceLabel,
   getSourceBucketKey,
   getSourceBucketLabel,
   isGeneratedSourceSwimlaneGroup,
@@ -2112,374 +2103,105 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             summary={sourceReferenceSummary}
           />
 
-          <div className="graph-rail-section">
-            <div className="section-frame-head compact">
-              <div>
-                <p className="eyebrow">选中内容</p>
-                <h2>节点与连线</h2>
-              </div>
-            </div>
-
-            {selectedNodes.length > 1 ? (
-              <div className="graph-form-stack">
-                <article className="graph-meta-card">
-                  <strong>已选中 {selectedNodes.length} 个节点</strong>
-                  <p>可以直接批量拖动、按 Delete 删除，或用上方工具栏把它们整理进同一个分组。</p>
-                </article>
-                <div className="graph-inline-actions">
-                  <button className="secondary-button" onClick={createGroupFromSelectedNode} type="button">
-                    <Layers3 size={16} />
-                    为选中节点建组
-                  </button>
-                  <button className="secondary-button" onClick={() => alignSelectedNodes("left")} type="button">
-                    左对齐
-                  </button>
-                  <button className="secondary-button" onClick={() => alignSelectedNodes("top")} type="button">
-                    顶部对齐
-                  </button>
-                  <button className="secondary-button" onClick={() => alignSelectedNodes("center")} type="button">
-                    水平居中
-                  </button>
-                  <button className="secondary-button" onClick={() => alignSelectedNodes("middle")} type="button">
-                    垂直居中
-                  </button>
-                  <button className="secondary-button" disabled={selectedNodes.length < 3} onClick={() => distributeSelectedNodes("horizontal")} type="button">
-                    横向均分
-                  </button>
-                  <button className="secondary-button" disabled={selectedNodes.length < 3} onClick={() => distributeSelectedNodes("vertical")} type="button">
-                    纵向均分
-                  </button>
-                  <button className="secondary-button" onClick={() => deleteSelectedNodes(selectedNodeIds)} type="button">
-                    <Trash2 size={16} />
-                    删除选中节点
-                  </button>
-                  <button className="ghost-button" onClick={clearNodeSelection} type="button">
-                    清空选择
-                  </button>
-                </div>
-                <div className="graph-form-stack tight">
-                  <div>
-                    <span className="graph-field-label">批量颜色</span>
-                    <div className="graph-style-swatches">
-                      {graphNodeToneOptions.map((option) => (
-                        <button
-                          aria-label={`批量切换为${option.label}`}
-                          className={batchTone === option.value ? "graph-style-swatch active" : "graph-style-swatch"}
-                          key={option.value}
-                          onClick={() => applyBatchTone(option.value)}
-                          style={{
-                            background: getNodeToneTokens({
-                              ...selectedNodes[0],
-                              metadata: {
-                                ...(selectedNodes[0].metadata ?? {}),
-                                appearance: { ...(selectedNodes[0].metadata?.appearance ?? {}), tone: option.value }
-                              }
-                            }).exportFill
-                          }}
-                          title={option.label}
-                          type="button"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="graph-field-label">批量强调</span>
-                    <div className="graph-segmented compact">
-                      {graphNodeEmphasisOptions.map((option) => (
-                        <button
-                          className={batchEmphasis === option.value ? "ghost-button active" : "ghost-button"}
-                          key={option.value}
-                          onClick={() => applyBatchEmphasis(option.value)}
-                          type="button"
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="graph-field-label">批量尺寸</span>
-                    <div className="graph-segmented compact">
-                      {graphNodeSizePresetOptions.map((option) => (
-                        <button
-                          className={batchSizePreset === option.value ? "ghost-button active" : "ghost-button"}
-                          key={option.value}
-                          onClick={() => applyBatchSizePreset(option.value)}
-                          type="button"
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="graph-meta-grid">
-                  <article className="graph-meta-card">
-                    <strong>按来源整理</strong>
-                    <div className="graph-source-summary-list">
-                      {selectedSourceSummary.map((item) => (
-                        <span className="graph-source-summary-pill" key={item.label}>
-                          {item.label} · {item.count}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="graph-inline-actions">
-                      <button className="secondary-button" onClick={() => organizeSelectedNodesBySource("type-columns")} type="button">
-                        按来源分列
-                      </button>
-                      <button className="secondary-button" onClick={() => organizeSelectedNodesBySource("type-rows")} type="button">
-                        按来源分行
-                      </button>
-                      <button className="secondary-button" onClick={createSourceSwimlanesFromSelection} type="button">
-                        生成来源泳道
-                      </button>
-                      <button className="ghost-button" onClick={createSourceGroupsFromSelection} type="button">
-                        生成来源分组
-                      </button>
-                    </div>
-                  </article>
-                  <article className="graph-meta-card muted">
-                    <strong>覆盖范围</strong>
-                    <p>{selectedNodes.map((node) => buildNodeTitle(node)).slice(0, 3).join("、")}{selectedNodes.length > 3 ? " ..." : ""}</p>
-                  </article>
-                  <article className="graph-meta-card muted">
-                    <strong>批量提示</strong>
-                    <p>按住 Shift 在空白处拖动可框选，按住 Shift 或 Ctrl 点击节点可增减选择。</p>
-                  </article>
-                </div>
-              </div>
-            ) : selectedNode ? (
-              <div className="graph-form-stack">
-                <label>
-                  <span>节点标题</span>
-                  <input
-                    onChange={(event) =>
-                      mutateDocument((draft) => {
-                        draft.nodes = draft.nodes.map((node) =>
-                          node.id === selectedNode.id ? { ...node, title: event.target.value } : node
-                        );
-                      })
-                    }
-                    value={selectedNode.title}
-                  />
-                </label>
-                <label>
-                  <span>节点笔记</span>
-                  <textarea
-                    onChange={(event) =>
-                      mutateDocument((draft) => {
-                        draft.nodes = draft.nodes.map((node) =>
-                          node.id === selectedNode.id ? patchNodeAppearance(node, { detail: event.target.value }) : node
-                        );
-                      })
-                    }
-                    rows={4}
-                    value={getNodeDetail(selectedNode)}
-                  />
-                </label>
-                {getGraphNodeMetadataEditorFields(selectedNode).map((field) => (
-                  <label key={field.field}>
-                    <span>{field.label}</span>
-                    <input
-                      aria-label={`${selectedNode.title} ${field.label}`}
-                      onChange={(event) =>
-                        mutateDocument(
-                          (draft) => {
-                            draft.nodes = draft.nodes.map((node) =>
-                              node.id === selectedNode.id ? patchGraphNodeMetadataField(node, field.field, event.target.value) : node
-                            );
-                          },
-                          { label: `编辑${field.label}` }
-                        )
-                      }
-                      placeholder={field.placeholder}
-                      value={getGraphNodeMetadataField(selectedNode, field.field)}
-                    />
-                  </label>
-                ))}
-                <div className="graph-form-stack tight">
-                  <div>
-                    <span className="graph-field-label">颜色</span>
-                    <div className="graph-style-swatches">
-                      {graphNodeToneOptions.map((option) => (
-                        <button
-                          aria-label={`切换为${option.label}色`}
-                          className={getNodeTone(selectedNode) === option.value ? "graph-style-swatch active" : "graph-style-swatch"}
-                          key={option.value}
-                          onClick={() =>
-                            mutateDocument((draft) => {
-                              draft.nodes = draft.nodes.map((node) =>
-                                node.id === selectedNode.id ? patchNodeAppearance(node, { tone: option.value }) : node
-                              );
-                            })
-                          }
-                          style={{
-                            background: getNodeToneTokens({
-                              ...selectedNode,
-                              metadata: {
-                                ...(selectedNode.metadata ?? {}),
-                                appearance: { ...(selectedNode.metadata?.appearance ?? {}), tone: option.value }
-                              }
-                            }).exportFill
-                          }}
-                          title={option.label}
-                          type="button"
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="graph-field-label">强调</span>
-                    <div className="graph-segmented compact">
-                      {graphNodeEmphasisOptions.map((option) => (
-                        <button
-                          className={getNodeEmphasis(selectedNode) === option.value ? "ghost-button active" : "ghost-button"}
-                          key={option.value}
-                          onClick={() =>
-                            mutateDocument((draft) => {
-                              draft.nodes = draft.nodes.map((node) =>
-                                node.id === selectedNode.id ? patchNodeAppearance(node, { emphasis: option.value }) : node
-                              );
-                            })
-                          }
-                          type="button"
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="graph-field-label">尺寸</span>
-                    <div className="graph-segmented compact">
-                      {graphNodeSizePresetOptions.map((option) => (
-                        <button
-                          className={resolveNodeSizePreset(selectedNode) === option.value ? "ghost-button active" : "ghost-button"}
-                          key={option.value}
-                          onClick={() =>
-                            mutateDocument((draft) => {
-                              draft.nodes = draft.nodes.map((node) =>
-                                node.id === selectedNode.id ? resizeNodeToPreset(node, option.value) : node
-                              );
-                            })
-                          }
-                          type="button"
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="graph-meta-card">
-                  <strong>来源</strong>
-                  <p>{selectedNode.source?.label || "当前节点是自由创建的概念节点"}</p>
-                  {selectedNodeSourceBacklink ? (
-                    <div className="graph-inline-actions">
-                      <button className="ghost-button" onClick={() => navigate(selectedNodeSourceBacklink.target)} type="button">
-                        <Link2 size={14} />
-                        {selectedNodeSourceBacklink.actionLabel}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-                <div className="graph-meta-grid">
-                  <article className="graph-meta-card muted">
-                    <strong>节点规格</strong>
-                    <p>
-                      {Math.round(selectedNode.width)} × {Math.round(selectedNode.height)} px
-                    </p>
-                  </article>
-                  {selectedNode.source?.type || selectedNode.source?.id ? (
-                    <article className="graph-meta-card muted">
-                      <strong>来源标识</strong>
-                      <p>
-                        {[getNodeSourceLabel(selectedNode.source?.type), selectedNode.source?.id].filter(Boolean).join(" / ")}
-                      </p>
-                    </article>
-                  ) : null}
-                </div>
-                {selectedNode.source?.excerpt ? (
-                  <article className="graph-meta-card">
-                    <strong>来源摘录</strong>
-                    <p>{selectedNode.source.excerpt}</p>
-                  </article>
-                ) : selectedNode.source ? (
-                  <article className="graph-meta-card muted">
-                    <strong>来源上下文</strong>
-                    <p>这个节点带有来源引用，但当前没有保存摘录内容。你可以回到原始页面继续查看上下文。</p>
-                  </article>
-                ) : null}
-              </div>
-            ) : null}
-
-            {selectedEdge ? (
-              <div className="graph-form-stack">
-                <label>
-                  <span>关系标签</span>
-                  <input
-                    onChange={(event) =>
-                      mutateDocument((draft) => {
-                        draft.edges = draft.edges.map((edge) =>
-                          edge.id === selectedEdge.id ? { ...edge, label: event.target.value } : edge
-                        );
-                      })
-                    }
-                    value={selectedEdge.label || ""}
-                  />
-                </label>
-                <label>
-                  <span>线条形态</span>
-                  <select
-                    onChange={(event) =>
-                      mutateDocument((draft) => {
-                        draft.edges = draft.edges.map((edge) =>
-                          edge.id === selectedEdge.id ? { ...edge, kind: event.target.value } : edge
-                        );
-                      })
-                    }
-                    value={selectedEdge.kind || "straight"}
-                  >
-                    <option value="straight">直线</option>
-                    <option value="curve">曲线</option>
-                  </select>
-                </label>
-              </div>
-            ) : null}
-
-            {document?.groups.length ? (
-              <div className="graph-group-list">
-                {document.groups.map((group) => (
-                  <article className="graph-group-item" key={group.id}>
-                    <input
-                      className="graph-group-title-input"
-                      onChange={(event) =>
-                        mutateDocument((draft) => {
-                          draft.groups = draft.groups.map((item) =>
-                            item.id === group.id ? { ...item, title: event.target.value } : item
-                          );
-                        })
-                      }
-                      value={group.title}
-                    />
-                    <span>{group.nodeIds.length} 个节点</span>
-                    <button className="ghost-button" onClick={() => toggleGroupCollapse(group.id)} type="button">
-                      {group.collapsed ? "展开" : "折叠"}
-                    </button>
-                  </article>
-                ))}
-              </div>
-            ) : null}
-
-            {selectedNodes.length === 0 && !selectedEdge ? (
-              <article className="graph-meta-card muted">
-                <strong>操作提示</strong>
-                <p>点击节点可编辑标题、笔记和样式，点击连线可改关系标签。按住 Shift 在空白处拖动可框选多个节点，滚轮可以缩放。</p>
-              </article>
-            ) : null}
-          </div>
+          <GraphWorkspaceSelectionPanel
+            batchEmphasis={batchEmphasis ?? "default"}
+            batchSizePreset={batchSizePreset ?? "default"}
+            batchTone={batchTone ?? "neutral"}
+            groups={document?.groups ?? []}
+            onAlignSelectedNodes={alignSelectedNodes}
+            onApplyBatchEmphasis={applyBatchEmphasis}
+            onApplyBatchSizePreset={applyBatchSizePreset}
+            onApplyBatchTone={applyBatchTone}
+            onClearNodeSelection={clearNodeSelection}
+            onCreateGroupFromSelectedNode={createGroupFromSelectedNode}
+            onCreateSourceGroupsFromSelection={createSourceGroupsFromSelection}
+            onCreateSourceSwimlanesFromSelection={createSourceSwimlanesFromSelection}
+            onDeleteSelectedNodes={deleteSelectedNodes}
+            onDistributeSelectedNodes={distributeSelectedNodes}
+            onEdgeKindChange={(kind) =>
+              selectedEdge
+                ? mutateDocument((draft) => {
+                    draft.edges = draft.edges.map((edge) => (edge.id === selectedEdge.id ? { ...edge, kind } : edge));
+                  })
+                : undefined
+            }
+            onEdgeLabelChange={(label) =>
+              selectedEdge
+                ? mutateDocument((draft) => {
+                    draft.edges = draft.edges.map((edge) => (edge.id === selectedEdge.id ? { ...edge, label } : edge));
+                  })
+                : undefined
+            }
+            onGroupTitleChange={(groupId, title) =>
+              mutateDocument((draft) => {
+                draft.groups = draft.groups.map((item) => (item.id === groupId ? { ...item, title } : item));
+              })
+            }
+            onNodeDetailChange={(detail) =>
+              selectedNode
+                ? mutateDocument((draft) => {
+                    draft.nodes = draft.nodes.map((node) =>
+                      node.id === selectedNode.id ? patchNodeAppearance(node, { detail }) : node
+                    );
+                  })
+                : undefined
+            }
+            onNodeEmphasisChange={(emphasis) =>
+              selectedNode
+                ? mutateDocument((draft) => {
+                    draft.nodes = draft.nodes.map((node) =>
+                      node.id === selectedNode.id ? patchNodeAppearance(node, { emphasis }) : node
+                    );
+                  })
+                : undefined
+            }
+            onNodeMetadataFieldChange={(field, value) =>
+              selectedNode
+                ? mutateDocument(
+                    (draft) => {
+                      draft.nodes = draft.nodes.map((node) =>
+                        node.id === selectedNode.id ? patchGraphNodeMetadataField(node, field, value) : node
+                      );
+                    },
+                    { label: `编辑${getGraphNodeMetadataEditorFields(selectedNode).find((item) => item.field === field)?.label ?? "节点元数据"}` }
+                  )
+                : undefined
+            }
+            onNodeSizePresetChange={(preset) =>
+              selectedNode
+                ? mutateDocument((draft) => {
+                    draft.nodes = draft.nodes.map((node) =>
+                      node.id === selectedNode.id ? resizeNodeToPreset(node, preset) : node
+                    );
+                  })
+                : undefined
+            }
+            onNodeTitleChange={(title) =>
+              selectedNode
+                ? mutateDocument((draft) => {
+                    draft.nodes = draft.nodes.map((node) => (node.id === selectedNode.id ? { ...node, title } : node));
+                  })
+                : undefined
+            }
+            onNodeToneChange={(tone) =>
+              selectedNode
+                ? mutateDocument((draft) => {
+                    draft.nodes = draft.nodes.map((node) =>
+                      node.id === selectedNode.id ? patchNodeAppearance(node, { tone }) : node
+                    );
+                  })
+                : undefined
+            }
+            onOpenSource={(target) => navigate(target)}
+            onOrganizeSelectedNodesBySource={organizeSelectedNodesBySource}
+            onToggleGroupCollapse={toggleGroupCollapse}
+            selectedEdge={selectedEdge}
+            selectedNode={selectedNode}
+            selectedNodeIds={selectedNodeIds}
+            selectedNodeSourceBacklink={selectedNodeSourceBacklink}
+            selectedNodes={selectedNodes}
+            selectedSourceSummary={selectedSourceSummary}
+          />
         </section>
       </div>
     </>

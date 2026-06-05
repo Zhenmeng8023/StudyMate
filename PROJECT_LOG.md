@@ -3,6 +3,30 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 00:34:54 +08:00 | v1.1.0-alpha.33 | 拆出图谱节点与连线详情面板
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，优先把右侧 rail 中的“选中内容 / 节点与连线”详情编辑区从 `useGraphWorkspaceController.tsx` 中下沉为纯视图组件。
+- 保留现有节点标题、笔记、URL/图片/公式/PDF metadata、颜色、强调、尺寸、边标签、边形态、分组标题、分组折叠、多选整理和来源反链行为。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/components/GraphWorkspaceSelectionPanel.tsx`，承接单节点详情、多选批量操作、边详情编辑、分组列表和空态操作提示。
+- 新增 `GraphWorkspaceSelectionPanel.test.tsx`，覆盖节点标题/URL metadata 编辑、来源反链回调、边标签/直线曲线回调、多选来源整理、分组标题编辑和空态提示。
+- 更新 `useGraphWorkspaceController.tsx`，把详情 rail JSX 替换为 `GraphWorkspaceSelectionPanel` 调用，controller 只保留不可变 document mutation、history 和保存状态回调。
+- 清理 controller 中随详情面板拆出后不再需要的图标、节点样式和 metadata 展示 imports。
+- 文件规模继续下降：`useGraphWorkspaceController.tsx` 从 2321 行降到 2049 行，新增详情组件 497 行，符合普通业务组件 500 行内的阶段目标。
+### 验证结果
+- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel` 先红后绿，最终 4 个组件用例通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel GraphWorkspacePage GraphWorkspaceRecoveryPanel GraphWorkspaceSourceSummary` 通过，4 个文件、16 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，包含全工作区 typecheck 和文档同步验证。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，26 个用户端测试文件、84 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- 节点/连线详情编辑已经有独立组件和测试保护，后续可以继续把 controller 内的画布 pointer drag、marquee、多选状态机和导入导出 hook 拆出。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证的局部演进。
+
 ## 2026-06-06 00:17:47 +08:00 | v1.1.0-alpha.32 | 拆分图谱核心模块并补编辑器成熟度回归
 ### 任务内容
 - 继续执行 StudyMate 图谱工作区 Project Graph 对标计划，优先处理 `@studymate/graph-core` 单文件过大的结构风险，并补前端节点/连线编辑、后端请求边界和 E2E 失败状态覆盖。

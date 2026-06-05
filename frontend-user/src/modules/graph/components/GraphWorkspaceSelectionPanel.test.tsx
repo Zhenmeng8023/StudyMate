@@ -1,0 +1,145 @@
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { GraphEdgePayload, GraphGroupPayload, GraphNodePayload } from "../../../api/client";
+import { GraphWorkspaceSelectionPanel } from "./GraphWorkspaceSelectionPanel";
+
+const urlNode: GraphNodePayload = {
+  id: "node-1",
+  type: "url",
+  title: "URL 节点",
+  x: 100,
+  y: 100,
+  width: 250,
+  height: 132,
+  source: { type: "material", id: "material-1", label: "资料 A" },
+  metadata: { content: { url: "https://old.example.test" } }
+};
+
+const edge: GraphEdgePayload = {
+  id: "edge-1",
+  kind: "straight",
+  sourceNodeId: "node-1",
+  targetNodeId: "node-2",
+  label: ""
+};
+
+const groups: GraphGroupPayload[] = [
+  {
+    id: "group-1",
+    title: "Group 1",
+    nodeIds: ["node-1"],
+    x: 0,
+    y: 0,
+    width: 320,
+    height: 220,
+    collapsed: false,
+    metadata: {}
+  }
+];
+
+function renderPanel(overrides: Partial<Parameters<typeof GraphWorkspaceSelectionPanel>[0]> = {}) {
+  const props: Parameters<typeof GraphWorkspaceSelectionPanel>[0] = {
+    batchEmphasis: "default",
+    batchSizePreset: "default",
+    batchTone: "neutral",
+    groups: [],
+    onAlignSelectedNodes: vi.fn(),
+    onApplyBatchEmphasis: vi.fn(),
+    onApplyBatchSizePreset: vi.fn(),
+    onApplyBatchTone: vi.fn(),
+    onClearNodeSelection: vi.fn(),
+    onCreateGroupFromSelectedNode: vi.fn(),
+    onCreateSourceGroupsFromSelection: vi.fn(),
+    onCreateSourceSwimlanesFromSelection: vi.fn(),
+    onDeleteSelectedNodes: vi.fn(),
+    onDistributeSelectedNodes: vi.fn(),
+    onEdgeKindChange: vi.fn(),
+    onEdgeLabelChange: vi.fn(),
+    onGroupTitleChange: vi.fn(),
+    onNodeDetailChange: vi.fn(),
+    onNodeEmphasisChange: vi.fn(),
+    onNodeMetadataFieldChange: vi.fn(),
+    onNodeSizePresetChange: vi.fn(),
+    onNodeTitleChange: vi.fn(),
+    onNodeToneChange: vi.fn(),
+    onOpenSource: vi.fn(),
+    onOrganizeSelectedNodesBySource: vi.fn(),
+    onToggleGroupCollapse: vi.fn(),
+    selectedEdge: null,
+    selectedNode: null,
+    selectedNodeIds: [],
+    selectedNodeSourceBacklink: null,
+    selectedNodes: [],
+    selectedSourceSummary: [],
+    ...overrides
+  };
+  render(<GraphWorkspaceSelectionPanel {...props} />);
+  return props;
+}
+
+describe("GraphWorkspaceSelectionPanel", () => {
+  afterEach(() => cleanup());
+
+  it("renders node metadata editors and delegates node edits", async () => {
+    const props = renderPanel({
+      selectedNode: urlNode,
+      selectedNodes: [urlNode],
+      selectedNodeIds: [urlNode.id],
+      selectedNodeSourceBacklink: {
+        target: "/reader/material-1",
+        actionLabel: "回到阅读器",
+        sourceTypeLabel: "资料",
+        sourceId: "material-1"
+      }
+    });
+
+    fireEvent.change(screen.getByLabelText("节点标题"), { target: { value: "新标题" } });
+    expect(props.onNodeTitleChange).toHaveBeenLastCalledWith("新标题");
+
+    fireEvent.change(screen.getByLabelText("URL 节点 URL"), { target: { value: "https://new.example.test" } });
+    expect(props.onNodeMetadataFieldChange).toHaveBeenLastCalledWith("url", "https://new.example.test");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "回到阅读器" }));
+    expect(props.onOpenSource).toHaveBeenCalledWith("/reader/material-1");
+  });
+
+  it("delegates edge label and kind editing", async () => {
+    const props = renderPanel({ selectedEdge: edge });
+
+    fireEvent.change(screen.getByLabelText("关系标签"), { target: { value: "前置" } });
+    expect(props.onEdgeLabelChange).toHaveBeenLastCalledWith("前置");
+    fireEvent.change(screen.getByLabelText("线条形态"), { target: { value: "curve" } });
+    expect(props.onEdgeKindChange).toHaveBeenCalledWith("curve");
+  });
+
+  it("renders multi-select actions and group editing", async () => {
+    const user = userEvent.setup();
+    const props = renderPanel({
+      groups,
+      selectedNodeIds: ["node-1", "node-2", "node-3"],
+      selectedNodes: [
+        urlNode,
+        { ...urlNode, id: "node-2", title: "节点 2" },
+        { ...urlNode, id: "node-3", title: "节点 3" }
+      ],
+      selectedSourceSummary: [{ label: "资料", count: 3 }]
+    });
+
+    await user.click(screen.getByRole("button", { name: "横向均分" }));
+    expect(props.onDistributeSelectedNodes).toHaveBeenCalledWith("horizontal");
+    await user.click(screen.getByRole("button", { name: "生成来源泳道" }));
+    expect(props.onCreateSourceSwimlanesFromSelection).toHaveBeenCalled();
+
+    fireEvent.change(screen.getByDisplayValue("Group 1"), { target: { value: "新分组" } });
+    expect(props.onGroupTitleChange).toHaveBeenLastCalledWith("group-1", "新分组");
+  });
+
+  it("renders operation guidance when nothing is selected", () => {
+    renderPanel();
+
+    expect(screen.getByText("操作提示")).toBeInTheDocument();
+    expect(screen.getByText(/点击节点可编辑标题/)).toBeInTheDocument();
+  });
+});
