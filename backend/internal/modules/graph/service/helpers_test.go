@@ -112,6 +112,40 @@ func TestValidateDocumentFindsProductizationIssues(t *testing.T) {
 	}
 }
 
+func TestValidateDocumentErrorSeverityMarksBlockingRules(t *testing.T) {
+	issues := ValidateDocument(graphdto.GraphDocumentPayload{
+		Nodes: []graphdto.GraphNodePayload{
+			{ID: "node-1", Type: "concept", Title: "Duplicate", Width: 240, Height: 120, Source: &graphdto.GraphNodeSourcePayload{Type: "note", ID: "note-1"}},
+			{ID: "node-1", Type: "concept", Title: "Duplicate", Width: 20, Height: 12, Source: &graphdto.GraphNodeSourcePayload{Type: "note", ID: "note-2"}},
+		},
+		Edges: []graphdto.GraphEdgePayload{{ID: "edge-1", SourceNodeID: "node-1", TargetNodeID: "missing-node"}},
+	})
+
+	blocking := make(map[string]bool)
+	for _, issue := range issues {
+		if issue.Severity == "error" {
+			blocking[issue.RuleType] = true
+		}
+	}
+
+	for _, rule := range []string{"duplicate_node_id", "invalid_node_size", "dangling_edge"} {
+		if !blocking[rule] {
+			t.Fatalf("expected blocking rule %s in %#v", rule, issues)
+		}
+	}
+
+	if !HasBlockingValidationIssues(issues) {
+		t.Fatal("expected blocking validation issues")
+	}
+
+	if HasBlockingValidationIssues([]graphdto.GraphValidationIssuePayload{
+		{RuleType: "missing_source", Message: "missing", Severity: "warning"},
+		{RuleType: "isolated_node", Message: "isolated", Severity: "info"},
+	}) {
+		t.Fatal("expected warning and info issues to remain saveable")
+	}
+}
+
 func TestListLearningDiagramTemplates(t *testing.T) {
 	templates := NewService(nil, nil, nil, nil, nil).ListDiagramTemplates()
 	if len(templates) != 4 {

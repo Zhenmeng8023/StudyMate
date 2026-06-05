@@ -93,6 +93,21 @@ test("graph workspace opens a 200 node graph and exposes JSON export", async ({ 
       await route.fulfill({ contentType: "application/json", body: success(detail) });
       return;
     }
+    if (url.pathname === "/api/v1/graphs/graph-1/batch-save") {
+      await route.fulfill({ contentType: "application/json", body: success({
+        ...detail,
+        currentVersion: 4,
+        document: {
+          ...detail.document,
+          version: 4
+        }
+      }) });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-1/validate") {
+      await route.fulfill({ contentType: "application/json", body: success({ issues: [] }) });
+      return;
+    }
     if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
       await route.fulfill({ contentType: "application/json", body: success([]) });
       return;
@@ -131,4 +146,7 @@ test("graph workspace opens a 200 node graph and exposes JSON export", async ({ 
   await expect(page.getByText("版本 3 · 200 节点 · 300 连线")).toBeVisible();
   await expect(page.locator('button[title="导出 StudyMate JSON"]')).toBeVisible();
   await expect(page.locator(".graph-stage")).toBeVisible();
+
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByLabel("图谱保存状态：已保存")).toBeVisible();
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GraphDetailPayload, GraphDocumentPayload } from "../../../api/client";
 import {
+  buildGraphImportSourceTargets,
   buildGraphJsonExport,
   parseGraphJsonImport,
   toGraphValidationIssues
@@ -94,6 +95,80 @@ describe("graphFileImportExport", () => {
     expect(issues.map((issue) => issue.ruleType)).toContain("dangling_edge");
     expect(issues.map((issue) => issue.ruleType)).toContain("invalid_node_size");
     expect(issues.map((issue) => issue.ruleType)).toContain("missing_source");
+  });
+
+  it("returns blocking issues for duplicate ids and invalid edge targets", () => {
+    const imported = {
+      schemaVersion: 1,
+      nodes: [
+        {
+          id: "node-1",
+          type: "concept",
+          title: "Duplicate",
+          x: 0,
+          y: 0,
+          width: 240,
+          height: 120,
+          source: { type: "note", id: "note-1" }
+        },
+        {
+          id: "node-1",
+          type: "concept",
+          title: "Duplicate",
+          x: 260,
+          y: 0,
+          width: 240,
+          height: 120,
+          source: { type: "note", id: "note-2" }
+        }
+      ],
+      edges: [{ id: "edge-1", sourceNodeId: "node-1", targetNodeId: "missing-node" }],
+      groups: [],
+      viewport: { x: 0, y: 0, zoom: 1 }
+    };
+
+    const issues = toGraphValidationIssues(parseGraphJsonImport(JSON.stringify(imported), buildDocument()).issues);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ruleType: "duplicate_node_id", severity: "error" }),
+        expect.objectContaining({ ruleType: "dangling_edge", severity: "error" })
+      ])
+    );
+  });
+
+  it("validates imported source targets against known workspace sources", () => {
+    const imported = {
+      schemaVersion: 1,
+      nodes: [
+        {
+          id: "node-1",
+          type: "concept",
+          title: "Unknown source",
+          x: 0,
+          y: 0,
+          width: 240,
+          height: 120,
+          source: { type: "note", id: "missing-note" }
+        }
+      ],
+      edges: [],
+      groups: [],
+      viewport: { x: 0, y: 0, zoom: 1 }
+    };
+    const sourceTargets = buildGraphImportSourceTargets({
+      currentDocument: buildDocument(),
+      materials: [],
+      notes: []
+    });
+
+    const issues = toGraphValidationIssues(
+      parseGraphJsonImport(JSON.stringify(imported), buildDocument(), { sourceTargets }).issues
+    );
+
+    expect(issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ ruleType: "invalid_source_target", severity: "error" })])
+    );
   });
 
   it("rejects unsupported schema versions", () => {

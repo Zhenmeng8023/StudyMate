@@ -174,6 +174,7 @@ describe("GraphWorkspacePage persistence states", () => {
     await user.click(screen.getByRole("button", { name: "新建URL节点" }));
 
     expect(screen.getByText("URL 节点")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("URL 节点 URL"), "https://example.test/lesson");
     expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
   });
 
@@ -217,7 +218,7 @@ describe("GraphWorkspacePage persistence states", () => {
 
     await user.click(screen.getByRole("button", { name: "导入草稿" }));
 
-    await expect(screen.findByText("导入 JSON 失败：发现 1 条结构错误")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("导入 JSON 失败：发现 2 条结构错误")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
     expect(batchSaveGraphMock).not.toHaveBeenCalled();
   });

@@ -143,6 +143,10 @@ func (s *Service) BatchSave(ownerUserID string, graphID string, request graphdto
 		return nil, err
 	}
 
+	if HasBlockingValidationIssues(ValidateDocument(request.Document)) {
+		return nil, apperrors.New(http.StatusBadRequest, "invalid_graph_document", "图谱包含重复 ID、悬挂连线或非法尺寸等结构错误")
+	}
+
 	graph.CurrentVersion++
 	graph.Title = request.Title
 	graph.Description = request.Description
@@ -436,6 +440,10 @@ func (s *Service) ListDiagramTemplates() []graphdto.DiagramTemplatePayload {
 }
 
 func (s *Service) saveImportedDocument(ownerUserID string, graph *graphmodel.Graph, document graphdto.GraphDocumentPayload, summary string) (*graphdto.GraphDetailPayload, error) {
+	if HasBlockingValidationIssues(ValidateDocument(document)) {
+		return nil, apperrors.New(http.StatusBadRequest, "invalid_graph_document", "图谱包含重复 ID、悬挂连线或非法尺寸等结构错误")
+	}
+
 	graph.CurrentVersion++
 	graph.NodeCount = int64(len(document.Nodes))
 	graph.EdgeCount = int64(len(document.Edges))

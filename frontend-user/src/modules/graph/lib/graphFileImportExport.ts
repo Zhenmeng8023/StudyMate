@@ -10,6 +10,8 @@ import {
 import type {
   GraphDetailPayload,
   GraphDocumentPayload,
+  MaterialPayload,
+  NotePayload,
   GraphValidationIssuePayload
 } from "../../../api/client";
 
@@ -28,16 +30,42 @@ export function buildGraphJsonExport(detail: GraphDetailPayload, exportedAt = ne
   };
 }
 
-export function parseGraphJsonImport(content: string, currentDocument: GraphDocumentPayload) {
+export function parseGraphJsonImport(
+  content: string,
+  currentDocument: GraphDocumentPayload,
+  options: { sourceTargets?: Set<string> } = {}
+) {
   const parsed = parseStudymateGraphJson(content, {
     graphId: currentDocument.graphId,
-    version: currentDocument.version
+    version: currentDocument.version,
+    sourceTargets: options.sourceTargets
   });
 
   return {
     document: fromCoreGraphDocument(parsed.document, currentDocument),
     issues: parsed.issues
   };
+}
+
+export function buildGraphImportSourceTargets(input: {
+  currentDocument: GraphDocumentPayload;
+  materials?: MaterialPayload[];
+  notes?: NotePayload[];
+}) {
+  const targets = new Set<string>();
+  for (const node of input.currentDocument.nodes) {
+    if (node.source?.type && node.source.id) {
+      targets.add(`${node.source.type.trim().toLowerCase()}:${node.source.id.trim()}`);
+    }
+  }
+  for (const material of input.materials ?? []) {
+    targets.add(`material:${material.id}`);
+  }
+  for (const note of input.notes ?? []) {
+    targets.add(`note:${note.id}`);
+  }
+
+  return targets;
 }
 
 export function toGraphValidationIssues(issues: GraphValidationIssue[]): GraphValidationIssuePayload[] {

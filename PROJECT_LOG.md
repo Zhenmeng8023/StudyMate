@@ -1977,3 +1977,28 @@
 
 ### 后续影响
 - 本阶段完成后 `master` 可进入本地 `v1.0.0` 标签；除非用户明确批准，不推送 commit 或 tag 到远端。
+
+## 2026-06-05 20:05:00 +08:00 | v1.1-graph-productization | 图谱工作区产品化补强
+
+### 任务内容
+- 根据 Project Graph 对标计划继续推进 StudyMate 图谱工作区，不重写现有强 MVP。
+- 优先补齐扩展节点 metadata 编辑、可解释 history label、JSON 导入来源校验、后端 error 级结构护栏和 200 节点 smoke 保存路径。
+
+### 完成结果
+- 用户端图谱扩展节点已支持 URL、图片、公式和 PDF 锚点的结构化 `metadata.content` 编辑，同时保留通用标题、描述、来源、颜色、强调和尺寸编辑。
+- 用户端 history 状态新增 `lastLabel` 和带 label 的 past/future 记录，导入、撤销、重做和保存状态具备可解释历史语义。
+- 用户端 `.smtg` JSON 导入会校验 schemaVersion、重复 ID、非法尺寸、悬挂边和无效来源 target；无效来源 target 根据当前图谱已有来源及已加载资料/笔记判断。
+- 后端 `BatchSave` 和导入/AI 草稿落库前会拒绝 error 级图谱结构问题，warning/info 级治理提示仍允许保存。
+- 图谱 controller 继续拆出 autosave/beforeunload、右键菜单关闭和 stage 测量生命周期 hook，降低大型 controller 的职责密度。
+- `e2e/v1-graph-workspace.spec.ts` 的 200 节点 smoke 增加手动保存并断言保存状态。
+- 继续把图谱工作区 header、来源 rail 和 toolbar 拆到 `GraphWorkspaceShell` 纯视图组件，toolbar 不再通过派发键盘事件触发撤销/重做，而是复用命名 controller 动作。
+- 新增 `GraphWorkspaceShell.test.tsx`，覆盖保存状态 aria-label、toolbar aria-label、节点类型切换和搜索定位触发。
+
+### 验证结果
+- `npm --workspace frontend-user run test -- GraphWorkspacePage graphHistory graphNodeMetadata graphFileImportExport` 通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceShell GraphWorkspacePage` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `cd backend && go test ./internal/modules/graph/...` 通过。
+
+### 后续影响
+- 后续最值得继续推进的是把图谱数据加载、画布交互和 JSX view 完整拆成容器 hook + 纯 view；补齐 PNG/SVG/JSON 大图导出失败路径；再做事件节流和边路径缓存等有证据的性能优化。

@@ -362,6 +362,16 @@ func ValidateDocument(document graphdto.GraphDocumentPayload) []graphdto.GraphVa
 	return issues
 }
 
+func HasBlockingValidationIssues(issues []graphdto.GraphValidationIssuePayload) bool {
+	for _, issue := range issues {
+		if issue.Severity == "error" {
+			return true
+		}
+	}
+
+	return false
+}
+
 func BuildCardDrafts(document graphdto.GraphDocumentPayload, nodeIDs []string) []graphdto.GraphCardDraftPayload {
 	nodeMap := make(map[string]graphdto.GraphNodePayload, len(document.Nodes))
 	for _, node := range document.Nodes {

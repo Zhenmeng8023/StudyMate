@@ -144,6 +144,9 @@
 - graph-core 已沉淀文档规范化、验证规则、学习模板、history label、JSON 文件格式和 200/300/20 基准夹具。
 - 后端 `ValidateGraph` 已扩展孤立节点、缺来源、重复标题、悬挂边、跨折叠分组边、空分组、非法尺寸和来源 target 规则。
 - 用户端工作区已接入 JSON 导入导出、明确保存状态、离页保护、学习模板展示和图谱 E2E smoke；`.prg` 兼容仍作为后续转换器计划，不进入当前范围。
+- 当前进一步补强：扩展节点的 URL/图片/公式/PDF 锚点 metadata 编辑已接入右侧节点面板；用户端 JSON 导入会校验 schemaVersion、重复 ID、非法尺寸、悬挂边和无效来源 target；后端保存/导入会拒绝 error 级结构问题但允许 warning/info 级学习治理提示。
+- 大型工作区 hook 已继续拆出 autosave/beforeunload、右键菜单关闭、stage 测量生命周期 hook，以及 header/source rail/toolbar 纯视图组件；后续仍需把数据加载、画布交互、stage world 和 detail rail 完整拆到独立容器与纯视图。
+- Playwright 图谱 200 节点 smoke 已扩展保存状态验证，覆盖大图打开后手动保存进入 `saved` 状态。
 
 退出标准：
 
