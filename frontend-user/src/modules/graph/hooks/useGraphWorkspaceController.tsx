@@ -1,6 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  BookOpen,
   Download,
   FileDown,
   Keyboard,
@@ -10,7 +9,6 @@ import {
   Redo2,
   ScanSearch,
   Search,
-  Sparkles,
   Trash2,
   Undo2,
   ZoomIn,
@@ -87,11 +85,13 @@ import {
   GraphStageCanvas,
   GraphStageStatus
 } from "../components/GraphWorkspaceStageChrome";
+import { GraphWorkspaceRecoveryPanel } from "../components/GraphWorkspaceRecoveryPanel";
 import {
   GraphWorkspaceHeader,
   GraphWorkspaceSourceRail,
   GraphWorkspaceToolbar
 } from "../components/GraphWorkspaceShell";
+import { GraphWorkspaceSourceSummary } from "../components/GraphWorkspaceSourceSummary";
 
 import {
   applyGraphDocumentChange,
@@ -130,7 +130,7 @@ import {
   formatGraphSaveStateLabel
 } from "../lib/graphPersistenceState";
 import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
-import { buildGraphSourceBacklink, buildGraphSourceBacklinkFromSource } from "../lib/graphSourceBacklinks";
+import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
 import {
   buildGraphWorkspaceLoadedStatus,
   buildGraphWorkspaceResourceState,
@@ -2093,146 +2093,24 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             <GraphValidationIssueList issues={validationIssues} />
           </div>
 
-          <div className="graph-rail-section">
-            <div className="section-frame-head compact">
-              <div>
-                <p className="eyebrow">快照与草稿</p>
-                <h2>Phase 5 / 6</h2>
-              </div>
-            </div>
+          <GraphWorkspaceRecoveryPanel
+            canGenerateCards={Boolean(selectedNode)}
+            cardDrafts={cardDrafts}
+            decks={decks}
+            onCommitCardDrafts={() => void handleCommitCardDrafts()}
+            onDraftDeckChange={setSelectedDraftDeckId}
+            onDraftFieldChange={handleDraftFieldChange}
+            onGenerateCards={() => void handleGenerateCards()}
+            onRestoreSnapshot={(versionNumber) => void handleRestoreSnapshot(versionNumber)}
+            saving={saving}
+            selectedDraftDeckId={selectedDraftDeckId}
+            snapshots={snapshots}
+          />
 
-            <div className="graph-inline-actions">
-              <button className="secondary-button" disabled={!selectedNode} onClick={() => void handleGenerateCards()} type="button">
-                <Sparkles size={16} />
-                生成卡片草稿
-              </button>
-            </div>
-
-            {cardDrafts.length ? (
-              <>
-                <div className="graph-form-stack">
-                  <label>
-                    <span>写入卡组</span>
-                    <select onChange={(event) => setSelectedDraftDeckId(event.target.value)} value={selectedDraftDeckId}>
-                      <option value="">请选择一个 deck</option>
-                      {decks.map((deck) => (
-                        <option key={deck.id} value={deck.id}>
-                          {deck.title}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <button className="secondary-button" disabled={!selectedDraftDeckId || saving} onClick={() => void handleCommitCardDrafts()} type="button">
-                    <BookOpen size={16} />
-                    确认写入卡组
-                  </button>
-                </div>
-
-                <div className="graph-card-draft-list">
-                  {cardDrafts.map((draft) => (
-                    <article className="graph-card-draft" key={draft.id}>
-                      <label>
-                        <span>问题</span>
-                        <input
-                          onChange={(event) => handleDraftFieldChange(draft.id, "front", event.target.value)}
-                          value={draft.front}
-                        />
-                      </label>
-                      <label>
-                        <span>答案</span>
-                        <textarea
-                          onChange={(event) => handleDraftFieldChange(draft.id, "back", event.target.value)}
-                          rows={4}
-                          value={draft.back}
-                        />
-                      </label>
-                      {draft.explanation ? <small>{draft.explanation}</small> : null}
-                    </article>
-                  ))}
-                </div>
-              </>
-            ) : !decks.length ? (
-              <article className="graph-meta-card muted">
-                <strong>卡组准备</strong>
-                <p>先去复习页创建一个 deck，这里就能把图谱草稿确认写进去。</p>
-              </article>
-            ) : null}
-
-            <div className="graph-snapshot-list">
-              {snapshots.map((snapshot) => (
-                <article className="graph-snapshot-item" key={snapshot.id}>
-                  <div>
-                    <strong>v{snapshot.versionNumber}</strong>
-                    <span>{snapshot.summary || "图谱变更"}</span>
-                  </div>
-                  <button className="ghost-button" disabled={saving} onClick={() => void handleRestoreSnapshot(snapshot.versionNumber)} type="button">
-                    恢复
-                  </button>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          <div className="graph-rail-section">
-            <div className="section-frame-head compact">
-              <div>
-                <p className="eyebrow">来源关系</p>
-                <h2>图谱引用</h2>
-              </div>
-            </div>
-            {sourceReferenceSummary.references.length || sourceReferenceSummary.isolatedNodeCount ? (
-              <div className="graph-form-stack">
-                <div className="graph-source-summary-list">
-                  {sourceReferenceSummary.typeBuckets.map((bucket) => (
-                    <span className="graph-source-summary-pill" key={bucket.type}>
-                      {bucket.label} · {bucket.referenceCount} 来源 / {bucket.nodeCount} 节点
-                    </span>
-                  ))}
-                  {sourceReferenceSummary.isolatedNodeCount ? (
-                    <span className="graph-source-summary-pill warning">
-                      孤立/无来源 · {sourceReferenceSummary.isolatedNodeCount} 节点
-                    </span>
-                  ) : null}
-                </div>
-                <div className="graph-source-reference-list">
-                  {sourceReferenceSummary.references.slice(0, 5).map((reference) => {
-                    const backlink = buildGraphSourceBacklinkFromSource({
-                      type: reference.type,
-                      id: reference.id,
-                      label: reference.label,
-                      excerpt: reference.excerpt
-                    });
-                    return (
-                      <article className="graph-source-reference-item" key={reference.key}>
-                        <div>
-                          <strong>{reference.label}</strong>
-                          <span>{reference.nodeCount} 个节点 · {backlink?.sourceTypeLabel ?? reference.type}</span>
-                        </div>
-                        {reference.excerpt ? <p>{reference.excerpt}</p> : null}
-                        {backlink ? (
-                          <button className="ghost-button compact" onClick={() => navigate(backlink.target)} type="button">
-                            <Link2 size={14} />
-                            {backlink.actionLabel}
-                          </button>
-                        ) : null}
-                      </article>
-                    );
-                  })}
-                  {sourceReferenceSummary.references.length > 5 ? (
-                    <article className="graph-meta-card muted">
-                      <strong>还有 {sourceReferenceSummary.references.length - 5} 个来源</strong>
-                      <p>可通过节点详情回到具体资料、笔记或批注上下文。</p>
-                    </article>
-                  ) : null}
-                </div>
-              </div>
-            ) : (
-              <article className="graph-meta-card muted">
-                <strong>暂无来源引用</strong>
-                <p>从资料、笔记或批注生成节点后，这里会显示图谱和原始学习内容的关系。</p>
-              </article>
-            )}
-          </div>
+          <GraphWorkspaceSourceSummary
+            onOpenSource={(target) => navigate(target)}
+            summary={sourceReferenceSummary}
+          />
 
           <div className="graph-rail-section">
             <div className="section-frame-head compact">

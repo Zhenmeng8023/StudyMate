@@ -3,6 +3,29 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-05 20:37:23 +08:00 | v1.1.0-alpha.31 | 拆出图谱右侧来源与恢复面板
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，优先把右侧 rail 中和学习闭环/恢复链路相关的纯展示区从 `useGraphWorkspaceController.tsx` 中拿出来。
+- 保留当前来源反链、来源摘要、卡片草稿编辑、写入卡组和快照恢复行为，不改变现有 Graph API 与 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/components/GraphWorkspaceSourceSummary.tsx`，承接来源类型统计、孤立/无来源节点提示、前 5 个来源列表、来源反链按钮和空态。
+- 新增 `frontend-user/src/modules/graph/components/GraphWorkspaceRecoveryPanel.tsx`，承接生成卡片草稿按钮、deck 选择、草稿问题/答案编辑、确认写入卡组和快照恢复列表。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把来源摘要与快照/卡片草稿 UI 替换为组件调用，controller 从 2609 行继续降到 2487 行。
+- 新增 `GraphWorkspaceSourceSummary.test.tsx` 与 `GraphWorkspaceRecoveryPanel.test.tsx`，覆盖来源统计、反链跳转回调、空态、来源折叠提示、卡片草稿编辑、确认写入和快照恢复回调。
+- 更新 `docs/planning/VERSION_PLAN.md` 与 `docs/planning/versions/v0.6.0-graph-product.md`，同步记录右侧 rail 的来源摘要、快照恢复和卡片草稿面板已拆出。
+### 验证结果
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceRecoveryPanel GraphWorkspaceSourceSummary GraphWorkspaceStageChrome GraphWorkspaceShell` 通过，4 个文件、11 个用例全部通过。
+- `npm run lint` 通过，包含全工作区 typecheck 和文档同步验证。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，26 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，25 个文件、78 个用户端用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 图谱来源摘要和恢复/卡片草稿链路现在有独立组件测试保护，后续可以继续拆节点/连线详情编辑区，而不需要同时触碰来源与恢复 UI。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证的局部产品化。
+
 ## 2026-06-05 20:24:42 +08:00 | v1.1.0-alpha.30 | 拆出图谱画布 Stage 纯视图组件
 ### 任务内容
 - 继续推进 StudyMate 图谱工作区 Project Graph 对标计划，优先拆分 `useGraphWorkspaceController.tsx` 的画布 JSX，避免继续把 stage status、world、minimap 和空态渲染堆在大型 controller 中。
