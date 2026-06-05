@@ -115,6 +115,11 @@ import {
 import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
 import { buildGraphSourceBacklink, buildGraphSourceBacklinkFromSource } from "../lib/graphSourceBacklinks";
 import {
+  buildGraphWorkspaceLoadedStatus,
+  buildGraphWorkspaceResourceState,
+  normalizeGraphWorkspaceDetail
+} from "../lib/graphWorkspaceLoadState";
+import {
   autosaveDelayMs,
   buildClearedFocusNavigationLocation,
   buildCombinedBounds,
@@ -129,7 +134,6 @@ import {
   buildSvgExport,
   clampZoom,
   cloneDocument,
-  createEmptyDocument,
   defaultNodePosition,
   downloadBlob,
   downloadTextFile,
@@ -734,8 +738,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         listDiagramTemplates(props.session)
       ]);
 
+      const resourceState = buildGraphWorkspaceResourceState({ graphs: graphList, decks: deckList }, requestedGraphId);
+
       setDecks(deckList);
-      setSelectedDraftDeckId((current) => current || deckList[0]?.id || "");
+      setSelectedDraftDeckId((current) =>
+        buildGraphWorkspaceResourceState({ graphs: graphList, decks: deckList }, requestedGraphId, current).selectedDraftDeckId
+      );
       setMaterials(materialList);
       setNotes(noteList);
       setDiagramTemplates(templateList);
@@ -747,27 +755,19 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
           visibility: "private"
         });
         setGraphs([created]);
-        const normalized = {
-          ...created,
-          document: normalizeDocument(created.id, created.currentVersion, created.document)
-        };
+        const normalized = normalizeGraphWorkspaceDetail(created);
         resetHistory(normalized);
         const snapshotsLoaded = await loadSnapshots(created.id);
-        setStatusMessage(snapshotsLoaded ? "已创建第一张图谱" : buildSnapshotListFailureState().statusMessage);
+        setStatusMessage(buildGraphWorkspaceLoadedStatus("created", snapshotsLoaded));
         return;
       }
 
       setGraphs(graphList);
-      const initialGraphId =
-        requestedGraphId && graphList.some((graph) => graph.id === requestedGraphId) ? requestedGraphId : graphList[0].id;
-      const first = await getGraph(props.session, initialGraphId);
-      const normalized = {
-        ...first,
-        document: normalizeDocument(first.id, first.currentVersion, first.document)
-      };
+      const first = await getGraph(props.session, resourceState.initialGraphId);
+      const normalized = normalizeGraphWorkspaceDetail(first);
       resetHistory(normalized);
-      const snapshotsLoaded = await loadSnapshots(initialGraphId);
-      setStatusMessage(snapshotsLoaded ? "图谱工作台已就绪" : buildSnapshotListFailureState().statusMessage);
+      const snapshotsLoaded = await loadSnapshots(resourceState.initialGraphId);
+      setStatusMessage(buildGraphWorkspaceLoadedStatus("loaded", snapshotsLoaded));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "加载图谱工作台失败");
     } finally {
@@ -812,17 +812,10 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setStatusMessage("正在切换图谱...");
     try {
       const detail = await getGraph(props.session, graphId);
-      const normalized = {
-        ...detail,
-        document: normalizeDocument(
-          detail.id,
-          detail.currentVersion,
-          detail.document.graphId ? detail.document : createEmptyDocument(detail.id, detail.currentVersion)
-        )
-      };
+      const normalized = normalizeGraphWorkspaceDetail(detail);
       resetHistory(normalized);
       const snapshotsLoaded = await loadSnapshots(graphId);
-      setStatusMessage(snapshotsLoaded ? "已切换到目标图谱" : buildSnapshotListFailureState().statusMessage);
+      setStatusMessage(buildGraphWorkspaceLoadedStatus("opened", snapshotsLoaded));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "切换图谱失败");
     } finally {

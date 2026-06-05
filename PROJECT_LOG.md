@@ -3,6 +3,28 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-05 10:19:20 +08:00 | v1.1.0-alpha.27 | 抽出图谱工作区加载状态边界并完成全链验证
+### 任务内容
+- 延续图谱工作区 controller 拆分，把数据加载、初始图谱选择、详情规范化和快照失败 ready 文案从大型 hook 中下沉为可测试 helper。
+- 在继续拆分前补跑图谱产品化最终验证链，确认上一阶段累计能力在当前仓库真实状态下仍可构建、测试和 E2E 打开。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphWorkspaceLoadState.test.ts`，先以缺失 helper 形成 RED，再覆盖请求图谱优先级、草稿牌组默认值、缺失 document 规范化和快照失败文案保留。
+- 新增 `frontend-user/src/modules/graph/lib/graphWorkspaceLoadState.ts`，导出 `buildGraphWorkspaceResourceState`、`normalizeGraphWorkspaceDetail` 和 `buildGraphWorkspaceLoadedStatus`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，加载、创建首张图谱和切换图谱路径复用新 helper；保留保存、导入、恢复等既有逻辑不扩散本次改动范围。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 通过，26 个 graph-core 用例全部通过。
+- `cd backend; go test ./...` 通过。
+- `npm run lint` 通过，包含全工作区 typecheck 和文档同步验证。
+- `npm run build:user` 通过。
+- `npm run test:user` 通过，17 个文件、51 个用户端用例全部通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱打开与 JSON 导出 smoke。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphWorkspaceLoadState.test.ts` 先红后绿，最终 4 个用例通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts` 通过，2 个文件、8 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱加载状态边界已经从 controller 中继续下沉；`useGraphWorkspaceController.tsx` 仍约 114KB / 2971 行，下一步适合继续拆数据保存/导入导出 hook 或画布 pointer drag 状态。
+- `.prg` 兼容、多目标边 UI、复杂自动布局、多人协作、Tauri 和 WebGL/Pixi 重写仍按计划延后。
+
 ## 2026-06-05 10:09:20 +08:00 | v1.1.0-alpha.26 | 补图谱工作区保存、快照与 JSON 导入失败页面回归
 ### 任务内容
 - 延续 autosave/dirty/snapshot 产品化切片，把上一轮纯逻辑状态 helper 推进到真实工作区 UI 回归测试。
