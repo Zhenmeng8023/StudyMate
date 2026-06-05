@@ -12,7 +12,8 @@ import {
   listGraphs,
   listMaterials,
   listNotes,
-  restoreGraphSnapshot
+  restoreGraphSnapshot,
+  validateGraph
 } from "../../api/client";
 import type { AuthSession, GraphDetailPayload, GraphSummaryPayload } from "../../api/client";
 import { GraphWorkspacePage } from "./GraphWorkspacePage";
@@ -30,7 +31,8 @@ vi.mock("../../api/client", async () => {
     listGraphSnapshots: vi.fn(),
     listMaterials: vi.fn(),
     listNotes: vi.fn(),
-    restoreGraphSnapshot: vi.fn()
+    restoreGraphSnapshot: vi.fn(),
+    validateGraph: vi.fn()
   };
 });
 
@@ -88,6 +90,7 @@ const listGraphSnapshotsMock = vi.mocked(listGraphSnapshots);
 const batchSaveGraphMock = vi.mocked(batchSaveGraph);
 const restoreGraphSnapshotMock = vi.mocked(restoreGraphSnapshot);
 const createGraphMock = vi.mocked(createGraph);
+const validateGraphMock = vi.mocked(validateGraph);
 
 function renderWorkspace() {
   return render(
@@ -122,6 +125,7 @@ describe("GraphWorkspacePage persistence states", () => {
     batchSaveGraphMock.mockResolvedValue(graphDetail);
     restoreGraphSnapshotMock.mockResolvedValue(graphDetail);
     createGraphMock.mockResolvedValue(graphDetail);
+    validateGraphMock.mockResolvedValue({ issues: [] });
   });
 
   it("shows a failed save state when batch save rejects", async () => {
@@ -221,5 +225,109 @@ describe("GraphWorkspacePage persistence states", () => {
     await expect(screen.findByText("导入 JSON 失败：发现 2 条结构错误")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
     expect(batchSaveGraphMock).not.toHaveBeenCalled();
+  });
+
+  it("edits selected node detail fields and saves the updated document payload", async () => {
+    const user = userEvent.setup();
+    const detailWithNode: GraphDetailPayload = {
+      ...graphDetail,
+      nodeCount: 1,
+      document: {
+        ...graphDetail.document,
+        nodes: [
+          {
+            id: "node-1",
+            type: "url",
+            title: "Original URL",
+            x: 100,
+            y: 100,
+            width: 250,
+            height: 132,
+            source: { type: "material", id: "material-1", label: "资料 A" },
+            metadata: { content: { url: "https://old.example.test" } }
+          }
+        ]
+      }
+    };
+    listGraphsMock.mockResolvedValue([{ ...graphSummary, nodeCount: 1 }]);
+    getGraphMock.mockResolvedValue(detailWithNode);
+    batchSaveGraphMock.mockResolvedValue(detailWithNode);
+
+    renderWorkspace();
+
+    await user.click(await screen.findByRole("button", { name: /Original URL/ }));
+    await user.clear(screen.getByLabelText("节点标题"));
+    await user.type(screen.getByLabelText("节点标题"), "Updated URL");
+    await user.clear(screen.getByLabelText("Updated URL URL"));
+    await user.type(screen.getByLabelText("Updated URL URL"), "https://new.example.test/lesson");
+
+    expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => expect(batchSaveGraphMock).toHaveBeenCalled());
+    const saveInput = batchSaveGraphMock.mock.calls.at(-1)?.[2];
+    expect(saveInput?.document.nodes[0]).toMatchObject({
+      id: "node-1",
+      title: "Updated URL",
+      metadata: { content: { url: "https://new.example.test/lesson" } }
+    });
+  });
+
+  it("edits selected edge label and curve style before saving", async () => {
+    const user = userEvent.setup();
+    const detailWithEdge: GraphDetailPayload = {
+      ...graphDetail,
+      nodeCount: 2,
+      edgeCount: 1,
+      document: {
+        ...graphDetail.document,
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "Source",
+            x: 100,
+            y: 100,
+            width: 220,
+            height: 132,
+            source: null,
+            metadata: {}
+          },
+          {
+            id: "node-2",
+            type: "text",
+            title: "Target",
+            x: 420,
+            y: 100,
+            width: 220,
+            height: 132,
+            source: null,
+            metadata: {}
+          }
+        ],
+        edges: [{ id: "edge-1", kind: "straight", sourceNodeId: "node-1", targetNodeId: "node-2", label: "" }]
+      }
+    };
+    listGraphsMock.mockResolvedValue([{ ...graphSummary, nodeCount: 2, edgeCount: 1 }]);
+    getGraphMock.mockResolvedValue(detailWithEdge);
+    batchSaveGraphMock.mockResolvedValue(detailWithEdge);
+
+    const { container } = renderWorkspace();
+
+    await screen.findByText("Source");
+    fireEvent.click(container.querySelector(".graph-edge")!);
+    await user.type(screen.getByLabelText("关系标签"), "前置关系");
+    fireEvent.change(screen.getByLabelText("线条形态"), { target: { value: "curve" } });
+
+    expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => expect(batchSaveGraphMock).toHaveBeenCalled());
+    const saveInput = batchSaveGraphMock.mock.calls.at(-1)?.[2];
+    expect(saveInput?.document.edges[0]).toMatchObject({
+      id: "edge-1",
+      kind: "curve",
+      label: "前置关系"
+    });
   });
 });

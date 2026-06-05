@@ -7,6 +7,7 @@ import (
 	"studymate/backend/internal/middleware"
 	carddto "studymate/backend/internal/modules/card/dto"
 	graphdto "studymate/backend/internal/modules/graph/dto"
+	"studymate/backend/internal/pkg/apperrors"
 	"studymate/backend/internal/pkg/response"
 )
 
@@ -49,7 +50,7 @@ func (h *Handler) ListGraphs(ctx *gin.Context) {
 func (h *Handler) CreateGraph(ctx *gin.Context) {
 	var request graphdto.CreateGraphRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		response.Error(ctx, err)
+		response.Error(ctx, badGraphRequest())
 		return
 	}
 
@@ -75,7 +76,7 @@ func (h *Handler) GetGraph(ctx *gin.Context) {
 func (h *Handler) UpdateGraph(ctx *gin.Context) {
 	var request graphdto.UpdateGraphRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		response.Error(ctx, err)
+		response.Error(ctx, badGraphRequest())
 		return
 	}
 
@@ -100,7 +101,7 @@ func (h *Handler) DeleteGraph(ctx *gin.Context) {
 func (h *Handler) BatchSave(ctx *gin.Context) {
 	var request graphdto.GraphBatchSaveRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		response.Error(ctx, err)
+		response.Error(ctx, badGraphRequest())
 		return
 	}
 
@@ -126,7 +127,7 @@ func (h *Handler) ListSnapshots(ctx *gin.Context) {
 func (h *Handler) RestoreSnapshot(ctx *gin.Context) {
 	var request graphdto.RestoreGraphRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		response.Error(ctx, err)
+		response.Error(ctx, badGraphRequest())
 		return
 	}
 
@@ -142,7 +143,7 @@ func (h *Handler) RestoreSnapshot(ctx *gin.Context) {
 func (h *Handler) ImportMarkdown(ctx *gin.Context) {
 	var request graphdto.ImportGraphRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		response.Error(ctx, err)
+		response.Error(ctx, badGraphRequest())
 		return
 	}
 
@@ -158,7 +159,7 @@ func (h *Handler) ImportMarkdown(ctx *gin.Context) {
 func (h *Handler) ImportMermaid(ctx *gin.Context) {
 	var request graphdto.ImportGraphRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		response.Error(ctx, err)
+		response.Error(ctx, badGraphRequest())
 		return
 	}
 
@@ -184,7 +185,7 @@ func (h *Handler) Validate(ctx *gin.Context) {
 func (h *Handler) GenerateCards(ctx *gin.Context) {
 	var request graphdto.GraphCardDraftRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		response.Error(ctx, err)
+		response.Error(ctx, badGraphRequest())
 		return
 	}
 
@@ -200,7 +201,7 @@ func (h *Handler) GenerateCards(ctx *gin.Context) {
 func (h *Handler) CommitCards(ctx *gin.Context) {
 	var request graphdto.CommitGraphCardDraftsRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		response.Error(ctx, err)
+		response.Error(ctx, badGraphRequest())
 		return
 	}
 
@@ -216,7 +217,7 @@ func (h *Handler) CommitCards(ctx *gin.Context) {
 func (h *Handler) CommitGraphChanges(ctx *gin.Context) {
 	var request graphdto.CommitGraphChangeDraftsRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		response.Error(ctx, err)
+		response.Error(ctx, badGraphRequest())
 		return
 	}
 
@@ -227,6 +228,10 @@ func (h *Handler) CommitGraphChanges(ctx *gin.Context) {
 	}
 
 	response.Success(ctx, http.StatusCreated, result)
+}
+
+func badGraphRequest() error {
+	return apperrors.New(http.StatusBadRequest, "invalid_graph_request", "图谱请求参数无效")
 }
 
 func (h *Handler) ListTemplates(ctx *gin.Context) {

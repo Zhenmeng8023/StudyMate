@@ -146,6 +146,50 @@ func TestValidateDocumentErrorSeverityMarksBlockingRules(t *testing.T) {
 	}
 }
 
+func TestValidateDocumentChecksStringSliceMultiTargetEdges(t *testing.T) {
+	issues := ValidateDocument(graphdto.GraphDocumentPayload{
+		Nodes: []graphdto.GraphNodePayload{
+			{
+				ID:     "node-1",
+				Type:   "concept",
+				Title:  "Source",
+				Width:  180,
+				Height: 96,
+				Source: &graphdto.GraphNodeSourcePayload{Type: "material", ID: "material-1"},
+			},
+			{
+				ID:     "node-2",
+				Type:   "concept",
+				Title:  "Target",
+				Width:  180,
+				Height: 96,
+				Source: &graphdto.GraphNodeSourcePayload{Type: "note", ID: "note-1"},
+			},
+		},
+		Edges: []graphdto.GraphEdgePayload{
+			{
+				ID:           "edge-1",
+				SourceNodeID: "node-1",
+				TargetNodeID: "node-2",
+				Metadata:     map[string]any{"targetNodeIds": []string{"node-2", "missing-node"}},
+			},
+		},
+	})
+
+	if !hasValidationRule(issues, "dangling_edge") {
+		t.Fatalf("expected dangling_edge for missing multi-target node, got %#v", issues)
+	}
+}
+
+func hasValidationRule(issues []graphdto.GraphValidationIssuePayload, ruleType string) bool {
+	for _, issue := range issues {
+		if issue.RuleType == ruleType {
+			return true
+		}
+	}
+	return false
+}
+
 func TestListLearningDiagramTemplates(t *testing.T) {
 	templates := NewService(nil, nil, nil, nil, nil).ListDiagramTemplates()
 	if len(templates) != 4 {

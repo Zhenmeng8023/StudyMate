@@ -280,20 +280,14 @@ func ValidateDocument(document graphdto.GraphDocumentPayload) []graphdto.GraphVa
 		} else {
 			connectedNodeIDs[edge.TargetNodeID] = struct{}{}
 		}
-		if rawTargets, ok := edge.Metadata["targetNodeIds"].([]any); ok {
-			for _, rawTarget := range rawTargets {
-				targetID, ok := rawTarget.(string)
-				if !ok {
-					targetID = ""
-				}
-				if _, exists := nodeMap[strings.TrimSpace(targetID)]; !exists {
-					issues = append(issues, graphdto.GraphValidationIssuePayload{
-						RuleType: "dangling_edge",
-						Message:  "多目标连线包含不存在的目标节点",
-						TargetID: edge.ID,
-						Severity: "error",
-					})
-				}
+		for _, targetID := range readMultiTargetNodeIDs(edge.Metadata) {
+			if _, exists := nodeMap[strings.TrimSpace(targetID)]; !exists {
+				issues = append(issues, graphdto.GraphValidationIssuePayload{
+					RuleType: "dangling_edge",
+					Message:  "多目标连线包含不存在的目标节点",
+					TargetID: edge.ID,
+					Severity: "error",
+				})
 			}
 		}
 	}
@@ -360,6 +354,26 @@ func ValidateDocument(document graphdto.GraphDocumentPayload) []graphdto.GraphVa
 	})
 
 	return issues
+}
+
+func readMultiTargetNodeIDs(metadata map[string]any) []string {
+	rawTargets := metadata["targetNodeIds"]
+	switch targets := rawTargets.(type) {
+	case []string:
+		return targets
+	case []any:
+		result := make([]string, 0, len(targets))
+		for _, rawTarget := range targets {
+			targetID, ok := rawTarget.(string)
+			if !ok {
+				targetID = ""
+			}
+			result = append(result, targetID)
+		}
+		return result
+	default:
+		return []string{}
+	}
 }
 
 func HasBlockingValidationIssues(issues []graphdto.GraphValidationIssuePayload) bool {

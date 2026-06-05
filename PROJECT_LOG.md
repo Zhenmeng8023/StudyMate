@@ -3,6 +3,33 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 00:17:47 +08:00 | v1.1.0-alpha.32 | 拆分图谱核心模块并补编辑器成熟度回归
+### 任务内容
+- 继续执行 StudyMate 图谱工作区 Project Graph 对标计划，优先处理 `@studymate/graph-core` 单文件过大的结构风险，并补前端节点/连线编辑、后端请求边界和 E2E 失败状态覆盖。
+- 保持现有 Graph API、`.smtg` schemaVersion 1 和前端 `GraphWorkspacePage` 入口兼容，不引入 WebGL/Pixi、CRDT、Tauri 或 `.prg` 兼容。
+### 完成结果
+- 新增 `packages/graph-core/src/model.ts`、`source.ts`、`mutations.ts`、`validation.ts`、`file-format.ts`、`history.ts`、`templates.ts`、`fixtures.ts`、`selection.ts`、`viewport.ts` 和 `utils.ts`，把原 `index.ts` 拆成聚焦模块并保留 barrel 导出。
+- 新增 `packages/graph-core/test/graphCoreModules.test.ts`，锁定模块化入口仍能暴露文档规范化、验证、`.smtg` 导入导出、history、模板、fixture、selection 和 viewport 能力。
+- 更新用户端图谱页面测试，覆盖选中 URL 节点后编辑标题和类型 metadata、选中边后编辑关系标签和直线/曲线形态，并验证保存 payload。
+- 扩展 `e2e/v1-graph-workspace.spec.ts`，在 200 节点、300 边、20 分组 smoke 中补快捷键面板、JSON 导入失败、快照恢复失败和来源反链跳转。
+- 更新后端 graph handler，无效 JSON/binding 请求统一返回 400 `invalid_graph_request`，避免图谱保存、恢复、导入和 AI 草稿入口把客户端错误误报为 500。
+- 更新后端图谱校验 helper，`metadata.targetNodeIds` 同时兼容 JSON 解码得到的 `[]any` 和服务内部构造的 `[]string`，避免多目标边漏检悬挂目标。
+- 更新 `frontend-user/tsconfig.json`，允许前端 noEmit typecheck 消费 graph-core 内部 `.ts` 模块 import。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm --workspace frontend-user run test -- GraphWorkspacePage` 通过，7 个页面级图谱用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `cd backend && go test ./internal/modules/graph/...` 通过。
+- `npm run lint` 通过，包含全工作区 typecheck 和文档同步验证。
+- `npm run build:user` 通过。
+- `npm run test:user` 通过，25 个用户端测试文件、80 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- `graph-core` 最大实现文件已降到约 220 行，后续可以按模块继续补文件格式、验证和性能 fixture 测试，而不再把逻辑压回单一入口。
+- 图谱前端的节点/连线详情编辑已有页面级回归保护，下一步适合继续把详情 rail 从 controller 中拆成容器和纯视图组件。
+- 后端图谱请求边界更稳定，后续补 service 级持久化测试时仍建议先抽 repository/document interface，避免单元测试依赖真实 MySQL/Mongo。
+
 ## 2026-06-05 20:37:23 +08:00 | v1.1.0-alpha.31 | 拆出图谱右侧来源与恢复面板
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 拆分，优先把右侧 rail 中和学习闭环/恢复链路相关的纯展示区从 `useGraphWorkspaceController.tsx` 中拿出来。
