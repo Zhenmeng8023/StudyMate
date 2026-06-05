@@ -102,6 +102,7 @@ import {
   parseGraphJsonImport,
   toGraphValidationIssues
 } from "../lib/graphFileImportExport";
+import { renderGraphPngBlobFromSvg } from "../lib/graphCanvasExport";
 import { resolveGraphKeyboardShortcut } from "../lib/graphKeyboardShortcuts";
 import {
   buildGraphBeforeUnloadMessage,
@@ -1516,42 +1517,15 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
 
     try {
       const svg = buildSvgExport(graphDetail, nodeMap, hiddenNodeIds);
-      const image = new Image();
-      const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(svgBlob);
-
-      await new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = () => reject(new Error("png_export_failed"));
-        image.src = url;
-      });
-
-      const canvas = window.document.createElement("canvas");
-      canvas.width = stageWidth;
-      canvas.height = stageHeight;
-      const context = canvas.getContext("2d");
-      if (!context) {
-        throw new Error("png_export_failed");
-      }
-
-      context.fillStyle = "#f9f6ef";
-      context.fillRect(0, 0, stageWidth, stageHeight);
-      context.drawImage(image, 0, 0, stageWidth, stageHeight);
-
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((result: Blob | null) => {
-          if (result) {
-            resolve(result);
-            return;
-          }
-          reject(new Error("png_export_failed"));
-        }, "image/png");
+      const blob = await renderGraphPngBlobFromSvg(svg, {
+        background: "#f9f6ef",
+        height: stageHeight,
+        width: stageWidth
       });
 
       const safeName = graphDetail.title.replace(/[\\/:*?"<>|]/g, "-");
       downloadBlob(`${safeName || "graph"}.png`, blob);
       setStatusMessage("已导出 PNG 图谱");
-      URL.revokeObjectURL(url);
     } catch {
       setStatusMessage("导出 PNG 失败");
     }

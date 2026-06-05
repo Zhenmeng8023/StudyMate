@@ -3,6 +3,22 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-05 10:23:12 +08:00 | v1.1.0-alpha.28 | 下沉图谱 PNG 导出渲染边界
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把 PNG 导出中的 SVG Blob、Image 加载、canvas 绘制和 object URL 生命周期从 controller 中下沉为可测试 helper。
+- 保留现有 PNG/SVG/JSON 导出入口和用户可见文案，重点降低导出失败时资源释放与浏览器 API 细节的回归风险。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphCanvasExport.test.ts`，先以缺失 helper 形成 RED，再覆盖 SVG 渲染成 PNG blob、canvas 尺寸、背景填充、图片绘制和失败时回收 object URL。
+- 新增 `frontend-user/src/modules/graph/lib/graphCanvasExport.ts`，导出 `renderGraphPngBlobFromSvg`，并在 `finally` 中统一回收 object URL。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，PNG 导出按钮复用新 helper，controller 不再直接管理 Image/canvas/toBlob 细节。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphCanvasExport.test.ts` 先红后绿，最终 2 个用例通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/GraphWorkspacePage.test.tsx` 通过，2 个文件、8 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- PNG 导出能力具备浏览器资源生命周期单元测试保护；下一步适合继续把 SVG/JSON 下载包装、Markdown/Mermaid/JSON 导入状态和保存恢复流程拆成更小 hook。
+- 大规模 Pixi/WebGL 迁移仍不进入当前阶段，继续按 DOM/SVG 局部优化路线推进。
+
 ## 2026-06-05 10:19:20 +08:00 | v1.1.0-alpha.27 | 抽出图谱工作区加载状态边界并完成全链验证
 ### 任务内容
 - 延续图谱工作区 controller 拆分，把数据加载、初始图谱选择、详情规范化和快照失败 ready 文案从大型 hook 中下沉为可测试 helper。
