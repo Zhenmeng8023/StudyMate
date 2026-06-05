@@ -37,12 +37,10 @@ import {
   GraphEdgePayload,
   GraphGroupPayload,
   GraphNodePayload,
-  GraphSnapshotPayload,
   GraphSummaryPayload,
   GraphValidationIssuePayload,
   MaterialPayload,
   NotePayload,
-  batchSaveGraph,
   commitGraphCardDrafts,
   createGraph,
   deleteGraph,
@@ -52,11 +50,9 @@ import {
   importGraphMermaid,
   listDecks,
   listDiagramTemplates,
-  listGraphSnapshots,
   listGraphs,
   listMaterials,
   listNotes,
-  restoreGraphSnapshot,
   validateGraph
 } from "../../../api/client";
 import {
@@ -89,7 +85,6 @@ import { GraphWorkspaceImportPanel } from "../components/GraphWorkspaceImportPan
 import {
   applyGraphDocumentChange,
   createEmptyGraphHistoryState,
-  markGraphHistorySaved,
   redoGraphDocument,
   resetGraphHistoryState,
   type GraphHistoryState,
@@ -113,14 +108,7 @@ import {
 } from "../lib/graphNodeMetadata";
 import { renderGraphPngBlobFromSvg } from "../lib/graphCanvasExport";
 import { resolveGraphKeyboardShortcut } from "../lib/graphKeyboardShortcuts";
-import {
-  buildGraphSaveFailureState,
-  buildGraphSaveSuccessState,
-  buildSnapshotListFailureState,
-  buildSnapshotRestoreFailureState,
-  buildSnapshotRestoreSuccessState,
-  formatGraphSaveStateLabel
-} from "../lib/graphPersistenceState";
+import { buildSnapshotListFailureState } from "../lib/graphPersistenceState";
 import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
 import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
 import {
@@ -165,12 +153,11 @@ import {
   type SelectionBox,
   type SourceOrganizerMode
 } from "../lib/workspaceControllerHelpers";
-import type { GraphWorkspaceSaveState } from "../state/types";
 import {
-  useGraphAutosaveLifecycle,
   useGraphContextMenuDismiss,
   useGraphStageMeasurement
 } from "./useGraphWorkspaceEffects";
+import { useGraphWorkspacePersistence } from "./useGraphWorkspacePersistence";
 
 export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const location = useLocation();
@@ -180,7 +167,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
   const [notes, setNotes] = useState<NotePayload[]>([]);
   const [diagramTemplates, setDiagramTemplates] = useState<DiagramTemplatePayload[]>([]);
-  const [snapshots, setSnapshots] = useState<GraphSnapshotPayload[]>([]);
   const [validationIssues, setValidationIssues] = useState<GraphValidationIssuePayload[]>([]);
   const [cardDrafts, setCardDrafts] = useState<GraphCardDraftPayload[]>([]);
   const [graphDetail, setGraphDetail] = useState<GraphDetailPayload | null>(null);
@@ -191,8 +177,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [historyState, setHistoryState] = useState<GraphHistoryState>(createEmptyGraphHistoryState);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saveState, setSaveState] = useState<GraphWorkspaceSaveState>("idle");
   const [statusMessage, setStatusMessage] = useState("正在加载图谱工作区...");
   const [graphSearch, setGraphSearch] = useState("");
   const [importMode, setImportMode] = useState<ImportMode>("markdown");
@@ -290,7 +274,29 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     [document?.nodes]
   );
   const quickNodeTypeLabel = getGraphNodeTypeOption(quickNodeType).label;
-  const saveStateLabel = formatGraphSaveStateLabel(saveState);
+  const dirty = historyState.dirty;
+  const {
+    loadSnapshots,
+    restoreSnapshot,
+    saveCurrentGraph,
+    saveState,
+    saveStateLabel,
+    saving,
+    setSaveState,
+    setSaving,
+    snapshots
+  } = useGraphWorkspacePersistence({
+    detailRef,
+    dirty,
+    graphDetail,
+    historyRef,
+    onGraphDetailChange: setGraphDetail,
+    onHistoryChange: setHistoryState,
+    onReplaceGraphSummary: replaceGraphSummary,
+    onResetHistory: resetHistory,
+    onStatusMessage: setStatusMessage,
+    session: props.session
+  });
   const settingsSections = useMemo(
     () =>
       buildGraphSettingsSections({
@@ -318,14 +324,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   );
   const historyPast = historyState.past;
   const historyFuture = historyState.future;
-  const dirty = historyState.dirty;
-
-  useGraphAutosaveLifecycle({
-    dirty,
-    graphDetail,
-    saving,
-    onAutosave: () => void saveCurrentGraph("自动保存")
-  });
 
   function resetHistory(nextDetail: GraphDetailPayload, label?: string) {
     setGraphDetail(nextDetail);
@@ -701,19 +699,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setStatusMessage(status);
   }
 
-  async function loadSnapshots(graphId: string) {
-    try {
-      const payload = await listGraphSnapshots(props.session, graphId);
-      setSnapshots(payload);
-      return true;
-    } catch {
-      setSnapshots([]);
-      const snapshotState = buildSnapshotListFailureState();
-      setStatusMessage(snapshotState.statusMessage);
-      return false;
-    }
-  }
-
   async function loadGraphWorkspace() {
     setLoading(true);
     setStatusMessage("正在同步图谱、资料、笔记和模板...");
@@ -809,45 +794,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       setStatusMessage(error instanceof Error ? error.message : "切换图谱失败");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function saveCurrentGraph(summary: string) {
-    const current = detailRef.current;
-    if (!current || saving) {
-      return;
-    }
-
-    setSaving(true);
-    setSaveState("pending");
-    setStatusMessage("正在保存图谱...");
-    try {
-      const payload = await batchSaveGraph(props.session, current.id, {
-        title: current.title,
-        description: current.description,
-        summary,
-        document: normalizeDocument(current.id, current.currentVersion, current.document)
-      });
-      const normalized = {
-        ...payload,
-        document: normalizeDocument(payload.id, payload.currentVersion, payload.document)
-      };
-      detailRef.current = normalized;
-      setGraphDetail(normalized);
-      replaceGraphSummary(normalized);
-      const nextHistory = markGraphHistorySaved(historyRef.current, summary);
-      historyRef.current = nextHistory;
-      setHistoryState(nextHistory);
-      const snapshotsLoaded = await loadSnapshots(normalized.id);
-      const successState = buildGraphSaveSuccessState();
-      setSaveState(successState.saveState);
-      setStatusMessage(snapshotsLoaded ? successState.statusMessage : buildSnapshotListFailureState().statusMessage);
-    } catch (error) {
-      const failedState = buildGraphSaveFailureState(error);
-      setSaveState(failedState.saveState);
-      setStatusMessage(failedState.statusMessage);
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -1620,32 +1566,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     }
   }
 
-  async function handleRestoreSnapshot(versionNumber: number) {
-    if (!graphDetail) {
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const payload = await restoreGraphSnapshot(props.session, graphDetail.id, versionNumber);
-      const normalized = {
-        ...payload,
-        document: normalizeDocument(payload.id, payload.currentVersion, payload.document)
-      };
-      resetHistory(normalized, "恢复历史快照");
-      const snapshotsLoaded = await loadSnapshots(normalized.id);
-      const successState = buildSnapshotRestoreSuccessState(versionNumber);
-      setSaveState(successState.saveState);
-      setStatusMessage(snapshotsLoaded ? successState.statusMessage : buildSnapshotListFailureState().statusMessage);
-    } catch (error) {
-      const failedState = buildSnapshotRestoreFailureState(error);
-      setSaveState(failedState.saveState);
-      setStatusMessage(failedState.statusMessage);
-    } finally {
-      setSaving(false);
-    }
-  }
-
   async function handleValidateGraph() {
     if (!graphDetail) {
       return;
@@ -2051,7 +1971,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             onDraftDeckChange={setSelectedDraftDeckId}
             onDraftFieldChange={handleDraftFieldChange}
             onGenerateCards={() => void handleGenerateCards()}
-            onRestoreSnapshot={(versionNumber) => void handleRestoreSnapshot(versionNumber)}
+            onRestoreSnapshot={(versionNumber) => void restoreSnapshot(versionNumber)}
             saving={saving}
             selectedDraftDeckId={selectedDraftDeckId}
             snapshots={snapshots}

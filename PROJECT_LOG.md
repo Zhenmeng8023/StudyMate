@@ -3,6 +3,28 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 07:25:40 +08:00 | v1.1.0-alpha.35 | 拆出图谱保存与快照持久化 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把保存、保存状态、自动保存生命周期、离页保护、快照列表加载和快照恢复从 `useGraphWorkspaceController.tsx` 中拆到独立 hook。
+- 保留现有 Graph API、`.smtg` 文件格式、保存/恢复 UI 和状态提示行为，不改变导入、切图、创建图谱等调用方契约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`，统一管理 `idle/dirty/pending/saved/failed` 保存态中的 `pending/saved/failed` 转换、`saving`、快照列表、手动/自动保存和快照恢复。
+- 新增 `useGraphWorkspacePersistence.test.tsx`，覆盖保存后标记 history saved 并刷新快照、快照恢复走统一 reset history 路径、快照列表/恢复 API 失败时保留可编辑状态并显示失败。
+- 更新 `useGraphWorkspaceController.tsx`，移除本地保存/快照状态和 `saveCurrentGraph` / `handleRestoreSnapshot` 实现，改用 `useGraphWorkspacePersistence` 返回的操作；controller 从 2012 行继续下降到 1938 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphWorkspacePersistence` 先红后绿，最终 3 个 hook 用例通过。
+- `npm --workspace frontend-user run test -- useGraphWorkspacePersistence GraphWorkspacePage GraphWorkspaceRecoveryPanel GraphWorkspaceShell` 通过，4 个文件、14 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，28 个用户端测试文件、90 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- 保存、自动保存、离页保护和快照恢复已经从大型 controller 中形成独立边界，后续可以继续把导入执行分支下沉为 `useGraphImportExport`，并进一步拆分 keyboard/context menu/selection 状态机。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 00:42:51 +08:00 | v1.1.0-alpha.34 | 拆出图谱导入与校验面板
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 拆分，把右侧 rail 中的 Markdown/Mermaid/JSON 导入、导入文本区、导入按钮、校验按钮和验证结果列表从 `useGraphWorkspaceController.tsx` 中拆出。

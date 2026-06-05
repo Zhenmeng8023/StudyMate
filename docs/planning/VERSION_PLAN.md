@@ -150,6 +150,7 @@
 - 当前继续补强：`@studymate/graph-core` 已从单一 `index.ts` 拆成 model、source、mutations、validation、file-format、history、templates、fixtures、selection 和 viewport 等聚焦模块，并保留 barrel 导出；用户端页面级测试已覆盖节点标题/URL metadata 编辑、边标签和直线/曲线切换保存 payload；后端 graph handler 的无效请求统一返回 400，服务端校验已兼容 `metadata.targetNodeIds` 的 `[]any` 与 `[]string`；Playwright 200 节点 smoke 已补 JSON 导入失败、快照恢复失败、快捷键面板和来源反链跳转。
 - 右侧 rail 的“节点与连线”详情编辑区已拆成 `GraphWorkspaceSelectionPanel` 纯视图组件，覆盖单节点 metadata、边详情、多选批量整理、分组标题/折叠和空态提示；`useGraphWorkspaceController.tsx` 继续下降到约 2049 行，后续重点转向画布 pointer drag、marquee、多选状态机和 import/export hook。
 - 右侧 rail 的“导入与校验”区已拆成 `GraphWorkspaceImportPanel` 纯视图组件，覆盖 Markdown/Mermaid/JSON 模式、导入文本区、导入/校验按钮和验证问题展示；`useGraphWorkspaceController.tsx` 继续下降到约 2012 行，后续可把导入执行分支下沉为 `useGraphImportExport`。
+- 保存、自动保存、离页保护、快照列表和快照恢复已拆成 `useGraphWorkspacePersistence`，新增 hook 级测试覆盖保存成功、快照恢复成功和快照 API 失败；`useGraphWorkspaceController.tsx` 继续下降到约 1938 行，后续继续拆 keyboard/context menu/selection 与 import/export 执行分支。
 
 退出标准：
 
