@@ -102,6 +102,12 @@ import {
   parseGraphJsonImport,
   toGraphValidationIssues
 } from "../lib/graphFileImportExport";
+import {
+  buildGraphNodeDraft,
+  getGraphNodeTypeOption,
+  graphNodeTypeOptions,
+  type GraphNodeCreationType
+} from "../lib/graphNodeTypes";
 import { renderGraphPngBlobFromSvg } from "../lib/graphCanvasExport";
 import { resolveGraphKeyboardShortcut } from "../lib/graphKeyboardShortcuts";
 import {
@@ -190,6 +196,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [graphSearch, setGraphSearch] = useState("");
   const [importMode, setImportMode] = useState<ImportMode>("markdown");
   const [importSource, setImportSource] = useState("# 学习主题\n## 核心概念\n## 待复习问题");
+  const [quickNodeType, setQuickNodeType] = useState<GraphNodeCreationType>("text");
   const [stageViewport, setStageViewport] = useState({ width: 0, height: 0 });
   const [focusPreview, setFocusPreview] = useState<FocusPreview | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
@@ -312,6 +319,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     () => summarizeGraphSourceReferences(document?.nodes ?? []),
     [document?.nodes]
   );
+  const quickNodeTypeLabel = getGraphNodeTypeOption(quickNodeType).label;
   const saveStateLabel = formatGraphSaveStateLabel(saveState);
   const settingsSections = useMemo(
     () =>
@@ -1189,39 +1197,19 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [deleteSelectedNodes, historyFuture, historyPast, nodeMap, selectedEdgeId, selectedNode, selectedNodeIds, visibleNodes]);
 
-  function createNode(
-    type: "text" | "rich-note" | "material" | "card" | "ai" | "image" | "url" | "formula" | "pdf-anchor",
-    source?: GraphNodePayload["source"]
-  ) {
+  function createNode(type: GraphNodeCreationType, source?: GraphNodePayload["source"]) {
     const current = detailRef.current;
     if (!current) {
       return;
     }
 
     const position = defaultNodePosition(current.document.nodes.length);
-    const titleByType: Record<string, string> = {
-      text: "新概念",
-      "rich-note": source?.label || "笔记节点",
-      material: source?.label || "资料节点",
-      card: source?.label || "复习卡片",
-      ai: source?.label || "AI 理解节点",
-      image: source?.label || "图片节点",
-      url: source?.label || "URL 节点",
-      formula: source?.label || "公式节点",
-      "pdf-anchor": source?.label || "PDF 锚点"
-    };
-
-    const nextNode: GraphNodePayload = {
+    const nextNode = buildGraphNodeDraft({
       id: randomId("node"),
-      type,
-      title: titleByType[type],
-      x: position.x,
-      y: position.y,
-      width: type === "text" ? 220 : 250,
-      height: type === "card" ? 110 : 132,
-      source: source ?? null,
-      metadata: {}
-    };
+      position,
+      source,
+      type
+    });
 
     mutateDocument((draft) => {
       draft.nodes.push(nextNode);
@@ -1882,14 +1870,28 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         <section className="graph-stage-panel">
           <div className="graph-toolbar">
             <div className="graph-toolbar-group">
-              <button className="icon-button" disabled={!graphDetail} onClick={() => createNode("text")} title="新建概念节点" type="button">
+              <select
+                aria-label="选择新建节点类型"
+                className="graph-node-type-select"
+                disabled={!graphDetail}
+                onChange={(event) => setQuickNodeType(event.target.value as GraphNodeCreationType)}
+                value={quickNodeType}
+              >
+                {graphNodeTypeOptions.map((option) => (
+                  <option key={option.type} value={option.type}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                aria-label={`新建${quickNodeTypeLabel}节点`}
+                className="icon-button"
+                disabled={!graphDetail}
+                onClick={() => createNode(quickNodeType)}
+                title={`新建${quickNodeTypeLabel}节点`}
+                type="button"
+              >
                 <Plus size={16} />
-              </button>
-              <button className="icon-button" disabled={!graphDetail} onClick={() => createNode("rich-note")} title="新建笔记节点" type="button">
-                <NotebookPen size={16} />
-              </button>
-              <button className="icon-button" disabled={!graphDetail} onClick={() => createNode("material")} title="新建资料节点" type="button">
-                <BookOpen size={16} />
               </button>
               <button className="icon-button" disabled={selectedNodeIds.length === 0} onClick={createGroupFromSelectedNode} title="基于选中节点创建分组" type="button">
                 <Layers3 size={16} />

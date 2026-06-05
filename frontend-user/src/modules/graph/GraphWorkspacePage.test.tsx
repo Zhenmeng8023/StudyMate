@@ -162,6 +162,21 @@ describe("GraphWorkspacePage persistence states", () => {
     expect(screen.getByTitle("新建概念节点")).toBeEnabled();
   });
 
+  it("creates extended node types from the toolbar type selector", async () => {
+    const user = userEvent.setup();
+
+    renderWorkspace();
+
+    await expect(screen.findByRole("button", { name: "保存" })).resolves.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "PDF 锚点" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("选择新建节点类型"), { target: { value: "url" } });
+    await user.click(screen.getByRole("button", { name: "新建URL节点" }));
+
+    expect(screen.getByText("URL 节点")).toBeInTheDocument();
+    expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
+  });
+
   it("reports JSON import validation errors without calling remote import endpoints", async () => {
     const user = userEvent.setup();
 

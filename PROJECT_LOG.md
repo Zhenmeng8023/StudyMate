@@ -3,6 +3,25 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-05 10:28:51 +08:00 | v1.1.0-alpha.29 | 补齐图谱工具栏扩展节点类型入口
+### 任务内容
+- 对齐 Project Graph 级节点编辑体验要求，把概念、笔记、资料、卡片、AI、图片、URL、公式、PDF 锚点九类 StudyMate 节点从散落在 controller 里的默认值收敛为统一配置。
+- 避免继续增加主界面按钮堆，改用“节点类型下拉 + 新建按钮”的紧凑入口暴露扩展节点类型。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphNodeTypes.test.ts`，先以缺失 helper 形成 RED，再覆盖九类节点选项、默认标题/尺寸和来源 label 继承。
+- 新增 `frontend-user/src/modules/graph/lib/graphNodeTypes.ts`，导出节点类型 union、配置列表、类型查询和 `buildGraphNodeDraft`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新建节点流程复用节点类型配置，工具栏新增可访问的“选择新建节点类型”下拉和动态“新建X节点”按钮。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，覆盖从工具栏选择 URL 类型并创建 URL 节点后进入 dirty 保存状态。
+- 更新 `frontend-user/src/styles/graph.css`，为节点类型下拉补充紧凑样式。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphNodeTypes.test.ts` 先红后绿，最终 3 个用例通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/lib/graphKeyboardShortcuts.test.ts` 通过，2 个文件、9 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+### 后续影响
+- 用户现在可以从主工具栏创建全部 StudyMate 产品化节点类型；后续可继续补节点详情面板中 URL/公式/PDF 锚点的专属字段编辑和键盘菜单入口。
+- 节点类型配置已脱离大型 controller，后续导入、AI 草稿和模板也可复用同一套默认值。
+
 ## 2026-06-05 10:23:12 +08:00 | v1.1.0-alpha.28 | 下沉图谱 PNG 导出渲染边界
 ### 任务内容
 - 继续拆分 `useGraphWorkspaceController.tsx`，把 PNG 导出中的 SVG Blob、Image 加载、canvas 绘制和 object URL 生命周期从 controller 中下沉为可测试 helper。
