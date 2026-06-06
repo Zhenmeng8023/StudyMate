@@ -13,9 +13,7 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   appendGraphEdgeToDocument,
-  buildGraphMinimapViewport,
   buildSourceSwimlaneLayout,
-  centerGraphViewportOnRect,
   clearGraphNodeSelection,
   createGraphGroupForNodes,
   duplicateGraphNodeInDocument,
@@ -108,13 +106,10 @@ import {
 } from "../lib/graphWorkspaceLoadState";
 import {
   autosaveDelayMs,
-  buildClearedFocusNavigationLocation,
   buildCombinedBounds,
-  buildFocusPreviewViewport,
   buildNodeBounds,
   buildSelectionBox,
   buildSourceGroupDefinitions,
-  clampZoom,
   cloneDocument,
   defaultNodePosition,
   findHiddenNodeIds,
@@ -132,7 +127,6 @@ import {
   stageWidth,
   type AlignmentGuide,
   type DragState,
-  type FocusPreview,
   type GraphFocusNavigationState,
   type ImportMode,
   type SelectionBox,
@@ -143,6 +137,7 @@ import { useGraphContextMenu } from "./useGraphContextMenu";
 import { useGraphKeyboardActions } from "./useGraphKeyboardActions";
 import { useGraphImportExport } from "./useGraphImportExport";
 import { useGraphWorkspacePersistence } from "./useGraphWorkspacePersistence";
+import { useGraphViewportCamera } from "./useGraphViewportCamera";
 
 export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const location = useLocation();
@@ -167,7 +162,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [importMode, setImportMode] = useState<ImportMode>("markdown");
   const [importSource, setImportSource] = useState("# 学习主题\n## 核心概念\n## 待复习问题");
   const [quickNodeType, setQuickNodeType] = useState<GraphNodeCreationType>("text");
-  const [focusPreview, setFocusPreview] = useState<FocusPreview | null>(null);
   const [selectionBox, setSelectionBox] = useState<SelectionBox>(null);
   const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([]);
   const [showKeyboardGuide, setShowKeyboardGuide] = useState(false);
@@ -175,7 +169,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const historyRef = useRef<GraphHistoryState>(createEmptyGraphHistoryState());
   const stageRef = useRef<HTMLDivElement | null>(null);
   const stageViewport = useGraphStageMeasurement(stageRef);
-  const consumedFocusRef = useRef("");
   const [selectedDraftDeckId, setSelectedDraftDeckId] = useState("");
   const navigationState = (location.state as GraphFocusNavigationState | null) ?? null;
   const focusSearch = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -315,16 +308,21 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       }),
     [document?.edges.length, document?.groups.length, document?.nodes.length, saveState]
   );
-  const minimapViewport = useMemo(() => {
-    return document
-      ? buildGraphMinimapViewport({
-          viewport: document.viewport,
-          stage: stageViewport,
-          world: { width: stageWidth, height: stageHeight },
-          scale: minimapScale
-        })
-      : null;
-  }, [document, stageViewport.height, stageViewport.width]);
+  const graphViewport = useGraphViewportCamera({
+    graphDetail,
+    locationPathname: location.pathname,
+    locationSearch: location.search,
+    navigate: (target) => navigate(target, { replace: true, state: null }),
+    onPreviewViewport: previewViewport,
+    onSelectNode: setSingleNodeSelection,
+    onStatusMessage: setStatusMessage,
+    onViewportDocumentChange: mutateDocument,
+    requestedFocus,
+    requestedFocusKey,
+    requestedGraphId,
+    stageRef,
+    stageViewport
+  });
   const alignmentHintLabels = useMemo(
     () => [...new Set(alignmentGuides.map((guide) => guide.label))],
     [alignmentGuides]
@@ -354,19 +352,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     onFocusSelectedNode: (nodeId) => {
       const node = nodeMap.get(nodeId);
       if (node) {
-        focusNode(node);
+        graphViewport.focusNode(node);
       }
     },
     onGroupSelection: createGroupFromSelectedNode,
     onRedo: redoCurrentGraph,
-    onResetViewport: () => {
-      mutateDocument(
-        (draft) => {
-          draft.viewport = { x: 140, y: 120, zoom: 1 };
-        },
-        { captureHistory: false, status: "已重置画布视野", label: "重置视野" }
-      );
-    },
+    onResetViewport: graphViewport.resetViewport,
     onSave: () => void saveCurrentGraph("手动保存"),
     onSelectAll: (nodeIds) => {
       setSelectedNodeIds(nodeIds);
@@ -814,30 +805,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     void loadGraphWorkspace();
   }, [props.session, requestedGraphId]);
 
-  useEffect(() => {
-    if (!graphDetail || !stageRef.current || !requestedFocus) {
-      return;
-    }
-    if (requestedGraphId && graphDetail.id !== requestedGraphId) {
-      return;
-    }
-    if (requestedFocusKey && consumedFocusRef.current === requestedFocusKey) {
-      return;
-    }
-
-    consumedFocusRef.current = requestedFocusKey;
-
-    previewViewport(buildFocusPreviewViewport(requestedFocus, graphDetail, stageRef.current), `已定位到 ${requestedFocus.label}`);
-    setFocusPreview(requestedFocus);
-    navigate(buildClearedFocusNavigationLocation(location.pathname, location.search), { replace: true, state: null });
-
-    const timer = window.setTimeout(() => {
-      setFocusPreview(null);
-    }, 2600);
-
-    return () => window.clearTimeout(timer);
-  }, [graphDetail, location.pathname, location.search, navigate, requestedFocus, requestedFocusKey, requestedGraphId]);
-
   async function openGraph(graphId: string) {
     if (detailRef.current?.id === graphId) {
       return;
@@ -1257,16 +1224,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setSingleNodeSelection(nodeId);
   }
 
-  function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
-    event.preventDefault();
-    mutateDocument(
-      (draft) => {
-        draft.viewport.zoom = clampZoom(draft.viewport.zoom + (event.deltaY < 0 ? 0.08 : -0.08));
-      },
-      { captureHistory: false, status: "已调整缩放，等待保存", label: "调整缩放" }
-    );
-  }
-
   function createGroupForNode(node: GraphNodePayload) {
     const current = detailRef.current;
     if (!current) {
@@ -1324,32 +1281,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     applyDocument(nextDocument, { status: "已切换分组折叠状态", label: "切换分组折叠" });
   }
 
-  function focusNode(node: GraphNodePayload) {
-    if (!detailRef.current || !stageRef.current) {
-      return;
-    }
-
-    const nextViewport = centerGraphViewportOnRect({
-      rect: node,
-      stage: {
-        width: stageRef.current.clientWidth,
-        height: stageRef.current.clientHeight
-      },
-      zoom: detailRef.current.document.viewport.zoom
-    });
-
-    mutateDocument(
-      (draft) => {
-        draft.viewport = {
-          ...draft.viewport,
-          ...nextViewport
-        };
-      },
-      { captureHistory: false, status: `已定位到节点 ${node.title}`, label: "聚焦节点" }
-    );
-    setSingleNodeSelection(node.id);
-  }
-
   function handleLocateNode() {
     const keyword = graphSearch.trim().toLowerCase();
     if (!keyword) {
@@ -1366,7 +1297,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    focusNode(node);
+    graphViewport.focusNode(node);
   }
 
   function deleteSelectedGraphItems() {
@@ -1384,15 +1315,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       );
       setSelectedEdgeId("");
     }
-  }
-
-  function zoomGraph(delta: number, status: string) {
-    mutateDocument(
-      (draft) => {
-        draft.viewport.zoom = clampZoom(draft.viewport.zoom + delta);
-      },
-      { captureHistory: false, status, label: "调整缩放" }
-    );
   }
 
   function duplicateNode(nodeId: string) {
@@ -1596,8 +1518,8 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             onToggleKeyboardGuide={() => setShowKeyboardGuide((current) => !current)}
             onToggleLinkMode={() => setLinkFromNodeId((current) => (current ? "" : selectedNodeId))}
             onUndo={undoCurrentGraph}
-            onZoomIn={() => zoomGraph(0.1, "已放大画布")}
-            onZoomOut={() => zoomGraph(-0.1, "已缩小画布")}
+            onZoomIn={() => graphViewport.zoomGraph(0.1, "已放大画布")}
+            onZoomOut={() => graphViewport.zoomGraph(-0.1, "已缩小画布")}
             quickNodeType={quickNodeType}
             quickNodeTypeLabel={quickNodeTypeLabel}
             selectedNodeCount={selectedNodeIds.length}
@@ -1616,11 +1538,11 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             <GraphStageCanvas
               alignmentGuides={alignmentGuides}
               document={document}
-              focusPreview={focusPreview}
+              focusPreview={graphViewport.focusPreview}
               graphDetail={graphDetail}
               hiddenNodeIds={hiddenNodeIds}
               linkFromNodeId={linkFromNodeId}
-              minimapViewport={minimapViewport}
+              minimapViewport={graphViewport.minimapViewport}
               nodeMap={nodeMap}
               onCanvasContextMenu={(event) => openContextMenu(event)}
               onCanvasPointerDown={handleCanvasPointerDown}
@@ -1634,7 +1556,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
               onNodeContextMenu={(event, node) => openContextMenu(event, { nodeId: node.id })}
               onNodePointerDown={handleNodePointerDown}
               onToggleGroupCollapse={toggleGroupCollapse}
-              onWheel={handleWheel}
+              onWheel={graphViewport.handleWheel}
               scale={minimapScale}
               selectedEdgeId={selectedEdgeId}
               selectedNodeIds={selectedNodeIds}
@@ -1700,7 +1622,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                       }}
                       onFocusNode={() => {
                         if (contextMenuNode) {
-                          focusNode(contextMenuNode);
+                          graphViewport.focusNode(contextMenuNode);
                         }
                         closeContextMenu();
                       }}

@@ -154,6 +154,7 @@
 - Markdown/Mermaid 远端导入、StudyMate JSON 本地导入和 PNG/SVG/JSON 导出已拆成 `useGraphImportExport`，新增 hook 测试覆盖 JSON 阻断错误、远端导入刷新快照、安全文件名和导出失败状态；`useGraphWorkspaceController.tsx` 继续下降到约 1857 行，后续重点转向 keyboard/context menu/selection 状态机。
 - 全局键盘快捷键监听与 action 分发已拆成 `useGraphKeyboardActions`，新增 hook 测试覆盖输入框内保存/撤销/重做、忽略画布编辑快捷键，以及全选、删除、分组、聚焦、链路、重置视野和 Escape；`useGraphWorkspaceController.tsx` 继续下降到约 1822 行，后续重点转向 context menu 与 selection/marquee 状态机。
 - 右键菜单打开、定位、节点/边选择联动和外部点击/滚动关闭已拆成 `useGraphContextMenu`，新增 hook 测试覆盖节点/边/画布菜单与 dismiss 生命周期；`useGraphWorkspaceController.tsx` 继续下降到约 1804 行，后续重点转向菜单动作分发、selection/marquee 与 camera/viewport。
+- 小地图 viewport、节点聚焦、滚轮/工具栏缩放、重置视野和导航 focus preview 已拆成 `useGraphViewportCamera`，新增 hook 测试覆盖聚焦、缩放、重置和预览过期；`useGraphWorkspaceController.tsx` 继续下降到约 1736 行，后续重点转向 selection/marquee/multi-select 与 node/edge/group mutations。
 
 退出标准：
 

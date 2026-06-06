@@ -3,6 +3,29 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 08:25:31 +08:00 | v1.1.0-alpha.39 | 拆出图谱 Camera 与视口 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把小地图 viewport、节点聚焦、滚轮缩放、工具栏缩放、重置视野和导航 focus preview 从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有聚焦节点、搜索定位、键盘重置视野、工具栏缩放、小地图显示和来源跳转落点预览行为。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphViewportCamera.ts`，统一管理 `minimapViewport`、`focusPreview`、`focusNode`、`zoomGraph`、`resetViewport` 和 `handleWheel`。
+- 新增 `useGraphViewportCamera.test.tsx`，覆盖小地图 ready 状态、节点聚焦选择与视口变更、按钮/滚轮缩放、重置视野、导航 focus preview 消费和 2600ms 后过期。
+- 更新 `useGraphWorkspaceController.tsx`，移除本地 minimap 计算、focus preview effect、`focusNode`、`zoomGraph` 和 `handleWheel`，改用 `useGraphViewportCamera`；controller 从 1804 行继续下降到 1736 行。
+- 修正 focus preview 计时器边界：预览触发导致 `graphDetail` 更新时不再清掉过期定时器，预览状态会按预期自动消失。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphViewportCamera` 先红后绿，最终 3 个 hook 用例通过。
+- `npm --workspace frontend-user run test -- useGraphViewportCamera GraphWorkspacePage GraphWorkspaceStageChrome graphKeyboardShortcuts` 通过，4 个文件、18 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，32 个用户端测试文件、103 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- camera/viewport 已成为独立 hook，后续可以继续拆 selection/marquee/multi-select 和 node/edge/group mutations 状态机，把大型 controller 进一步压到更接近编排层。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 08:06:34 +08:00 | v1.1.0-alpha.38 | 拆出图谱右键菜单状态 Hook
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 拆分，把右键菜单打开、定位、节点/边选择联动、显式关闭和外部点击/滚动关闭从 `useGraphWorkspaceController.tsx` 中下沉。
