@@ -3,6 +3,27 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 13:21:03 +08:00 | v1.1.0-alpha.44 | 拆出图谱来源布局与分组逻辑
+### 任务内容
+- 继续推进图谱工作区 Phase 1 和学习闭环整理能力，把按来源类型分列/分行整理、来源分组生成的坐标和分组计算从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有来源 bucket 顺序、来源标签排序、未选中节点不变、来源分组标题、画布边界 clamp 和不可变更新行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphSourceLayout.ts`，提供 `organizeGraphNodesBySource` 和 `buildGraphSourceGroups` 纯函数。
+- 新增 `graphSourceLayout.test.ts`，覆盖按来源类型分列、按来源类型分行、未选中节点引用不变、原节点不变，以及来源分组边界和 `makeGroupId`。
+- 更新 `useGraphWorkspaceController.tsx`，移除内联来源整理 placement、来源分组 bounds 和 group payload 生成逻辑；controller 从 1576 行继续下降到 1505 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphSourceLayout` 先红后绿，最终 1 个文件、3 个用例通过。
+- `npm --workspace frontend-user run test -- graphSourceLayout GraphWorkspaceSelectionPanel GraphWorkspacePage` 通过，3 个文件、14 个用例全部通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，37 个用户端测试文件、116 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 来源整理与来源分组已成为可测试纯逻辑，后续可以继续拆来源泳道生成、批量样式和 node/edge/group mutations。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 13:11:46 +08:00 | v1.1.0-alpha.43 | 拆出图谱选中节点布局逻辑
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 和 Project Graph 级批量编辑体验，把选中节点对齐与均分的坐标计算从 `useGraphWorkspaceController.tsx` 下沉。

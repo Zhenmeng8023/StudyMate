@@ -29,7 +29,6 @@ import {
   GraphDetailPayload,
   GraphDocumentPayload,
   GraphEdgePayload,
-  GraphGroupPayload,
   GraphNodePayload,
   GraphSummaryPayload,
   GraphValidationIssuePayload,
@@ -99,6 +98,10 @@ import {
   type GraphNodeAlignment,
   type GraphNodeDistributionAxis
 } from "../lib/graphSelectionLayout";
+import {
+  buildGraphSourceGroups,
+  organizeGraphNodesBySource
+} from "../lib/graphSourceLayout";
 import { buildSnapshotListFailureState } from "../lib/graphPersistenceState";
 import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
 import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
@@ -109,7 +112,6 @@ import {
 } from "../lib/graphWorkspaceLoadState";
 import {
   autosaveDelayMs,
-  buildSourceGroupDefinitions,
   cloneDocument,
   defaultNodePosition,
   findHiddenNodeIds,
@@ -465,72 +467,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    const grouped = buildSourceGroupDefinitions(selectedNodes)
-      .map((group) => ({
-        ...group,
-        nodes: selectedNodes
-          .filter((node) => group.nodeIds.includes(node.id))
-          .sort((left, right) => {
-            const sourceLabelDiff = (left.source?.label || left.title).localeCompare(right.source?.label || right.title, "zh-CN");
-            return sourceLabelDiff === 0 ? left.title.localeCompare(right.title, "zh-CN") : sourceLabelDiff;
-          })
-      }))
-      .filter((group) => group.nodes.length > 0);
-
-    if (grouped.length === 0) {
-      return;
-    }
-
-    const anchorLeft = Math.min(...selectedNodes.map((node) => node.x));
-    const anchorTop = Math.min(...selectedNodes.map((node) => node.y));
-    const laneGap = 72;
-    const itemGap = 24;
-    const placements = new Map<string, { x: number; y: number }>();
-    let laneOffset = 0;
-
-    for (const group of grouped) {
-      if (mode === "type-columns") {
-        let columnHeight = 0;
-        let columnWidth = 0;
-        for (const node of group.nodes) {
-          placements.set(node.id, {
-            x: anchorLeft + laneOffset,
-            y: anchorTop + columnHeight
-          });
-          columnHeight += node.height + itemGap;
-          columnWidth = Math.max(columnWidth, node.width);
-        }
-        laneOffset += columnWidth + laneGap;
-        continue;
-      }
-
-      let rowWidth = 0;
-      let rowHeight = 0;
-      for (const node of group.nodes) {
-        placements.set(node.id, {
-          x: anchorLeft + rowWidth,
-          y: anchorTop + laneOffset
-        });
-        rowWidth += node.width + itemGap;
-        rowHeight = Math.max(rowHeight, node.height);
-      }
-      laneOffset += rowHeight + laneGap;
-    }
-
+    const layout = organizeGraphNodesBySource(selectedNodes, selectedNodeIds, mode);
     mutateDocument((draft) => {
-      draft.nodes = draft.nodes.map((node) => {
-        const placement = placements.get(node.id);
-        if (!placement) {
-          return node;
-        }
-        return {
-          ...node,
-          x: Math.max(0, Math.min(stageWidth - node.width, Number(placement.x.toFixed(1)))),
-          y: Math.max(0, Math.min(stageHeight - node.height, Number(placement.y.toFixed(1))))
-        };
-      });
+      const layoutNodes = new Map(layout.nodes.map((node) => [node.id, node]));
+      draft.nodes = draft.nodes.map((node) => layoutNodes.get(node.id) ?? node);
     });
-    setStatusMessage(mode === "type-columns" ? "已按来源类型分列整理选中节点" : "已按来源类型分行整理选中节点");
+    setStatusMessage(layout.status);
   }
 
   function createSourceGroupsFromSelection() {
@@ -538,34 +480,15 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    const sourceGroups = buildSourceGroupDefinitions(selectedNodes).filter((group) => group.nodeIds.length > 0);
-    if (sourceGroups.length === 0) {
+    const result = buildGraphSourceGroups(selectedNodes, selectedNodeIds, {
+      makeGroupId: () => randomId("group")
+    });
+    if (result.groups.length === 0) {
       return;
     }
 
     mutateDocument((draft) => {
-      const nextGroups: GraphGroupPayload[] = [];
-      for (const sourceGroup of sourceGroups) {
-        const nodes = draft.nodes.filter((node) => sourceGroup.nodeIds.includes(node.id));
-        if (nodes.length === 0) {
-          continue;
-        }
-        const left = Math.min(...nodes.map((node) => node.x));
-        const top = Math.min(...nodes.map((node) => node.y));
-        const right = Math.max(...nodes.map((node) => node.x + node.width));
-        const bottom = Math.max(...nodes.map((node) => node.y + node.height));
-        nextGroups.push({
-          id: randomId("group"),
-          title: sourceGroup.title,
-          nodeIds: [...sourceGroup.nodeIds],
-          x: Math.max(0, left - 28),
-          y: Math.max(0, top - 40),
-          width: Math.min(stageWidth, right - left + 56),
-          height: Math.min(stageHeight, bottom - top + 78),
-          collapsed: false
-        });
-      }
-      draft.groups.push(...nextGroups);
+      draft.groups.push(...result.groups);
     });
     setStatusMessage("已按来源类型为选中节点建立分组");
   }
