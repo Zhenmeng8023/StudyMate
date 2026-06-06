@@ -93,6 +93,12 @@ import {
   patchGraphNodeMetadataField
 } from "../lib/graphNodeMetadata";
 import { buildGraphDragMove } from "../lib/graphDragMove";
+import {
+  alignSelectedGraphNodes,
+  distributeSelectedGraphNodes,
+  type GraphNodeAlignment,
+  type GraphNodeDistributionAxis
+} from "../lib/graphSelectionLayout";
 import { buildSnapshotListFailureState } from "../lib/graphPersistenceState";
 import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
 import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
@@ -434,101 +440,23 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setLinkFromNodeId("");
   }
 
-  function alignSelectedNodes(direction: "left" | "top" | "center" | "middle") {
+  function alignSelectedNodes(direction: GraphNodeAlignment) {
     if (selectedNodes.length < 2) {
       return;
     }
 
-    if (direction === "left") {
-      const anchor = Math.min(...selectedNodes.map((node) => node.x));
-      mutateDocument((draft) => {
-        draft.nodes = draft.nodes.map((node) =>
-          selectedNodeIds.includes(node.id)
-            ? {
-                ...node,
-                x: Math.max(0, Math.min(stageWidth - node.width, Number(anchor.toFixed(1))))
-              }
-            : node
-        );
-      });
-      return;
-    }
-
-    if (direction === "top") {
-      const anchor = Math.min(...selectedNodes.map((node) => node.y));
-      mutateDocument((draft) => {
-        draft.nodes = draft.nodes.map((node) =>
-          selectedNodeIds.includes(node.id)
-            ? {
-                ...node,
-                y: Math.max(0, Math.min(stageHeight - node.height, Number(anchor.toFixed(1))))
-              }
-            : node
-        );
-      });
-      return;
-    }
-
-    if (direction === "center") {
-      const center = selectedNodes.reduce((sum, node) => sum + node.x + node.width / 2, 0) / selectedNodes.length;
-      mutateDocument((draft) => {
-        draft.nodes = draft.nodes.map((node) =>
-          selectedNodeIds.includes(node.id)
-            ? {
-                ...node,
-                x: Math.max(0, Math.min(stageWidth - node.width, Number((center - node.width / 2).toFixed(1))))
-              }
-            : node
-        );
-      });
-      return;
-    }
-
-    const middle = selectedNodes.reduce((sum, node) => sum + node.y + node.height / 2, 0) / selectedNodes.length;
     mutateDocument((draft) => {
-      draft.nodes = draft.nodes.map((node) =>
-        selectedNodeIds.includes(node.id)
-          ? {
-              ...node,
-              y: Math.max(0, Math.min(stageHeight - node.height, Number((middle - node.height / 2).toFixed(1))))
-            }
-          : node
-      );
+      draft.nodes = alignSelectedGraphNodes(draft.nodes, selectedNodeIds, direction);
     });
   }
 
-  function distributeSelectedNodes(axis: "horizontal" | "vertical") {
+  function distributeSelectedNodes(axis: GraphNodeDistributionAxis) {
     if (selectedNodes.length < 3) {
       return;
     }
 
-    const ordered = [...selectedNodes].sort((left, right) => (axis === "horizontal" ? left.x - right.x : left.y - right.y));
-    const first = ordered[0];
-    const last = ordered[ordered.length - 1];
-    const span = axis === "horizontal" ? last.x - first.x : last.y - first.y;
-    if (span <= 0) {
-      return;
-    }
-
-    const step = span / (ordered.length - 1);
-    const positions = Object.fromEntries(
-      ordered.map((node, index) => [
-        node.id,
-        axis === "horizontal"
-          ? {
-              x: Math.max(0, Math.min(stageWidth - node.width, Number((first.x + index * step).toFixed(1))))
-            }
-          : {
-              y: Math.max(0, Math.min(stageHeight - node.height, Number((first.y + index * step).toFixed(1))))
-            }
-      ])
-    );
-
     mutateDocument((draft) => {
-      draft.nodes = draft.nodes.map((node) => {
-        const position = positions[node.id];
-        return position ? { ...node, ...position } : node;
-      });
+      draft.nodes = distributeSelectedGraphNodes(draft.nodes, selectedNodeIds, axis);
     });
   }
 

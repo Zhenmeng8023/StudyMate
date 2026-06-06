@@ -158,6 +158,7 @@
 - 节点单选、多选 toggle、显式多选、框选矩形命中和节点选择时清理边选择已拆成 `useGraphSelectionState`，新增 hook 测试覆盖隐藏节点过滤与选择行为；`useGraphWorkspaceController.tsx` 继续下降到约 1719 行，后续重点转向 pointer drag 状态机和 node/edge/group mutations。
 - 画布拖拽状态、框选框和对齐辅助线已拆成 `useGraphDragState`，新增 hook 测试覆盖框选更新、画布平移、单/多节点拖拽、辅助线和清理；`useGraphWorkspaceController.tsx` 继续下降到约 1689 行，后续重点转向拖拽文档变更和 node/edge/group mutations。
 - 单节点/多节点拖动的 viewport zoom delta、对齐吸附、边界 clamp 和下一版节点列表生成已拆成 `graphDragMove.ts` 纯逻辑，新增测试覆盖 immutability、单节点移动和多节点 origins；`useGraphWorkspaceController.tsx` 继续下降到约 1643 行，后续重点转向 pan/marquee pointer effect 和 node/edge/group mutations。
+- 选中节点左/顶/中心/中线对齐与水平/垂直均分已拆成 `graphSelectionLayout.ts` 纯逻辑，新增测试覆盖未选中节点不变、边界 clamp、稳定排序和数量不足不变；`useGraphWorkspaceController.tsx` 继续下降到约 1576 行，后续重点转向按来源整理、来源分组和 node/edge/group mutations。
 
 退出标准：
 

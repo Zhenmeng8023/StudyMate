@@ -3,6 +3,27 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 13:11:46 +08:00 | v1.1.0-alpha.43 | 拆出图谱选中节点布局逻辑
+### 任务内容
+- 继续推进图谱工作区 Phase 1 和 Project Graph 级批量编辑体验，把选中节点对齐与均分的坐标计算从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有左对齐、顶部对齐、水平居中、垂直居中、水平/垂直均分、画布边界 clamp 和不可变更新行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphSelectionLayout.ts`，提供 `alignSelectedGraphNodes` 和 `distributeSelectedGraphNodes` 纯函数。
+- 新增 `graphSelectionLayout.test.ts`，覆盖对齐不修改未选中节点、居中对齐边界 clamp、水平均分稳定顺序，以及选中数量不足时返回原节点数组。
+- 更新 `useGraphWorkspaceController.tsx`，移除内联对齐/均分坐标计算和节点 map 变更逻辑；controller 从 1643 行继续下降到 1576 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphSelectionLayout` 先红后绿，最终 1 个文件、4 个用例通过。
+- `npm --workspace frontend-user run test -- graphSelectionLayout GraphWorkspaceSelectionPanel GraphWorkspacePage` 通过，3 个文件、15 个用例全部通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，36 个用户端测试文件、113 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 选中节点布局编辑已成为可测试纯逻辑，后续可以继续拆按来源整理、来源分组、批量样式和 node/edge/group mutations。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 13:03:53 +08:00 | v1.1.0-alpha.42 | 拆出图谱拖动文档变更逻辑
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 拆分，把单节点/多节点拖动时的坐标计算、吸附辅助线、边界 clamp 和下一版节点列表生成从 `useGraphWorkspaceController.tsx` 下沉。
