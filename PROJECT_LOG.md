@@ -3,6 +3,28 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 12:45:34 +08:00 | v1.1.0-alpha.40 | 拆出图谱节点选择状态 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把节点单选、多选 toggle、显式多选、框选命中和节点选择时清理边选择的行为从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有键盘全选、来源泳道整理后选择、框选、多选拖动、复制节点、右键删除节点和边选择清理行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphSelectionState.ts`，统一管理 `selectedNodeId`、`selectedNodeIds`、`selectSingleNode`、`toggleNodeSelection`、`selectNodeIds`、`selectNodesInWorldRect`、`clearNodeSelection` 和 `resetNodeSelection`。
+- 新增 `useGraphSelectionState.test.tsx`，覆盖单选、toggle 多选、清空、重置、显式多选、隐藏节点过滤和框选矩形命中。
+- 更新 `useGraphWorkspaceController.tsx`，移除本地节点选择 state 和直接调用 graph-core selection helper 的代码；键盘全选、来源泳道、框选、节点拖动、复制节点和右键删除节点改为通过 `useGraphSelectionState` 分发；controller 从 1736 行继续下降到 1719 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphSelectionState` 先红后绿，最终 1 个文件、2 个用例通过。
+- `npm --workspace frontend-user run test -- useGraphSelectionState GraphWorkspacePage GraphWorkspaceSelectionPanel GraphWorkspaceStageChrome graphKeyboardShortcuts` 通过，5 个文件、21 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，33 个用户端测试文件、105 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- selection/marquee/multi-select 已有独立状态 hook，后续可以继续拆画布 pointer drag 状态机和 node/edge/group mutations，把大型 controller 继续压缩到编排层。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 08:25:31 +08:00 | v1.1.0-alpha.39 | 拆出图谱 Camera 与视口 Hook
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 拆分，把小地图 viewport、节点聚焦、滚轮缩放、工具栏缩放、重置视野和导航 focus preview 从 `useGraphWorkspaceController.tsx` 下沉。

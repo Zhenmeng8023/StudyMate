@@ -14,16 +14,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   appendGraphEdgeToDocument,
   buildSourceSwimlaneLayout,
-  clearGraphNodeSelection,
   createGraphGroupForNodes,
   duplicateGraphNodeInDocument,
   parseGraphFocusPreviewSearch,
   removeGraphNodesFromDocument,
-  selectGraphNodesInRect,
-  setGraphNodeSelection,
   summarizeGraphSourceReferences,
   toggleGraphGroupCollapse,
-  toggleGraphNodeSelection
 } from "@studymate/graph-core";
 import {
   AuthSession,
@@ -138,6 +134,7 @@ import { useGraphKeyboardActions } from "./useGraphKeyboardActions";
 import { useGraphImportExport } from "./useGraphImportExport";
 import { useGraphWorkspacePersistence } from "./useGraphWorkspacePersistence";
 import { useGraphViewportCamera } from "./useGraphViewportCamera";
+import { useGraphSelectionState } from "./useGraphSelectionState";
 
 export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const location = useLocation();
@@ -150,9 +147,10 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [validationIssues, setValidationIssues] = useState<GraphValidationIssuePayload[]>([]);
   const [cardDrafts, setCardDrafts] = useState<GraphCardDraftPayload[]>([]);
   const [graphDetail, setGraphDetail] = useState<GraphDetailPayload | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState("");
-  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedEdgeId, setSelectedEdgeId] = useState("");
+  const graphSelection = useGraphSelectionState({ onClearEdgeSelection: () => setSelectedEdgeId("") });
+  const selectedNodeId = graphSelection.selectedNodeId;
+  const selectedNodeIds = graphSelection.selectedNodeIds;
   const [linkFromNodeId, setLinkFromNodeId] = useState("");
   const [historyState, setHistoryState] = useState<GraphHistoryState>(createEmptyGraphHistoryState);
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -360,9 +358,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     onResetViewport: graphViewport.resetViewport,
     onSave: () => void saveCurrentGraph("手动保存"),
     onSelectAll: (nodeIds) => {
-      setSelectedNodeIds(nodeIds);
-      setSelectedNodeId(nodeIds[0] || "");
-      setSelectedEdgeId("");
+      graphSelection.selectNodeIds(nodeIds, { activeNodeId: nodeIds[0] || "" });
     },
     onToggleKeyboardGuide: () => setShowKeyboardGuide((current) => !current),
     onToggleLinkMode: (nodeId) => {
@@ -382,8 +378,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     const nextHistory = resetGraphHistoryState(historyRef.current, label);
     historyRef.current = nextHistory;
     setHistoryState(nextHistory);
-    setSelectedNodeId("");
-    setSelectedNodeIds([]);
+    graphSelection.resetNodeSelection();
     setSelectedEdgeId("");
     setLinkFromNodeId("");
     setValidationIssues([]);
@@ -421,23 +416,15 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   }
 
   function setSingleNodeSelection(nodeId: string) {
-    const nextSelection = setGraphNodeSelection({ selectedNodeId, selectedNodeIds }, nodeId);
-    setSelectedNodeId(nextSelection.selectedNodeId);
-    setSelectedNodeIds(nextSelection.selectedNodeIds);
-    setSelectedEdgeId("");
+    graphSelection.selectSingleNode(nodeId);
   }
 
   function clearNodeSelection() {
-    const nextSelection = clearGraphNodeSelection({ selectedNodeId, selectedNodeIds });
-    setSelectedNodeId(nextSelection.selectedNodeId);
-    setSelectedNodeIds(nextSelection.selectedNodeIds);
+    graphSelection.clearNodeSelection();
   }
 
   function toggleNodeInSelection(nodeId: string) {
-    const nextSelection = toggleGraphNodeSelection({ selectedNodeId, selectedNodeIds }, nodeId);
-    setSelectedNodeId(nextSelection.selectedNodeId);
-    setSelectedNodeIds(nextSelection.selectedNodeIds);
-    setSelectedEdgeId("");
+    graphSelection.toggleNodeSelection(nodeId);
   }
 
   function deleteSelectedNodes(nodeIds: string[]) {
@@ -694,8 +681,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         }))
       );
     });
-    setSelectedNodeIds(layout.nodes.map((node) => node.id));
-    setSelectedNodeId("");
+    graphSelection.selectNodeIds(layout.nodes.map((node) => node.id), { activeNodeId: "" });
     setStatusMessage(`已生成 ${layout.laneCount} 条来源泳道`);
   }
 
@@ -1019,16 +1005,13 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
           currentDrag.currentX + stageRef.current.getBoundingClientRect().left,
           currentDrag.currentY + stageRef.current.getBoundingClientRect().top
         );
-        const matched = selectGraphNodesInRect(detailRef.current.document.nodes ?? [], {
+        graphSelection.selectNodesInWorldRect(detailRef.current.document.nodes ?? [], {
           left: rectStart.x,
           right: rectEnd.x,
           top: rectStart.y,
           bottom: rectEnd.y,
           hiddenNodeIds
         });
-        setSelectedNodeIds(matched);
-        setSelectedNodeId(matched[0] || "");
-        setSelectedEdgeId("");
         setSelectionBox(null);
       }
       clearActiveDrag();
@@ -1137,9 +1120,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     }
 
     const nextSelection = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id];
-    setSelectedNodeIds(nextSelection);
-    setSelectedNodeId(node.id);
-    setSelectedEdgeId("");
+    graphSelection.selectNodeIds(nextSelection, { activeNodeId: node.id });
     const currentDetail = detailRef.current;
     if (currentDetail) {
       const nextHistory = {
@@ -1334,8 +1315,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     }
 
     applyDocument(result.document, { label: "复制节点" });
-    setSelectedNodeId(result.node.id);
-    setSelectedEdgeId("");
+    graphSelection.selectNodeIds([result.node.id], { activeNodeId: result.node.id });
     setStatusMessage("已复制节点");
   }
 
@@ -1609,7 +1589,10 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                             nodeIds: group.nodeIds.filter((item) => item !== nodeId)
                           }));
                         });
-                        setSelectedNodeId("");
+                        graphSelection.selectNodeIds(
+                          selectedNodeIds.filter((item) => item !== nodeId),
+                          { activeNodeId: "", clearEdgeSelection: false }
+                        );
                         closeContextMenu();
                       }}
                       onDuplicateNode={() => {
