@@ -3,6 +3,27 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 13:30:59 +08:00 | v1.1.0-alpha.45 | 拆出图谱来源泳道文档变更逻辑
+### 任务内容
+- 继续推进图谱工作区 Phase 1 和学习闭环来源组织能力，把来源泳道生成后的节点位置、生成分组替换和选择态回写从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有来源泳道布局、旧生成泳道替换、手动分组保留、生成分组 metadata、节点引用保留和不可变更新行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphSourceSwimlanes.ts`，提供 `buildGraphSourceSwimlaneDocument` 纯函数，封装 graph-core 泳道布局到前端文档变更的映射。
+- 新增 `graphSourceSwimlanes.test.ts`，覆盖生成来源泳道、替换重叠旧生成泳道、保留手动分组、保留未选中节点引用，以及选中节点不足时返回原文档。
+- 更新 `useGraphWorkspaceController.tsx`，移除内联来源泳道 layoutNodes、旧泳道过滤和 group payload 复制逻辑；controller 从 1505 行继续下降到 1488 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphSourceSwimlanes` 先红后绿，最终 1 个文件、2 个用例通过。
+- `npm --workspace frontend-user run test -- graphSourceSwimlanes graphSourceLayout GraphWorkspaceSelectionPanel GraphWorkspacePage` 通过，4 个文件、16 个用例全部通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，38 个用户端测试文件、118 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 来源整理、来源分组和来源泳道已形成连续的可测试来源组织逻辑，后续可以继续拆批量样式和 node/edge/group mutations。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 13:21:03 +08:00 | v1.1.0-alpha.44 | 拆出图谱来源布局与分组逻辑
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 和学习闭环整理能力，把按来源类型分列/分行整理、来源分组生成的坐标和分组计算从 `useGraphWorkspaceController.tsx` 下沉。

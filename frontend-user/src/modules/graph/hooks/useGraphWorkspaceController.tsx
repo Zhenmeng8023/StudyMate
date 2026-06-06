@@ -13,7 +13,6 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   appendGraphEdgeToDocument,
-  buildSourceSwimlaneLayout,
   createGraphGroupForNodes,
   duplicateGraphNodeInDocument,
   parseGraphFocusPreviewSearch,
@@ -102,6 +101,7 @@ import {
   buildGraphSourceGroups,
   organizeGraphNodesBySource
 } from "../lib/graphSourceLayout";
+import { buildGraphSourceSwimlaneDocument } from "../lib/graphSourceSwimlanes";
 import { buildSnapshotListFailureState } from "../lib/graphPersistenceState";
 import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
 import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
@@ -117,7 +117,6 @@ import {
   findHiddenNodeIds,
   getSourceBucketKey,
   getSourceBucketLabel,
-  isGeneratedSourceSwimlaneGroup,
   maxHistoryEntries,
   minimapScale,
   normalizeDocument,
@@ -498,36 +497,21 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    const anchorX = Math.min(...selectedNodes.map((node) => node.x));
-    const anchorY = Math.min(...selectedNodes.map((node) => node.y));
-    const layout = buildSourceSwimlaneLayout(selectedNodes, {
-      anchorX,
-      anchorY,
-      stageWidth,
-      stageHeight,
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
+
+    const result = buildGraphSourceSwimlaneDocument(current.document, selectedNodeIds, {
       makeGroupId: () => randomId("swimlane")
     });
-    const layoutNodes = new Map(layout.nodes.map((node) => [node.id, node]));
-    const selectedNodeSet = new Set(selectedNodeIds);
+    if (result.document === current.document) {
+      return;
+    }
 
-    mutateDocument((draft) => {
-      draft.nodes = draft.nodes.map((node) => {
-        const nextNode = layoutNodes.get(node.id);
-        return nextNode ? { ...node, x: nextNode.x, y: nextNode.y } : node;
-      });
-      draft.groups = draft.groups.filter(
-        (group) => !(isGeneratedSourceSwimlaneGroup(group) && group.nodeIds.some((nodeId) => selectedNodeSet.has(nodeId)))
-      );
-      draft.groups.push(
-        ...layout.groups.map((group) => ({
-          ...group,
-          nodeIds: [...group.nodeIds],
-          metadata: group.metadata ? { ...group.metadata } : undefined
-        }))
-      );
-    });
-    graphSelection.selectNodeIds(layout.nodes.map((node) => node.id), { activeNodeId: "" });
-    setStatusMessage(`已生成 ${layout.laneCount} 条来源泳道`);
+    applyDocument(result.document, { label: "生成来源泳道" });
+    graphSelection.selectNodeIds(result.selectedNodeIds, { activeNodeId: "" });
+    setStatusMessage(result.status);
   }
 
   function applyBatchTone(tone: Parameters<typeof patchNodeAppearance>[1]["tone"]) {
