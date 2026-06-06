@@ -3,6 +3,28 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 07:56:20 +08:00 | v1.1.0-alpha.37 | 拆出图谱键盘快捷键 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把全局 `keydown` 监听、快捷键上下文判断和 action 分发从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有保存、Undo/Redo、全选、删除、聚焦、分组、链路模式、重置视野、键盘帮助和 Escape 清理行为。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphKeyboardActions.ts`，统一承接 `resolveGraphKeyboardShortcut` 的 action 分发和 keydown 生命周期。
+- 新增 `useGraphKeyboardActions.test.tsx`，覆盖输入框内仍可保存/撤销/重做、输入框内忽略画布编辑快捷键、选择/聚焦/分组/链路/重置/Escape 等常用操作。
+- 更新 `useGraphWorkspaceController.tsx`，移除内联 keydown effect，改为向 `useGraphKeyboardActions` 传递当前选择态、可见节点和动作回调；controller 从 1857 行继续下降到 1822 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphKeyboardActions` 先红后绿，最终 3 个 hook 用例通过。
+- `npm --workspace frontend-user run test -- useGraphKeyboardActions graphKeyboardShortcuts GraphWorkspacePage GraphWorkspaceShell GraphWorkspacePanels` 通过，5 个文件、20 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，30 个用户端测试文件、98 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- 快捷键行为已经成为独立 hook，后续可以继续拆 context menu 和 selection/marquee 状态机，逐步把成熟编辑器的输入与选择操作从 controller 中移出。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 07:41:41 +08:00 | v1.1.0-alpha.36 | 拆出图谱导入导出执行 Hook
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 和 Phase 5 拆分，把 Markdown/Mermaid 远端导入、StudyMate JSON 本地导入、PNG/SVG/JSON 导出和导出失败状态从 `useGraphWorkspaceController.tsx` 下沉。

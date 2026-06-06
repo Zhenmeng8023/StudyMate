@@ -98,7 +98,6 @@ import {
   getGraphNodeMetadataEditorFields,
   patchGraphNodeMetadataField
 } from "../lib/graphNodeMetadata";
-import { resolveGraphKeyboardShortcut } from "../lib/graphKeyboardShortcuts";
 import { buildSnapshotListFailureState } from "../lib/graphPersistenceState";
 import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
 import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
@@ -122,7 +121,6 @@ import {
   getSourceBucketKey,
   getSourceBucketLabel,
   isGeneratedSourceSwimlaneGroup,
-  isTypingElement,
   maxHistoryEntries,
   minimapScale,
   normalizeDocument,
@@ -145,6 +143,7 @@ import {
   useGraphContextMenuDismiss,
   useGraphStageMeasurement
 } from "./useGraphWorkspaceEffects";
+import { useGraphKeyboardActions } from "./useGraphKeyboardActions";
 import { useGraphImportExport } from "./useGraphImportExport";
 import { useGraphWorkspacePersistence } from "./useGraphWorkspacePersistence";
 
@@ -330,6 +329,60 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   );
   const historyPast = historyState.past;
   const historyFuture = historyState.future;
+  const visibleNodeIds = useMemo(() => visibleNodes.map((node) => node.id), [visibleNodes]);
+
+  useGraphKeyboardActions({
+    hasDocument: Boolean(detailRef.current),
+    onDeleteSelectedEdge: (edgeId) => {
+      mutateDocument(
+        (draft) => {
+          draft.edges = draft.edges.filter((edge) => edge.id !== edgeId);
+        },
+        { label: "删除连线" }
+      );
+      setSelectedEdgeId("");
+    },
+    onDeleteSelectedNodes: deleteSelectedNodes,
+    onEscape: () => {
+      setLinkFromNodeId("");
+      setSelectionBox(null);
+      setAlignmentGuides([]);
+      setShowKeyboardGuide(false);
+    },
+    onFocusSelectedNode: (nodeId) => {
+      const node = nodeMap.get(nodeId);
+      if (node) {
+        focusNode(node);
+      }
+    },
+    onGroupSelection: createGroupFromSelectedNode,
+    onRedo: redoCurrentGraph,
+    onResetViewport: () => {
+      mutateDocument(
+        (draft) => {
+          draft.viewport = { x: 140, y: 120, zoom: 1 };
+        },
+        { captureHistory: false, status: "已重置画布视野", label: "重置视野" }
+      );
+    },
+    onSave: () => void saveCurrentGraph("手动保存"),
+    onSelectAll: (nodeIds) => {
+      setSelectedNodeIds(nodeIds);
+      setSelectedNodeId(nodeIds[0] || "");
+      setSelectedEdgeId("");
+    },
+    onToggleKeyboardGuide: () => setShowKeyboardGuide((current) => !current),
+    onToggleLinkMode: (nodeId) => {
+      if (nodeId) {
+        setLinkFromNodeId((current) => (current ? "" : nodeId));
+      }
+    },
+    onUndo: undoCurrentGraph,
+    selectedEdgeId,
+    selectedNodeId: selectedNode?.id ?? "",
+    selectedNodeIds,
+    visibleNodeIds
+  });
 
   function resetHistory(nextDetail: GraphDetailPayload, label?: string) {
     setGraphDetail(nextDetail);
@@ -1023,96 +1076,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       window.removeEventListener("blur", clearActiveDrag);
     };
   }, [dragState, hiddenNodeIds, selectionBox]);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      const action = resolveGraphKeyboardShortcut(event, {
-        isTyping: isTypingElement(event.target),
-        selectedNodeCount: selectedNodeIds.length,
-        hasSelectedEdge: Boolean(selectedEdgeId),
-        hasDocument: Boolean(detailRef.current)
-      });
-
-      switch (action) {
-        case "toggle-keyboard-guide":
-          event.preventDefault();
-          setShowKeyboardGuide((current) => !current);
-          break;
-        case "save":
-          event.preventDefault();
-          void saveCurrentGraph("手动保存");
-          break;
-        case "select-all":
-          event.preventDefault();
-          setSelectedNodeIds(visibleNodes.map((node) => node.id));
-          setSelectedNodeId(visibleNodes[0]?.id || "");
-          setSelectedEdgeId("");
-          break;
-        case "undo": {
-          event.preventDefault();
-          undoCurrentGraph();
-          break;
-        }
-        case "redo": {
-          event.preventDefault();
-          redoCurrentGraph();
-          break;
-        }
-        case "delete-nodes":
-          event.preventDefault();
-          deleteSelectedNodes(selectedNodeIds);
-          break;
-        case "delete-edge":
-          event.preventDefault();
-          mutateDocument(
-            (draft) => {
-              draft.edges = draft.edges.filter((edge) => edge.id !== selectedEdgeId);
-            },
-            { label: "删除连线" }
-          );
-          setSelectedEdgeId("");
-          break;
-        case "focus-selection": {
-          event.preventDefault();
-          const node = nodeMap.get(selectedNodeIds[0]);
-          if (node) {
-            focusNode(node);
-          }
-          break;
-        }
-        case "group-selection":
-          event.preventDefault();
-          createGroupFromSelectedNode();
-          break;
-        case "toggle-link-mode":
-          event.preventDefault();
-          if (selectedNode) {
-            setLinkFromNodeId((current) => (current ? "" : selectedNode.id));
-          }
-          break;
-        case "reset-viewport":
-          event.preventDefault();
-          mutateDocument(
-            (draft) => {
-              draft.viewport = { x: 140, y: 120, zoom: 1 };
-            },
-        { captureHistory: false, status: "已重置画布视野", label: "重置视野" }
-          );
-          break;
-        case "escape":
-          setLinkFromNodeId("");
-          setSelectionBox(null);
-          setAlignmentGuides([]);
-          setShowKeyboardGuide(false);
-          break;
-        case "none":
-          break;
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [deleteSelectedNodes, historyFuture, historyPast, nodeMap, selectedEdgeId, selectedNode, selectedNodeIds, visibleNodes]);
 
   function createNode(type: GraphNodeCreationType, source?: GraphNodePayload["source"]) {
     const current = detailRef.current;
