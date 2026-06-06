@@ -104,7 +104,6 @@ import {
   autosaveDelayMs,
   buildCombinedBounds,
   buildNodeBounds,
-  buildSelectionBox,
   buildSourceGroupDefinitions,
   cloneDocument,
   defaultNodePosition,
@@ -121,11 +120,8 @@ import {
   resolveAlignmentGuides,
   stageHeight,
   stageWidth,
-  type AlignmentGuide,
-  type DragState,
   type GraphFocusNavigationState,
   type ImportMode,
-  type SelectionBox,
   type SourceOrganizerMode
 } from "../lib/workspaceControllerHelpers";
 import { useGraphStageMeasurement } from "./useGraphWorkspaceEffects";
@@ -135,6 +131,7 @@ import { useGraphImportExport } from "./useGraphImportExport";
 import { useGraphWorkspacePersistence } from "./useGraphWorkspacePersistence";
 import { useGraphViewportCamera } from "./useGraphViewportCamera";
 import { useGraphSelectionState } from "./useGraphSelectionState";
+import { useGraphDragState } from "./useGraphDragState";
 
 export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const location = useLocation();
@@ -153,15 +150,16 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const selectedNodeIds = graphSelection.selectedNodeIds;
   const [linkFromNodeId, setLinkFromNodeId] = useState("");
   const [historyState, setHistoryState] = useState<GraphHistoryState>(createEmptyGraphHistoryState);
-  const [dragState, setDragState] = useState<DragState | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("正在加载图谱工作区...");
   const [graphSearch, setGraphSearch] = useState("");
   const [importMode, setImportMode] = useState<ImportMode>("markdown");
   const [importSource, setImportSource] = useState("# 学习主题\n## 核心概念\n## 待复习问题");
   const [quickNodeType, setQuickNodeType] = useState<GraphNodeCreationType>("text");
-  const [selectionBox, setSelectionBox] = useState<SelectionBox>(null);
-  const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([]);
+  const graphDrag = useGraphDragState();
+  const dragState = graphDrag.dragState;
+  const selectionBox = graphDrag.selectionBox;
+  const alignmentGuides = graphDrag.alignmentGuides;
   const [showKeyboardGuide, setShowKeyboardGuide] = useState(false);
   const detailRef = useRef<GraphDetailPayload | null>(null);
   const historyRef = useRef<GraphHistoryState>(createEmptyGraphHistoryState());
@@ -343,8 +341,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     onDeleteSelectedNodes: deleteSelectedNodes,
     onEscape: () => {
       setLinkFromNodeId("");
-      setSelectionBox(null);
-      setAlignmentGuides([]);
+      graphDrag.clearActiveDrag();
       setShowKeyboardGuide(false);
     },
     onFocusSelectedNode: (nodeId) => {
@@ -383,8 +380,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setLinkFromNodeId("");
     setValidationIssues([]);
     setCardDrafts([]);
-    setSelectionBox(null);
-    setAlignmentGuides([]);
+    graphDrag.clearActiveDrag();
   }
 
   function replaceGraphSummary(summary: GraphSummaryPayload) {
@@ -855,15 +851,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     }
 
     const currentDrag = dragState;
-    function clearActiveDrag() {
-      setAlignmentGuides([]);
-      setSelectionBox(null);
-      setDragState(null);
-    }
-
     function handlePointerMove(event: PointerEvent) {
       if ((event.buttons & 1) !== 1) {
-        clearActiveDrag();
+        graphDrag.clearActiveDrag();
         return;
       }
 
@@ -892,7 +882,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             : { deltaX: 0, deltaY: 0, guides: [] };
         const nextX = currentDrag.originX + rawDeltaX + snap.deltaX;
         const nextY = currentDrag.originY + rawDeltaY + snap.deltaY;
-        setAlignmentGuides(snap.guides);
+        graphDrag.setAlignmentGuides(snap.guides);
         mutateDocument(
           (draft) => {
             draft.nodes = draft.nodes.map((node) =>
@@ -932,7 +922,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             : { deltaX: 0, deltaY: 0, guides: [] };
         const deltaX = rawDeltaX + snap.deltaX;
         const deltaY = rawDeltaY + snap.deltaY;
-        setAlignmentGuides(snap.guides);
+        graphDrag.setAlignmentGuides(snap.guides);
         mutateDocument(
           (draft) => {
             draft.nodes = draft.nodes.map((node) => {
@@ -953,28 +943,16 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       }
 
       if (currentDrag.kind === "marquee") {
-        setAlignmentGuides([]);
+        graphDrag.setAlignmentGuides([]);
         if (!stageRef.current) {
           return;
         }
         const rect = stageRef.current.getBoundingClientRect();
-        setSelectionBox(
-          buildSelectionBox(
-            currentDrag.startX,
-            currentDrag.startY,
-            event.clientX - rect.left,
-            event.clientY - rect.top
-          )
-        );
-        setDragState({
-          ...currentDrag,
-          currentX: event.clientX - rect.left,
-          currentY: event.clientY - rect.top
-        });
+        graphDrag.updateMarquee(event.clientX - rect.left, event.clientY - rect.top);
         return;
       }
 
-      setAlignmentGuides([]);
+      graphDrag.setAlignmentGuides([]);
       const nextViewport = {
         x: currentDrag.originX + event.clientX - currentDrag.pointerX,
         y: currentDrag.originY + event.clientY - currentDrag.pointerY
@@ -1012,22 +990,23 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
           bottom: rectEnd.y,
           hiddenNodeIds
         });
-        setSelectionBox(null);
+        graphDrag.clearActiveDrag();
+        return;
       }
-      clearActiveDrag();
+      graphDrag.clearActiveDrag();
     }
 
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
-    window.addEventListener("pointercancel", clearActiveDrag);
-    window.addEventListener("blur", clearActiveDrag);
+    window.addEventListener("pointercancel", graphDrag.clearActiveDrag);
+    window.addEventListener("blur", graphDrag.clearActiveDrag);
     return () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
-      window.removeEventListener("pointercancel", clearActiveDrag);
-      window.removeEventListener("blur", clearActiveDrag);
+      window.removeEventListener("pointercancel", graphDrag.clearActiveDrag);
+      window.removeEventListener("blur", graphDrag.clearActiveDrag);
     };
-  }, [dragState, hiddenNodeIds, selectionBox]);
+  }, [dragState, graphDrag, hiddenNodeIds, selectionBox]);
 
   function createNode(type: GraphNodeCreationType, source?: GraphNodePayload["source"]) {
     const current = detailRef.current;
@@ -1080,23 +1059,15 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     clearNodeSelection();
     setSelectedEdgeId("");
     setLinkFromNodeId("");
-    setAlignmentGuides([]);
+    graphDrag.setAlignmentGuides([]);
     if (event.shiftKey && stageRef.current) {
       const rect = stageRef.current.getBoundingClientRect();
       const startX = event.clientX - rect.left;
       const startY = event.clientY - rect.top;
-      setSelectionBox({ left: startX, top: startY, width: 0, height: 0 });
-      setDragState({
-        kind: "marquee",
-        startX,
-        startY,
-        currentX: startX,
-        currentY: startY
-      });
+      graphDrag.beginMarquee(startX, startY);
       return;
     }
-    setDragState({
-      kind: "pan",
+    graphDrag.beginPan({
       pointerX: event.clientX,
       pointerY: event.clientY,
       originX: document.viewport.x,
@@ -1147,8 +1118,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
           })
           .filter(Boolean) as Array<[string, { x: number; y: number }]>
       );
-      setDragState({
-        kind: "multi-node",
+      graphDrag.beginMultiNodeDrag({
         nodeIds: nextSelection,
         pointerX: event.clientX,
         pointerY: event.clientY,
@@ -1156,8 +1126,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       });
       return;
     }
-    setDragState({
-      kind: "node",
+    graphDrag.beginNodeDrag({
       nodeId: node.id,
       pointerX: event.clientX,
       pointerY: event.clientY,

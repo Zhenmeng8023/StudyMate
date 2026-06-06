@@ -3,6 +3,28 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 12:55:35 +08:00 | v1.1.0-alpha.41 | 拆出图谱拖拽状态 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把画布拖拽状态、框选框和对齐辅助线状态从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有画布平移、Shift 框选、单节点拖动、多节点拖动、对齐辅助线、Escape 清理和拖拽取消行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphDragState.ts`，统一管理 `dragState`、`selectionBox`、`alignmentGuides`、`beginMarquee`、`updateMarquee`、`beginPan`、`beginNodeDrag`、`beginMultiNodeDrag` 和 `clearActiveDrag`。
+- 新增 `useGraphDragState.test.tsx`，覆盖框选开始/更新、画布平移、单节点拖拽、多节点拖拽、辅助线设置和清理。
+- 更新 `useGraphWorkspaceController.tsx`，移除本地 drag/selectionBox/alignmentGuides state 和直接构造 DragState 的代码；controller 从 1719 行继续下降到 1689 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphDragState` 先红后绿，最终 1 个文件、2 个用例通过。
+- `npm --workspace frontend-user run test -- useGraphDragState GraphWorkspacePage GraphWorkspaceStageChrome graphKeyboardShortcuts` 通过，4 个文件、17 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，34 个用户端测试文件、107 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- pointer drag 的状态边界已经独立，后续可以继续拆移动时的文档变更、对齐吸附计算和 node/edge/group mutations，把大型 controller 继续压缩到编排层。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 12:45:34 +08:00 | v1.1.0-alpha.40 | 拆出图谱节点选择状态 Hook
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 拆分，把节点单选、多选 toggle、显式多选、框选命中和节点选择时清理边选择的行为从 `useGraphWorkspaceController.tsx` 下沉。

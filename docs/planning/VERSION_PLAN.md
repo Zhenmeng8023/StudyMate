@@ -156,6 +156,7 @@
 - 右键菜单打开、定位、节点/边选择联动和外部点击/滚动关闭已拆成 `useGraphContextMenu`，新增 hook 测试覆盖节点/边/画布菜单与 dismiss 生命周期；`useGraphWorkspaceController.tsx` 继续下降到约 1804 行，后续重点转向菜单动作分发、selection/marquee 与 camera/viewport。
 - 小地图 viewport、节点聚焦、滚轮/工具栏缩放、重置视野和导航 focus preview 已拆成 `useGraphViewportCamera`，新增 hook 测试覆盖聚焦、缩放、重置和预览过期；`useGraphWorkspaceController.tsx` 继续下降到约 1736 行，后续重点转向 selection/marquee/multi-select 与 node/edge/group mutations。
 - 节点单选、多选 toggle、显式多选、框选矩形命中和节点选择时清理边选择已拆成 `useGraphSelectionState`，新增 hook 测试覆盖隐藏节点过滤与选择行为；`useGraphWorkspaceController.tsx` 继续下降到约 1719 行，后续重点转向 pointer drag 状态机和 node/edge/group mutations。
+- 画布拖拽状态、框选框和对齐辅助线已拆成 `useGraphDragState`，新增 hook 测试覆盖框选更新、画布平移、单/多节点拖拽、辅助线和清理；`useGraphWorkspaceController.tsx` 继续下降到约 1689 行，后续重点转向拖拽文档变更和 node/edge/group mutations。
 
 退出标准：
 
