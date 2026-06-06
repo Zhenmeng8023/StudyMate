@@ -3,6 +3,28 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 13:03:53 +08:00 | v1.1.0-alpha.42 | 拆出图谱拖动文档变更逻辑
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把单节点/多节点拖动时的坐标计算、吸附辅助线、边界 clamp 和下一版节点列表生成从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有拖动时不记录 history、状态提示、viewport zoom delta、对齐吸附、隐藏节点过滤和不可变更新行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphDragMove.ts`，提供 `buildGraphDragMove` 纯函数，统一返回 `nodes`、`alignmentGuides` 和拖动状态文案。
+- 新增 `graphDragMove.test.ts`，覆盖单节点按 viewport zoom 移动且不修改原文档、多节点按 origins 移动并 clamp 到画布边界。
+- 更新 `useGraphWorkspaceController.tsx`，移除内联单节点/多节点拖动坐标计算、吸附计算和节点 map 变更逻辑；controller 从 1689 行继续下降到 1643 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphDragMove` 先红后绿，最终 1 个文件、2 个用例通过。
+- `npm --workspace frontend-user run test -- graphDragMove useGraphDragState GraphWorkspacePage GraphWorkspaceStageChrome graphKeyboardShortcuts` 通过，5 个文件、19 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，35 个用户端测试文件、109 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 节点拖动的文档变更已经成为可测试纯逻辑，后续可以继续拆 pan/marquee pointer effect、节点/边/分组 mutations 和拖动性能节流。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 12:55:35 +08:00 | v1.1.0-alpha.41 | 拆出图谱拖拽状态 Hook
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 拆分，把画布拖拽状态、框选框和对齐辅助线状态从 `useGraphWorkspaceController.tsx` 下沉。

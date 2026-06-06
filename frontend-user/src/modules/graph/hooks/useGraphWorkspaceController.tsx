@@ -92,6 +92,7 @@ import {
   getGraphNodeMetadataEditorFields,
   patchGraphNodeMetadataField
 } from "../lib/graphNodeMetadata";
+import { buildGraphDragMove } from "../lib/graphDragMove";
 import { buildSnapshotListFailureState } from "../lib/graphPersistenceState";
 import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
 import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
@@ -102,8 +103,6 @@ import {
 } from "../lib/graphWorkspaceLoadState";
 import {
   autosaveDelayMs,
-  buildCombinedBounds,
-  buildNodeBounds,
   buildSourceGroupDefinitions,
   cloneDocument,
   defaultNodePosition,
@@ -117,7 +116,6 @@ import {
   projectClientPointToWorld,
   randomId,
   rebuildDetail,
-  resolveAlignmentGuides,
   stageHeight,
   stageWidth,
   type GraphFocusNavigationState,
@@ -863,81 +861,37 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       }
 
       if (currentDrag.kind === "node") {
-        const rawDeltaX = (event.clientX - currentDrag.pointerX) / current.document.viewport.zoom;
-        const rawDeltaY = (event.clientY - currentDrag.pointerY) / current.document.viewport.zoom;
-        const movingNode = current.document.nodes.find((node) => node.id === currentDrag.nodeId);
-        const stationaryNodes = current.document.nodes.filter(
-          (node) => node.id !== currentDrag.nodeId && !hiddenNodeIds.has(node.id)
-        );
-        const snap =
-          movingNode && stationaryNodes.length > 0
-            ? resolveAlignmentGuides(
-                buildNodeBounds({
-                  ...movingNode,
-                  x: currentDrag.originX + rawDeltaX,
-                  y: currentDrag.originY + rawDeltaY
-                }),
-                stationaryNodes
-              )
-            : { deltaX: 0, deltaY: 0, guides: [] };
-        const nextX = currentDrag.originX + rawDeltaX + snap.deltaX;
-        const nextY = currentDrag.originY + rawDeltaY + snap.deltaY;
-        graphDrag.setAlignmentGuides(snap.guides);
+        const move = buildGraphDragMove({
+          clientX: event.clientX,
+          clientY: event.clientY,
+          document: current.document,
+          dragState: currentDrag,
+          hiddenNodeIds
+        });
+        graphDrag.setAlignmentGuides(move.alignmentGuides);
         mutateDocument(
           (draft) => {
-            draft.nodes = draft.nodes.map((node) =>
-              node.id === currentDrag.nodeId
-                ? {
-                    ...node,
-                    x: Math.max(0, Math.min(stageWidth - node.width, Number(nextX.toFixed(1)))),
-                    y: Math.max(0, Math.min(stageHeight - node.height, Number(nextY.toFixed(1))))
-                  }
-                : node
-            );
+            draft.nodes = move.nodes;
           },
-          { captureHistory: false, status: "正在调整节点位置" }
+          { captureHistory: false, status: move.status }
         );
         return;
       }
 
       if (currentDrag.kind === "multi-node") {
-        const rawDeltaX = (event.clientX - currentDrag.pointerX) / current.document.viewport.zoom;
-        const rawDeltaY = (event.clientY - currentDrag.pointerY) / current.document.viewport.zoom;
-        const movingNodes = current.document.nodes.filter((node) => Boolean(currentDrag.origins[node.id]));
-        const stationaryNodes = current.document.nodes.filter(
-          (node) => !currentDrag.origins[node.id] && !hiddenNodeIds.has(node.id)
-        );
-        const snap =
-          movingNodes.length > 0 && stationaryNodes.length > 0
-            ? resolveAlignmentGuides(
-                buildCombinedBounds(
-                  movingNodes.map((node) => ({
-                    ...node,
-                    x: currentDrag.origins[node.id].x + rawDeltaX,
-                    y: currentDrag.origins[node.id].y + rawDeltaY
-                  }))
-                ),
-                stationaryNodes
-              )
-            : { deltaX: 0, deltaY: 0, guides: [] };
-        const deltaX = rawDeltaX + snap.deltaX;
-        const deltaY = rawDeltaY + snap.deltaY;
-        graphDrag.setAlignmentGuides(snap.guides);
+        const move = buildGraphDragMove({
+          clientX: event.clientX,
+          clientY: event.clientY,
+          document: current.document,
+          dragState: currentDrag,
+          hiddenNodeIds
+        });
+        graphDrag.setAlignmentGuides(move.alignmentGuides);
         mutateDocument(
           (draft) => {
-            draft.nodes = draft.nodes.map((node) => {
-              const origin = currentDrag.origins[node.id];
-              if (!origin) {
-                return node;
-              }
-              return {
-                ...node,
-                x: Math.max(0, Math.min(stageWidth - node.width, Number((origin.x + deltaX).toFixed(1)))),
-                y: Math.max(0, Math.min(stageHeight - node.height, Number((origin.y + deltaY).toFixed(1))))
-              };
-            });
+            draft.nodes = move.nodes;
           },
-          { captureHistory: false, status: "正在批量调整节点位置" }
+          { captureHistory: false, status: move.status }
         );
         return;
       }
