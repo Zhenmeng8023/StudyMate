@@ -28,7 +28,9 @@ import {
   GraphDetailPayload,
   GraphDocumentPayload,
   GraphEdgePayload,
+  GraphNodeEmphasis,
   GraphNodePayload,
+  GraphNodeTone,
   GraphSummaryPayload,
   GraphValidationIssuePayload,
   MaterialPayload,
@@ -90,6 +92,11 @@ import {
   getGraphNodeMetadataEditorFields,
   patchGraphNodeMetadataField
 } from "../lib/graphNodeMetadata";
+import {
+  applyGraphBatchEmphasis,
+  applyGraphBatchSizePreset,
+  applyGraphBatchTone
+} from "../lib/graphBatchAppearance";
 import { buildGraphDragMove } from "../lib/graphDragMove";
 import {
   alignSelectedGraphNodes,
@@ -514,27 +521,21 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setStatusMessage(result.status);
   }
 
-  function applyBatchTone(tone: Parameters<typeof patchNodeAppearance>[1]["tone"]) {
+  function applyBatchTone(tone: GraphNodeTone) {
     mutateDocument((draft) => {
-      draft.nodes = draft.nodes.map((node) =>
-        selectedNodeIds.includes(node.id) ? patchNodeAppearance(node, { tone }) : node
-      );
+      draft.nodes = applyGraphBatchTone(draft.nodes, selectedNodeIds, tone);
     });
   }
 
-  function applyBatchEmphasis(emphasis: Parameters<typeof patchNodeAppearance>[1]["emphasis"]) {
+  function applyBatchEmphasis(emphasis: GraphNodeEmphasis) {
     mutateDocument((draft) => {
-      draft.nodes = draft.nodes.map((node) =>
-        selectedNodeIds.includes(node.id) ? patchNodeAppearance(node, { emphasis }) : node
-      );
+      draft.nodes = applyGraphBatchEmphasis(draft.nodes, selectedNodeIds, emphasis);
     });
   }
 
   function applyBatchSizePreset(preset: Parameters<typeof resizeNodeToPreset>[1]) {
     mutateDocument((draft) => {
-      draft.nodes = draft.nodes.map((node) =>
-        selectedNodeIds.includes(node.id) ? resizeNodeToPreset(node, preset) : node
-      );
+      draft.nodes = applyGraphBatchSizePreset(draft.nodes, selectedNodeIds, preset);
     });
   }
 

@@ -161,6 +161,7 @@
 - 选中节点左/顶/中心/中线对齐与水平/垂直均分已拆成 `graphSelectionLayout.ts` 纯逻辑，新增测试覆盖未选中节点不变、边界 clamp、稳定排序和数量不足不变；`useGraphWorkspaceController.tsx` 继续下降到约 1576 行，后续重点转向按来源整理、来源分组和 node/edge/group mutations。
 - 按来源类型分列/分行整理和来源分组生成已拆成 `graphSourceLayout.ts` 纯逻辑，新增测试覆盖来源排序、未选中节点引用不变、来源分组边界和 `makeGroupId`；`useGraphWorkspaceController.tsx` 继续下降到约 1505 行，后续重点转向来源泳道、批量样式和 node/edge/group mutations。
 - 来源泳道生成后的节点位置、旧生成泳道替换、手动分组保留和选择态回写已拆成 `graphSourceSwimlanes.ts` 纯逻辑，新增测试覆盖 generated metadata、未选中节点引用不变和选中不足返回原文档；`useGraphWorkspaceController.tsx` 继续下降到约 1488 行，后续重点转向批量样式和 node/edge/group mutations。
+- 选中节点批量 tone、emphasis 和 size preset 已拆成 `graphBatchAppearance.ts` 纯逻辑，新增测试覆盖未选中节点引用不变、保留已有 tone 和尺寸 preset；`useGraphWorkspaceController.tsx` 继续下降到约 1486 行，后续重点转向新增、删除、复制、分组、折叠和连线 mutations。
 
 退出标准：
 

@@ -3,6 +3,27 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 18:32:23 +08:00 | v1.1.0-alpha.46 | 拆出图谱批量样式变更逻辑
+### 任务内容
+- 继续推进图谱工作区 Phase 1 和 Project Graph 级批量编辑体验，把选中节点颜色、强调和尺寸 preset 的批量 mutation 从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有 tone、emphasis、size preset 语义、未选中节点引用不变和不可变更新行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphBatchAppearance.ts`，提供 `applyGraphBatchTone`、`applyGraphBatchEmphasis` 和 `applyGraphBatchSizePreset` 纯函数。
+- 新增 `graphBatchAppearance.test.ts`，覆盖批量 tone、批量 emphasis 保留已有 tone、批量尺寸 preset，以及未选中节点引用不变。
+- 更新 `useGraphWorkspaceController.tsx`，移除内联批量样式 map 逻辑；controller 从 1488 行继续下降到 1486 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphBatchAppearance` 先红后绿，最终 1 个文件、3 个用例通过。
+- `npm --workspace frontend-user run test -- graphBatchAppearance GraphWorkspaceSelectionPanel GraphWorkspacePage` 通过，3 个文件、14 个用例全部通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，39 个用户端测试文件、121 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 批量外观编辑已成为可测试纯逻辑，后续可以继续拆 node/edge/group mutations，包括新增、删除、复制、分组、折叠和连线。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 13:30:59 +08:00 | v1.1.0-alpha.45 | 拆出图谱来源泳道文档变更逻辑
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 和学习闭环来源组织能力，把来源泳道生成后的节点位置、生成分组替换和选择态回写从 `useGraphWorkspaceController.tsx` 下沉。
