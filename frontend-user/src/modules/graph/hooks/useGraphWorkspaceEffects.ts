@@ -1,24 +1,8 @@
 import { useEffect, useState, type RefObject } from "react";
 import type { GraphDetailPayload } from "../../../api/client";
-import type { ContextMenuState } from "../lib/workspaceControllerHelpers";
 import { autosaveDelayMs } from "../lib/workspaceControllerHelpers";
 import { buildGraphBeforeUnloadMessage } from "../lib/graphPersistenceState";
 import { shouldAutosaveGraph } from "./useGraphAutosaveBoundary";
-
-export function useGraphContextMenuDismiss(contextMenu: ContextMenuState, onDismiss: () => void) {
-  useEffect(() => {
-    if (!contextMenu) {
-      return;
-    }
-
-    window.addEventListener("click", onDismiss);
-    window.addEventListener("scroll", onDismiss, true);
-    return () => {
-      window.removeEventListener("click", onDismiss);
-      window.removeEventListener("scroll", onDismiss, true);
-    };
-  }, [contextMenu, onDismiss]);
-}
 
 export function useGraphStageMeasurement(stageRef: RefObject<HTMLDivElement | null>) {
   const [stageViewport, setStageViewport] = useState({ width: 0, height: 0 });

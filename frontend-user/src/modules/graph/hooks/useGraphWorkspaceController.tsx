@@ -131,7 +131,6 @@ import {
   stageHeight,
   stageWidth,
   type AlignmentGuide,
-  type ContextMenuState,
   type DragState,
   type FocusPreview,
   type GraphFocusNavigationState,
@@ -139,10 +138,8 @@ import {
   type SelectionBox,
   type SourceOrganizerMode
 } from "../lib/workspaceControllerHelpers";
-import {
-  useGraphContextMenuDismiss,
-  useGraphStageMeasurement
-} from "./useGraphWorkspaceEffects";
+import { useGraphStageMeasurement } from "./useGraphWorkspaceEffects";
+import { useGraphContextMenu } from "./useGraphContextMenu";
 import { useGraphKeyboardActions } from "./useGraphKeyboardActions";
 import { useGraphImportExport } from "./useGraphImportExport";
 import { useGraphWorkspacePersistence } from "./useGraphWorkspacePersistence";
@@ -171,7 +168,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [importSource, setImportSource] = useState("# 学习主题\n## 核心概念\n## 待复习问题");
   const [quickNodeType, setQuickNodeType] = useState<GraphNodeCreationType>("text");
   const [focusPreview, setFocusPreview] = useState<FocusPreview | null>(null);
-  const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const [selectionBox, setSelectionBox] = useState<SelectionBox>(null);
   const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([]);
   const [showKeyboardGuide, setShowKeyboardGuide] = useState(false);
@@ -200,7 +196,13 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     historyRef.current = historyState;
   }, [historyState]);
 
-  useGraphContextMenuDismiss(contextMenu, () => setContextMenu(null));
+  const { closeContextMenu, contextMenu, openContextMenu } = useGraphContextMenu({
+    onEdgeSelect: (edgeId) => {
+      setSelectedEdgeId(edgeId);
+      clearNodeSelection();
+    },
+    onNodeSelect: setSingleNodeSelection
+  });
 
   const document = graphDetail?.document ?? null;
   const nodeMap = useMemo(() => {
@@ -1124,7 +1126,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    setContextMenu(null);
+    closeContextMenu();
     clearNodeSelection();
     setSelectedEdgeId("");
     setLinkFromNodeId("");
@@ -1161,7 +1163,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    setContextMenu(null);
+    closeContextMenu();
     if (event.shiftKey || event.metaKey || event.ctrlKey) {
       toggleNodeInSelection(node.id);
       return;
@@ -1217,7 +1219,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   }
 
   function handleNodeClick(nodeId: string, event?: React.MouseEvent<HTMLButtonElement>) {
-    setContextMenu(null);
+    closeContextMenu();
     if (linkFromNodeId && linkFromNodeId !== nodeId) {
       const current = detailRef.current;
       if (!current || linkFromNodeId === nodeId) {
@@ -1253,27 +1255,6 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     }
 
     setSingleNodeSelection(nodeId);
-  }
-
-  function openContextMenu(
-    event: React.MouseEvent<HTMLElement | SVGPathElement>,
-    payload?: { nodeId?: string; edgeId?: string }
-  ) {
-    event.preventDefault();
-    event.stopPropagation();
-    setContextMenu({
-      x: event.clientX,
-      y: event.clientY,
-      nodeId: payload?.nodeId,
-      edgeId: payload?.edgeId
-    });
-    if (payload?.nodeId) {
-      setSingleNodeSelection(payload.nodeId);
-    }
-    if (payload?.edgeId) {
-      setSelectedEdgeId(payload.edgeId);
-      clearNodeSelection();
-    }
   }
 
   function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
@@ -1671,28 +1652,28 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                       isLinkStartSelected={linkFromNodeId === contextMenu.nodeId}
                       onCreateCanvasMaterialNode={() => {
                         createNode("material");
-                        setContextMenu(null);
+                        closeContextMenu();
                       }}
                       onCreateCanvasNoteNode={() => {
                         createNode("rich-note");
-                        setContextMenu(null);
+                        closeContextMenu();
                       }}
                       onCreateCanvasTextNode={() => {
                         createNode("text");
-                        setContextMenu(null);
+                        closeContextMenu();
                       }}
                       onCreateGroup={() => {
                         if (contextMenuNode) {
                           createGroupForNode(contextMenuNode);
                         }
-                        setContextMenu(null);
+                        closeContextMenu();
                       }}
                       onDeleteEdge={() => {
                         mutateDocument((draft) => {
                           draft.edges = draft.edges.filter((edge) => edge.id !== contextMenu.edgeId);
                         });
                         setSelectedEdgeId("");
-                        setContextMenu(null);
+                        closeContextMenu();
                       }}
                       onDeleteNode={() => {
                         const nodeId = contextMenu.nodeId || "";
@@ -1707,27 +1688,27 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                           }));
                         });
                         setSelectedNodeId("");
-                        setContextMenu(null);
+                        closeContextMenu();
                       }}
                       onDuplicateNode={() => {
                         duplicateNode(contextMenu.nodeId || "");
-                        setContextMenu(null);
+                        closeContextMenu();
                       }}
                       onExportPng={() => {
                         void graphImportExport.exportPng();
-                        setContextMenu(null);
+                        closeContextMenu();
                       }}
                       onFocusNode={() => {
                         if (contextMenuNode) {
                           focusNode(contextMenuNode);
                         }
-                        setContextMenu(null);
+                        closeContextMenu();
                       }}
                       onOpenSource={() => {
                         if (contextMenuSourceBacklink) {
                           navigate(contextMenuSourceBacklink.target);
                         }
-                        setContextMenu(null);
+                        closeContextMenu();
                       }}
                       onToggleEdgeKind={() => {
                         mutateDocument((draft) => {
@@ -1737,12 +1718,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                               : edge
                           );
                         });
-                        setContextMenu(null);
+                        closeContextMenu();
                       }}
                       onToggleLinkStart={() => {
                         setLinkFromNodeId((current) => (current === contextMenu.nodeId ? "" : contextMenu.nodeId || ""));
                         setSingleNodeSelection(contextMenu.nodeId || "");
-                        setContextMenu(null);
+                        closeContextMenu();
                       }}
                     />
                   ) : null}

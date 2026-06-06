@@ -3,6 +3,29 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-06 08:06:34 +08:00 | v1.1.0-alpha.38 | 拆出图谱右键菜单状态 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把右键菜单打开、定位、节点/边选择联动、显式关闭和外部点击/滚动关闭从 `useGraphWorkspaceController.tsx` 中下沉。
+- 保留现有右键菜单 UI、节点/边/画布右键入口和菜单动作回调，不改变 Graph API 或图谱文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphContextMenu.ts`，统一管理 context menu 状态、`openContextMenu`、`closeContextMenu` 和 dismiss 生命周期。
+- 新增 `useGraphContextMenu.test.tsx`，覆盖节点/边/画布右键菜单坐标、节点/边选择回调、显式关闭、外部点击关闭和滚动关闭。
+- 更新 `useGraphWorkspaceController.tsx`，移除本地 `contextMenu` state、旧 `openContextMenu` 函数和内联 dismiss effect，改用 `useGraphContextMenu`；controller 从 1822 行继续下降到 1804 行。
+- 清理 `useGraphWorkspaceEffects.ts` 中不再使用的 `useGraphContextMenuDismiss`。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphContextMenu` 先红后绿，最终 2 个 hook 用例通过。
+- `npm --workspace frontend-user run test -- useGraphContextMenu GraphWorkspacePage GraphWorkspacePanels GraphWorkspaceStageChrome` 通过，4 个文件、17 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，31 个用户端测试文件、100 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- 右键菜单输入生命周期已成为独立 hook，后续可以继续把菜单动作分发、selection/marquee/multi-select 和 camera/viewport 状态机从大型 controller 中移出。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
 ## 2026-06-06 07:56:20 +08:00 | v1.1.0-alpha.37 | 拆出图谱键盘快捷键 Hook
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 拆分，把全局 `keydown` 监听、快捷键上下文判断和 action 分发从 `useGraphWorkspaceController.tsx` 下沉。
