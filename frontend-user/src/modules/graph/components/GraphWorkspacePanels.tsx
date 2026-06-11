@@ -180,6 +180,16 @@ export function GraphSettingsPanel(props: { sections: GraphSettingsSection[] }) 
         >
           <span className="eyebrow">{section.eyebrow}</span>
           <strong>{section.title}</strong>
+          <p>{section.summary}</p>
+          {section.actions?.length ? (
+            <div className="graph-source-summary-list">
+              {section.actions.map((action) => (
+                <span className="graph-source-summary-pill" key={`${section.key}-${action.label}`}>
+                  {action.label} · {action.state}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <ul>
             {section.items.map((item) => (
               <li key={item}>{item}</li>

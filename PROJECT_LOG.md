@@ -3,6 +3,26 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-12 01:08:52 +08:00 | v1.1.0-alpha.48 | 强化图谱设置面板治理信息
+### 任务内容
+- 继续推进 P0 稳定治理，在不改变 Graph API 和 `.smtg` 合约的前提下，把 GraphWorkspace 设置面板从说明清单增强为更清晰的工作区治理区域。
+- 聚焦显示偏好、导入导出、autosave 状态和大图性能提示，让失败导入/导出、pending/failed 保存和 200/300/20 基准规模具备可解释文案。
+### 完成结果
+- 扩展 `frontend-user/src/modules/graph/lib/graphSettingsPanel.ts`，为每个设置分区增加 `summary` 和 `actions`，覆盖小地图、来源泳道、快捷键、JSON 校验、导入失败保留当前画布、导出失败状态回写、dirty/pending/failed 保存治理和大图整理建议。
+- 更新 `GraphSettingsPanel` 渲染摘要和状态标签，让设置面板更清楚地区分显示、导入导出、自动保存、性能和快捷键区域。
+- 补强 `graphSettingsPanel.test.ts` 和 `GraphWorkspacePanels.test.tsx`，锁定 failed/pending 保存状态、大图性能建议、导入导出失败解释和设置标签渲染。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphSettingsPanel` 先红，失败原因为设置分区缺少 `summary/actions` 和 failed/pending 保存治理语义。
+- `npm --workspace frontend-user run test -- graphSettingsPanel GraphWorkspacePanels` 通过，2 个文件、7 个用例通过。
+- `npm --workspace frontend-user run test -- graphSettingsPanel GraphWorkspacePanels GraphWorkspacePage GraphWorkspaceShell` 通过，4 个文件、16 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 设置面板已更接近 Project Graph 级工作区治理入口，后续可以继续强化 validation panel 的规则中文名、严重级说明、定位动作和修复建议。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
 ## 2026-06-12 01:02:24 +08:00 | v1.1.0-alpha.47 | 拆出图谱节点连线分组 mutation
 ### 任务内容
 - 从 P0 稳定治理开始，继续拆 `useGraphWorkspaceController.tsx` 中的 node/edge/group 新增、删除、复制、连线、分组和折叠 mutation。

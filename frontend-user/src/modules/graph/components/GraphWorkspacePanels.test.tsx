@@ -81,13 +81,17 @@ describe("GraphWorkspacePanels", () => {
             key: "autosave",
             eyebrow: "自动保存",
             title: "保存状态",
+            summary: "自动保存负责兜底，手动保存负责确认。",
+            actions: [{ label: "dirty", state: "离页保护" }],
             items: ["自动保存间隔约 8 秒。"]
           },
           {
             key: "performance",
             eyebrow: "性能提示",
             title: "已达到基准规模",
+            summary: "已进入 200/300/20 基准规模，请优先使用治理工具。",
             tone: "warning",
+            actions: [{ label: "大图导航", state: "建议使用搜索/小地图" }],
             items: ["当前 200 节点 / 300 边 / 20 分组。"]
           }
         ]}
@@ -97,5 +101,8 @@ describe("GraphWorkspacePanels", () => {
     expect(screen.getByRole("region", { name: "图谱设置" })).toBeInTheDocument();
     expect(screen.getByText("自动保存")).toBeInTheDocument();
     expect(screen.getByText("已达到基准规模")).toBeInTheDocument();
+    expect(screen.getByText("自动保存负责兜底，手动保存负责确认。")).toBeInTheDocument();
+    expect(screen.getByText("dirty · 离页保护")).toBeInTheDocument();
+    expect(screen.getByText("大图导航 · 建议使用搜索/小地图")).toBeInTheDocument();
   });
 });
