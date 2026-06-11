@@ -3,6 +3,25 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-12 01:02:24 +08:00 | v1.1.0-alpha.47 | 拆出图谱节点连线分组 mutation
+### 任务内容
+- 从 P0 稳定治理开始，继续拆 `useGraphWorkspaceController.tsx` 中的 node/edge/group 新增、删除、复制、连线、分组和折叠 mutation。
+- 保持现有 React + Vite + TypeScript、`@studymate/graph-core`、Graph API 和 `.smtg` 合约不变，只把工作区选择态、history label、status 文案和不可变更新封装到前端纯函数。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphWorkspaceMutations.ts`，提供创建节点、创建连线、删除选中节点/连线、删除右键节点、复制节点、创建分组和切换分组折叠的工作区 mutation 结果。
+- 新增 `graphWorkspaceMutations.test.ts`，覆盖新增节点、连线去重失败解释、删除节点清理边和分组、删除连线、复制节点 metadata 深拷贝、单/多节点分组和折叠 no-op。
+- 更新 `useGraphWorkspaceController.tsx`，相关动作改为调用纯函数，并通过统一 `applyWorkspaceMutation` 同步文档、选择态、连线模式、选中边和状态文案；本轮统计从约 1603 行下降到 1596 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphWorkspaceMutations` 先红，失败原因为 `graphWorkspaceMutations` 模块尚不存在。
+- `npm --workspace frontend-user run test -- graphWorkspaceMutations` 绿，1 个文件、7 个用例通过。
+- `npm --workspace frontend-user run test -- graphWorkspaceMutations GraphWorkspacePage useGraphKeyboardActions useGraphContextMenu` 通过，4 个文件、19 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run build:user` 通过。
+### 后续影响
+- 图谱节点/连线/分组的核心工作区变更已有独立纯函数和 immutability 回归，后续可以继续把 settings panel、validation panel、autosave/history 边界按同样 TDD 小切片推进。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
 ## 2026-06-06 18:32:23 +08:00 | v1.1.0-alpha.46 | 拆出图谱批量样式变更逻辑
 ### 任务内容
 - 继续推进图谱工作区 Phase 1 和 Project Graph 级批量编辑体验，把选中节点颜色、强调和尺寸 preset 的批量 mutation 从 `useGraphWorkspaceController.tsx` 下沉。

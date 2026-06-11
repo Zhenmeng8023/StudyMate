@@ -12,13 +12,8 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  appendGraphEdgeToDocument,
-  createGraphGroupForNodes,
-  duplicateGraphNodeInDocument,
   parseGraphFocusPreviewSearch,
-  removeGraphNodesFromDocument,
   summarizeGraphSourceReferences,
-  toggleGraphGroupCollapse,
 } from "@studymate/graph-core";
 import {
   AuthSession,
@@ -27,7 +22,6 @@ import {
   GraphCardDraftPayload,
   GraphDetailPayload,
   GraphDocumentPayload,
-  GraphEdgePayload,
   GraphNodeEmphasis,
   GraphNodePayload,
   GraphNodeTone,
@@ -83,7 +77,6 @@ import {
   undoGraphDocument
 } from "../lib/graphHistory";
 import {
-  buildGraphNodeDraft,
   getGraphNodeTypeOption,
   graphNodeTypeOptions,
   type GraphNodeCreationType
@@ -109,6 +102,16 @@ import {
   organizeGraphNodesBySource
 } from "../lib/graphSourceLayout";
 import { buildGraphSourceSwimlaneDocument } from "../lib/graphSourceSwimlanes";
+import {
+  connectGraphWorkspaceNodes,
+  createGraphWorkspaceGroup,
+  createGraphWorkspaceNode,
+  deleteGraphWorkspaceNode,
+  deleteGraphWorkspaceSelection,
+  duplicateGraphWorkspaceNode,
+  toggleGraphWorkspaceGroupCollapse,
+  type GraphWorkspaceDocumentMutationResult
+} from "../lib/graphWorkspaceMutations";
 import { buildSnapshotListFailureState } from "../lib/graphPersistenceState";
 import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
 import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
@@ -120,7 +123,6 @@ import {
 import {
   autosaveDelayMs,
   cloneDocument,
-  defaultNodePosition,
   findHiddenNodeIds,
   getSourceBucketKey,
   getSourceBucketLabel,
@@ -435,17 +437,43 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     graphSelection.toggleNodeSelection(nodeId);
   }
 
+  function applyWorkspaceMutation(result: GraphWorkspaceDocumentMutationResult) {
+    if (!result.changed) {
+      return false;
+    }
+
+    applyDocument(result.document, { label: result.label, status: result.status });
+    if (result.selectedNodeIds) {
+      graphSelection.selectNodeIds(result.selectedNodeIds, {
+        activeNodeId: result.activeNodeId ?? "",
+        clearEdgeSelection: false
+      });
+    }
+    if (result.selectedEdgeId !== undefined) {
+      setSelectedEdgeId(result.selectedEdgeId);
+    }
+    if (result.linkFromNodeId !== undefined) {
+      setLinkFromNodeId(result.linkFromNodeId);
+    }
+    return true;
+  }
+
   function deleteSelectedNodes(nodeIds: string[]) {
     if (nodeIds.length === 0) {
       return;
     }
 
     const current = detailRef.current;
-    if (current) {
-      applyDocument(removeGraphNodesFromDocument(current.document, nodeIds));
+    if (!current) {
+      return;
     }
-    clearNodeSelection();
-    setLinkFromNodeId("");
+
+    const result = deleteGraphWorkspaceSelection(current.document, {
+      linkFromNodeId,
+      selectedEdgeId: "",
+      selectedNodeIds: nodeIds
+    });
+    applyWorkspaceMutation(result);
   }
 
   function alignSelectedNodes(direction: GraphNodeAlignment) {
@@ -804,22 +832,13 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    const position = defaultNodePosition(current.document.nodes.length);
-    const nextNode = buildGraphNodeDraft({
-      id: randomId("node"),
-      position,
+    const result = createGraphWorkspaceNode(current.document, {
+      makeNodeId: () => randomId("node"),
       source,
       type
     });
 
-    mutateDocument(
-      (draft) => {
-        draft.nodes.push(nextNode);
-      },
-      { label: `新增${getGraphNodeTypeOption(type).label}节点` }
-    );
-    setSingleNodeSelection(nextNode.id);
-    setLinkFromNodeId("");
+    applyWorkspaceMutation(result);
   }
 
   function addMaterialNode(material: MaterialPayload) {
@@ -933,26 +952,18 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         return;
       }
 
-      const nextEdge: GraphEdgePayload = {
-        id: randomId("edge"),
-        kind: "straight",
+      const result = connectGraphWorkspaceNodes(current.document, {
+        makeEdgeId: () => randomId("edge"),
         sourceNodeId: linkFromNodeId,
-        targetNodeId: nodeId,
-        label: "关联",
-        metadata: {}
-      };
-
-      const result = appendGraphEdgeToDocument(current.document, nextEdge);
+        targetNodeId: nodeId
+      });
       if (!result.created) {
-        setStatusMessage(result.reason === "duplicate" ? "这两个节点之间已经有连线" : "无法在这两个节点之间创建连线");
-        setLinkFromNodeId("");
+        setStatusMessage(result.status ?? "无法在这两个节点之间创建连线");
+        setLinkFromNodeId(result.linkFromNodeId ?? "");
         return;
       }
 
-      applyDocument(result.document, { label: "创建连线" });
-      setSelectedEdgeId(nextEdge.id);
-      clearNodeSelection();
-      setLinkFromNodeId("");
+      applyWorkspaceMutation(result);
       return;
     }
 
@@ -970,17 +981,14 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    const result = createGraphGroupForNodes(current.document, [node.id], {
-      makeGroupId: () => randomId("group"),
-      title: `${node.title} 分组`
+    const result = createGraphWorkspaceGroup(current.document, [node.id], {
+      makeGroupId: () => randomId("group")
     });
-    if (!result.group) {
+    if (!result.changed) {
       return;
     }
 
-    applyDocument(result.document, { label: "创建分组" });
-    setSingleNodeSelection(node.id);
-    setStatusMessage("已基于当前节点创建分组");
+    applyWorkspaceMutation(result);
   }
 
   function createGroupFromSelectedNode() {
@@ -997,16 +1005,14 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    const result = createGraphGroupForNodes(current.document, selectedNodeIds, {
-      makeGroupId: () => randomId("group"),
-      title: `${selectedNodes[0].title} 等 ${selectedNodes.length} 个节点`
+    const result = createGraphWorkspaceGroup(current.document, selectedNodeIds, {
+      makeGroupId: () => randomId("group")
     });
-    if (!result.group) {
+    if (!result.changed) {
       return;
     }
 
-    applyDocument(result.document, { label: "创建分组" });
-    setStatusMessage(`已为 ${selectedNodes.length} 个节点创建分组`);
+    applyWorkspaceMutation(result);
   }
 
   function toggleGroupCollapse(groupId: string) {
@@ -1014,11 +1020,11 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     if (!current) {
       return;
     }
-    const nextDocument = toggleGraphGroupCollapse(current.document, groupId);
-    if (nextDocument === current.document) {
+    const result = toggleGraphWorkspaceGroupCollapse(current.document, groupId);
+    if (!result.changed) {
       return;
     }
-    applyDocument(nextDocument, { status: "已切换分组折叠状态", label: "切换分组折叠" });
+    applyWorkspaceMutation(result);
   }
 
   function handleLocateNode() {
@@ -1041,20 +1047,17 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   }
 
   function deleteSelectedGraphItems() {
-    if (selectedNodeIds.length > 0) {
-      deleteSelectedNodes(selectedNodeIds);
+    const current = detailRef.current;
+    if (!current) {
       return;
     }
 
-    if (selectedEdgeId) {
-      mutateDocument(
-        (draft) => {
-          draft.edges = draft.edges.filter((edge) => edge.id !== selectedEdgeId);
-        },
-        { label: "删除连线" }
-      );
-      setSelectedEdgeId("");
-    }
+    const result = deleteGraphWorkspaceSelection(current.document, {
+      linkFromNodeId,
+      selectedEdgeId,
+      selectedNodeIds
+    });
+    applyWorkspaceMutation(result);
   }
 
   function duplicateNode(nodeId: string) {
@@ -1063,19 +1066,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    const result = duplicateGraphNodeInDocument(current.document, nodeId, {
+    const result = duplicateGraphWorkspaceNode(current.document, nodeId, {
       makeNodeId: () => randomId("node"),
-      titleSuffix: " 副本",
       stageWidth,
       stageHeight
     });
-    if (!result.node) {
-      return;
-    }
-
-    applyDocument(result.document, { label: "复制节点" });
-    graphSelection.selectNodeIds([result.node.id], { activeNodeId: result.node.id });
-    setStatusMessage("已复制节点");
+    applyWorkspaceMutation(result);
   }
 
   async function handleValidateGraph() {
@@ -1330,28 +1326,25 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                         closeContextMenu();
                       }}
                       onDeleteEdge={() => {
-                        mutateDocument((draft) => {
-                          draft.edges = draft.edges.filter((edge) => edge.id !== contextMenu.edgeId);
-                        });
-                        setSelectedEdgeId("");
+                        if (detailRef.current) {
+                          const result = deleteGraphWorkspaceSelection(detailRef.current.document, {
+                            linkFromNodeId,
+                            selectedEdgeId: contextMenu.edgeId || "",
+                            selectedNodeIds: []
+                          });
+                          applyWorkspaceMutation(result);
+                        }
                         closeContextMenu();
                       }}
                       onDeleteNode={() => {
                         const nodeId = contextMenu.nodeId || "";
-                        mutateDocument((draft) => {
-                          draft.nodes = draft.nodes.filter((node) => node.id !== nodeId);
-                          draft.edges = draft.edges.filter(
-                            (edge) => edge.sourceNodeId !== nodeId && edge.targetNodeId !== nodeId
-                          );
-                          draft.groups = draft.groups.map((group) => ({
-                            ...group,
-                            nodeIds: group.nodeIds.filter((item) => item !== nodeId)
-                          }));
-                        });
-                        graphSelection.selectNodeIds(
-                          selectedNodeIds.filter((item) => item !== nodeId),
-                          { activeNodeId: "", clearEdgeSelection: false }
-                        );
+                        if (detailRef.current) {
+                          const result = deleteGraphWorkspaceNode(detailRef.current.document, nodeId, {
+                            linkFromNodeId,
+                            selectedNodeIds
+                          });
+                          applyWorkspaceMutation(result);
+                        }
                         closeContextMenu();
                       }}
                       onDuplicateNode={() => {
