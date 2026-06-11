@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { GraphDetailPayload, GraphDocumentPayload } from "../../../api/client";
 import {
   applyGraphDocumentChange,
+  buildGraphHistoryBoundarySummary,
   createEmptyGraphHistoryState,
   markGraphHistorySaved,
   redoGraphDocument,
@@ -155,5 +156,42 @@ describe("graphHistory", () => {
 
     expect(saved.dirty).toBe(false);
     expect(saved.past).toHaveLength(1);
+  });
+
+  it("summarizes autosave and undo redo boundaries for workspace governance", () => {
+    const dirtySummary = buildGraphHistoryBoundarySummary({
+      history: {
+        past: [
+          { label: "导入 StudyMate 图谱 JSON", document: buildDocument({ version: 3 }) },
+          { label: "创建连线", document: buildDocument({ version: 4 }) }
+        ],
+        future: [{ label: "切换分组折叠", document: buildDocument({ version: 5 }) }],
+        dirty: true,
+        lastLabel: "创建连线"
+      },
+      saveState: "dirty"
+    });
+    const failedSummary = buildGraphHistoryBoundarySummary({
+      history: {
+        past: [{ label: "恢复历史快照", document: buildDocument({ version: 3 }) }],
+        future: [],
+        dirty: true,
+        lastLabel: "恢复历史快照"
+      },
+      saveState: "failed"
+    });
+
+    expect(dirtySummary).toEqual({
+      lastChangeLabel: "创建连线",
+      saveBoundaryLabel: "有未保存修改",
+      undoRedoLabel: "可撤销 2 步 / 可重做 1 步",
+      riskLabel: "离页前会提示，自动保存会继续尝试。"
+    });
+    expect(failedSummary).toEqual({
+      lastChangeLabel: "恢复历史快照",
+      saveBoundaryLabel: "保存失败",
+      undoRedoLabel: "可撤销 1 步 / 暂无可重做",
+      riskLabel: "保存失败后不要静默离页，请手动保存或恢复快照。"
+    });
   });
 });

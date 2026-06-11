@@ -3,6 +3,26 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-12 01:22:43 +08:00 | v1.1.0-alpha.50 | 增强图谱历史与保存边界摘要
+### 任务内容
+- 继续推进 P0 稳定治理，强化 autosave/dirty/pending/saved/failed 与 Undo/Redo 边界的可解释性。
+- 不改变 Graph API、`.smtg` 合约或后端保存逻辑，只为前端工作区提供稳定的历史边界摘要，让保存、导入、恢复、模板应用等历史点能在治理面板中被解释。
+### 完成结果
+- 新增 `buildGraphHistoryBoundarySummary`，将 `history.lastLabel`、undo/redo 数量和当前 saveState 转换为可读的最近历史点、保存边界和风险提示。
+- 扩展 `buildGraphSettingsSections` 的 autosave 区域，展示最近历史点、历史边界和 Undo/Redo 状态。
+- 更新 `useGraphWorkspaceController.tsx`，把当前 `historyState` 和 `saveState` 传入设置面板，保持现有保存、导入、恢复和撤销/重做行为不变。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphHistory graphSettingsPanel` 先红，失败原因为缺少 `buildGraphHistoryBoundarySummary`，且 autosave 设置区未展示最近历史点。
+- `npm --workspace frontend-user run test -- graphHistory graphSettingsPanel` 通过，2 个文件、9 个用例通过。
+- `npm --workspace frontend-user run test -- graphHistory graphSettingsPanel GraphWorkspacePanels GraphWorkspacePage useGraphWorkspacePersistence` 通过，5 个文件、23 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 设置面板现在能同时解释保存状态和历史边界，后续可以继续完善来源反链与学习闭环，把图谱节点到卡片生成/复习确认流做成更强的端到端体验。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
 ## 2026-06-12 01:16:12 +08:00 | v1.1.0-alpha.49 | 强化图谱校验面板解释信息
 ### 任务内容
 - 继续推进 P0 稳定治理，强化 GraphWorkspace validation panel，让孤立节点、缺来源、重复标题、悬挂边、跨折叠分组边、空分组、非法尺寸、无效来源 target 和多目标边异常等问题具备可读解释。

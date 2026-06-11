@@ -7,6 +7,12 @@ describe("buildGraphSettingsSections", () => {
       autosaveDelayMs: 8000,
       edgeCount: 12,
       groupCount: 2,
+      historyBoundary: {
+        lastChangeLabel: "导入 StudyMate 图谱 JSON",
+        riskLabel: "离页前会提示，自动保存会继续尝试。",
+        saveBoundaryLabel: "有未保存修改",
+        undoRedoLabel: "可撤销 2 步 / 暂无可重做"
+      },
       nodeCount: 10,
       saveState: "dirty"
     });
@@ -29,6 +35,13 @@ describe("buildGraphSettingsSections", () => {
     expect(sections.find((section) => section.key === "import-export")?.items.join(" ")).toContain(
       "导入失败会保留当前画布"
     );
+    expect(sections.find((section) => section.key === "autosave")?.items.join(" ")).toContain(
+      "最近历史点：导入 StudyMate 图谱 JSON"
+    );
+    expect(sections.find((section) => section.key === "autosave")?.actions).toContainEqual({
+      label: "Undo/Redo",
+      state: "可撤销 2 步 / 暂无可重做"
+    });
   });
 
   it("surfaces a performance warning at the 200 node benchmark scale", () => {

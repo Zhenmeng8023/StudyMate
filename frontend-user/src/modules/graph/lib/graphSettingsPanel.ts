@@ -1,4 +1,5 @@
 import type { GraphWorkspaceSaveState } from "../state/types";
+import type { GraphHistoryBoundarySummary } from "./graphHistory";
 
 export type GraphSettingsSectionKey = "display" | "import-export" | "autosave" | "performance" | "shortcuts";
 
@@ -21,6 +22,7 @@ export type GraphSettingsSectionOptions = {
   autosaveDelayMs: number;
   edgeCount: number;
   groupCount: number;
+  historyBoundary?: GraphHistoryBoundarySummary;
   nodeCount: number;
   saveState: GraphWorkspaceSaveState;
 };
@@ -69,13 +71,22 @@ export function buildGraphSettingsSections(options: GraphSettingsSectionOptions)
       actions: [
         { label: "dirty", state: "离页保护" },
         { label: "pending", state: "显示正在保存" },
-        { label: "failed", state: "显示失败原因" }
+        { label: "failed", state: "显示失败原因" },
+        ...(options.historyBoundary
+          ? [{ label: "Undo/Redo", state: options.historyBoundary.undoRedoLabel }]
+          : [])
       ],
       items: [
         `自动保存间隔约 ${autosaveSeconds} 秒。`,
         `当前保存状态：${formatSaveState(options.saveState)}。`,
         "离页前会拦截 dirty / pending 状态。",
-        buildAutosaveGuidance(options.saveState)
+        buildAutosaveGuidance(options.saveState),
+        ...(options.historyBoundary
+          ? [
+              `最近历史点：${options.historyBoundary.lastChangeLabel}。`,
+              `历史边界：${options.historyBoundary.saveBoundaryLabel}；${options.historyBoundary.riskLabel}`
+            ]
+          : [])
       ]
     },
     {

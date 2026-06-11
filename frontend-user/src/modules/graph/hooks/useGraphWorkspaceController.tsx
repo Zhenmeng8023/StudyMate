@@ -70,6 +70,7 @@ import { GraphWorkspaceImportPanel } from "../components/GraphWorkspaceImportPan
 
 import {
   applyGraphDocumentChange,
+  buildGraphHistoryBoundarySummary,
   createEmptyGraphHistoryState,
   redoGraphDocument,
   resetGraphHistoryState,
@@ -313,10 +314,14 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         autosaveDelayMs,
         edgeCount: document?.edges.length ?? 0,
         groupCount: document?.groups.length ?? 0,
+        historyBoundary: buildGraphHistoryBoundarySummary({
+          history: historyState,
+          saveState
+        }),
         nodeCount: document?.nodes.length ?? 0,
         saveState
       }),
-    [document?.edges.length, document?.groups.length, document?.nodes.length, saveState]
+    [document?.edges.length, document?.groups.length, document?.nodes.length, historyState, saveState]
   );
   const graphViewport = useGraphViewportCamera({
     graphDetail,
