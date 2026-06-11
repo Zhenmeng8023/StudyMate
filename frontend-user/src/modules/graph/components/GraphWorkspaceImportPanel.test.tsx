@@ -84,7 +84,9 @@ describe("GraphWorkspaceImportPanel", () => {
     );
 
     expect(screen.getByRole("button", { name: "导入草稿" })).toBeDisabled();
-    expect(screen.getByText("dangling_edge")).toBeInTheDocument();
+    expect(screen.getByText("悬挂连线 · 1")).toBeInTheDocument();
+    expect(screen.getByText("定位：edge-1")).toBeInTheDocument();
+    expect(screen.getByText("修复建议：删除这条连线，或重新连接到仍存在的节点。")).toBeInTheDocument();
     expect(screen.getByText("连线终点不存在")).toBeInTheDocument();
   });
 });

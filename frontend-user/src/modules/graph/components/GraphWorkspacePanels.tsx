@@ -150,19 +150,22 @@ export function GraphValidationIssueList(props: { issues: GraphValidationIssuePa
         <div className="graph-source-summary-list">
           {summary.ruleGroups.map((group) => (
             <span className={`graph-source-summary-pill ${group.severity}`} key={group.ruleType}>
-              {group.ruleType} · {group.count}
+              {group.ruleLabel} · {group.count}
             </span>
           ))}
         </div>
       </article>
       <div className="graph-issue-list">
-        {props.issues.map((issue) => (
+        {summary.issueDetails.map((issue, index) => (
           <article
             className={`graph-issue-item ${issue.severity}`}
-            key={`${issue.ruleType}-${issue.targetId || issue.message}`}
+            key={`${issue.ruleType}-${issue.targetId || issue.message}-${index}`}
           >
-            <strong>{issue.ruleType}</strong>
+            <strong>{`${issue.ruleLabel}（${issue.severityLabel}）`}</strong>
             <span>{issue.message}</span>
+            <span>{`定位：${issue.targetLabel}`}</span>
+            <span>{`影响：${issue.impact}`}</span>
+            <span>{`修复建议：${issue.fixHint}`}</span>
           </article>
         ))}
       </div>

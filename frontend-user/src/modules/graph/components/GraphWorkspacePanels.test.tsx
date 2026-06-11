@@ -56,17 +56,26 @@ describe("GraphWorkspacePanels", () => {
   it("renders validation issues and falls back to the empty-state copy", () => {
     const issues: GraphValidationIssuePayload[] = [
       {
-        message: "节点标题为空",
-        ruleType: "empty_title",
+        message: "连线终点不存在",
+        ruleType: "dangling_edge",
+        severity: "error",
+        targetId: "edge-1"
+      },
+      {
+        message: "节点缺少来源",
+        ruleType: "missing_source",
         severity: "warning",
         targetId: "node-1"
       }
     ];
 
     const { rerender } = render(<GraphValidationIssueList issues={issues} />);
-    expect(screen.getByText("发现 1 个警告")).toBeInTheDocument();
-    expect(screen.getByText("empty_title")).toBeInTheDocument();
-    expect(screen.getByText("节点标题为空")).toBeInTheDocument();
+    expect(screen.getByText("发现 1 个错误、1 个警告")).toBeInTheDocument();
+    expect(screen.getByText("悬挂连线 · 1")).toBeInTheDocument();
+    expect(screen.getByText("缺少来源 · 1")).toBeInTheDocument();
+    expect(screen.getByText("定位：edge-1")).toBeInTheDocument();
+    expect(screen.getByText("修复建议：删除这条连线，或重新连接到仍存在的节点。")).toBeInTheDocument();
+    expect(screen.getByText("连线终点不存在")).toBeInTheDocument();
 
     rerender(<GraphValidationIssueList issues={[]} />);
     expect(screen.getByText("验证结果")).toBeInTheDocument();

@@ -3,6 +3,26 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-12 01:16:12 +08:00 | v1.1.0-alpha.49 | 强化图谱校验面板解释信息
+### 任务内容
+- 继续推进 P0 稳定治理，强化 GraphWorkspace validation panel，让孤立节点、缺来源、重复标题、悬挂边、跨折叠分组边、空分组、非法尺寸、无效来源 target 和多目标边异常等问题具备可读解释。
+- 不改变后端校验、Graph API 或 `.smtg` 合约，只增强用户端规则解释、严重级说明、定位提示和修复建议。
+### 完成结果
+- 扩展 `frontend-user/src/modules/graph/lib/graphValidationPanel.ts`，为现有校验 ruleType 增加中文规则名、severity 文案、影响说明、target 摘要和修复建议，并保留未知规则 fallback。
+- 更新 `GraphValidationIssueList`，规则汇总显示中文名称，单条问题显示“定位 / 影响 / 修复建议”，让导入失败和校验失败更可解释。
+- 更新 `GraphWorkspacePanels.test.tsx`、`GraphWorkspaceImportPanel.test.tsx` 和 `graphValidationPanel.test.ts`，覆盖规则解释、产品化规则清单、导入面板校验展示和空态回归。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphValidationPanel GraphWorkspacePanels` 先红，失败原因为面板仍显示原始 `ruleType`，缺少中文规则名、影响和修复建议。
+- `npm --workspace frontend-user run test -- graphValidationPanel GraphWorkspacePanels` 通过，2 个文件、7 个用例通过。
+- `npm --workspace frontend-user run test -- graphValidationPanel GraphWorkspacePanels GraphWorkspacePage graphFileImportExport GraphWorkspaceImportPanel` 通过，5 个文件、23 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 校验面板已从原始规则列表升级为可解释治理面板，后续可以继续推进 autosave/dirty/pending/saved/failed 与 Undo/Redo 边界硬化。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
 ## 2026-06-12 01:08:52 +08:00 | v1.1.0-alpha.48 | 强化图谱设置面板治理信息
 ### 任务内容
 - 继续推进 P0 稳定治理，在不改变 Graph API 和 `.smtg` 合约的前提下，把 GraphWorkspace 设置面板从说明清单增强为更清晰的工作区治理区域。
