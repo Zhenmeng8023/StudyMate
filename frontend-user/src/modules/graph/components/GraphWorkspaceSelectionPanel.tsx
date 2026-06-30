@@ -358,12 +358,24 @@ function GraphSingleNodePanel(props: {
         <strong>来源</strong>
         <p>{selectedNode.source?.label || "当前节点是自由创建的概念节点"}</p>
         {props.selectedNodeSourceBacklink ? (
-          <div className="graph-inline-actions">
-            <button className="ghost-button" onClick={() => props.onOpenSource(props.selectedNodeSourceBacklink!.target)} type="button">
-              <Link2 size={14} />
-              {props.selectedNodeSourceBacklink.actionLabel}
-            </button>
-          </div>
+          <>
+            <div className="graph-source-summary-list">
+              <span className="graph-source-summary-pill">
+                {props.selectedNodeSourceBacklink.sourceTypeLabel} / {props.selectedNodeSourceBacklink.sourceId}
+              </span>
+              <span className="graph-source-summary-pill">{props.selectedNodeSourceBacklink.learningStepLabel}</span>
+            </div>
+            <article className="graph-meta-card muted">
+              <strong>学习闭环</strong>
+              <p>{props.selectedNodeSourceBacklink.description}</p>
+            </article>
+            <div className="graph-inline-actions">
+              <button className="ghost-button" onClick={() => props.onOpenSource(props.selectedNodeSourceBacklink!.target)} type="button">
+                <Link2 size={14} />
+                {props.selectedNodeSourceBacklink.actionLabel}
+              </button>
+            </div>
+          </>
         ) : null}
       </div>
       <GraphNodeMetadataSummary selectedNode={selectedNode} />

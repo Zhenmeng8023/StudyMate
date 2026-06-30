@@ -90,7 +90,9 @@ describe("GraphWorkspaceSelectionPanel", () => {
         target: "/reader/material-1",
         actionLabel: "回到阅读器",
         sourceTypeLabel: "资料",
-        sourceId: "material-1"
+        sourceId: "material-1",
+        learningStepLabel: "资料阅读",
+        description: "回到原始资料确认上下文，再从图谱节点生成卡片草稿进入复习。"
       }
     });
 
@@ -101,6 +103,11 @@ describe("GraphWorkspaceSelectionPanel", () => {
     expect(props.onNodeMetadataFieldChange).toHaveBeenLastCalledWith("url", "https://new.example.test");
 
     const user = userEvent.setup();
+    expect(screen.getByText("学习闭环")).toBeInTheDocument();
+    expect(screen.getAllByText("资料 / material-1").length).toBeGreaterThan(0);
+    expect(screen.getByText("资料阅读")).toBeInTheDocument();
+    expect(screen.getByText("回到原始资料确认上下文，再从图谱节点生成卡片草稿进入复习。")).toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: "回到阅读器" }));
     expect(props.onOpenSource).toHaveBeenCalledWith("/reader/material-1");
   });

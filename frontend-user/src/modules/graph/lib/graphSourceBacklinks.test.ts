@@ -21,12 +21,27 @@ describe("buildGraphSourceBacklink", () => {
   it("links material, note, card, and AI sources to their workspaces", () => {
     expect(buildGraphSourceBacklink(node({ source: { type: "material", id: "material 1" } }))).toMatchObject({
       target: "/reader/material%201",
-      actionLabel: "回到阅读器"
+      actionLabel: "回到阅读器",
+      learningStepLabel: "资料阅读",
+      description: "回到原始资料确认上下文，再从图谱节点生成卡片草稿进入复习。"
     });
     expect(buildGraphSourceBacklink(node({ source: { type: "note", id: "note-1" } }))?.target).toBe("/notes?selected=note-1");
     expect(buildGraphSourceBacklink(node({ source: { type: "card", id: "card-1" } }))?.target).toBe("/review?card=card-1");
     expect(buildGraphSourceBacklink(node({ source: { type: "ai_draft", id: "draft-1" } }))?.target).toBe("/ai?draft=draft-1");
     expect(buildGraphSourceBacklink(node({ source: { type: "ai_task", id: "task-1" } }))?.target).toBe("/ai?task=task-1");
+  });
+
+  it("accepts source type aliases used by imports and learning loop payloads", () => {
+    expect(buildGraphSourceBacklink(node({ source: { type: "ai-draft", id: "draft 1" } }))).toMatchObject({
+      target: "/ai?draft=draft%201",
+      sourceTypeLabel: "AI 草稿",
+      sourceId: "draft 1",
+      learningStepLabel: "AI 草稿确认",
+      description: "回到 AI 草稿确认生成内容，再把确认后的知识点沉淀为卡片或图谱节点。"
+    });
+    expect(buildGraphSourceBacklink(node({ source: { type: "ai_task", id: "task-1" } }))?.learningStepLabel).toBe(
+      "AI 任务追踪"
+    );
   });
 
   it("links annotation and PDF anchor nodes back to the reader page and annotation query", () => {
@@ -39,6 +54,7 @@ describe("buildGraphSourceBacklink", () => {
       )
     ).toMatchObject({
       sourceTypeLabel: "批注",
+      learningStepLabel: "资料批注",
       target: "/reader/material-1?page=3&annotation=annotation-1",
       actionLabel: "回到批注"
     });

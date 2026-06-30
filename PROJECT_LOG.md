@@ -3,6 +3,26 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-30 20:12:21 +08:00 | v1.1.0-alpha.51 | 强化图谱来源反链学习闭环提示
+### 任务内容
+- 继续推进 P0 稳定治理，完善来源反链和学习闭环，让资料、PDF 批注、笔记、卡片、AI 草稿/任务节点不仅能跳回来源，也能解释当前处于学习闭环的哪一步。
+- 不改变 Graph API、`.smtg` 合约或卡片生成接口，只增强前端来源反链模型和选中节点面板展示。
+### 完成结果
+- 扩展 `buildGraphSourceBacklink`，为资料、笔记、卡片、批注、PDF 锚点、AI 草稿和 AI 任务返回 `learningStepLabel` 与 `description`，补充“资料阅读 / 笔记沉淀 / 卡片复习 / 资料批注 / PDF 锚点 / AI 草稿确认 / AI 任务追踪”等学习阶段。
+- 兼容 `ai-draft`、`ai_draft`、`ai-task`、`ai_task` 等来源类型别名，避免导入或 AI payload 使用不同命名时丢失反链。
+- 更新 `GraphWorkspaceSelectionPanel` 的单节点来源卡片，展示来源类型、来源 ID、学习阶段和下一步说明，并保留原有跳转按钮；现有“生成卡片草稿 / 确认写入卡组”仍由快照与草稿面板承接。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphSourceBacklinks GraphWorkspaceSelectionPanel` 先红，失败原因为缺少学习阶段/说明字段，且 `ai-draft` 别名未识别。
+- `npm --workspace frontend-user run test -- graphSourceBacklinks GraphWorkspaceSelectionPanel` 通过，2 个文件、8 个用例通过。
+- `npm --workspace frontend-user run test -- GraphWorkspacePage GraphWorkspaceSourceSummary GraphWorkspaceRecoveryPanel graphSourceBacklinks GraphWorkspaceSelectionPanel` 通过，5 个文件、20 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 选中节点面板现在能把来源跳转和学习闭环串起来，后续可以继续扩展节点对象模型和编辑面板，让 URL、图片、公式、PDF 锚点、卡片、资料、笔记、AI 草稿和工程图节点保持更统一的结构化 metadata。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
 ## 2026-06-12 01:22:43 +08:00 | v1.1.0-alpha.50 | 增强图谱历史与保存边界摘要
 ### 任务内容
 - 继续推进 P0 稳定治理，强化 autosave/dirty/pending/saved/failed 与 Undo/Redo 边界的可解释性。
