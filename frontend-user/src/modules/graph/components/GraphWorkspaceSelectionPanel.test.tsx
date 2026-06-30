@@ -144,6 +144,30 @@ describe("GraphWorkspaceSelectionPanel", () => {
     expect(props.onNodeMetadataFieldChange).toHaveBeenLastCalledWith("cardId", "card-2");
   });
 
+  it("renders a structured mode selector for diagram nodes", () => {
+    const diagramNode: GraphNodePayload = {
+      ...urlNode,
+      id: "diagram-node",
+      type: "diagram",
+      title: "ERD 模型",
+      source: null,
+      metadata: { content: { diagramKind: "erd", diagramShape: "entity" } }
+    };
+    const props = renderPanel({
+      selectedNode: diagramNode,
+      selectedNodes: [diagramNode],
+      selectedNodeIds: [diagramNode.id],
+      selectedNodeSourceBacklink: null
+    });
+
+    const modeSelect = screen.getByLabelText("ERD 模型 工程图类型");
+    expect(modeSelect).toHaveValue("erd");
+    expect(screen.getByRole("option", { name: "C4" })).toBeInTheDocument();
+
+    fireEvent.change(modeSelect, { target: { value: "c4" } });
+    expect(props.onNodeMetadataFieldChange).toHaveBeenLastCalledWith("diagramKind", "c4");
+  });
+
   it("renders multi-select actions and group editing", async () => {
     const user = userEvent.setup();
     const props = renderPanel({

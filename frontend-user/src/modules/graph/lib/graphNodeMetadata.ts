@@ -20,6 +20,21 @@ export type GraphNodeMetadataField =
 
 export type GraphNodeMetadataContent = Partial<Record<GraphNodeMetadataField, string>>;
 
+export type GraphNodeMetadataEditorField = {
+  field: GraphNodeMetadataField;
+  label: string;
+  placeholder: string;
+  options?: Array<{ value: string; label: string }>;
+};
+
+export const graphDiagramModeOptions = [
+  { value: "free", label: "自由" },
+  { value: "uml", label: "UML" },
+  { value: "erd", label: "ERD" },
+  { value: "c4", label: "C4" },
+  { value: "flowchart", label: "流程图" }
+];
+
 export function getGraphNodeMetadataContent(node: GraphNodePayload): GraphNodeMetadataContent {
   const content = node.metadata?.content;
   if (!content || typeof content !== "object" || Array.isArray(content)) {
@@ -64,11 +79,7 @@ export function patchGraphNodeMetadataField(
   };
 }
 
-export function getGraphNodeMetadataEditorFields(node: GraphNodePayload): Array<{
-  field: GraphNodeMetadataField;
-  label: string;
-  placeholder: string;
-}> {
+export function getGraphNodeMetadataEditorFields(node: GraphNodePayload): GraphNodeMetadataEditorField[] {
   switch (node.type) {
     case "image":
       return [
@@ -103,7 +114,12 @@ export function getGraphNodeMetadataEditorFields(node: GraphNodePayload): Array<
       ];
     case "diagram":
       return [
-        { field: "diagramKind", label: "工程图类型", placeholder: "UML / ERD / C4 / Flowchart" },
+        {
+          field: "diagramKind",
+          label: "工程图类型",
+          placeholder: "选择工程图类型",
+          options: graphDiagramModeOptions
+        },
         { field: "diagramShape", label: "图形类型", placeholder: "class / entity / component / step" },
         { field: "diagramSourceId", label: "导入来源 ID", placeholder: "import-..." }
       ];

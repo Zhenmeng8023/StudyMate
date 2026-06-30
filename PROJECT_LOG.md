@@ -3,6 +3,28 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-07-01 01:12:37 +08:00 | v1.1.0-alpha.58 | 工程图节点支持结构化模式选择
+### 任务内容
+- 继续推进自由/UML/ERD/C4/流程图模式能力，把工程图节点的 `diagramKind` 从自由文本输入升级为结构化选择。
+- 保持 `metadata.content.diagramKind` 仍为字符串，不改 Graph API、`.smtg` 合约或后端模型。
+### 完成结果
+- 新增 `GraphNodeMetadataEditorField` descriptor 类型和 `graphDiagramModeOptions`，固定支持 `free/uml/erd/c4/flowchart` 五种模式。
+- 更新 `getGraphNodeMetadataEditorFields`，为 `diagramKind` 返回可选项，其他 URL、图片、PDF、学习节点字段保持原输入框行为。
+- 更新 `GraphWorkspaceSelectionPanel`，带 `options` 的 metadata 字段渲染为键盘可达的 `<select>`，并继续通过现有回调写回不可变文档。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphNodeMetadata` 先红，失败原因为 `diagramKind` descriptor 缺少五种模式选项。
+- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel` 先红，失败原因为工程图类型仍渲染为普通 input。
+- `npm --workspace frontend-user run test -- graphNodeMetadata` 通过，1 个文件、6 个用例通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel` 通过，1 个文件、6 个用例通过。
+- `npm --workspace frontend-user run test -- graphNodeMetadata GraphWorkspaceSelectionPanel GraphWorkspacePage graphTemplateApplication graphNodeTypes` 通过，5 个文件、26 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 工程图节点的模式 metadata 现在可稳定用于模板、导入草稿和后续模式专属校验，避免大小写或任意文本导致规则漂移。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
 ## 2026-07-01 01:06:53 +08:00 | v1.1.0-alpha.57 | 工程图模板转换为 Mermaid 导入草稿
 ### 任务内容
 - 继续推进 v0.8 模板中心与导入草稿能力，让 `diagram` 模式模板套用后进入 Mermaid 草稿，而不是和学习模板一样固定生成 Markdown 大纲。

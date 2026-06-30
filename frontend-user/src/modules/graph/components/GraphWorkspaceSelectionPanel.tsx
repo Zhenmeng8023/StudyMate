@@ -331,12 +331,27 @@ function GraphSingleNodePanel(props: {
       {getGraphNodeMetadataEditorFields(selectedNode).map((field) => (
         <label key={field.field}>
           <span>{field.label}</span>
-          <input
-            aria-label={`${selectedNode.title} ${field.label}`}
-            onChange={(event) => props.onNodeMetadataFieldChange(field.field, event.target.value)}
-            placeholder={field.placeholder}
-            value={getGraphNodeMetadataField(selectedNode, field.field)}
-          />
+          {field.options ? (
+            <select
+              aria-label={`${selectedNode.title} ${field.label}`}
+              onChange={(event) => props.onNodeMetadataFieldChange(field.field, event.target.value)}
+              value={getGraphNodeMetadataField(selectedNode, field.field)}
+            >
+              <option value="">{field.placeholder}</option>
+              {field.options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              aria-label={`${selectedNode.title} ${field.label}`}
+              onChange={(event) => props.onNodeMetadataFieldChange(field.field, event.target.value)}
+              placeholder={field.placeholder}
+              value={getGraphNodeMetadataField(selectedNode, field.field)}
+            />
+          )}
         </label>
       ))}
       <div className="graph-form-stack tight">

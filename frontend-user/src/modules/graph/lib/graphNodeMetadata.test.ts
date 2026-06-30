@@ -60,10 +60,18 @@ describe("graphNodeMetadata", () => {
   });
 
   it("exposes draft diagram metadata editors without adding a new creation workflow", () => {
-    expect(getGraphNodeMetadataEditorFields(node({ type: "diagram" })).map((item) => item.field)).toEqual([
+    const fields = getGraphNodeMetadataEditorFields(node({ type: "diagram" }));
+    expect(fields.map((item) => item.field)).toEqual([
       "diagramKind",
       "diagramShape",
       "diagramSourceId"
+    ]);
+    expect(fields.find((item) => item.field === "diagramKind")?.options).toEqual([
+      { value: "free", label: "自由" },
+      { value: "uml", label: "UML" },
+      { value: "erd", label: "ERD" },
+      { value: "c4", label: "C4" },
+      { value: "flowchart", label: "流程图" }
     ]);
   });
 
