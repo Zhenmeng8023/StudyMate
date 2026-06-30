@@ -3,6 +3,27 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-30 20:16:44 +08:00 | v1.1.0-alpha.52 | 扩展图谱学习节点结构化 metadata 编辑
+### 任务内容
+- 继续推进节点对象模型和编辑面板成熟度，在不改变 Graph API 和 `.smtg` 合约的前提下，让资料、笔记、卡片、AI 草稿/任务和导入态工程图节点具备结构化 metadata 编辑入口。
+- 保持现有 URL、图片、公式、PDF 锚点字段行为不变，并继续通过不可变更新写入 `metadata.content`。
+### 完成结果
+- 扩展 `GraphNodeMetadataField`，新增 `materialId`、`materialUrl`、`noteId`、`cardId`、`deckId`、`aiDraftId`、`aiTaskId`、`diagramKind`、`diagramShape` 和 `diagramSourceId`。
+- 更新 `getGraphNodeMetadataEditorFields`，为 `material`、`rich-note`、`card`、`ai` 和导入态 `diagram` 节点返回类型化编辑字段；工程图字段只支持草稿/导入态编辑，不新增创建流程或后端端点。
+- 补强 `GraphWorkspaceSelectionPanel` 组件测试，确认卡片节点会展示“卡片 ID / 卡组 ID”编辑框，并把变更委托给现有 `onNodeMetadataFieldChange`。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphNodeMetadata` 先红，失败原因为学习节点和 `diagram` 节点仍返回空编辑字段。
+- `npm --workspace frontend-user run test -- graphNodeMetadata` 通过，1 个文件、6 个用例通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel` 通过，1 个文件、5 个用例通过。
+- `npm --workspace frontend-user run test -- graphNodeMetadata GraphWorkspaceSelectionPanel GraphWorkspacePage graphSourceBacklinks` 通过，4 个文件、22 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 学习闭环节点现在可以在选中面板中维护来源/卡组/AI 草稿等结构化字段，后续可继续把这些 metadata 与卡片生成、复习确认和导入草稿校验面板打通。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
 ## 2026-06-30 20:12:21 +08:00 | v1.1.0-alpha.51 | 强化图谱来源反链学习闭环提示
 ### 任务内容
 - 继续推进 P0 稳定治理，完善来源反链和学习闭环，让资料、PDF 批注、笔记、卡片、AI 草稿/任务节点不仅能跳回来源，也能解释当前处于学习闭环的哪一步。

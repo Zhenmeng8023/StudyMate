@@ -6,7 +6,17 @@ export type GraphNodeMetadataField =
   | "altText"
   | "formula"
   | "pdfPage"
-  | "pdfAnchor";
+  | "pdfAnchor"
+  | "materialId"
+  | "materialUrl"
+  | "noteId"
+  | "cardId"
+  | "deckId"
+  | "aiDraftId"
+  | "aiTaskId"
+  | "diagramKind"
+  | "diagramShape"
+  | "diagramSourceId";
 
 export type GraphNodeMetadataContent = Partial<Record<GraphNodeMetadataField, string>>;
 
@@ -73,6 +83,29 @@ export function getGraphNodeMetadataEditorFields(node: GraphNodePayload): Array<
       return [
         { field: "pdfPage", label: "PDF 页码", placeholder: "12" },
         { field: "pdfAnchor", label: "PDF 锚点", placeholder: "章节、批注或坐标" }
+      ];
+    case "material":
+      return [
+        { field: "materialId", label: "资料 ID", placeholder: "material-..." },
+        { field: "materialUrl", label: "资料 URL", placeholder: "https://..." }
+      ];
+    case "rich-note":
+      return [{ field: "noteId", label: "笔记 ID", placeholder: "note-..." }];
+    case "card":
+      return [
+        { field: "cardId", label: "卡片 ID", placeholder: "card-..." },
+        { field: "deckId", label: "卡组 ID", placeholder: "deck-..." }
+      ];
+    case "ai":
+      return [
+        { field: "aiDraftId", label: "AI 草稿 ID", placeholder: "draft-..." },
+        { field: "aiTaskId", label: "AI 任务 ID", placeholder: "task-..." }
+      ];
+    case "diagram":
+      return [
+        { field: "diagramKind", label: "工程图类型", placeholder: "UML / ERD / C4 / Flowchart" },
+        { field: "diagramShape", label: "图形类型", placeholder: "class / entity / component / step" },
+        { field: "diagramSourceId", label: "导入来源 ID", placeholder: "import-..." }
       ];
     default:
       return [];

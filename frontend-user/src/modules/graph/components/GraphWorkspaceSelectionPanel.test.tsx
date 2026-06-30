@@ -121,6 +121,29 @@ describe("GraphWorkspaceSelectionPanel", () => {
     expect(props.onEdgeKindChange).toHaveBeenCalledWith("curve");
   });
 
+  it("renders structured metadata editors for card nodes", () => {
+    const cardNode: GraphNodePayload = {
+      ...urlNode,
+      id: "card-node",
+      type: "card",
+      title: "复习卡片",
+      source: { type: "card", id: "card-1", label: "卡片 A" },
+      metadata: { content: { cardId: "card-1", deckId: "deck-1" } }
+    };
+    const props = renderPanel({
+      selectedNode: cardNode,
+      selectedNodes: [cardNode],
+      selectedNodeIds: [cardNode.id],
+      selectedNodeSourceBacklink: null
+    });
+
+    expect(screen.getByLabelText("复习卡片 卡片 ID")).toHaveValue("card-1");
+    expect(screen.getByLabelText("复习卡片 卡组 ID")).toHaveValue("deck-1");
+
+    fireEvent.change(screen.getByLabelText("复习卡片 卡片 ID"), { target: { value: "card-2" } });
+    expect(props.onNodeMetadataFieldChange).toHaveBeenLastCalledWith("cardId", "card-2");
+  });
+
   it("renders multi-select actions and group editing", async () => {
     const user = userEvent.setup();
     const props = renderPanel({
