@@ -9,7 +9,8 @@ export type GraphNodeCreationType =
   | "image"
   | "url"
   | "formula"
-  | "pdf-anchor";
+  | "pdf-anchor"
+  | "diagram";
 
 export interface GraphNodeTypeOption {
   defaultTitle: string;
@@ -28,7 +29,8 @@ export const graphNodeTypeOptions: GraphNodeTypeOption[] = [
   { type: "image", label: "图片", defaultTitle: "图片节点", width: 250, height: 132 },
   { type: "url", label: "URL", defaultTitle: "URL 节点", width: 250, height: 132 },
   { type: "formula", label: "公式", defaultTitle: "公式节点", width: 250, height: 132 },
-  { type: "pdf-anchor", label: "PDF 锚点", defaultTitle: "PDF 锚点", width: 250, height: 132 }
+  { type: "pdf-anchor", label: "PDF 锚点", defaultTitle: "PDF 锚点", width: 250, height: 132 },
+  { type: "diagram", label: "工程图", defaultTitle: "工程图节点", width: 280, height: 160 }
 ];
 
 export function getGraphNodeTypeOption(type: GraphNodeCreationType) {

@@ -3,6 +3,26 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-30 20:28:31 +08:00 | v1.1.0-alpha.55 | 支持工程图节点基础创建类型
+### 任务内容
+- 继续推进 P1/P2 交界的对象模型成熟度，让工程图节点不只存在于导入态 metadata 编辑中，也能通过现有图谱工具栏创建。
+- 不引入模板中心、图形库面板、SQL/OpenAPI 导入或新后端端点，只扩展当前前端节点创建类型和 draft 配置。
+### 完成结果
+- 扩展 `GraphNodeCreationType`，新增 `diagram`。
+- 更新 `graphNodeTypeOptions`，在新建节点下拉框中加入“工程图”，默认标题为“工程图节点”，尺寸为 280 × 160。
+- 补充 `graphNodeTypes.test.ts` 和 `GraphWorkspaceShell.test.tsx`，覆盖工程图类型暴露、draft 构建和工具栏下拉回调。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphNodeTypes GraphWorkspaceShell` 先红，失败原因为工程图选项缺失，`diagram` draft 回退为概念节点。
+- `npm --workspace frontend-user run test -- graphNodeTypes GraphWorkspaceShell` 通过，2 个文件、6 个用例通过。
+- `npm --workspace frontend-user run test -- graphNodeTypes graphNodeMetadata GraphWorkspaceShell GraphWorkspaceSelectionPanel GraphWorkspacePage graphWorkspaceMutations` 通过，6 个文件、31 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 工程图节点已进入现有画布创建入口，并可复用前一阶段的 `diagramKind/diagramShape/diagramSourceId` metadata 编辑；后续可以继续推进模板中心、图形库面板和导入草稿校验。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
 ## 2026-06-30 20:25:23 +08:00 | v1.1.0-alpha.54 | 保留图谱卡片写入的结构化来源
 ### 任务内容
 - 继续完善图谱节点生成卡片并参与复习的学习闭环，让确认写入复习卡片时，即使图谱节点没有显式 `source`，也能从结构化 metadata 保留来源。

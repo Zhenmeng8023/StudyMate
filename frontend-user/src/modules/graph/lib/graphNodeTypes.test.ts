@@ -12,9 +12,11 @@ describe("graph node types", () => {
       "image",
       "url",
       "formula",
-      "pdf-anchor"
+      "pdf-anchor",
+      "diagram"
     ]);
     expect(graphNodeTypeOptions.map((option) => option.label)).toContain("PDF 锚点");
+    expect(graphNodeTypeOptions.map((option) => option.label)).toContain("工程图");
   });
 
   it("builds a default node draft from type configuration", () => {
@@ -47,6 +49,23 @@ describe("graph node types", () => {
       width: 250,
       height: 110,
       source: { type: "card", id: "card-1", label: "间隔重复卡片" }
+    });
+  });
+
+  it("builds an engineering diagram node draft from type configuration", () => {
+    expect(
+      buildGraphNodeDraft({
+        id: "node-diagram",
+        position: { x: 40, y: 60 },
+        type: "diagram"
+      })
+    ).toMatchObject({
+      id: "node-diagram",
+      type: "diagram",
+      title: "工程图节点",
+      width: 280,
+      height: 160,
+      metadata: {}
     });
   });
 });
