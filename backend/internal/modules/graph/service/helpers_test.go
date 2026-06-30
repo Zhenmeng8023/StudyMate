@@ -193,11 +193,14 @@ func hasValidationRule(issues []graphdto.GraphValidationIssuePayload, ruleType s
 
 func TestListLearningDiagramTemplates(t *testing.T) {
 	templates := NewService(nil, nil, nil, nil, nil).ListDiagramTemplates()
-	if len(templates) != 4 {
-		t.Fatalf("expected 4 learning templates, got %d", len(templates))
-	}
 	expected := []string{"learning-material-map", "book-notes-map", "concept-network", "review-card-prep"}
+	if len(templates) < len(expected) {
+		t.Fatalf("expected at least %d learning templates, got %d", len(expected), len(templates))
+	}
 	for index, template := range templates {
+		if index >= len(expected) {
+			break
+		}
 		if template.ID != expected[index] {
 			t.Fatalf("expected template %s at index %d, got %s", expected[index], index, template.ID)
 		}
@@ -206,6 +209,36 @@ func TestListLearningDiagramTemplates(t *testing.T) {
 		}
 		if len(template.SampleLines) < 3 {
 			t.Fatalf("expected sample lines for template %s", template.ID)
+		}
+	}
+}
+
+func TestListEngineeringDiagramTemplates(t *testing.T) {
+	templates := NewService(nil, nil, nil, nil, nil).ListDiagramTemplates()
+	expected := map[string]string{
+		"uml-class-diagram":  "uml",
+		"erd-schema-diagram": "erd",
+		"c4-context-diagram": "c4",
+		"flowchart-process":  "flowchart",
+	}
+
+	found := map[string]graphdto.DiagramTemplatePayload{}
+	for _, template := range templates {
+		if template.Mode == "diagram" {
+			found[template.ID] = template
+		}
+	}
+
+	for templateID, category := range expected {
+		template, ok := found[templateID]
+		if !ok {
+			t.Fatalf("expected engineering template %s in %#v", templateID, found)
+		}
+		if template.Category != category {
+			t.Fatalf("expected template %s category %s, got %s", templateID, category, template.Category)
+		}
+		if len(template.SampleLines) < 4 {
+			t.Fatalf("expected diagram template %s to include preview sample lines", templateID)
 		}
 	}
 }

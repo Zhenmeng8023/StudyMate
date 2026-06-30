@@ -436,6 +436,38 @@ func (s *Service) ListDiagramTemplates() []graphdto.DiagramTemplatePayload {
 			Mode:        "learning",
 			SampleLines: []string{"复习来源笔记", "可提问知识点", "卡片草稿", "易混淆点"},
 		},
+		{
+			ID:          "uml-class-diagram",
+			Name:        "UML 类图",
+			Category:    "uml",
+			Description: "梳理类、接口、属性、方法和依赖关系，适合软件设计课程复盘。",
+			Mode:        "diagram",
+			SampleLines: []string{"领域模型", "核心类", "接口契约", "依赖关系"},
+		},
+		{
+			ID:          "erd-schema-diagram",
+			Name:        "ERD 数据模型",
+			Category:    "erd",
+			Description: "从实体、字段、主键和关系整理数据库结构，后续可承接 SQL DDL 导入草稿。",
+			Mode:        "diagram",
+			SampleLines: []string{"业务实体", "关键字段", "主键约束", "实体关系"},
+		},
+		{
+			ID:          "c4-context-diagram",
+			Name:        "C4 上下文图",
+			Category:    "c4",
+			Description: "表达系统、用户、外部依赖和边界，适合架构学习和项目复盘。",
+			Mode:        "diagram",
+			SampleLines: []string{"目标系统", "使用者", "外部系统", "系统边界"},
+		},
+		{
+			ID:          "flowchart-process",
+			Name:        "流程图",
+			Category:    "flowchart",
+			Description: "把步骤、判断、输入输出和异常路径整理成可复习的流程图。",
+			Mode:        "diagram",
+			SampleLines: []string{"开始", "关键步骤", "判断分支", "结束/回滚"},
+		},
 	}
 }
 

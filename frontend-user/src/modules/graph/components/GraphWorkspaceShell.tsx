@@ -145,13 +145,20 @@ export function GraphWorkspaceSourceRail(props: {
               type="button"
             >
               <strong>{template.name}</strong>
+              <small>{formatDiagramTemplateMode(template)}</small>
               <span>{template.description}</span>
+              {template.sampleLines.length ? <em>{template.sampleLines.slice(0, 3).join(" → ")}</em> : null}
             </button>
           ))}
         </div>
       </div>
     </section>
   );
+}
+
+function formatDiagramTemplateMode(template: DiagramTemplatePayload) {
+  const modeLabel = template.mode === "diagram" ? "工程图" : "学习闭环";
+  return [modeLabel, template.category].filter(Boolean).join(" / ");
 }
 
 export function GraphWorkspaceToolbar(props: {

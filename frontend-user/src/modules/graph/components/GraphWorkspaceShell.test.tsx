@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GraphDetailPayload } from "../../../api/client";
 import { graphNodeTypeOptions } from "../lib/graphNodeTypes";
-import { GraphWorkspaceHeader, GraphWorkspaceToolbar } from "./GraphWorkspaceShell";
+import { GraphWorkspaceHeader, GraphWorkspaceSourceRail, GraphWorkspaceToolbar } from "./GraphWorkspaceShell";
 
 const graphDetail: GraphDetailPayload = {
   id: "graph-1",
@@ -96,5 +96,38 @@ describe("GraphWorkspaceShell components", () => {
     fireEvent.keyDown(screen.getByPlaceholderText("搜索节点"), { key: "Enter" });
     expect(onLocateNode).toHaveBeenCalled();
     expect(screen.getByLabelText("图谱工具栏")).toBeInTheDocument();
+  });
+
+  it("renders diagram template mode and sample preview in the source rail", () => {
+    const onApplyTemplate = vi.fn();
+
+    render(
+      <GraphWorkspaceSourceRail
+        diagramTemplates={[
+          {
+            id: "uml-class-diagram",
+            name: "UML 类图",
+            category: "uml",
+            description: "梳理类、接口、属性、方法和依赖关系。",
+            mode: "diagram",
+            sampleLines: ["领域模型", "核心类", "接口契约", "依赖关系"]
+          }
+        ]}
+        graphDetail={graphDetail}
+        graphs={[graphDetail]}
+        materials={[]}
+        notes={[]}
+        onAddMaterialNode={vi.fn()}
+        onAddNoteNode={vi.fn()}
+        onApplyTemplate={onApplyTemplate}
+        onOpenGraph={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("工程图 / uml")).toBeInTheDocument();
+    expect(screen.getByText("领域模型 → 核心类 → 接口契约")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /UML 类图/ }));
+    expect(onApplyTemplate).toHaveBeenCalledWith(expect.objectContaining({ id: "uml-class-diagram" }));
   });
 });

@@ -3,6 +3,29 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-30 20:33:01 +08:00 | v1.1.0-alpha.56 | 增强工程图模板中心信息
+### 任务内容
+- 继续推进 v0.8 工程图能力，在不新增端点、不引入新库、不实现 SQL/OpenAPI 导入的前提下，让已有模板中心具备专业工程图模板和更可读的预览信息。
+- 保持 `DiagramTemplatePayload` 合约不变，继续通过 `/diagram/templates` 返回模板列表。
+### 完成结果
+- 在 `ListDiagramTemplates` 中新增 UML 类图、ERD 数据模型、C4 上下文图和流程图 4 个工程图模板，`mode` 使用 `diagram`，`category` 分别为 `uml/erd/c4/flowchart`。
+- 更新 `GraphWorkspaceSourceRail` 模板卡片，展示“学习闭环/工程图 + category”的模式标签，并显示前三条 `sampleLines` 骨架预览。
+- 补充后端 service 测试和前端 SourceRail 测试，覆盖专业模板存在、分类正确、样例线不少于 4 条，以及前端模式/预览展示和点击套用回调。
+### 验证结果
+- `go test ./internal/modules/graph/service` 先红，失败原因为工程图模板列表为空。
+- `npm --workspace frontend-user run test -- GraphWorkspaceShell` 先红，失败原因为模板卡未显示“工程图 / uml”和样例骨架预览。
+- `go test ./internal/modules/graph/service` 通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceShell` 通过，1 个文件、3 个用例通过。
+- `go test ./internal/modules/graph/...` 通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceShell GraphWorkspacePage graphNodeTypes graphNodeMetadata` 通过，4 个文件、20 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 模板中心现在能同时服务学习闭环和工程图草稿，为后续模板应用生成工程图节点、图形库面板和 SQL/OpenAPI 导入草稿打基础。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
 ## 2026-06-30 20:28:31 +08:00 | v1.1.0-alpha.55 | 支持工程图节点基础创建类型
 ### 任务内容
 - 继续推进 P1/P2 交界的对象模型成熟度，让工程图节点不只存在于导入态 metadata 编辑中，也能通过现有图谱工具栏创建。
