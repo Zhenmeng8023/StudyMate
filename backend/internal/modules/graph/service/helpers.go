@@ -495,11 +495,35 @@ func BuildCardCreateRequests(document graphdto.GraphDocumentPayload, drafts []gr
 		if node.Source != nil {
 			request.SourceType = strings.TrimSpace(node.Source.Type)
 			request.SourceID = strings.TrimSpace(node.Source.ID)
+		} else if sourceType, sourceID := inferCardSourceFromMetadata(node.Metadata); sourceType != "" && sourceID != "" {
+			request.SourceType = sourceType
+			request.SourceID = sourceID
 		}
 		requests = append(requests, request)
 	}
 
 	return requests, nil
+}
+
+func inferCardSourceFromMetadata(metadata map[string]any) (string, string) {
+	fields := []struct {
+		key        string
+		sourceType string
+	}{
+		{key: "noteId", sourceType: "note"},
+		{key: "cardId", sourceType: "card"},
+		{key: "materialId", sourceType: "material"},
+		{key: "aiDraftId", sourceType: "ai_draft"},
+		{key: "aiTaskId", sourceType: "ai_task"},
+		{key: "diagramSourceId", sourceType: "diagram"},
+	}
+	for _, field := range fields {
+		if value := readMetadataContentString(metadata, field.key); value != "" {
+			return field.sourceType, value
+		}
+	}
+
+	return "", ""
 }
 
 func ApplyGraphChangeDrafts(

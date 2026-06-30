@@ -3,6 +3,24 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-30 20:25:23 +08:00 | v1.1.0-alpha.54 | 保留图谱卡片写入的结构化来源
+### 任务内容
+- 继续完善图谱节点生成卡片并参与复习的学习闭环，让确认写入复习卡片时，即使图谱节点没有显式 `source`，也能从结构化 metadata 保留来源。
+- 不改变 `CommitGraphCardDraftsRequest`、card API 或 `.smtg` 合约，只增强后端 create card request 的来源推断。
+### 完成结果
+- 新增 `inferCardSourceFromMetadata`，在 `BuildCardCreateRequests` 中保留显式 `node.Source` 优先级；当显式来源缺失时，按 `noteId`、`cardId`、`materialId`、`aiDraftId`、`aiTaskId`、`diagramSourceId` 推断 `SourceType/SourceID`。
+- 补充 service helper 测试，覆盖自由整理的 `rich-note` 节点只有 `metadata.content.noteId` 时，确认写入卡片仍生成 `note/note-1` 来源。
+- 保持已有缺失节点、空白草稿和显式来源保留行为不变。
+### 验证结果
+- `go test ./internal/modules/graph/service` 先红，失败原因为 metadata fallback 未实现，create request 的 `SourceType/SourceID` 为空。
+- `go test ./internal/modules/graph/service` 通过。
+- `go test ./internal/modules/graph/...` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 图谱节点现在从“生成卡片草稿”到“确认写入复习卡片”都能携带来源线索，后续可以继续做 UI 层复习写入成功后的图谱反链提示或导入草稿校验展示。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
 ## 2026-06-30 20:22:18 +08:00 | v1.1.0-alpha.53 | 让图谱卡片草稿携带结构化来源线索
 ### 任务内容
 - 继续打通来源反链、结构化 metadata 与卡片生成/复习确认流，让图谱节点生成卡片草稿时能带出资料、笔记、卡片、AI 草稿和工程图导入等上下文。

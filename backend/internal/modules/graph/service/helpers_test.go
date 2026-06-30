@@ -304,6 +304,42 @@ func TestBuildCardCreateRequestsFromDraftsPreservesSource(t *testing.T) {
 	}
 }
 
+func TestBuildCardCreateRequestsFallsBackToStructuredMetadataSource(t *testing.T) {
+	document := graphdto.GraphDocumentPayload{
+		Nodes: []graphdto.GraphNodePayload{
+			{
+				ID:    "node-1",
+				Type:  "rich-note",
+				Title: "Binary Tree",
+				Metadata: map[string]any{
+					"content": map[string]any{
+						"noteId":     "note-1",
+						"materialId": "material-1",
+					},
+				},
+			},
+		},
+	}
+
+	requests, err := BuildCardCreateRequests(document, []graphdto.GraphCardDraftPayload{
+		{
+			ID:           "draft-1",
+			SourceNodeID: "node-1",
+			Front:        "什么是 Binary Tree？",
+			Back:         "一种每个节点最多有两个子节点的树。",
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if len(requests) != 1 {
+		t.Fatalf("expected 1 request, got %d", len(requests))
+	}
+	if requests[0].SourceType != "note" || requests[0].SourceID != "note-1" {
+		t.Fatalf("expected source note/note-1 from metadata fallback, got %#v", requests[0])
+	}
+}
+
 func TestBuildCardCreateRequestsRejectsMissingNode(t *testing.T) {
 	document := graphdto.GraphDocumentPayload{
 		Nodes: []graphdto.GraphNodePayload{{ID: "node-1", Type: "text", Title: "Binary Tree"}},
