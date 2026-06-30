@@ -3,6 +3,24 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-06-30 20:22:18 +08:00 | v1.1.0-alpha.53 | 让图谱卡片草稿携带结构化来源线索
+### 任务内容
+- 继续打通来源反链、结构化 metadata 与卡片生成/复习确认流，让图谱节点生成卡片草稿时能带出资料、笔记、卡片、AI 草稿和工程图导入等上下文。
+- 不改变 `/graphs/:id/ai/generate-cards` 请求合约、Graph API 或 `.smtg` 文件格式，只增强后端草稿解释文案。
+### 完成结果
+- 新增 `BuildCardDraftExplanation`，在保留原有固定说明的基础上，从 `metadata.content` 按稳定顺序提取 `materialId`、`materialUrl`、`noteId`、`cardId`、`deckId`、`aiDraftId`、`aiTaskId`、`diagramKind`、`diagramShape` 和 `diagramSourceId`。
+- 更新 `BuildCardDrafts`，生成 `GraphCardDraftPayload.explanation` 时追加“来源线索”，帮助用户在确认写入卡组前理解卡片草稿来自哪段学习闭环上下文。
+- 补充后端 service helper 测试，锁定卡片节点的 `cardId/deckId/aiDraftId` 会进入草稿解释，避免结构化 metadata 只停留在前端编辑面板。
+### 验证结果
+- `go test ./internal/modules/graph/service` 先红，失败原因为草稿 explanation 仍是固定文案，未包含“卡片 ID card-1”等结构化线索。
+- `go test ./internal/modules/graph/service` 通过。
+- `go test ./internal/modules/graph/...` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 图谱节点的结构化 metadata 已进入卡片草稿确认流，后续可以继续把复习写入结果反链回图谱，或为导入草稿校验面板展示这些来源线索。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
 ## 2026-06-30 20:16:44 +08:00 | v1.1.0-alpha.52 | 扩展图谱学习节点结构化 metadata 编辑
 ### 任务内容
 - 继续推进节点对象模型和编辑面板成熟度，在不改变 Graph API 和 `.smtg` 合约的前提下，让资料、笔记、卡片、AI 草稿/任务和导入态工程图节点具备结构化 metadata 编辑入口。

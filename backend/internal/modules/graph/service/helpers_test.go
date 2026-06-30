@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strings"
 	"testing"
 
 	aidto "studymate/backend/internal/modules/ai/dto"
@@ -235,6 +236,37 @@ func TestBuildCardDraftsFromSelection(t *testing.T) {
 
 	if drafts[0].Front == "" || drafts[0].Back == "" {
 		t.Fatalf("expected non-empty card draft, got %#v", drafts[0])
+	}
+}
+
+func TestBuildCardDraftsIncludesStructuredMetadataContext(t *testing.T) {
+	document := graphdto.GraphDocumentPayload{
+		Nodes: []graphdto.GraphNodePayload{
+			{
+				ID:    "node-1",
+				Type:  "card",
+				Title: "Binary Tree Review",
+				Metadata: map[string]any{
+					"content": map[string]any{
+						"cardId":    "card-1",
+						"deckId":    "deck-1",
+						"aiDraftId": "draft-1",
+					},
+				},
+			},
+		},
+	}
+
+	drafts := BuildCardDrafts(document, []string{"node-1"})
+	if len(drafts) != 1 {
+		t.Fatalf("expected 1 draft, got %d", len(drafts))
+	}
+
+	explanation := drafts[0].Explanation
+	for _, expected := range []string{"卡片 ID card-1", "卡组 ID deck-1", "AI 草稿 ID draft-1"} {
+		if !strings.Contains(explanation, expected) {
+			t.Fatalf("expected explanation to contain %q, got %q", expected, explanation)
+		}
 	}
 }
 

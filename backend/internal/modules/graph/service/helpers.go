@@ -411,11 +411,60 @@ func BuildCardDrafts(document graphdto.GraphDocumentPayload, nodeIDs []string) [
 			SourceNodeID: node.ID,
 			Front:        "什么是 " + node.Title + "？",
 			Back:         back,
-			Explanation:  "该草稿由图谱节点生成，确认后再进入正式复习卡片。",
+			Explanation:  BuildCardDraftExplanation(node),
 		})
 	}
 
 	return drafts
+}
+
+func BuildCardDraftExplanation(node graphdto.GraphNodePayload) string {
+	base := "该草稿由图谱节点生成，确认后再进入正式复习卡片。"
+	refs := buildCardDraftMetadataRefs(node.Metadata)
+	if len(refs) == 0 {
+		return base
+	}
+
+	return base + " 来源线索：" + strings.Join(refs, "；") + "。"
+}
+
+func buildCardDraftMetadataRefs(metadata map[string]any) []string {
+	fields := []struct {
+		key   string
+		label string
+	}{
+		{key: "materialId", label: "资料 ID"},
+		{key: "materialUrl", label: "资料 URL"},
+		{key: "noteId", label: "笔记 ID"},
+		{key: "cardId", label: "卡片 ID"},
+		{key: "deckId", label: "卡组 ID"},
+		{key: "aiDraftId", label: "AI 草稿 ID"},
+		{key: "aiTaskId", label: "AI 任务 ID"},
+		{key: "diagramKind", label: "工程图类型"},
+		{key: "diagramShape", label: "图形类型"},
+		{key: "diagramSourceId", label: "导入来源 ID"},
+	}
+	refs := make([]string, 0, len(fields))
+	for _, field := range fields {
+		if value := readMetadataContentString(metadata, field.key); value != "" {
+			refs = append(refs, field.label+" "+value)
+		}
+	}
+	return refs
+}
+
+func readMetadataContentString(metadata map[string]any, key string) string {
+	content, ok := metadata["content"].(map[string]any)
+	if !ok {
+		return ""
+	}
+
+	value, ok := content[key].(string)
+	if !ok {
+		return ""
+	}
+
+	return strings.TrimSpace(value)
 }
 
 func BuildCardCreateRequests(document graphdto.GraphDocumentPayload, drafts []graphdto.GraphCardDraftPayload) ([]carddto.CreateCardRequest, error) {
