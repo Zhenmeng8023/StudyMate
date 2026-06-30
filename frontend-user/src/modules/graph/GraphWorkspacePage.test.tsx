@@ -182,6 +182,30 @@ describe("GraphWorkspacePage persistence states", () => {
     expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
   });
 
+  it("applies diagram templates as Mermaid import drafts", async () => {
+    const user = userEvent.setup();
+    listDiagramTemplatesMock.mockResolvedValueOnce([
+      {
+        id: "uml-class-diagram",
+        name: "UML 类图",
+        category: "uml",
+        description: "梳理类、接口、属性、方法和依赖关系。",
+        mode: "diagram",
+        sampleLines: ["领域模型", "核心类", "接口契约"]
+      }
+    ]);
+
+    const { container } = renderWorkspace();
+
+    await expect(screen.findByRole("button", { name: /UML 类图/ })).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /UML 类图/ }));
+
+    expect(screen.getByText("已把工程图模板“UML 类图”作为 Mermaid 草稿放入导入面板")).toBeInTheDocument();
+    const importInput = container.querySelector<HTMLTextAreaElement>(".graph-import-input");
+    expect(importInput?.value).toBe("flowchart TD\n  T1[领域模型] --> T2[核心类]\n  T2[核心类] --> T3[接口契约]");
+    expect(screen.getByRole("button", { name: "Mermaid" })).toHaveClass("active");
+  });
+
   it("reports JSON import validation errors without calling remote import endpoints", async () => {
     const user = userEvent.setup();
 

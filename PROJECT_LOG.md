@@ -3,6 +3,28 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-07-01 01:06:53 +08:00 | v1.1.0-alpha.57 | 工程图模板转换为 Mermaid 导入草稿
+### 任务内容
+- 继续推进 v0.8 模板中心与导入草稿能力，让 `diagram` 模式模板套用后进入 Mermaid 草稿，而不是和学习模板一样固定生成 Markdown 大纲。
+- 不改变 `DiagramTemplatePayload`、导入 API 或 `.smtg` 合约，只拆出前端纯函数并调整 controller 编排。
+### 完成结果
+- 新增 `buildGraphTemplateImportDraft`，学习模板继续输出 Markdown 标题大纲，工程图模板按 `sampleLines` 稳定生成 `flowchart TD` Mermaid 连线草稿。
+- 更新 `useGraphWorkspaceController.tsx` 的 `applyTemplate`，只消费纯函数返回的 `importMode/importSource/status`，减少 controller 内联格式组装。
+- 补充纯函数和 `GraphWorkspacePage` 测试，覆盖学习模板 Markdown 回归、UML 模板 Mermaid 草稿、导入模式切换和可读状态提示。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphTemplateApplication` 先红，失败原因为纯函数模块尚不存在。
+- `npm --workspace frontend-user run test -- GraphWorkspacePage` 先红，失败原因为工程图模板仍走 Markdown 并显示旧状态。
+- `npm --workspace frontend-user run test -- graphTemplateApplication` 通过，1 个文件、2 个用例通过。
+- `npm --workspace frontend-user run test -- GraphWorkspacePage` 通过，1 个文件、8 个用例通过。
+- `npm --workspace frontend-user run test -- graphTemplateApplication GraphWorkspacePage GraphWorkspaceShell GraphWorkspaceImportPanel useGraphImportExport` 通过，5 个文件、21 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 工程图模板现在已从“展示卡”进入现有 Mermaid 导入草稿链路，后续可继续补 SQL/OpenAPI 草稿解析和模式专属校验。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
 ## 2026-06-30 20:33:01 +08:00 | v1.1.0-alpha.56 | 增强工程图模板中心信息
 ### 任务内容
 - 继续推进 v0.8 工程图能力，在不新增端点、不引入新库、不实现 SQL/OpenAPI 导入的前提下，让已有模板中心具备专业工程图模板和更可读的预览信息。

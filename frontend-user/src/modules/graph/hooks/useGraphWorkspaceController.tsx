@@ -116,6 +116,7 @@ import {
 import { buildSnapshotListFailureState } from "../lib/graphPersistenceState";
 import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
 import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
+import { buildGraphTemplateImportDraft } from "../lib/graphTemplateApplication";
 import {
   buildGraphWorkspaceLoadedStatus,
   buildGraphWorkspaceResourceState,
@@ -1148,11 +1149,10 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   }
 
   function applyTemplate(template: DiagramTemplatePayload) {
-    setImportMode("markdown");
-    setImportSource(
-      template.sampleLines.map((line, index) => `${index === 0 ? "#" : "##"} ${line}`).join("\n")
-    );
-    setStatusMessage(`已把模板“${template.name}”放入导入面板`);
+    const draft = buildGraphTemplateImportDraft(template);
+    setImportMode(draft.importMode);
+    setImportSource(draft.importSource);
+    setStatusMessage(draft.status);
   }
 
   async function handleCreateGraph() {
