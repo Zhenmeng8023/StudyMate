@@ -7,30 +7,63 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
-	adminrepo "studymate/backend/internal/modules/admin/repository"
-	aiservice "studymate/backend/internal/modules/ai/service"
+	aidto "studymate/backend/internal/modules/ai/dto"
 	carddto "studymate/backend/internal/modules/card/dto"
-	cardservice "studymate/backend/internal/modules/card/service"
 	graphdto "studymate/backend/internal/modules/graph/dto"
 	graphmodel "studymate/backend/internal/modules/graph/model"
 	graphrepo "studymate/backend/internal/modules/graph/repository"
 	"studymate/backend/internal/pkg/apperrors"
 )
 
+type graphRepository interface {
+	Create(graph *graphmodel.Graph) error
+	Save(graph *graphmodel.Graph) error
+	Delete(graph *graphmodel.Graph) error
+	FindByID(graphID string) (*graphmodel.Graph, error)
+	ListByOwner(ownerUserID string) ([]graphdto.GraphSummaryPayload, error)
+	CreateVersion(version *graphmodel.GraphVersion) error
+	ListVersions(graphID string, limit int) ([]graphdto.GraphSnapshotPayload, error)
+	DeleteVersions(graphID string) error
+	DeleteRelations(graphID string) error
+	ReplaceSourceRelations(graphID string, relations []graphmodel.GraphRelation) error
+}
+
+type graphDocumentStore interface {
+	UpsertCurrent(graph *graphmodel.Graph, document graphdto.GraphDocumentPayload) error
+	FindCurrent(graphID string) (*graphdto.GraphDocumentPayload, error)
+	CreateSnapshot(graph *graphmodel.Graph, document graphdto.GraphDocumentPayload) (string, error)
+	FindSnapshot(graphID string, version int64) (*graphdto.GraphDocumentPayload, error)
+	DeleteGraphArtifacts(graphID string) error
+}
+
+type auditLogRecorder interface {
+	Create(actorUserID string, action string, targetType string, metadata map[string]any) error
+}
+
+type graphCardService interface {
+	BulkCreateCards(ownerUserID string, deckID string, requests []carddto.CreateCardRequest) ([]carddto.CardPayload, error)
+}
+
+type graphAITaskService interface {
+	RecordGraphCardDrafts(ownerUserID string, graphID string, drafts []graphdto.GraphCardDraftPayload) ([]graphdto.GraphCardDraftPayload, error)
+	GetDraftsByIDs(ownerUserID string, draftIDs []string) ([]aidto.DraftPayload, error)
+	ResolveGraphChangeDrafts(ownerUserID string, draftIDs []string, remainders map[string]map[string]any) error
+}
+
 type Service struct {
-	repository *graphrepo.Repository
-	documents  *graphrepo.DocumentRepository
-	auditLogs  *adminrepo.AuditLogRepository
-	cards      *cardservice.Service
-	aiTasks    *aiservice.Service
+	repository graphRepository
+	documents  graphDocumentStore
+	auditLogs  auditLogRecorder
+	cards      graphCardService
+	aiTasks    graphAITaskService
 }
 
 func NewService(
-	repository *graphrepo.Repository,
-	documents *graphrepo.DocumentRepository,
-	auditLogs *adminrepo.AuditLogRepository,
-	cards *cardservice.Service,
-	aiTasks *aiservice.Service,
+	repository graphRepository,
+	documents graphDocumentStore,
+	auditLogs auditLogRecorder,
+	cards graphCardService,
+	aiTasks graphAITaskService,
 ) *Service {
 	return &Service{
 		repository: repository,
@@ -142,26 +175,29 @@ func (s *Service) BatchSave(ownerUserID string, graphID string, request graphdto
 	if err != nil {
 		return nil, err
 	}
+	if request.Document.Version != graph.CurrentVersion {
+		return nil, apperrors.New(
+			http.StatusConflict,
+			"graph_version_conflict",
+			"图谱已被其他窗口更新，请刷新当前图谱后再保存。",
+		)
+	}
 
-	if HasBlockingValidationIssues(ValidateDocument(request.Document)) {
+	nextVersion := graph.CurrentVersion + 1
+	document := graphdto.NormalizeDocumentPayload(graph.ID, nextVersion, request.Document)
+
+	if HasBlockingValidationIssues(ValidateDocument(document)) {
 		return nil, apperrors.New(http.StatusBadRequest, "invalid_graph_document", "图谱包含重复 ID、悬挂连线或非法尺寸等结构错误")
 	}
 
-	graph.CurrentVersion++
+	graph.CurrentVersion = nextVersion
 	graph.Title = request.Title
 	graph.Description = request.Description
-	graph.NodeCount = int64(len(request.Document.Nodes))
-	graph.EdgeCount = int64(len(request.Document.Edges))
+	graph.NodeCount = int64(len(document.Nodes))
+	graph.EdgeCount = int64(len(document.Edges))
 
 	if err := s.repository.Save(graph); err != nil {
 		return nil, apperrors.Internal("保存图谱失败")
-	}
-
-	document := request.Document
-	document.GraphID = graph.ID
-	document.Version = graph.CurrentVersion
-	if document.SchemaVersion == 0 {
-		document.SchemaVersion = 1
 	}
 
 	s.persistDocument(ownerUserID, graph, document, request.Summary)
@@ -210,15 +246,15 @@ func (s *Service) RestoreSnapshot(ownerUserID string, graphID string, request gr
 	graph.CurrentVersion++
 	graph.NodeCount = int64(len(document.Nodes))
 	graph.EdgeCount = int64(len(document.Edges))
+	graph.Mode = normalizeGraphMode(*document)
 	if err := s.repository.Save(graph); err != nil {
 		return nil, apperrors.Internal("恢复图谱快照失败")
 	}
 
-	document.GraphID = graph.ID
-	document.Version = graph.CurrentVersion
-	s.persistDocument(ownerUserID, graph, *document, "恢复历史快照")
+	normalized := graphdto.NormalizeDocumentPayload(graph.ID, graph.CurrentVersion, *document)
+	s.persistDocument(ownerUserID, graph, normalized, "恢复历史快照")
 
-	return s.buildDetail(graph, *document), nil
+	return s.buildDetail(graph, normalized), nil
 }
 
 func (s *Service) ImportMarkdown(ownerUserID string, graphID string, request graphdto.ImportGraphRequest) (*graphdto.GraphDetailPayload, error) {
@@ -243,6 +279,32 @@ func (s *Service) ImportMermaid(ownerUserID string, graphID string, request grap
 	}
 
 	return s.saveImportedDocument(ownerUserID, graph, document, "导入 Mermaid 草稿")
+}
+
+func (s *Service) PreviewLayout(ownerUserID string, graphID string, request graphdto.PreviewGraphLayoutRequest) (*graphdto.GraphLayoutPreviewPayload, error) {
+	graph, err := s.requireOwnerGraph(ownerUserID, graphID)
+	if err != nil {
+		return nil, err
+	}
+
+	document := graphdto.NormalizeDocumentPayload(graph.ID, graph.CurrentVersion, request.Document)
+
+	switch request.Mode {
+	case "source-swimlane":
+		preview, ok := BuildSourceSwimlanePreview(document, request.NodeIDs)
+		if !ok {
+			return nil, apperrors.New(http.StatusBadRequest, "invalid_graph_layout_request", "至少选择两个现有节点生成来源泳道")
+		}
+		return &graphdto.GraphLayoutPreviewPayload{
+			Mode:            request.Mode,
+			StatusMessage:   preview.StatusMessage,
+			Document:        preview.Document,
+			SelectedNodeIDs: preview.SelectedNodeIDs,
+			LaneCount:       preview.LaneCount,
+		}, nil
+	default:
+		return nil, apperrors.New(http.StatusBadRequest, "invalid_graph_layout_request", "不支持的图谱布局模式")
+	}
 }
 
 func (s *Service) ValidateGraph(ownerUserID string, graphID string) (*graphdto.GraphValidationResponse, error) {
@@ -472,22 +534,23 @@ func (s *Service) ListDiagramTemplates() []graphdto.DiagramTemplatePayload {
 }
 
 func (s *Service) saveImportedDocument(ownerUserID string, graph *graphmodel.Graph, document graphdto.GraphDocumentPayload, summary string) (*graphdto.GraphDetailPayload, error) {
-	if HasBlockingValidationIssues(ValidateDocument(document)) {
+	nextVersion := graph.CurrentVersion + 1
+	normalized := graphdto.NormalizeDocumentPayload(graph.ID, nextVersion, document)
+
+	if HasBlockingValidationIssues(ValidateDocument(normalized)) {
 		return nil, apperrors.New(http.StatusBadRequest, "invalid_graph_document", "图谱包含重复 ID、悬挂连线或非法尺寸等结构错误")
 	}
 
-	graph.CurrentVersion++
-	graph.NodeCount = int64(len(document.Nodes))
-	graph.EdgeCount = int64(len(document.Edges))
-	graph.Mode = normalizeGraphMode(document)
+	graph.CurrentVersion = nextVersion
+	graph.NodeCount = int64(len(normalized.Nodes))
+	graph.EdgeCount = int64(len(normalized.Edges))
+	graph.Mode = normalizeGraphMode(normalized)
 	if err := s.repository.Save(graph); err != nil {
 		return nil, apperrors.Internal("保存导入图谱失败")
 	}
 
-	document.GraphID = graph.ID
-	document.Version = graph.CurrentVersion
-	s.persistDocument(ownerUserID, graph, document, summary)
-	return s.buildDetail(graph, document), nil
+	s.persistDocument(ownerUserID, graph, normalized, summary)
+	return s.buildDetail(graph, normalized), nil
 }
 
 func (s *Service) persistDocument(ownerUserID string, graph *graphmodel.Graph, document graphdto.GraphDocumentPayload, summary string) {
@@ -564,19 +627,5 @@ func normalizeGraphMode(document graphdto.GraphDocumentPayload) string {
 }
 
 func defaultDocument(graphID string, version int64) graphdto.GraphDocumentPayload {
-	return graphdto.GraphDocumentPayload{
-		GraphID:       graphID,
-		Version:       version,
-		SchemaVersion: 1,
-		Viewport: graphdto.GraphViewportPayload{
-			X:    0,
-			Y:    0,
-			Zoom: 1,
-		},
-		Nodes:    []graphdto.GraphNodePayload{},
-		Edges:    []graphdto.GraphEdgePayload{},
-		Groups:   []graphdto.GraphGroupPayload{},
-		Theme:    map[string]any{},
-		Metadata: map[string]any{},
-	}
+	return graphdto.NewEmptyDocumentPayload(graphID, version)
 }

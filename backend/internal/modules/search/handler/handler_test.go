@@ -78,6 +78,28 @@ func TestSearchPassesQueryFiltersAndLimitToService(t *testing.T) {
 	}
 }
 
+func TestSearchWithoutTypesUsesDefaultServiceBehavior(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeSearchService{}
+	handler := NewHandler(service, nil)
+	router := gin.New()
+	router.GET("/search", handler.Search)
+
+	request := httptest.NewRequest(http.MethodGet, "/search?q=%E7%AC%94%E8%AE%B0", nil)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if len(service.types) != 0 {
+		t.Fatalf("expected omitted types to reach service as nil/empty, got %#v", service.types)
+	}
+	if service.limit != 20 {
+		t.Fatalf("expected default limit 20, got %d", service.limit)
+	}
+}
+
 func TestSearchReturnsServiceErrorsInEnvelope(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	service := &fakeSearchService{err: apperrors.New(http.StatusBadRequest, "invalid_search_type", "unsupported")}

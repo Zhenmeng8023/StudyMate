@@ -29,10 +29,41 @@ export function buildGraphSaveFailureState(error: unknown): Required<GraphPersis
   };
 }
 
+export function buildRecoveredLocalDraftState(): GraphPersistenceStatus {
+  return {
+    statusMessage: "已恢复本地未保存草稿，请尽快保存图谱"
+  };
+}
+
+export function buildStaleLocalDraftDiscardedState(): GraphPersistenceStatus {
+  return {
+    statusMessage: "检测到本地草稿基于旧版本，已放弃恢复并加载最新图谱"
+  };
+}
+
+export function buildConcurrentEditingWarningState(): GraphPersistenceStatus {
+  return {
+    statusMessage: "检测到另一个窗口正在编辑当前图谱，请保存前确认最新版本。"
+  };
+}
+
+export function buildConcurrentVersionAheadState(): GraphPersistenceStatus {
+  return {
+    statusMessage: "另一窗口已保存更高版本，请刷新图谱后再继续编辑。"
+  };
+}
+
 export function buildSnapshotRestoreSuccessState(versionNumber: number): Required<GraphPersistenceStatus> {
   return {
     saveState: "saved",
     statusMessage: `已恢复到快照版本 ${versionNumber}`
+  };
+}
+
+export function buildSnapshotRestoreBlockedDirtyState(): Required<GraphPersistenceStatus> {
+  return {
+    saveState: "dirty",
+    statusMessage: "当前图谱仍有未保存修改，请先保存后再恢复快照"
   };
 }
 

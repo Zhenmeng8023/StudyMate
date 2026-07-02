@@ -17,6 +17,8 @@ import {
 } from "../../api/client";
 import type { AuthSession, GraphDetailPayload, GraphSummaryPayload } from "../../api/client";
 import { GraphWorkspacePage } from "./GraphWorkspacePage";
+import { buildGraphWorkspaceConcurrencyStorageKey } from "./lib/graphWorkspaceConcurrencySignal";
+import { buildGraphWorkspaceDraftStorageKey } from "./lib/graphWorkspaceDraftRecovery";
 
 vi.mock("../../api/client", async () => {
   const actual = await vi.importActual<typeof import("../../api/client")>("../../api/client");
@@ -91,6 +93,9 @@ const batchSaveGraphMock = vi.mocked(batchSaveGraph);
 const restoreGraphSnapshotMock = vi.mocked(restoreGraphSnapshot);
 const createGraphMock = vi.mocked(createGraph);
 const validateGraphMock = vi.mocked(validateGraph);
+const clipboardWriteTextMock = vi.fn();
+const createObjectUrlMock = vi.fn();
+const revokeObjectUrlMock = vi.fn();
 
 function renderWorkspace() {
   return render(
@@ -103,10 +108,29 @@ function renderWorkspace() {
 describe("GraphWorkspacePage persistence states", () => {
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
+    window.sessionStorage.clear();
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    clipboardWriteTextMock.mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: clipboardWriteTextMock
+      }
+    });
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: createObjectUrlMock.mockReturnValue("blob:conflict")
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: revokeObjectUrlMock
+    });
     listGraphsMock.mockResolvedValue([graphSummary]);
     getGraphMock.mockResolvedValue(graphDetail);
     listDecksMock.mockResolvedValue([]);
@@ -144,6 +168,89 @@ describe("GraphWorkspacePage persistence states", () => {
     expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
   });
 
+  it("offers reloading the latest graph after a version conflict and confirms discarding dirty edits", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    batchSaveGraphMock.mockRejectedValueOnce(new Error("图谱已被其他窗口更新，请刷新当前图谱后再保存。"));
+    getGraphMock.mockReset();
+    getGraphMock
+      .mockResolvedValueOnce(graphDetail)
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        title: "Graph on server",
+        currentVersion: 5,
+        updatedAt: "2026-07-01T20:20:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 5
+        }
+      })
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        title: "Graph on server",
+        currentVersion: 5,
+        updatedAt: "2026-07-01T20:20:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 5
+        }
+      });
+
+    renderWorkspace();
+
+    await expect(screen.findByRole("button", { name: "保存" })).resolves.toBeInTheDocument();
+    await user.click(screen.getByTitle("新建概念节点"));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await expect(screen.findByText("图谱已被其他窗口更新，请刷新当前图谱后再保存。")).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("图谱冲突辅助")).toHaveTextContent("先留存当前草稿，再决定是否重载");
+    expect(screen.getByText("如果确认放弃本地修改：可直接重载最新图谱")).toBeInTheDocument();
+    expect(screen.getByText("如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱")).toBeInTheDocument();
+    expect(screen.getAllByText("节点：新增 1 个（新概念）")).toHaveLength(2);
+    await expect(screen.findByText("标题已修改（当前：Graph；基线：Graph on server）")).resolves.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "复制冲突摘要" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "导出冲突摘要" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "复制最新图谱 JSON" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "导出最新图谱 JSON" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "导出冲突处理包" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "复制当前草稿 JSON" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "导出当前草稿 JSON" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "复制冲突摘要" }));
+
+    await expect(screen.findByText("已复制图谱冲突摘要，可在重载前同步当前取舍信息")).resolves.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "复制最新图谱 JSON" }));
+
+    await expect(screen.findByText("已复制最新图谱 JSON，可与本地草稿配合人工比对")).resolves.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "导出冲突处理包" }));
+
+    await expect(screen.findByText("已导出冲突处理包，可稍后人工比对本地与最新版本")).resolves.toBeInTheDocument();
+    expect(screen.getByText("已留存冲突材料，可安全重载最新图谱")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "先保留本地，稍后人工合并" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "先保留本地，稍后人工合并" }));
+
+    await expect(screen.findAllByText("已标记为稍后人工合并，当前继续保留本地草稿")).resolves.toHaveLength(2);
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "复制当前草稿 JSON" }));
+
+    await expect(
+      screen.findByText(/已复制当前草稿 JSON，可在重载前留存本地修改|当前环境不支持复制当前草稿 JSON，请改用导出。/)
+    ).resolves.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重新加载最新图谱" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "放弃本地并重载最新图谱" }));
+
+    expect(confirmSpy).toHaveBeenCalledWith("重新加载最新图谱会丢弃当前未保存修改，确定继续吗？");
+    await expect(screen.findByText("已重新加载最新图谱，未保存更改已放弃")).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("图谱保存状态：空闲")).toBeInTheDocument();
+    expect(screen.getByText(/版本 5 · 0 节点 · 0 连线/)).toBeInTheDocument();
+    confirmSpy.mockRestore();
+  });
+
   it("shows a failed restore state when snapshot restore rejects", async () => {
     const user = userEvent.setup();
     restoreGraphSnapshotMock.mockRejectedValueOnce(new Error("快照恢复失败"));
@@ -155,6 +262,139 @@ describe("GraphWorkspacePage persistence states", () => {
 
     await expect(screen.findByText("快照恢复失败")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
+  });
+
+  it("blocks snapshot restore when the graph still has unsaved edits", async () => {
+    const user = userEvent.setup();
+
+    renderWorkspace();
+
+    await expect(screen.findByRole("button", { name: /保存/ })).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /新建.*节点/ }));
+    expect(screen.getByLabelText(/图谱保存状态：有未保存修改/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /恢复/ }));
+
+    await expect(screen.findByText(/未保存修改，请先保存后再恢复快照/)).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText(/图谱保存状态：有未保存修改/)).toBeInTheDocument();
+    expect(restoreGraphSnapshotMock).not.toHaveBeenCalled();
+  });
+
+  it("restores a same-version local draft when reopening the same graph workspace", async () => {
+    const user = userEvent.setup();
+
+    renderWorkspace();
+
+    await expect(screen.findByRole("button", { name: "保存" })).resolves.toBeInTheDocument();
+    await user.click(screen.getByTitle("新建概念节点"));
+    expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
+    expect(window.sessionStorage.getItem(buildGraphWorkspaceDraftStorageKey("graph-1"))).not.toBeNull();
+
+    cleanup();
+
+    renderWorkspace();
+
+    await expect(screen.findByText("已恢复本地未保存草稿，请尽快保存图谱")).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /新概念/ })).toBeInTheDocument();
+  });
+
+  it("offers reloading the latest graph when another window has already saved a newer version", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    getGraphMock.mockReset();
+    getGraphMock
+      .mockResolvedValueOnce(graphDetail)
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        currentVersion: 5,
+        updatedAt: "2026-07-01T20:22:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 5
+        }
+      })
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        currentVersion: 5,
+        updatedAt: "2026-07-01T20:22:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 5
+        }
+      });
+
+    renderWorkspace();
+
+    await expect(screen.findByRole("button", { name: "保存" })).resolves.toBeInTheDocument();
+    await user.click(screen.getByTitle("新建概念节点"));
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: buildGraphWorkspaceConcurrencyStorageKey("graph-1", "other-session"),
+        newValue: JSON.stringify({
+          currentVersion: 5,
+          dirty: false,
+          graphId: "graph-1",
+          sessionId: "other-session",
+          updatedAt: "2026-07-01T20:21:00Z"
+        }),
+        storageArea: window.localStorage
+      })
+    );
+
+    await expect(screen.findByText("另一窗口已保存更高版本，请刷新图谱后再继续编辑。")).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "重新加载最新图谱" }));
+
+    expect(confirmSpy).toHaveBeenCalledWith("重新加载最新图谱会丢弃当前未保存修改，确定继续吗？");
+    await expect(screen.findByText("已重新加载最新图谱，未保存更改已放弃")).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("图谱保存状态：空闲")).toBeInTheDocument();
+    confirmSpy.mockRestore();
+  });
+
+  it("explains when a stale local draft is discarded in favor of the latest graph head", async () => {
+    window.sessionStorage.setItem(
+      buildGraphWorkspaceDraftStorageKey("graph-1"),
+      JSON.stringify({
+        currentVersion: 4,
+        description: "stale draft",
+        document: {
+          ...graphDetail.document,
+          nodes: [
+            {
+              id: "node-stale",
+              type: "concept",
+              title: "Stale recovered node",
+              x: 120,
+              y: 140,
+              width: 220,
+              height: 132,
+              source: null,
+              metadata: {}
+            }
+          ]
+        },
+        graphId: "graph-1",
+        savedAt: "2026-07-01T20:10:00Z",
+        title: "Stale draft graph"
+      })
+    );
+    getGraphMock.mockResolvedValueOnce({
+      ...graphDetail,
+      currentVersion: 5,
+      updatedAt: "2026-07-01T20:11:00Z",
+      document: {
+        ...graphDetail.document,
+        version: 5
+      }
+    });
+
+    renderWorkspace();
+
+    await expect(screen.findByText("检测到本地草稿基于旧版本，已放弃恢复并加载最新图谱")).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("图谱保存状态：空闲")).toBeInTheDocument();
+    expect(window.sessionStorage.getItem(buildGraphWorkspaceDraftStorageKey("graph-1"))).toBeNull();
+    expect(screen.getByText(/版本 5 · 0 节点 · 0 连线/)).toBeInTheDocument();
+    expect(screen.queryByText("Stale recovered node")).toBeNull();
   });
 
   it("keeps editing available but reports snapshot list failures", async () => {

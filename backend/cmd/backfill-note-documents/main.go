@@ -16,6 +16,9 @@ func main() {
 	flag.Parse()
 
 	cfg := config.Load()
+	if err := config.ValidateMySQLConfig(cfg); err != nil {
+		log.Fatal(err)
+	}
 	deps, err := database.Connect(cfg)
 	if err != nil {
 		log.Fatalf("connect dependencies: %v", err)

@@ -22,4 +22,3 @@ func (n *NoteRelation) BeforeCreate(_ *gorm.DB) error {
 
 	return nil
 }
-

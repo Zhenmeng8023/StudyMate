@@ -22,6 +22,7 @@ type graphService interface {
 	RestoreSnapshot(ownerUserID string, graphID string, request graphdto.RestoreGraphRequest) (*graphdto.GraphDetailPayload, error)
 	ImportMarkdown(ownerUserID string, graphID string, request graphdto.ImportGraphRequest) (*graphdto.GraphDetailPayload, error)
 	ImportMermaid(ownerUserID string, graphID string, request graphdto.ImportGraphRequest) (*graphdto.GraphDetailPayload, error)
+	PreviewLayout(ownerUserID string, graphID string, request graphdto.PreviewGraphLayoutRequest) (*graphdto.GraphLayoutPreviewPayload, error)
 	ValidateGraph(ownerUserID string, graphID string) (*graphdto.GraphValidationResponse, error)
 	GenerateCardDrafts(ownerUserID string, graphID string, request graphdto.GraphCardDraftRequest) ([]graphdto.GraphCardDraftPayload, error)
 	CommitCardDrafts(ownerUserID string, graphID string, request graphdto.CommitGraphCardDraftsRequest) ([]carddto.CardPayload, error)
@@ -164,6 +165,22 @@ func (h *Handler) ImportMermaid(ctx *gin.Context) {
 	}
 
 	result, err := h.service.ImportMermaid(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), request)
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}
+
+func (h *Handler) PreviewLayout(ctx *gin.Context) {
+	var request graphdto.PreviewGraphLayoutRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, badGraphRequest())
+		return
+	}
+
+	result, err := h.service.PreviewLayout(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), request)
 	if err != nil {
 		response.Error(ctx, err)
 		return

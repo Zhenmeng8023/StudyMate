@@ -25,7 +25,10 @@
 - 后端 search service 已抽出 `SearchIndexer` 边界，默认保持 MySQL fallback；后续 adapter 切换不作为当前阻塞项。
 - Reader 链路已补到用户端 API 合约、`ReaderPage` 书签/批注来源回归，以及后端 `reader/handler`、`reader/service` 的鉴权、请求体、资料可见性和批注选择边界测试，后续继续向 notes 来源追踪闭环推进。
 - 图谱工作区已开始把 `useGraphWorkspaceController.tsx` 的 history/autosave/undo-redo 状态迁到独立 helper，并新增状态回归测试锁定行为。
+- 图谱导出、缩略图与布局契约已进一步收口：JSON/SVG/PNG 导出边界集中在 `graphFileImportExport.ts`，graph 摘要显式暴露 `thumbnailFileId`，来源泳道布局新增统一 `POST /graphs/:id/layouts/preview` 预览接口。
 - Playwright 当前已覆盖公共壳层、搜索、分享只读页、复习队列回写和后台治理用户模块，并通过测试内 API 拦截降低本地后端耦合。
+- 配置安全第一轮收口已完成：`JWT_SECRET`、`MYSQL_DSN` 不再回退到危险默认值，后端启动和迁移命令会显式校验关键环境变量。
+- 最小 CI 质量门禁已完成：`gofmt` 检查、配置安全回归检查、Vitest、Playwright、Go test 与文档同步已纳入默认 `npm run ci`。
 
 完成标志：
 
@@ -63,12 +66,14 @@
 - `docs/planning/VERSION_PLAN.md` 补齐 v1.0 阶段、取舍和性能预算。
 - `CHANGELOG.md`、`PROJECT_LOG.md`、PR 模板、CI 和文档同步脚本进入版本管理。
 - 每个里程碑都运行完整测试并提交。
+- 当前进一步补强：`gofmt` 和配置安全回归已纳入默认门禁，危险 fallback 已从后端配置层移除。
 
 完成标志：
 
 - 文档同步脚本通过。
 - README、开发说明、版本计划、路线图、变更记录和项目日志一致。
 - Node 24 / Go 1.26 CI 基线覆盖前后台构建、Vitest、Playwright、图谱核心测试、后端测试和文档同步。
+- 当前 CI 还未纳入依赖审计、覆盖率硬门槛和更完整的 secret scan，这些仍属于后续增强项。
 
 ## B. 拆分超大文件
 
@@ -104,6 +109,7 @@
 - 保留搜索定位、来源泳道、来源摘要、AI 落点预览、Markdown/Mermaid 导入、PNG/SVG 导出。
 - 新增图谱模板、验证规则面板、autosave/dirty 策略、Undo/Redo 边界、来源反链、键盘可达菜单、无障碍标签和设置面板。
 - 当前优先从 history/autosave/undo-redo 状态机继续拆分大控制器，再沿同一边界下沉数据加载、交互和设置面板逻辑。
+- 当前布局能力已从前端局部 helper 提升为统一 preview API，下一步重点转向 autosave、snapshot 和冲突处理可靠性，而不是继续分散补局部布局逻辑。
 - 增加 200 节点、300 边、20 分组的性能回归用例。
 
 完成标志：
@@ -153,7 +159,9 @@
 ## D 阶段当前完成
 
 - 复习调度已形成 `Scheduler` 接口，v1 默认 SM-2 不再直接绑死在服务方法中。
-- `/api/v1/search` 已提供 MySQL fallback 分组搜索，用户端搜索页改为后端搜索。
+- `/api/v1/search` 已提供 MySQL fallback 分组搜索，用户端搜索页改为后端搜索；省略 `types` 时默认覆盖 `material/post/note/graph/card` 五组，未知类型返回 `400 invalid_search_type`，`limit` 最大钳制为 `50`；搜索页现支持 URL 类型筛选、来源跳转和当前批次内分页切换，并已有集中化的搜索契约/回归矩阵文档与 `npm run verify:search` 入口。
+- 搜索 fallback 组内现已按“标题命中优先、摘要命中次之”的规则稳定排序，并把长摘要压缩为单行 160 字符内预览。
+- 搜索 fallback 的权限矩阵已显式固定：匿名请求只实际搜索资料与社区，graph 结果仅允许 `active` 且 owner/public 的图谱进入候选集。
 - `/api/v1/share-links` 与 `/api/v1/share/:token` 已提供 generic share link 和只读解析页。
 - 管理后台 users/reports/tags/AI/audit/files 模块已经从占位入口升级为真实 API 数据面。
 

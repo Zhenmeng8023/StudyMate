@@ -217,13 +217,26 @@
 
 .search-workspace,
 .search-section-grid,
-.search-result-list {
+.search-result-list,
+.search-filter-rail,
+.search-pagination,
+.search-pagination-controls {
   display: grid;
   gap: 16px;
 }
 
 .search-section-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.filter-chip.active {
+  border-color: rgba(41, 88, 70, 0.28);
+  background: rgba(41, 88, 70, 0.1);
+}
+
+.search-pagination-controls {
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  justify-content: start;
 }
 
 .search-result-card {

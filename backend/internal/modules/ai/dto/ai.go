@@ -29,19 +29,19 @@ type UsageSummaryPayload struct {
 }
 
 type DraftPayload struct {
-	ID          string `json:"id"`
-	TaskID      string `json:"taskId"`
-	DraftType   string `json:"draftType"`
-	TargetType  string `json:"targetType"`
-	TargetID    string `json:"targetId"`
-	Status      string `json:"status"`
-	SourceType  string `json:"sourceType,omitempty"`
-	SourceID    string `json:"sourceId,omitempty"`
-	SourceLabel string `json:"sourceLabel,omitempty"`
-	Front       string `json:"front"`
-	Back        string `json:"back"`
-	Explanation string `json:"explanation,omitempty"`
+	ID          string         `json:"id"`
+	TaskID      string         `json:"taskId"`
+	DraftType   string         `json:"draftType"`
+	TargetType  string         `json:"targetType"`
+	TargetID    string         `json:"targetId"`
+	Status      string         `json:"status"`
+	SourceType  string         `json:"sourceType,omitempty"`
+	SourceID    string         `json:"sourceId,omitempty"`
+	SourceLabel string         `json:"sourceLabel,omitempty"`
+	Front       string         `json:"front"`
+	Back        string         `json:"back"`
+	Explanation string         `json:"explanation,omitempty"`
 	Metadata    map[string]any `json:"metadata,omitempty"`
-	CreatedAt   string `json:"createdAt"`
-	UpdatedAt   string `json:"updatedAt"`
+	CreatedAt   string         `json:"createdAt"`
+	UpdatedAt   string         `json:"updatedAt"`
 }

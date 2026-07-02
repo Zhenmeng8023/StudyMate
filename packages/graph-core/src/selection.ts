@@ -21,6 +21,32 @@ export function clearGraphNodeSelection(_: GraphSelectionState): GraphSelectionS
   return createGraphSelectionState();
 }
 
+export function replaceGraphNodeSelection(
+  _: GraphSelectionState,
+  nodeIds: string[],
+  options: {
+    activeNodeId?: string;
+  } = {}
+): GraphSelectionState {
+  const normalizedNodeIds = [...new Set(nodeIds.map((nodeId) => nodeId.trim()).filter(Boolean))];
+  if (normalizedNodeIds.length === 0) {
+    return createGraphSelectionState();
+  }
+
+  const hasExplicitActiveNodeId = Object.prototype.hasOwnProperty.call(options, "activeNodeId");
+  const activeNodeId = options.activeNodeId?.trim() ?? "";
+  return {
+    selectedNodeId: hasExplicitActiveNodeId
+      ? activeNodeId
+        ? normalizedNodeIds.includes(activeNodeId)
+          ? activeNodeId
+          : normalizedNodeIds[0]
+        : ""
+      : normalizedNodeIds[0],
+    selectedNodeIds: normalizedNodeIds
+  };
+}
+
 export function toggleGraphNodeSelection(selection: GraphSelectionState, nodeId: string): GraphSelectionState {
   if (!nodeId.trim()) {
     return {

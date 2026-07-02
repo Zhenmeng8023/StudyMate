@@ -11,6 +11,7 @@ import type {
   GraphNodePayload
 } from "../../../api/client";
 import { getNodeToneTokens } from "../nodeAppearance";
+import { createEmptyGraphDocumentPayload, normalizeGraphDocumentPayload } from "./graphDocumentPayload";
 
 export const stageWidth = 2400;
 export const stageHeight = 1600;
@@ -121,36 +122,11 @@ export function cloneDocument(document: GraphDocumentPayload): GraphDocumentPayl
 }
 
 export function normalizeDocument(graphId: string, version: number, document: GraphDocumentPayload): GraphDocumentPayload {
-  return {
-    ...cloneDocument(document),
-    graphId,
-    version,
-    schemaVersion: document.schemaVersion || 1,
-    viewport: {
-      x: document.viewport?.x ?? 140,
-      y: document.viewport?.y ?? 120,
-      zoom: document.viewport?.zoom || 1
-    },
-    nodes: document.nodes ?? [],
-    edges: document.edges ?? [],
-    groups: document.groups ?? [],
-    theme: document.theme ?? {},
-    metadata: document.metadata ?? {}
-  };
+  return normalizeGraphDocumentPayload(graphId, version, document);
 }
 
 export function createEmptyDocument(graphId: string, version: number): GraphDocumentPayload {
-  return normalizeDocument(graphId, version, {
-    graphId,
-    version,
-    schemaVersion: 1,
-    viewport: { x: 140, y: 120, zoom: 1 },
-    nodes: [],
-    edges: [],
-    groups: [],
-    theme: {},
-    metadata: {}
-  });
+  return createEmptyGraphDocumentPayload(graphId, version);
 }
 
 export function rebuildDetail(detail: GraphDetailPayload, document: GraphDocumentPayload): GraphDetailPayload {

@@ -72,19 +72,20 @@ type GraphDocumentPayload struct {
 }
 
 type GraphSummaryPayload struct {
-	ID             string `json:"id"`
-	OwnerUserID    string `json:"ownerUserId"`
-	Title          string `json:"title"`
-	Description    string `json:"description"`
-	Visibility     string `json:"visibility"`
-	Status         string `json:"status"`
-	GraphType      string `json:"graphType"`
-	Mode           string `json:"mode"`
-	CurrentVersion int64  `json:"currentVersion"`
-	NodeCount      int64  `json:"nodeCount"`
-	EdgeCount      int64  `json:"edgeCount"`
-	CreatedAt      string `json:"createdAt"`
-	UpdatedAt      string `json:"updatedAt"`
+	ID              string `json:"id"`
+	OwnerUserID     string `json:"ownerUserId"`
+	Title           string `json:"title"`
+	Description     string `json:"description"`
+	Visibility      string `json:"visibility"`
+	Status          string `json:"status"`
+	GraphType       string `json:"graphType"`
+	Mode            string `json:"mode"`
+	ThumbnailFileID string `json:"thumbnailFileId,omitempty"`
+	CurrentVersion  int64  `json:"currentVersion"`
+	NodeCount       int64  `json:"nodeCount"`
+	EdgeCount       int64  `json:"edgeCount"`
+	CreatedAt       string `json:"createdAt"`
+	UpdatedAt       string `json:"updatedAt"`
 }
 
 type GraphDetailPayload struct {
@@ -126,6 +127,20 @@ type GraphValidationResponse struct {
 	Issues []GraphValidationIssuePayload `json:"issues"`
 }
 
+type PreviewGraphLayoutRequest struct {
+	Mode     string               `json:"mode" binding:"required,oneof=source-swimlane"`
+	NodeIDs  []string             `json:"nodeIds" binding:"required,min=2,max=50,dive,min=1"`
+	Document GraphDocumentPayload `json:"document" binding:"required"`
+}
+
+type GraphLayoutPreviewPayload struct {
+	Mode            string               `json:"mode"`
+	StatusMessage   string               `json:"statusMessage"`
+	Document        GraphDocumentPayload `json:"document"`
+	SelectedNodeIDs []string             `json:"selectedNodeIds"`
+	LaneCount       int                  `json:"laneCount"`
+}
+
 type GraphCardDraftPayload struct {
 	ID           string `json:"id"`
 	DraftID      string `json:"draftId,omitempty"`
@@ -145,13 +160,13 @@ type CommitGraphCardDraftsRequest struct {
 }
 
 type CommitGraphChangeDraftsRequest struct {
-	DraftIDs        []string                        `json:"draftIds" binding:"required,min=1,max=20,dive,min=1"`
-	NodeSelections  []GraphDraftNodeSelectionInput `json:"nodeSelections"`
+	DraftIDs       []string                       `json:"draftIds" binding:"required,min=1,max=20,dive,min=1"`
+	NodeSelections []GraphDraftNodeSelectionInput `json:"nodeSelections"`
 }
 
 type GraphDraftNodeSelectionInput struct {
-	DraftID  string   `json:"draftId" binding:"required,min=1,max=36"`
-	NodeIDs  []string `json:"nodeIds" binding:"required,min=1,max=50,dive,min=1"`
+	DraftID string   `json:"draftId" binding:"required,min=1,max=36"`
+	NodeIDs []string `json:"nodeIds" binding:"required,min=1,max=50,dive,min=1"`
 }
 
 type DiagramTemplatePayload struct {

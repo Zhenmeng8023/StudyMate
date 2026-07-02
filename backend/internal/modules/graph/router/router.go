@@ -17,6 +17,7 @@ func RegisterRoutes(group *gin.RouterGroup, handler *graphhandler.Handler) {
 	group.POST("/graphs/:id/restore", handler.RestoreSnapshot)
 	group.POST("/graphs/:id/import/markdown", handler.ImportMarkdown)
 	group.POST("/graphs/:id/import/mermaid", handler.ImportMermaid)
+	group.POST("/graphs/:id/layouts/preview", handler.PreviewLayout)
 	group.POST("/graphs/:id/validate", handler.Validate)
 	group.POST("/graphs/:id/ai/generate-cards", handler.GenerateCards)
 	group.POST("/graphs/:id/ai/commit-cards", handler.CommitCards)

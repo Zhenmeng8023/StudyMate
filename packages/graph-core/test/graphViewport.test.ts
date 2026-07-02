@@ -5,7 +5,9 @@ import {
   centerGraphViewportOnRect,
   clampGraphZoom,
   projectClientPointToGraph,
-  type GraphViewport
+  resetGraphViewport,
+  type GraphViewport,
+  zoomGraphViewport
 } from "../src/index.ts";
 
 const viewport: GraphViewport = { x: 120, y: 90, zoom: 1.25 };
@@ -73,5 +75,25 @@ test("buildGraphMinimapViewport returns null when stage is not measurable", () =
       scale: 0.1
     }),
     null
+  );
+});
+
+test("zoomGraphViewport applies clamped zoom without mutating pan offsets", () => {
+  assert.deepEqual(zoomGraphViewport(viewport, 0.1), { x: 120, y: 90, zoom: 1.35 });
+  assert.deepEqual(zoomGraphViewport(viewport, -5), { x: 120, y: 90, zoom: 0.55 });
+});
+
+test("resetGraphViewport replaces viewport state with provided defaults", () => {
+  assert.deepEqual(
+    resetGraphViewport(viewport, {
+      x: 140,
+      y: 120,
+      zoom: 1
+    }),
+    {
+      x: 140,
+      y: 120,
+      zoom: 1
+    }
   );
 });

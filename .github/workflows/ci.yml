@@ -29,6 +29,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify backend gofmt
+        run: npm run verify:backend:format
+
+      - name: Verify config safety
+        run: npm run verify:config-safety
+
       - name: Typecheck
         run: npm run typecheck
 

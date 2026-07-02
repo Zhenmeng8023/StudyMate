@@ -6,6 +6,16 @@
 
 ### Added
 
+- Added `verify:backend:format` and `verify:config-safety` root scripts, plus CI workflow steps that explicitly gate Go formatting and configuration safety regressions.
+- v1.1 搜索契约补强新增后端 search handler/service 回归测试，覆盖空 `types` 默认五组搜索、非法类型 `400 invalid_search_type`，以及 `limit` 上限钳制到 `50`。
+- v1.1 搜索契约补强新增用户端 search API 回归测试，锁定“不传 `types` 时不发送空 `types=` 参数”的请求形状。
+- v1.1 搜索结果质量补强新增纯逻辑回归测试，覆盖“标题命中优先”排序和长摘要折叠/截断规则。
+- v1.1 搜索权限矩阵补强新增纯 `spec` 测试，覆盖匿名短路 `note/graph/card`、公开资料/社区过滤，以及 graph 的 `active + owner/public` 约束。
+- v1.1 搜索页体验补强新增 `SearchWorkspacePage` 页面级回归测试，覆盖无关键词空态、后端错误态、URL 类型筛选、来源链接和当前批次分页切换。
+- v1.1 搜索文档收口新增 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`，并补 `npm run verify:search` 作为搜索专项回归入口。
+- v1.1 图谱文档契约收口新增 `docs/architecture/GRAPH_DOCUMENT_CONTRACT.md`、前端 `graphDocumentPayload` 兼容适配测试，以及后端 graph DTO 共享默认化测试，锁定 `GraphDocument` / `schemaVersion` / 空文档兼容读取规则。
+- v1.1 图谱 API 生命周期收口新增 `docs/architecture/GRAPH_API_LIFECYCLE.md`、后端 graph service 生命周期测试和前端 `graphs` API 契约测试，并修复 snapshot restore 时 `document.version` 可能回落为旧值、以及 `graph.mode` 可能与恢复后文档不一致的问题。
+- v1.1 图谱导出/缩略图/布局契约收口新增 `docs/architecture/GRAPH_EXPORT_LAYOUT_CONTRACT.md`、graph 摘要 `thumbnailFileId` 字段，以及 `POST /graphs/:id/layouts/preview` 来源泳道预览接口；前端工作区现优先走后端布局预览，失败时回退本地 helper。
 - v1.1 质量硬化新增用户端 search/share API 合约测试，覆盖 grouped search 查询参数、owner share link 创建载荷和 public share token 解析路径。
 - v1.1 质量硬化新增用户端 review/AI API 合约测试，覆盖 Deck/Card、今日队列、复习回写、AI drafts/tasks/usage 和图谱变更草稿确认请求形状。
 - v1.1 质量硬化新增 ReviewWorkspace 页面级测试，覆盖今日队列展示、翻面和评分回写。
@@ -35,6 +45,34 @@
 
 ### Changed
 
+- Search contract now treats omitted/blank `types` as the default `material/post/note/graph/card` groups, rejects unknown types before hitting the indexer, and documents `source` as a domain field rather than a storage-engine marker.
+- Search `limit` now defaults to `20` when missing/invalid and clamps to `50` when callers ask for a larger page size.
+- MySQL fallback search now fetches a slightly larger candidate set, keeps title matches ahead of summary-only matches within each group, and normalizes long summaries into single-line previews.
+- Search fallback now encodes its visibility rules explicitly: anonymous requests short-circuit `note/graph/card`, and logged-in graph queries only return `active` records that are either owned by the caller or public.
+- Search workspace UI now syncs `types` filters into the URL and paginates each fetched result batch locally, while explicitly documenting that backend offset/page pagination is not available yet.
+- Search regressions now have a dedicated `verify:search` command that runs frontend API/page tests, backend search tests, search smoke coverage, and document sync together.
+- Graph document normalization is now explicit on both sides of the wire: frontend workspace payloads reuse `@studymate/graph-core` normalization with UI viewport defaults, while backend graph DTO helpers normalize current documents, snapshots, imports, and restores through one shared contract.
+- Graph workspace state extraction now continues through shared graph-core helpers: explicit multi-select replacement, viewport zoom/reset transitions, and frontend history undo/redo wrappers all delegate to reusable `selection` / `viewport` / `history` primitives.
+- Graph workspace import/export/validation now routes through one frontend facade: JSON/SVG export descriptors, JSON import blocking rules, Markdown/Mermaid remote import normalization, and validate status messages all flow through `graphFileImportExport.ts`.
+- Graph batch-save now rejects stale document versions with `409 graph_version_conflict` instead of silently overwriting newer heads, and frontend persistence regressions now lock that dirty local edits remain visible after a conflict.
+- Graph snapshot restore now refuses to run while the workspace is still dirty, preserving unsaved local edits and showing an explicit “save before restore” message instead of silently replacing the canvas.
+- Graph workspace persistence now stores dirty drafts per graph in browser `sessionStorage`, restores them only when the reopened graph is still on the same head version, and drops stale local drafts instead of replaying them over a newer server document.
+- Graph workspace now also emits per-window concurrency signals through `localStorage`, warns when another window is still editing or has already saved a newer version, and explains when a stale local draft is intentionally discarded.
+- Graph workspace status now offers an explicit `重新加载最新图谱` action after cross-window version-ahead warnings or `409 graph_version_conflict`, confirms before discarding dirty edits, and clears failed-save UI after reloading the latest server head.
+- Graph workspace now also shows conflict-assist actions for dirty conflict states, letting users copy or export the current draft JSON before they choose to reload the latest graph head.
+- Graph conflict assist now summarizes the current unsaved local changes against the last synced graph baseline, so users can see what they are about to keep or discard before reloading.
+- Graph conflict assist now also compares the dirty local draft against the latest server head and shows a second summary for “与最新图谱相比”, instead of limiting the user to purely local unsaved-change hints.
+- Graph conflict summaries now include key object names alongside counts, so conflict hints can say which node/group/title changed instead of only reporting coarse totals.
+- Graph conflict assist now also lets users copy or export a portable Markdown conflict summary, so they can carry human-readable local-vs-latest context away before deciding whether to reload the latest head.
+- Graph conflict assist now also lets users copy or export the latest server-head StudyMate JSON during a dirty conflict, so local draft JSON, latest-head JSON, and the readable conflict summary can all be carried away for later manual comparison.
+- Graph conflict assist now also exports a single conflict bundle JSON, packaging the local draft artifact, latest-head artifact, and readable conflict summary together for later manual comparison or merge prep.
+- Graph conflict assist now also surfaces explicit disposal guidance and an in-card `放弃本地并重载最新图谱` action, so conflict handling is no longer split between material export and a separate status-bar-only reload entry.
+- Graph conflict assist now also marks when conflict materials have already been captured successfully, surfacing an explicit `已留存冲突材料，可安全重载最新图谱` cue before the user discards local edits.
+- Graph conflict assist now also lets users explicitly mark `先保留本地，稍后人工合并`, keeping the local draft in place while surfacing a matching status cue instead of forcing an immediate reload decision.
+- Graph `.smtg` parsing now accepts legacy payloads that omit `schemaVersion` as v1-compatible imports, while still rejecting array roots and invalid wrapped `document` payloads; graph-core regressions now also cover history fallback labels and past/future stack limits.
+- Backend config no longer falls back to dangerous default `JWT_SECRET` and `MYSQL_DSN` values; startup and migration-related commands now fail fast with explicit configuration errors.
+- Playwright preview defaults moved from ports `4173/4174` to `44173/44174`, with environment-variable overrides for local or CI environments.
+- Ran `gofmt` across the backend so the new Go formatting gate can pass consistently.
 - README 当前阶段更新为真实项目状态：阅读/笔记已闭环，图谱工作区为强 MVP，复习和 AI 部分实现，后台审核主链存在但治理能力不完整。
 - `.gitignore` 重新允许 `PROJECT_LOG.md`、`docs/planning/` 和 `docs/design/` 进入版本治理。
 - GitHub CI 扩展为覆盖 Node 24、Go 1.26、前后台构建、前后台测试、Playwright、图谱核心测试、后端测试和文档同步。

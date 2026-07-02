@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	graphSchemaVersion   = 1
 	graphDocumentTimeout = 5 * time.Second
 )
 
@@ -24,18 +23,18 @@ type DocumentRepository struct {
 }
 
 type graphDocumentRecord struct {
-	ID            string                     `bson:"_id"`
-	GraphID       string                     `bson:"graph_id"`
-	OwnerUserID   string                     `bson:"owner_user_id"`
-	Version       int64                      `bson:"version"`
-	SchemaVersion int                        `bson:"schema_version"`
+	ID            string                        `bson:"_id"`
+	GraphID       string                        `bson:"graph_id"`
+	OwnerUserID   string                        `bson:"owner_user_id"`
+	Version       int64                         `bson:"version"`
+	SchemaVersion int                           `bson:"schema_version"`
 	Viewport      graphdto.GraphViewportPayload `bson:"viewport"`
 	Nodes         []graphdto.GraphNodePayload   `bson:"nodes"`
 	Edges         []graphdto.GraphEdgePayload   `bson:"edges"`
 	Groups        []graphdto.GraphGroupPayload  `bson:"groups"`
-	Theme         map[string]any             `bson:"theme,omitempty"`
-	Metadata      map[string]any             `bson:"metadata,omitempty"`
-	UpdatedAt     time.Time                  `bson:"updated_at"`
+	Theme         map[string]any                `bson:"theme,omitempty"`
+	Metadata      map[string]any                `bson:"metadata,omitempty"`
+	UpdatedAt     time.Time                     `bson:"updated_at"`
 }
 
 func NewDocumentRepository(database *mongo.Database) *DocumentRepository {
@@ -88,7 +87,7 @@ func (r *DocumentRepository) FindCurrent(graphID string) (*graphdto.GraphDocumen
 		return nil, fmt.Errorf("find graph document: %w", err)
 	}
 
-	return &graphdto.GraphDocumentPayload{
+	document := graphdto.NormalizeDocumentPayload(graphID, record.Version, graphdto.GraphDocumentPayload{
 		GraphID:       record.GraphID,
 		Version:       record.Version,
 		SchemaVersion: record.SchemaVersion,
@@ -99,7 +98,9 @@ func (r *DocumentRepository) FindCurrent(graphID string) (*graphdto.GraphDocumen
 		Theme:         record.Theme,
 		Metadata:      record.Metadata,
 		UpdatedAt:     record.UpdatedAt.Format(time.RFC3339),
-	}, nil
+	})
+
+	return &document, nil
 }
 
 func (r *DocumentRepository) CreateSnapshot(graph *graphmodel.Graph, document graphdto.GraphDocumentPayload) (string, error) {
@@ -145,7 +146,7 @@ func (r *DocumentRepository) FindSnapshot(graphID string, version int64) (*graph
 		return nil, fmt.Errorf("find graph snapshot: %w", err)
 	}
 
-	return &graphdto.GraphDocumentPayload{
+	document := graphdto.NormalizeDocumentPayload(graphID, record.Version, graphdto.GraphDocumentPayload{
 		GraphID:       record.GraphID,
 		Version:       record.Version,
 		SchemaVersion: record.SchemaVersion,
@@ -156,7 +157,9 @@ func (r *DocumentRepository) FindSnapshot(graphID string, version int64) (*graph
 		Theme:         record.Theme,
 		Metadata:      record.Metadata,
 		UpdatedAt:     record.UpdatedAt.Format(time.RFC3339),
-	}, nil
+	})
+
+	return &document, nil
 }
 
 func (r *DocumentRepository) DeleteGraphArtifacts(graphID string) error {
@@ -184,7 +187,7 @@ func BuildGraphDocument(graph *graphmodel.Graph, document graphdto.GraphDocument
 		now = time.Now()
 	}
 
-	normalized := normalizeDocument(graph.ID, graph.CurrentVersion, document)
+	normalized := graphdto.NormalizeDocumentPayload(graph.ID, graph.CurrentVersion, document)
 
 	return bson.M{
 		"_id":            graph.ID,
@@ -208,7 +211,7 @@ func BuildGraphSnapshot(graph *graphmodel.Graph, document graphdto.GraphDocument
 		now = time.Now()
 	}
 
-	normalized := normalizeDocument(graph.ID, graph.CurrentVersion, document)
+	normalized := graphdto.NormalizeDocumentPayload(graph.ID, graph.CurrentVersion, document)
 
 	return bson.M{
 		"_id":            snapshotID,
@@ -253,36 +256,4 @@ func ExtractSourceRelations(document graphdto.GraphDocumentPayload) []graphmodel
 	}
 
 	return relations
-}
-
-func normalizeDocument(graphID string, version int64, document graphdto.GraphDocumentPayload) graphdto.GraphDocumentPayload {
-	if document.SchemaVersion == 0 {
-		document.SchemaVersion = graphSchemaVersion
-	}
-	if document.GraphID == "" {
-		document.GraphID = graphID
-	}
-	if document.Version == 0 {
-		document.Version = version
-	}
-	if document.Viewport.Zoom == 0 {
-		document.Viewport.Zoom = 1
-	}
-	if document.Nodes == nil {
-		document.Nodes = []graphdto.GraphNodePayload{}
-	}
-	if document.Edges == nil {
-		document.Edges = []graphdto.GraphEdgePayload{}
-	}
-	if document.Groups == nil {
-		document.Groups = []graphdto.GraphGroupPayload{}
-	}
-	if document.Theme == nil {
-		document.Theme = map[string]any{}
-	}
-	if document.Metadata == nil {
-		document.Metadata = map[string]any{}
-	}
-
-	return document
 }

@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+const adminBaseUrl = process.env.PLAYWRIGHT_ADMIN_BASE_URL ?? `http://127.0.0.1:${process.env.PLAYWRIGHT_ADMIN_PORT ?? "44174"}`;
+
 const adminSession = {
   accessToken: "admin-token",
   refreshToken: "refresh-token",
@@ -64,7 +66,7 @@ test("admin governance page loads the users module with an admin session", async
     });
   });
 
-  await page.goto("http://127.0.0.1:4174/");
+  await page.goto(`${adminBaseUrl}/`);
 
   await expect(page.getByText("Operator")).toBeVisible();
   await page.locator(".nav-stack button").nth(4).click();

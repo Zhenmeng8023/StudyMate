@@ -27,4 +27,3 @@ func (r *ReadingProgress) BeforeCreate(_ *gorm.DB) error {
 
 	return nil
 }
-

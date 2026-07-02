@@ -1,5 +1,4 @@
 import { useCallback } from "react";
-import { sanitizeGraphExportFilename } from "@studymate/graph-core";
 import {
   importGraphMarkdown,
   importGraphMermaid
@@ -15,16 +14,14 @@ import type {
 } from "../../../api/client";
 import { renderGraphPngBlobFromSvg } from "../lib/graphCanvasExport";
 import {
+  buildGraphExportArtifact,
   buildGraphImportSourceTargets,
-  buildGraphJsonExport,
-  parseGraphJsonImport,
-  toGraphValidationIssues
+  buildRemoteGraphImportOutcome,
+  parseGraphJsonImport
 } from "../lib/graphFileImportExport";
 import {
-  buildSvgExport,
   downloadBlob,
   downloadTextFile,
-  normalizeDocument,
   stageHeight,
   stageWidth,
   type ImportMode
@@ -76,9 +73,14 @@ export function useGraphImportExport(options: GraphImportExportOptions) {
     }
 
     try {
-      const svg = buildSvgExport(options.graphDetail, options.nodeMap, options.hiddenNodeIds);
-      const blob = await pngRenderer(svg);
-      blobDownloader(buildAssetExportFilename(options.graphDetail.title, "png"), blob);
+      const svgExport = buildGraphExportArtifact({
+        detail: options.graphDetail,
+        hiddenNodeIds: options.hiddenNodeIds,
+        kind: "svg",
+        nodeMap: options.nodeMap
+      });
+      const blob = await pngRenderer(svgExport.content);
+      blobDownloader(svgExport.filename.replace(/\.svg$/u, ".png"), blob);
       options.onStatusMessage("已导出 PNG 图谱");
     } catch {
       options.onStatusMessage("导出 PNG 失败");
@@ -91,8 +93,13 @@ export function useGraphImportExport(options: GraphImportExportOptions) {
     }
 
     try {
-      const svg = buildSvgExport(options.graphDetail, options.nodeMap, options.hiddenNodeIds);
-      textDownloader(buildAssetExportFilename(options.graphDetail.title, "svg"), svg, "image/svg+xml;charset=utf-8");
+      const exported = buildGraphExportArtifact({
+        detail: options.graphDetail,
+        hiddenNodeIds: options.hiddenNodeIds,
+        kind: "svg",
+        nodeMap: options.nodeMap
+      });
+      textDownloader(exported.filename, exported.content, exported.mimeType);
       options.onStatusMessage("已导出 SVG 图谱");
     } catch {
       options.onStatusMessage("导出 SVG 失败");
@@ -105,7 +112,7 @@ export function useGraphImportExport(options: GraphImportExportOptions) {
     }
 
     try {
-      const exported = buildGraphJsonExport(options.graphDetail);
+      const exported = buildGraphExportArtifact({ detail: options.graphDetail, kind: "json" });
       textDownloader(exported.filename, exported.content, exported.mimeType);
       options.onStatusMessage("已导出 StudyMate 图谱 JSON");
     } catch {
@@ -126,7 +133,25 @@ export function useGraphImportExport(options: GraphImportExportOptions) {
     options.onSavingChange(true);
     try {
       if (options.importMode === "json") {
-        importGraphJson(options);
+        const imported = parseGraphJsonImport(options.importSource, options.graphDetail.document, {
+          sourceTargets: buildGraphImportSourceTargets({
+            currentDocument: options.graphDetail.document,
+            materials: options.materials,
+            notes: options.notes
+          })
+        });
+        options.onValidationIssuesChange(imported.issuePayloads);
+        if (imported.blockingIssueCount > 0) {
+          options.onSaveStateChange("failed");
+          options.onStatusMessage(imported.statusMessage);
+          return;
+        }
+
+        options.onApplyDocument(imported.document, {
+          captureHistory: true,
+          label: imported.appliedLabel,
+          status: imported.statusMessage
+        });
         return;
       }
 
@@ -134,17 +159,12 @@ export function useGraphImportExport(options: GraphImportExportOptions) {
         options.importMode === "markdown"
           ? await importGraphMarkdown(options.session, options.graphDetail.id, options.importSource)
           : await importGraphMermaid(options.session, options.graphDetail.id, options.importSource);
-      const normalized = {
-        ...payload,
-        document: normalizeDocument(payload.id, payload.currentVersion, payload.document)
-      };
-      options.onResetHistory(
-        normalized,
-        options.importMode === "markdown" ? "导入 Markdown 大纲" : "导入 Mermaid 草稿"
-      );
-      await options.loadSnapshots(normalized.id);
+      const imported = buildRemoteGraphImportOutcome(payload, options.importMode);
+
+      options.onResetHistory(imported.detail, imported.resetLabel);
+      await options.loadSnapshots(imported.detail.id);
       options.onSaveStateChange("saved");
-      options.onStatusMessage(options.importMode === "markdown" ? "已导入 Markdown 大纲" : "已导入 Mermaid 草稿");
+      options.onStatusMessage(imported.statusMessage);
     } catch (error) {
       options.onSaveStateChange("failed");
       options.onStatusMessage(error instanceof Error ? error.message : "导入图谱失败");
@@ -159,36 +179,4 @@ export function useGraphImportExport(options: GraphImportExportOptions) {
     exportSvg,
     importGraph
   };
-}
-
-function importGraphJson(options: GraphImportExportOptions) {
-  if (!options.graphDetail) {
-    return;
-  }
-
-  const imported = parseGraphJsonImport(options.importSource, options.graphDetail.document, {
-    sourceTargets: buildGraphImportSourceTargets({
-      currentDocument: options.graphDetail.document,
-      materials: options.materials,
-      notes: options.notes
-    })
-  });
-  const issues = toGraphValidationIssues(imported.issues);
-  const errors = issues.filter((issue) => issue.severity === "error");
-  options.onValidationIssuesChange(issues);
-  if (errors.length > 0) {
-    options.onSaveStateChange("failed");
-    options.onStatusMessage(`导入 JSON 失败：发现 ${errors.length} 条结构错误`);
-    return;
-  }
-
-  options.onApplyDocument(imported.document, {
-    captureHistory: true,
-    label: "导入 StudyMate 图谱 JSON",
-    status: issues.length ? `已导入 JSON，另有 ${issues.length} 条校验提示` : "已导入 StudyMate 图谱 JSON"
-  });
-}
-
-function buildAssetExportFilename(title: string, extension: "png" | "svg") {
-  return `${sanitizeGraphExportFilename(title, "graph")}.${extension}`;
 }

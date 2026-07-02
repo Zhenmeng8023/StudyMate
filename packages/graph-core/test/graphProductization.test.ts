@@ -4,6 +4,8 @@ import {
   buildGraphBenchmarkFixture,
   createGraphHistoryState,
   getLearningGraphTemplates,
+  graphHistoryLimit,
+  markGraphHistoryClean,
   normalizeGraphDocument,
   parseStudymateGraphJson,
   redoGraphHistory,
@@ -176,26 +178,100 @@ test("StudyMate graph JSON round trips and rejects invalid schema", () => {
   );
 });
 
-test("graph history stores explainable labels and supports undo redo", () => {
+test("StudyMate graph JSON accepts legacy root documents and reports malformed input", () => {
+  const legacyRootJson = JSON.stringify({
+    ...baseDocument,
+    id: "legacy-root",
+    version: 7,
+    viewport: { x: 12, y: 24, zoom: 1.2 },
+    schemaVersion: undefined,
+    metadata: { importedFrom: "legacy-root" }
+  });
+
+  const parsedLegacy = parseStudymateGraphJson(legacyRootJson);
+
+  assert.equal(parsedLegacy.document.id, "legacy-root");
+  assert.equal(parsedLegacy.document.version, 7);
+  assert.equal(parsedLegacy.schemaVersion, 1);
+  assert.equal(parsedLegacy.document.schemaVersion, 1);
+  assert.deepEqual(parsedLegacy.document.viewport, { x: 12, y: 24, zoom: 1.2 });
+  assert.deepEqual(parsedLegacy.document.metadata, { importedFrom: "legacy-root" });
+  assert.deepEqual(parsedLegacy.metadata, { importedFrom: "legacy-root" });
+
+  assert.throws(
+    () => parseStudymateGraphJson("{not-json}"),
+    /Invalid StudyMate graph JSON/
+  );
+  assert.throws(
+    () => parseStudymateGraphJson(JSON.stringify(["not", "an", "object"])),
+    /root must be an object/
+  );
+  assert.throws(
+    () => parseStudymateGraphJson(JSON.stringify({ schemaVersion: 1, document: ["bad-document"] })),
+    /document must be an object/
+  );
+});
+
+test("graph history stores readable labels, fallback labels, and supports undo redo", () => {
   const history = createGraphHistoryState(baseDocument);
   const moved = {
     ...baseDocument,
     nodes: baseDocument.nodes.map((node) => (node.id === "node-a" ? { ...node, x: node.x + 80 } : node))
   };
-  const changed = withGraphHistoryChange(history, moved, "移动节点");
+  const changed = withGraphHistoryChange(history, moved, "\u79fb\u52a8\u8282\u70b9");
 
+  assert.equal(history.lastLabel, "\u521d\u59cb\u72b6\u6001");
   assert.equal(changed.present.nodes[0].x, 90);
-  assert.equal(changed.past[0].label, "移动节点");
+  assert.equal(changed.past[0].label, "\u79fb\u52a8\u8282\u70b9");
   assert.equal(changed.dirty, true);
 
   const undone = undoGraphHistory(changed);
   assert.ok(undone);
   assert.equal(undone.present.nodes[0].x, 10);
-  assert.equal(undone.future[0].label, "移动节点");
+  assert.equal(undone.future[0].label, "\u79fb\u52a8\u8282\u70b9");
+  assert.equal(undone.lastLabel, "\u64a4\u9500\uff1a\u79fb\u52a8\u8282\u70b9");
 
   const redone = redoGraphHistory(undone);
   assert.ok(redone);
   assert.equal(redone.present.nodes[0].x, 90);
+  assert.equal(redone.lastLabel, "\u91cd\u505a\uff1a\u79fb\u52a8\u8282\u70b9");
+
+  const fallbackChange = withGraphHistoryChange(history, moved, "   ");
+  assert.equal(fallbackChange.lastLabel, "\u56fe\u8c31\u53d8\u66f4");
+
+  const markedClean = markGraphHistoryClean(fallbackChange, "  ");
+  assert.equal(markedClean.lastLabel, "\u4fdd\u5b58\u56fe\u8c31");
+  assert.equal(markedClean.dirty, false);
+});
+
+test("graph history respects the configured past and future limits", () => {
+  let history = createGraphHistoryState(baseDocument);
+
+  for (let index = 0; index < graphHistoryLimit + 5; index += 1) {
+    const nextDocument = {
+      ...baseDocument,
+      nodes: baseDocument.nodes.map((node) =>
+        node.id === "node-a" ? { ...node, x: node.x + index + 1 } : node
+      )
+    };
+    history = withGraphHistoryChange(history, nextDocument, `step-${index}`);
+  }
+
+  assert.equal(history.past.length, graphHistoryLimit);
+  assert.equal(history.past[0]?.label, "step-5");
+
+  let undone = history;
+  for (let index = 0; index < graphHistoryLimit + 5; index += 1) {
+    const next = undoGraphHistory(undone);
+    if (!next) {
+      break;
+    }
+    undone = next;
+  }
+
+  assert.equal(undone.future.length, graphHistoryLimit);
+  assert.equal(undone.future[0]?.label, "step-5");
+  assert.equal(undone.future.at(-1)?.label, `step-${graphHistoryLimit + 4}`);
 });
 
 test("learning graph templates cover the four v0.6 product templates", () => {

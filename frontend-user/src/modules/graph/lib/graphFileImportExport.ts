@@ -10,23 +10,69 @@ import {
 import type {
   GraphDetailPayload,
   GraphDocumentPayload,
+  GraphNodePayload,
+  GraphValidationIssuePayload,
   MaterialPayload,
-  NotePayload,
-  GraphValidationIssuePayload
+  NotePayload
 } from "../../../api/client";
+import { buildSvgExport, normalizeDocument } from "./workspaceControllerHelpers";
 
-export function buildGraphJsonExport(detail: GraphDetailPayload, exportedAt = new Date().toISOString()) {
-  const coreDocument = toCoreGraphDocument(detail.document);
-  const filename = `${sanitizeGraphExportFilename(detail.title)}${studymateGraphExtension}`;
+type GraphJsonExportOptions = {
+  detail: GraphDetailPayload;
+  kind: "json";
+};
+
+type GraphSvgExportOptions = {
+  detail: GraphDetailPayload;
+  hiddenNodeIds: Set<string>;
+  kind: "svg";
+  nodeMap: Map<string, GraphNodePayload>;
+};
+
+type GraphRemoteImportMode = "markdown" | "mermaid";
+
+export type GraphJsonImportResult = {
+  appliedLabel: string;
+  blockingIssueCount: number;
+  document: GraphDocumentPayload;
+  issues: GraphValidationIssue[];
+  issuePayloads: GraphValidationIssuePayload[];
+  statusMessage: string;
+};
+
+export type GraphRemoteImportOutcome = {
+  detail: GraphDetailPayload;
+  resetLabel: string;
+  statusMessage: string;
+};
+
+export type GraphValidationOutcome = {
+  issues: GraphValidationIssuePayload[];
+  statusMessage: string;
+};
+
+export function buildGraphExportArtifact(
+  options: GraphJsonExportOptions | GraphSvgExportOptions,
+  exportedAt = new Date().toISOString()
+) {
+  if (options.kind === "json") {
+    const coreDocument = toCoreGraphDocument(options.detail.document);
+    return {
+      filename: buildGraphAssetExportFilename(options.detail.title, studymateGraphExtension.slice(1)),
+      mimeType: studymateGraphMimeType,
+      content: serializeStudymateGraphJson(coreDocument, {
+        exportedAt,
+        graphId: options.detail.id,
+        title: options.detail.title,
+        app: "StudyMate"
+      })
+    };
+  }
+
   return {
-    filename,
-    mimeType: studymateGraphMimeType,
-    content: serializeStudymateGraphJson(coreDocument, {
-      exportedAt,
-      graphId: detail.id,
-      title: detail.title,
-      app: "StudyMate"
-    })
+    filename: buildGraphAssetExportFilename(options.detail.title, "svg"),
+    mimeType: "image/svg+xml;charset=utf-8",
+    content: buildSvgExport(options.detail, options.nodeMap, options.hiddenNodeIds)
   };
 }
 
@@ -34,16 +80,50 @@ export function parseGraphJsonImport(
   content: string,
   currentDocument: GraphDocumentPayload,
   options: { sourceTargets?: Set<string> } = {}
-) {
+): GraphJsonImportResult {
   const parsed = parseStudymateGraphJson(content, {
     graphId: currentDocument.graphId,
     version: currentDocument.version,
     sourceTargets: options.sourceTargets
   });
+  const issuePayloads = toGraphValidationIssues(parsed.issues);
+  const blockingIssueCount = issuePayloads.filter((issue) => issue.severity === "error").length;
 
   return {
+    appliedLabel: "导入 StudyMate 图谱 JSON",
+    blockingIssueCount,
     document: fromCoreGraphDocument(parsed.document, currentDocument),
-    issues: parsed.issues
+    issues: parsed.issues,
+    issuePayloads,
+    statusMessage:
+      blockingIssueCount > 0
+        ? `导入 JSON 失败：发现 ${blockingIssueCount} 条结构错误`
+        : issuePayloads.length > 0
+          ? `已导入 JSON，另有 ${issuePayloads.length} 条校验提示`
+          : "已导入 StudyMate 图谱 JSON"
+  };
+}
+
+export function buildRemoteGraphImportOutcome(
+  detail: GraphDetailPayload,
+  mode: GraphRemoteImportMode
+): GraphRemoteImportOutcome {
+  const normalizedDetail = {
+    ...detail,
+    document: normalizeDocument(detail.id, detail.currentVersion, detail.document)
+  };
+
+  return {
+    detail: normalizedDetail,
+    resetLabel: mode === "markdown" ? "导入 Markdown 大纲" : "导入 Mermaid 草稿",
+    statusMessage: mode === "markdown" ? "已导入 Markdown 大纲" : "已导入 Mermaid 草稿"
+  };
+}
+
+export function buildGraphValidationOutcome(issues: GraphValidationIssuePayload[]): GraphValidationOutcome {
+  return {
+    issues,
+    statusMessage: issues.length > 0 ? `发现 ${issues.length} 条校验提示` : "图谱校验通过"
   };
 }
 
@@ -143,4 +223,8 @@ function fromCoreGraphDocument(document: GraphDocument, currentDocument: GraphDo
       importedFrom: "studymate-graph-json"
     }
   };
+}
+
+function buildGraphAssetExportFilename(title: string, extension: string) {
+  return `${sanitizeGraphExportFilename(title, "graph")}.${extension}`;
 }

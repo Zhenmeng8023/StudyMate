@@ -39,6 +39,7 @@ import {
   listGraphs,
   listMaterials,
   listNotes,
+  previewGraphLayout,
   validateGraph
 } from "../../../api/client";
 import {
@@ -55,6 +56,7 @@ import {
   GraphValidationIssueList
 } from "../components/GraphWorkspacePanels";
 import {
+  GraphConflictAssistCard,
   GraphStageCanvas,
   GraphStageStatus
 } from "../components/GraphWorkspaceStageChrome";
@@ -103,6 +105,7 @@ import {
   organizeGraphNodesBySource
 } from "../lib/graphSourceLayout";
 import { buildGraphSourceSwimlaneDocument } from "../lib/graphSourceSwimlanes";
+import { buildGraphExportArtifact, buildGraphValidationOutcome } from "../lib/graphFileImportExport";
 import {
   connectGraphWorkspaceNodes,
   createGraphWorkspaceGroup,
@@ -118,13 +121,29 @@ import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
 import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
 import { buildGraphTemplateImportDraft } from "../lib/graphTemplateApplication";
 import {
+  buildGraphConflictBundleArtifact,
+  buildGraphConflictReportArtifact,
+  buildGraphUnsavedChangeSummary
+} from "../lib/graphConflictSummary";
+import {
+  clearGraphWorkspaceLocalDraft,
+  getGraphWorkspaceDraftStorage,
+  readGraphWorkspaceLocalDraft,
+  recoverGraphWorkspaceLocalDraft
+} from "../lib/graphWorkspaceDraftRecovery";
+import {
   buildGraphWorkspaceLoadedStatus,
   buildGraphWorkspaceResourceState,
   normalizeGraphWorkspaceDetail
 } from "../lib/graphWorkspaceLoadState";
 import {
+  buildRecoveredLocalDraftState,
+  buildStaleLocalDraftDiscardedState
+} from "../lib/graphPersistenceState";
+import {
   autosaveDelayMs,
   cloneDocument,
+  downloadTextFile,
   findHiddenNodeIds,
   getSourceBucketKey,
   getSourceBucketLabel,
@@ -168,6 +187,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [historyState, setHistoryState] = useState<GraphHistoryState>(createEmptyGraphHistoryState);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("正在加载图谱工作区...");
+  const [reloadLatestSuggested, setReloadLatestSuggested] = useState(false);
+  const [conflictArtifactsCaptured, setConflictArtifactsCaptured] = useState(false);
+  const [manualMergeDeferred, setManualMergeDeferred] = useState(false);
+  const [latestConflictDetail, setLatestConflictDetail] = useState<GraphDetailPayload | null>(null);
+  const [latestConflictError, setLatestConflictError] = useState("");
+  const [latestConflictLoading, setLatestConflictLoading] = useState(false);
   const [graphSearch, setGraphSearch] = useState("");
   const [importMode, setImportMode] = useState<ImportMode>("markdown");
   const [importSource, setImportSource] = useState("# 学习主题\n## 核心概念\n## 待复习问题");
@@ -178,6 +203,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const alignmentGuides = graphDrag.alignmentGuides;
   const [showKeyboardGuide, setShowKeyboardGuide] = useState(false);
   const detailRef = useRef<GraphDetailPayload | null>(null);
+  const lastSyncedDetailRef = useRef<GraphDetailPayload | null>(null);
   const historyRef = useRef<GraphHistoryState>(createEmptyGraphHistoryState());
   const stageRef = useRef<HTMLDivElement | null>(null);
   const stageViewport = useGraphStageMeasurement(stageRef);
@@ -196,6 +222,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   useEffect(() => {
     detailRef.current = graphDetail;
   }, [graphDetail]);
+
+  useEffect(() => {
+    if (graphDetail && !historyState.dirty) {
+      lastSyncedDetailRef.current = graphDetail;
+    }
+  }, [graphDetail, historyState.dirty]);
 
   useEffect(() => {
     historyRef.current = historyState;
@@ -270,6 +302,55 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   );
   const quickNodeTypeLabel = getGraphNodeTypeOption(quickNodeType).label;
   const dirty = historyState.dirty;
+  const unsavedChangeSummary = useMemo(
+    () => buildGraphUnsavedChangeSummary(graphDetail, lastSyncedDetailRef.current),
+    [graphDetail]
+  );
+  const latestHeadConflictSummary = useMemo(
+    () => buildGraphUnsavedChangeSummary(graphDetail, latestConflictDetail),
+    [graphDetail, latestConflictDetail]
+  );
+  function setWorkspaceStatusMessage(message: string, options?: { suggestReload?: boolean }) {
+    setStatusMessage(message);
+    setReloadLatestSuggested(Boolean(options?.suggestReload));
+  }
+
+  useEffect(() => {
+    const currentGraphId = detailRef.current?.id;
+    if (!reloadLatestSuggested || !dirty || !currentGraphId) {
+      setConflictArtifactsCaptured(false);
+      setManualMergeDeferred(false);
+      setLatestConflictDetail(null);
+      setLatestConflictError("");
+      setLatestConflictLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLatestConflictLoading(true);
+    setLatestConflictError("");
+    void getGraph(props.session, currentGraphId)
+      .then((detail) => {
+        if (cancelled || detailRef.current?.id !== currentGraphId) {
+          return;
+        }
+        setLatestConflictDetail(normalizeGraphWorkspaceDetail(detail));
+        setLatestConflictLoading(false);
+      })
+      .catch((error) => {
+        if (cancelled || detailRef.current?.id !== currentGraphId) {
+          return;
+        }
+        setLatestConflictDetail(null);
+        setLatestConflictError(error instanceof Error ? error.message : "暂时无法获取最新图谱差异摘要");
+        setLatestConflictLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dirty, props.session, reloadLatestSuggested]);
+
   const {
     loadSnapshots,
     restoreSnapshot,
@@ -287,9 +368,10 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     historyRef,
     onGraphDetailChange: setGraphDetail,
     onHistoryChange: setHistoryState,
+    onReloadLatestSuggestionChange: setReloadLatestSuggested,
     onReplaceGraphSummary: replaceGraphSummary,
     onResetHistory: resetHistory,
-    onStatusMessage: setStatusMessage,
+    onStatusMessage: (message) => setWorkspaceStatusMessage(message),
     session: props.session
   });
   const graphImportExport = useGraphImportExport({
@@ -305,7 +387,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     onResetHistory: resetHistory,
     onSaveStateChange: setSaveState,
     onSavingChange: setSaving,
-    onStatusMessage: setStatusMessage,
+    onStatusMessage: (message) => setWorkspaceStatusMessage(message),
     onValidationIssuesChange: setValidationIssues,
     session: props.session
   });
@@ -331,7 +413,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     navigate: (target) => navigate(target, { replace: true, state: null }),
     onPreviewViewport: previewViewport,
     onSelectNode: setSingleNodeSelection,
-    onStatusMessage: setStatusMessage,
+    onStatusMessage: (message) => setWorkspaceStatusMessage(message),
     onViewportDocumentChange: mutateDocument,
     requestedFocus,
     requestedFocusKey,
@@ -390,17 +472,68 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     visibleNodeIds
   });
 
-  function resetHistory(nextDetail: GraphDetailPayload, label?: string) {
-    setGraphDetail(nextDetail);
-    const nextHistory = resetGraphHistoryState(historyRef.current, label);
-    historyRef.current = nextHistory;
-    setHistoryState(nextHistory);
+  function clearWorkspaceTransientState() {
     graphSelection.resetNodeSelection();
     setSelectedEdgeId("");
     setLinkFromNodeId("");
     setValidationIssues([]);
     setCardDrafts([]);
     graphDrag.clearActiveDrag();
+  }
+
+  function resetHistory(nextDetail: GraphDetailPayload, label?: string) {
+    detailRef.current = nextDetail;
+    setGraphDetail(nextDetail);
+    const nextHistory = resetGraphHistoryState(historyRef.current, label);
+    historyRef.current = nextHistory;
+    setHistoryState(nextHistory);
+    setReloadLatestSuggested(false);
+    clearWorkspaceTransientState();
+  }
+
+  function applyRecoveredDraft(nextDetail: GraphDetailPayload, label = "恢复本地草稿") {
+    detailRef.current = nextDetail;
+    setGraphDetail(nextDetail);
+    replaceGraphSummary(nextDetail);
+    const nextHistory = {
+      ...resetGraphHistoryState(historyRef.current, label),
+      dirty: true
+    };
+    historyRef.current = nextHistory;
+    setHistoryState(nextHistory);
+    clearWorkspaceTransientState();
+    setSaveState("dirty");
+    setReloadLatestSuggested(false);
+  }
+
+  function resolveWorkspaceDetailFromDraft(detail: GraphDetailPayload) {
+    const storage = getGraphWorkspaceDraftStorage();
+    const draft = readGraphWorkspaceLocalDraft(storage, detail.id);
+    const recovery = recoverGraphWorkspaceLocalDraft(detail, draft);
+    if (recovery.stale) {
+      clearGraphWorkspaceLocalDraft(storage, detail.id);
+    }
+    return recovery;
+  }
+
+  function buildLoadStatusMessage(
+    kind: Parameters<typeof buildGraphWorkspaceLoadedStatus>[0],
+    snapshotsLoaded: boolean,
+    recovery: { recovered: boolean; stale: boolean }
+  ) {
+    if (recovery.recovered) {
+      return snapshotsLoaded
+        ? buildRecoveredLocalDraftState().statusMessage
+        : `${buildRecoveredLocalDraftState().statusMessage}；${buildSnapshotListFailureState().statusMessage}`;
+    }
+
+    if (recovery.stale) {
+      return snapshotsLoaded
+        ? buildStaleLocalDraftDiscardedState().statusMessage
+        : `${buildStaleLocalDraftDiscardedState().statusMessage}；${buildSnapshotListFailureState().statusMessage}`;
+    }
+
+    return buildGraphWorkspaceLoadedStatus(kind, snapshotsLoaded);
   }
 
   function replaceGraphSummary(summary: GraphSummaryPayload) {
@@ -428,7 +561,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     replaceGraphSummary(result.detail);
     setHistoryState(result.history);
     setSaveState("dirty");
-    setStatusMessage(options?.status ?? "图谱有未保存的更改");
+    setWorkspaceStatusMessage(options?.status ?? "图谱有未保存的更改");
   }
 
   function setSingleNodeSelection(nodeId: string) {
@@ -512,7 +645,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       const layoutNodes = new Map(layout.nodes.map((node) => [node.id, node]));
       draft.nodes = draft.nodes.map((node) => layoutNodes.get(node.id) ?? node);
     });
-    setStatusMessage(layout.status);
+    setWorkspaceStatusMessage(layout.status);
   }
 
   function createSourceGroupsFromSelection() {
@@ -530,10 +663,10 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     mutateDocument((draft) => {
       draft.groups.push(...result.groups);
     });
-    setStatusMessage("已按来源类型为选中节点建立分组");
+    setWorkspaceStatusMessage("已按来源类型为选中节点建立分组");
   }
 
-  function createSourceSwimlanesFromSelection() {
+  async function createSourceSwimlanesFromSelection() {
     if (selectedNodes.length < 2) {
       return;
     }
@@ -543,16 +676,31 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    const result = buildGraphSourceSwimlaneDocument(current.document, selectedNodeIds, {
-      makeGroupId: () => randomId("swimlane")
-    });
-    if (result.document === current.document) {
+    setSaving(true);
+    try {
+      const preview = await previewGraphLayout(props.session, current.id, {
+        mode: "source-swimlane",
+        nodeIds: selectedNodeIds,
+        document: current.document
+      });
+      applyDocument(preview.document, { label: "生成来源泳道" });
+      graphSelection.selectNodeIds(preview.selectedNodeIds, { activeNodeId: "" });
+      setWorkspaceStatusMessage(preview.statusMessage);
       return;
+    } catch (error) {
+      const fallback = buildGraphSourceSwimlaneDocument(current.document, selectedNodeIds, {
+        makeGroupId: () => randomId("swimlane")
+      });
+      if (fallback.document !== current.document) {
+        applyDocument(fallback.document, { label: "生成来源泳道" });
+        graphSelection.selectNodeIds(fallback.selectedNodeIds, { activeNodeId: "" });
+        setWorkspaceStatusMessage("布局预览接口不可用，已使用本地来源泳道布局");
+        return;
+      }
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "生成来源泳道失败");
+    } finally {
+      setSaving(false);
     }
-
-    applyDocument(result.document, { label: "生成来源泳道" });
-    graphSelection.selectNodeIds(result.selectedNodeIds, { activeNodeId: "" });
-    setStatusMessage(result.status);
   }
 
   function applyBatchTone(tone: GraphNodeTone) {
@@ -598,12 +746,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     const nextDetail = rebuildDetail(current, nextDocument);
     detailRef.current = nextDetail;
     setGraphDetail(nextDetail);
-    setStatusMessage(status);
+    setWorkspaceStatusMessage(status);
   }
 
   async function loadGraphWorkspace() {
     setLoading(true);
-    setStatusMessage("正在同步图谱、资料、笔记和模板...");
+    setWorkspaceStatusMessage("正在同步图谱、资料、笔记和模板...");
 
     try {
       const [graphList, deckList, materialList, noteList, templateList] = await Promise.all([
@@ -634,18 +782,23 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         const normalized = normalizeGraphWorkspaceDetail(created);
         resetHistory(normalized, "创建图谱");
         const snapshotsLoaded = await loadSnapshots(created.id);
-        setStatusMessage(buildGraphWorkspaceLoadedStatus("created", snapshotsLoaded));
+        setWorkspaceStatusMessage(buildGraphWorkspaceLoadedStatus("created", snapshotsLoaded));
         return;
       }
 
       setGraphs(graphList);
       const first = await getGraph(props.session, resourceState.initialGraphId);
       const normalized = normalizeGraphWorkspaceDetail(first);
-      resetHistory(normalized, "加载图谱");
+      const recovered = resolveWorkspaceDetailFromDraft(normalized);
+      if (recovered.recovered) {
+        applyRecoveredDraft(recovered.detail);
+      } else {
+        resetHistory(normalized, "加载图谱");
+      }
       const snapshotsLoaded = await loadSnapshots(resourceState.initialGraphId);
-      setStatusMessage(buildGraphWorkspaceLoadedStatus("loaded", snapshotsLoaded));
+      setWorkspaceStatusMessage(buildLoadStatusMessage("loaded", snapshotsLoaded, recovered));
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "加载图谱工作台失败");
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "加载图谱工作台失败");
     } finally {
       setLoading(false);
     }
@@ -661,17 +814,227 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     }
 
     setLoading(true);
-    setStatusMessage("正在切换图谱...");
+    setWorkspaceStatusMessage("正在切换图谱...");
     try {
       const detail = await getGraph(props.session, graphId);
       const normalized = normalizeGraphWorkspaceDetail(detail);
-      resetHistory(normalized, "切换图谱");
+      const recovered = resolveWorkspaceDetailFromDraft(normalized);
+      if (recovered.recovered) {
+        applyRecoveredDraft(recovered.detail);
+      } else {
+        resetHistory(normalized, "切换图谱");
+      }
       const snapshotsLoaded = await loadSnapshots(graphId);
-      setStatusMessage(buildGraphWorkspaceLoadedStatus("opened", snapshotsLoaded));
+      setWorkspaceStatusMessage(buildLoadStatusMessage("opened", snapshotsLoaded, recovered));
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "切换图谱失败");
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "切换图谱失败");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function reloadLatestGraph() {
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
+
+    const shouldConfirmDiscard = dirty;
+    if (shouldConfirmDiscard && !window.confirm("重新加载最新图谱会丢弃当前未保存修改，确定继续吗？")) {
+      return;
+    }
+
+    setLoading(true);
+    setReloadLatestSuggested(false);
+    setWorkspaceStatusMessage("正在重新加载最新图谱...");
+    try {
+      const detail = await getGraph(props.session, current.id);
+      const normalized = normalizeGraphWorkspaceDetail(detail);
+      resetHistory(normalized, "重新加载最新图谱");
+      const snapshotsLoaded = await loadSnapshots(current.id);
+      setSaveState("idle");
+      setWorkspaceStatusMessage(
+        snapshotsLoaded
+          ? shouldConfirmDiscard
+            ? "已重新加载最新图谱，未保存更改已放弃"
+            : "已重新加载最新图谱"
+          : shouldConfirmDiscard
+            ? `已重新加载最新图谱，未保存更改已放弃；${buildSnapshotListFailureState().statusMessage}`
+            : `已重新加载最新图谱；${buildSnapshotListFailureState().statusMessage}`
+      );
+    } catch (error) {
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "重新加载图谱失败", { suggestReload: true });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function deferManualMergeUntilLater() {
+    setManualMergeDeferred(true);
+    setWorkspaceStatusMessage(
+      conflictArtifactsCaptured
+        ? "已标记为稍后人工合并，当前继续保留本地草稿"
+        : "已保留本地草稿；如需稍后人工合并，建议先导出冲突处理包",
+      { suggestReload: true }
+    );
+  }
+
+  async function copyConflictDraftJson() {
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
+
+    try {
+      const exported = buildGraphExportArtifact({ detail: current, kind: "json" });
+      const clipboard = window.navigator?.clipboard;
+      if (!clipboard || typeof clipboard.writeText !== "function") {
+        throw new Error("当前环境不支持复制当前草稿 JSON，请改用导出。");
+      }
+      await clipboard.writeText(exported.content);
+      setConflictArtifactsCaptured(true);
+      setWorkspaceStatusMessage("已复制当前草稿 JSON，可在重载前留存本地修改", { suggestReload: true });
+    } catch (error) {
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "复制当前草稿 JSON 失败", {
+        suggestReload: true
+      });
+    }
+  }
+
+  async function copyConflictSummaryReport() {
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
+
+    try {
+      const exported = buildGraphConflictReportArtifact({
+        current,
+        changeSummary: unsavedChangeSummary,
+        latestHeadError: latestConflictError,
+        latestHeadLoading: latestConflictLoading,
+        latestHeadSummary: latestHeadConflictSummary
+      });
+      const clipboard = window.navigator?.clipboard;
+      if (!clipboard || typeof clipboard.writeText !== "function") {
+        throw new Error("当前环境不支持复制图谱冲突摘要，请改用导出。");
+      }
+      await clipboard.writeText(exported.content);
+      setConflictArtifactsCaptured(true);
+      setWorkspaceStatusMessage("已复制图谱冲突摘要，可在重载前同步当前取舍信息", { suggestReload: true });
+    } catch (error) {
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "复制图谱冲突摘要失败", {
+        suggestReload: true
+      });
+    }
+  }
+
+  function exportConflictDraftJson() {
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
+
+    try {
+      const exported = buildGraphExportArtifact({ detail: current, kind: "json" });
+      downloadTextFile(exported.filename, exported.content, exported.mimeType);
+      setConflictArtifactsCaptured(true);
+      setWorkspaceStatusMessage("已导出当前草稿 JSON，请在重载前妥善留存本地修改", { suggestReload: true });
+    } catch {
+      setWorkspaceStatusMessage("导出当前草稿 JSON 失败", { suggestReload: true });
+    }
+  }
+
+  function exportConflictSummaryReport() {
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
+
+    try {
+      const exported = buildGraphConflictReportArtifact({
+        current,
+        changeSummary: unsavedChangeSummary,
+        latestHeadError: latestConflictError,
+        latestHeadLoading: latestConflictLoading,
+        latestHeadSummary: latestHeadConflictSummary
+      });
+      downloadTextFile(exported.filename, exported.content, exported.mimeType);
+      setConflictArtifactsCaptured(true);
+      setWorkspaceStatusMessage("已导出图谱冲突摘要，请在重载前同步当前取舍信息", { suggestReload: true });
+    } catch {
+      setWorkspaceStatusMessage("导出图谱冲突摘要失败", { suggestReload: true });
+    }
+  }
+
+  async function copyLatestConflictJson() {
+    const latest = latestConflictDetail;
+    if (!latest) {
+      return;
+    }
+
+    try {
+      const exported = buildGraphExportArtifact({ detail: latest, kind: "json" });
+      const clipboard = window.navigator?.clipboard;
+      if (!clipboard || typeof clipboard.writeText !== "function") {
+        throw new Error("当前环境不支持复制最新图谱 JSON，请改用导出。");
+      }
+      await clipboard.writeText(exported.content);
+      setConflictArtifactsCaptured(true);
+      setWorkspaceStatusMessage("已复制最新图谱 JSON，可与本地草稿配合人工比对", { suggestReload: true });
+    } catch (error) {
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "复制最新图谱 JSON 失败", {
+        suggestReload: true
+      });
+    }
+  }
+
+  function exportLatestConflictJson() {
+    const latest = latestConflictDetail;
+    if (!latest) {
+      return;
+    }
+
+    try {
+      const exported = buildGraphExportArtifact({ detail: latest, kind: "json" });
+      downloadTextFile(exported.filename, exported.content, exported.mimeType);
+      setConflictArtifactsCaptured(true);
+      setWorkspaceStatusMessage("已导出最新图谱 JSON，可与本地草稿配合人工比对", { suggestReload: true });
+    } catch {
+      setWorkspaceStatusMessage("导出最新图谱 JSON 失败", { suggestReload: true });
+    }
+  }
+
+  function exportConflictBundle() {
+    const current = detailRef.current;
+    const latest = latestConflictDetail;
+    if (!current || !latest) {
+      return;
+    }
+
+    try {
+      const currentDraftArtifact = buildGraphExportArtifact({ detail: current, kind: "json" });
+      const latestHeadArtifact = buildGraphExportArtifact({ detail: latest, kind: "json" });
+      const reportArtifact = buildGraphConflictReportArtifact({
+        current,
+        changeSummary: unsavedChangeSummary,
+        latestHeadError: latestConflictError,
+        latestHeadLoading: latestConflictLoading,
+        latestHeadSummary: latestHeadConflictSummary
+      });
+      const bundleArtifact = buildGraphConflictBundleArtifact({
+        current,
+        changeSummary: unsavedChangeSummary,
+        currentDraftArtifact,
+        latestHeadArtifact,
+        latestHeadSummary: latestHeadConflictSummary,
+        reportArtifact
+      });
+      downloadTextFile(bundleArtifact.filename, bundleArtifact.content, bundleArtifact.mimeType);
+      setConflictArtifactsCaptured(true);
+      setWorkspaceStatusMessage("已导出冲突处理包，可稍后人工比对本地与最新版本", { suggestReload: true });
+    } catch {
+      setWorkspaceStatusMessage("导出冲突处理包失败", { suggestReload: true });
     }
   }
 
@@ -691,7 +1054,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     replaceGraphSummary(result.detail);
     setHistoryState(result.history);
     setSaveState("dirty");
-    setStatusMessage(`${result.history.lastLabel}，等待保存`);
+    setWorkspaceStatusMessage(`${result.history.lastLabel}，等待保存`);
   }
 
   function redoCurrentGraph() {
@@ -710,7 +1073,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     replaceGraphSummary(result.detail);
     setHistoryState(result.history);
     setSaveState("dirty");
-    setStatusMessage(`${result.history.lastLabel}，等待保存`);
+    setWorkspaceStatusMessage(`${result.history.lastLabel}，等待保存`);
   }
 
   useEffect(() => {
@@ -964,7 +1327,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         targetNodeId: nodeId
       });
       if (!result.created) {
-        setStatusMessage(result.status ?? "无法在这两个节点之间创建连线");
+        setWorkspaceStatusMessage(result.status ?? "无法在这两个节点之间创建连线");
         setLinkFromNodeId(result.linkFromNodeId ?? "");
         return;
       }
@@ -1045,7 +1408,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return title.includes(keyword) || sourceLabel.includes(keyword);
     });
     if (!node) {
-      setStatusMessage("没有找到匹配的节点");
+      setWorkspaceStatusMessage("没有找到匹配的节点");
       return;
     }
 
@@ -1087,35 +1450,36 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
 
     try {
       const payload = await validateGraph(props.session, graphDetail.id);
-      setValidationIssues(payload.issues);
-      setStatusMessage(payload.issues.length ? `发现 ${payload.issues.length} 条校验提示` : "图谱校验通过");
+      const validation = buildGraphValidationOutcome(payload.issues);
+      setValidationIssues(validation.issues);
+      setWorkspaceStatusMessage(validation.statusMessage);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "图谱校验失败");
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "图谱校验失败");
     }
   }
 
   async function handleGenerateCards() {
     if (!graphDetail || !selectedNode) {
-      setStatusMessage("先选中一个节点，再生成卡片草稿");
+      setWorkspaceStatusMessage("先选中一个节点，再生成卡片草稿");
       return;
     }
 
     try {
       const payload = await generateGraphCardDrafts(props.session, graphDetail.id, [selectedNode.id]);
       setCardDrafts(payload);
-      setStatusMessage(payload.length ? "已生成卡片草稿" : "没有生成新的卡片草稿");
+      setWorkspaceStatusMessage(payload.length ? "已生成卡片草稿" : "没有生成新的卡片草稿");
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "生成卡片草稿失败");
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "生成卡片草稿失败");
     }
   }
 
   async function handleCommitCardDrafts() {
     if (!graphDetail || cardDrafts.length === 0) {
-      setStatusMessage("先生成卡片草稿，再确认写入卡组");
+      setWorkspaceStatusMessage("先生成卡片草稿，再确认写入卡组");
       return;
     }
     if (!selectedDraftDeckId) {
-      setStatusMessage("先选择一个目标卡组");
+      setWorkspaceStatusMessage("先选择一个目标卡组");
       return;
     }
 
@@ -1134,9 +1498,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             : deck
         )
       );
-      setStatusMessage(`已将 ${payload.length} 张卡片写入 ${targetDeck?.title || "目标卡组"}。`);
+      setWorkspaceStatusMessage(`已将 ${payload.length} 张卡片写入 ${targetDeck?.title || "目标卡组"}。`);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "写入卡片失败");
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "写入卡片失败");
     } finally {
       setSaving(false);
     }
@@ -1152,7 +1516,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     const draft = buildGraphTemplateImportDraft(template);
     setImportMode(draft.importMode);
     setImportSource(draft.importSource);
-    setStatusMessage(draft.status);
+    setWorkspaceStatusMessage(draft.status);
   }
 
   async function handleCreateGraph() {
@@ -1171,9 +1535,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       resetHistory(normalized, "创建图谱");
       await loadSnapshots(normalized.id);
       setSaveState("saved");
-      setStatusMessage("已创建新图谱");
+      setWorkspaceStatusMessage("已创建新图谱");
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "创建图谱失败");
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "创建图谱失败");
     } finally {
       setSaving(false);
     }
@@ -1201,9 +1565,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         setGraphDetail(null);
         await handleCreateGraph();
       }
-      setStatusMessage("图谱已删除");
+      setWorkspaceStatusMessage("图谱已删除");
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "删除图谱失败");
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "删除图谱失败");
     } finally {
       setSaving(false);
     }
@@ -1271,9 +1635,32 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
               alignmentHintLabels={alignmentHintLabels}
               graphDetail={graphDetail}
               loading={loading}
+              onStatusAction={reloadLatestSuggested ? () => void reloadLatestGraph() : undefined}
               selectedNodeCount={selectedNodeIds.length}
+              statusActionLabel={reloadLatestSuggested ? "重新加载最新图谱" : undefined}
               statusMessage={statusMessage}
             />
+
+            {reloadLatestSuggested && dirty ? (
+              <GraphConflictAssistCard
+                changeSummary={unsavedChangeSummary}
+                latestHeadAvailable={Boolean(latestConflictDetail)}
+                latestHeadError={latestConflictError}
+                latestHeadLoading={latestConflictLoading}
+                latestHeadSummary={latestHeadConflictSummary}
+                manualMergeDeferred={manualMergeDeferred}
+                materialsCaptured={conflictArtifactsCaptured}
+                onDeferManualMerge={deferManualMergeUntilLater}
+                onExportConflictBundle={exportConflictBundle}
+                onReloadLatest={() => void reloadLatestGraph()}
+                onCopyLatestJson={() => void copyLatestConflictJson()}
+                onCopySummaryReport={() => void copyConflictSummaryReport()}
+                onCopyDraftJson={() => void copyConflictDraftJson()}
+                onExportLatestJson={exportLatestConflictJson}
+                onExportSummaryReport={exportConflictSummaryReport}
+                onExportDraftJson={exportConflictDraftJson}
+              />
+            ) : null}
 
             <GraphStageCanvas
               alignmentGuides={alignmentGuides}

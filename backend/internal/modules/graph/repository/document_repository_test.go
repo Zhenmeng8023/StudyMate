@@ -42,7 +42,7 @@ func TestBuildGraphDocument(t *testing.T) {
 				Metadata: map[string]any{
 					"detail": "A balanced tree node note",
 					"appearance": map[string]any{
-						"tone":      "sage",
+						"tone":     "sage",
 						"emphasis": "strong",
 					},
 				},

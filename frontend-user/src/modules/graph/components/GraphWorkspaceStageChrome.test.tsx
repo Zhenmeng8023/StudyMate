@@ -2,7 +2,13 @@ import { createRef } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GraphDetailPayload, GraphDocumentPayload, GraphNodePayload } from "../../../api/client";
-import { GraphStageCanvas, GraphStageEmptyState, GraphStageMinimap, GraphStageStatus } from "./GraphWorkspaceStageChrome";
+import {
+  GraphConflictAssistCard,
+  GraphStageCanvas,
+  GraphStageEmptyState,
+  GraphStageMinimap,
+  GraphStageStatus
+} from "./GraphWorkspaceStageChrome";
 
 const graphDetail: GraphDetailPayload = {
   id: "graph-1",
@@ -91,12 +97,15 @@ describe("GraphWorkspaceStageChrome components", () => {
   afterEach(() => cleanup());
 
   it("renders status, graph counts, and alignment hints accessibly", () => {
+    const onStatusAction = vi.fn();
     render(
       <GraphStageStatus
         alignmentHintLabels={["左对齐", "顶部对齐"]}
         graphDetail={graphDetail}
         loading={false}
+        onStatusAction={onStatusAction}
         selectedNodeCount={2}
+        statusActionLabel="重新加载最新图谱"
         statusMessage="已保存"
       />
     );
@@ -104,6 +113,8 @@ describe("GraphWorkspaceStageChrome components", () => {
     expect(screen.getByRole("status")).toHaveTextContent("已保存");
     expect(screen.getByLabelText("对齐参考线")).toHaveTextContent("左对齐");
     expect(screen.getByText("版本 4 · 2 节点 · 1 连线 · 已选 2 个节点")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "重新加载最新图谱" }));
+    expect(onStatusAction).toHaveBeenCalled();
   });
 
   it("renders minimap groups, active nodes, and viewport bounds", () => {
@@ -123,6 +134,63 @@ describe("GraphWorkspaceStageChrome components", () => {
     expect(container.querySelector(".graph-minimap-group.collapsed")).not.toBeNull();
     expect(container.querySelector(".graph-minimap-node.active")).not.toBeNull();
     expect(container.querySelector(".graph-minimap-viewport")).not.toBeNull();
+  });
+
+  it("offers conflict helpers and disposal guidance for dirty conflicts", () => {
+    const onExportConflictBundle = vi.fn();
+    const onDeferManualMerge = vi.fn();
+    const onReloadLatest = vi.fn();
+    const onCopyLatestJson = vi.fn();
+    const onCopySummaryReport = vi.fn();
+    const onExportSummaryReport = vi.fn();
+    const onExportLatestJson = vi.fn();
+    const onCopyDraftJson = vi.fn();
+    const onExportDraftJson = vi.fn();
+
+    render(
+      <GraphConflictAssistCard
+        changeSummary={["标题已修改", "节点：新增 1 个"]}
+        latestHeadAvailable
+        latestHeadSummary={["标题已修改", "节点：新增 1 个，删除 1 个"]}
+        manualMergeDeferred
+        materialsCaptured
+        onDeferManualMerge={onDeferManualMerge}
+        onExportConflictBundle={onExportConflictBundle}
+        onReloadLatest={onReloadLatest}
+        onCopyLatestJson={onCopyLatestJson}
+        onCopySummaryReport={onCopySummaryReport}
+        onCopyDraftJson={onCopyDraftJson}
+        onExportLatestJson={onExportLatestJson}
+        onExportSummaryReport={onExportSummaryReport}
+        onExportDraftJson={onExportDraftJson}
+      />
+    );
+
+    expect(screen.getByLabelText("图谱冲突辅助")).toHaveTextContent("先留存当前草稿，再决定是否重载");
+    expect(screen.getByText("已留存冲突材料，可安全重载最新图谱")).toBeInTheDocument();
+    expect(screen.getByText("已标记为稍后人工合并，当前继续保留本地草稿")).toBeInTheDocument();
+    expect(screen.getByText("如果确认放弃本地修改：可直接重载最新图谱")).toBeInTheDocument();
+    expect(screen.getByText("如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱")).toBeInTheDocument();
+    expect(screen.getAllByText("标题已修改")).toHaveLength(2);
+    expect(screen.getByText("节点：新增 1 个，删除 1 个")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "复制冲突摘要" }));
+    fireEvent.click(screen.getByRole("button", { name: "导出冲突摘要" }));
+    fireEvent.click(screen.getByRole("button", { name: "复制最新图谱 JSON" }));
+    fireEvent.click(screen.getByRole("button", { name: "导出最新图谱 JSON" }));
+    fireEvent.click(screen.getByRole("button", { name: "导出冲突处理包" }));
+    fireEvent.click(screen.getByRole("button", { name: "先保留本地，稍后人工合并" }));
+    fireEvent.click(screen.getByRole("button", { name: "复制当前草稿 JSON" }));
+    fireEvent.click(screen.getByRole("button", { name: "导出当前草稿 JSON" }));
+    fireEvent.click(screen.getByRole("button", { name: "放弃本地并重载最新图谱" }));
+    expect(onExportConflictBundle).toHaveBeenCalled();
+    expect(onDeferManualMerge).toHaveBeenCalled();
+    expect(onReloadLatest).toHaveBeenCalled();
+    expect(onCopyLatestJson).toHaveBeenCalled();
+    expect(onExportLatestJson).toHaveBeenCalled();
+    expect(onCopySummaryReport).toHaveBeenCalled();
+    expect(onExportSummaryReport).toHaveBeenCalled();
+    expect(onCopyDraftJson).toHaveBeenCalled();
+    expect(onExportDraftJson).toHaveBeenCalled();
   });
 
   it("delegates canvas node, edge, and group interactions", () => {

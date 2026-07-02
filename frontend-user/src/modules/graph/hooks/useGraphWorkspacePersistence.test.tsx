@@ -17,6 +17,7 @@ import {
   resetGraphHistoryState,
   type GraphHistoryState
 } from "../lib/graphHistory";
+import { buildGraphWorkspaceConcurrencyStorageKey } from "../lib/graphWorkspaceConcurrencySignal";
 import { useGraphWorkspacePersistence } from "./useGraphWorkspacePersistence";
 
 vi.mock("../../../api/client", async () => {
@@ -81,11 +82,13 @@ const batchSaveGraphMock = vi.mocked(batchSaveGraph);
 const listGraphSnapshotsMock = vi.mocked(listGraphSnapshots);
 const restoreGraphSnapshotMock = vi.mocked(restoreGraphSnapshot);
 
-function PersistenceHarness() {
+function PersistenceHarness(props: { initialDirty?: boolean } = {}) {
   const [detail, setDetail] = useState<GraphDetailPayload | null>(graphDetail);
-  const [history, setHistory] = useState<GraphHistoryState>(() =>
-    resetGraphHistoryState(createEmptyGraphHistoryState(), "加载图谱")
-  );
+  const [history, setHistory] = useState<GraphHistoryState>(() => ({
+    ...resetGraphHistoryState(createEmptyGraphHistoryState(), "加载图谱"),
+    dirty: props.initialDirty ?? false
+  }));
+  const [reloadLatestSuggested, setReloadLatestSuggested] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [replacedTitle, setReplacedTitle] = useState("");
   const detailRef = useRef<GraphDetailPayload | null>(detail);
@@ -106,6 +109,7 @@ function PersistenceHarness() {
     historyRef,
     onGraphDetailChange: setDetail,
     onHistoryChange: setHistory,
+    onReloadLatestSuggestionChange: setReloadLatestSuggested,
     onReplaceGraphSummary: (summary: GraphSummaryPayload) => setReplacedTitle(summary.title),
     onResetHistory: (nextDetail, label) => {
       setDetail(nextDetail);
@@ -133,6 +137,7 @@ function PersistenceHarness() {
       <span>dirty:{String(history.dirty)}</span>
       <span>title:{detail?.title}</span>
       <span>history-label:{history.lastLabel}</span>
+      <span>reload-suggested:{String(reloadLatestSuggested)}</span>
       <span>replaced:{replacedTitle}</span>
       <span>status:{statusMessage}</span>
     </div>
@@ -142,10 +147,12 @@ function PersistenceHarness() {
 describe("useGraphWorkspacePersistence", () => {
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     batchSaveGraphMock.mockResolvedValue({
       ...graphDetail,
       title: "Graph saved",
@@ -208,5 +215,70 @@ describe("useGraphWorkspacePersistence", () => {
 
     expect(await screen.findByText("save-state:failed")).toBeInTheDocument();
     expect(screen.getByText("status:restore down")).toBeInTheDocument();
+  });
+
+  it("keeps dirty edits visible when batch save reports a version conflict", async () => {
+    batchSaveGraphMock.mockRejectedValueOnce(new Error("图谱已被其他窗口更新，请刷新当前图谱后再保存。"));
+
+    render(<PersistenceHarness initialDirty />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "save graph" }));
+    });
+
+    expect(await screen.findByText("save-state:failed")).toBeInTheDocument();
+    expect(screen.getByText("dirty:true")).toBeInTheDocument();
+    expect(screen.getByText("reload-suggested:true")).toBeInTheDocument();
+    expect(screen.getByText("status:图谱已被其他窗口更新，请刷新当前图谱后再保存。")).toBeInTheDocument();
+  });
+
+  it("warns when another window is still editing the same graph", async () => {
+    render(<PersistenceHarness />);
+
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: buildGraphWorkspaceConcurrencyStorageKey("graph-1", "other-session"),
+          newValue: JSON.stringify({
+            currentVersion: 4,
+            dirty: true,
+            graphId: "graph-1",
+            sessionId: "other-session",
+            updatedAt: "2026-07-01T20:05:00Z"
+          }),
+          storageArea: window.localStorage
+        })
+      );
+    });
+
+    expect(
+      await screen.findByText("status:检测到另一个窗口正在编辑当前图谱，请保存前确认最新版本。")
+    ).toBeInTheDocument();
+    expect(screen.getByText("reload-suggested:false")).toBeInTheDocument();
+  });
+
+  it("warns when another window has already saved a newer graph version", async () => {
+    render(<PersistenceHarness />);
+
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: buildGraphWorkspaceConcurrencyStorageKey("graph-1", "other-session"),
+          newValue: JSON.stringify({
+            currentVersion: 5,
+            dirty: false,
+            graphId: "graph-1",
+            sessionId: "other-session",
+            updatedAt: "2026-07-01T20:06:00Z"
+          }),
+          storageArea: window.localStorage
+        })
+      );
+    });
+
+    expect(
+      await screen.findByText("status:另一窗口已保存更高版本，请刷新图谱后再继续编辑。")
+    ).toBeInTheDocument();
+    expect(screen.getByText("reload-suggested:true")).toBeInTheDocument();
   });
 });

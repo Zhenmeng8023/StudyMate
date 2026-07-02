@@ -28,4 +28,3 @@ func (n *Note) BeforeCreate(_ *gorm.DB) error {
 
 	return nil
 }
-

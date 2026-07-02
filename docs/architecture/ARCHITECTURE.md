@@ -15,6 +15,7 @@
 - Meilisearch 后续接入：面向用户的全文搜索。
 
 详细数据库结构见 [DATABASE_DESIGN.md](./DATABASE_DESIGN.md)。
+图谱文档结构契约见 [GRAPH_DOCUMENT_CONTRACT.md](./GRAPH_DOCUMENT_CONTRACT.md)，图谱 API 生命周期与版本推进规则见 [GRAPH_API_LIFECYCLE.md](./GRAPH_API_LIFECYCLE.md)，导出/缩略图/布局边界见 [GRAPH_EXPORT_LAYOUT_CONTRACT.md](./GRAPH_EXPORT_LAYOUT_CONTRACT.md)。
 
 ## 后端结构
 

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   clearGraphNodeSelection,
   createGraphSelectionState,
+  replaceGraphNodeSelection,
   selectGraphNodesInRect,
   setGraphNodeSelection,
   toggleGraphNodeSelection,
@@ -37,6 +38,36 @@ test("graph selection toggle ignores empty node ids", () => {
 
   assert.deepEqual(toggleGraphNodeSelection(selected, ""), selected);
   assert.deepEqual(setGraphNodeSelection(selected, ""), createGraphSelectionState());
+});
+
+test("replaceGraphNodeSelection normalizes explicit multi-select state", () => {
+  const current = setGraphNodeSelection(createGraphSelectionState(), "node-a");
+
+  assert.deepEqual(
+    replaceGraphNodeSelection(current, ["node-a", "node-a", "", "node-b"], { activeNodeId: "missing-node" }),
+    {
+      selectedNodeId: "node-a",
+      selectedNodeIds: ["node-a", "node-b"]
+    }
+  );
+
+  assert.deepEqual(
+    replaceGraphNodeSelection(current, ["node-a", "node-b"], { activeNodeId: "node-b" }),
+    {
+      selectedNodeId: "node-b",
+      selectedNodeIds: ["node-a", "node-b"]
+    }
+  );
+
+  assert.deepEqual(
+    replaceGraphNodeSelection(current, ["node-a", "node-b"], { activeNodeId: "" }),
+    {
+      selectedNodeId: "",
+      selectedNodeIds: ["node-a", "node-b"]
+    }
+  );
+
+  assert.deepEqual(replaceGraphNodeSelection(current, []), createGraphSelectionState());
 });
 
 test("selectGraphNodesInRect returns visible intersecting nodes in document order", () => {

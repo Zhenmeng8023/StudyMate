@@ -30,7 +30,11 @@ var _ searchService = (*searchservice.Service)(nil)
 func (h *Handler) Search(ctx *gin.Context) {
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "20"))
 	userID := h.optionalUserID(ctx)
-	payload, err := h.service.Search(ctx.Query("q"), strings.Split(ctx.Query("types"), ","), limit, userID)
+	var types []string
+	if rawTypes := strings.TrimSpace(ctx.Query("types")); rawTypes != "" {
+		types = strings.Split(rawTypes, ",")
+	}
+	payload, err := h.service.Search(ctx.Query("q"), types, limit, userID)
 	if err != nil {
 		response.Error(ctx, err)
 		return

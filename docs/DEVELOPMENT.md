@@ -11,12 +11,15 @@
 - `AiPage` 已有页面级 Vitest，覆盖待确认卡片草稿写入所选复习 deck，以及图谱变更草稿写入目标图谱；后续 AI 草稿确认 UI 改动应保留 draftId、sourceType、sourceId、draftIds 和 nodeSelections 的传递。
 - 后端 handler 测试优先通过最小 service interface 注入 fake，不直接拉真实数据库；search/share/card/graph/AI handler 已按该模式解耦，admin handler 已补 limit 解析测试。
 - Playwright smoke 已覆盖公共壳层、后端分组搜索页、分享只读页、受保护的复习队列回写页和管理端用户治理模块；这些测试均用 `page.route` 固定 API 响应，受保护页面通过 `localStorage` 注入测试 session，避免本地后端成为前端 smoke 的前置条件。
-- `npm run test:e2e` 会同时构建用户端和管理端，并由 Playwright 启动 `frontend-user` 4173 与 `frontend-admin` 4174 两个 preview 服务。
+- `npm run test:e2e` 会同时构建用户端和管理端，并由 Playwright 默认启动 `frontend-user` 44173 与 `frontend-admin` 44174 两个 preview 服务；如需覆盖，可设置 `PLAYWRIGHT_USER_PORT` 与 `PLAYWRIGHT_ADMIN_PORT`。
 - `zh-CN` 是源语言。用户端字典位于 `frontend-user/src/i18n/dictionary.ts`，管理端字典位于 `frontend-admin/src/i18n/dictionary.ts`。
 - `en-US` 目前只保留占位文案，测试会校验占位字典与 `zh-CN` 字典键保持一致。
 - 用户端 API client 以 `frontend-user/src/api/client.ts` 作为稳定 barrel，新增接口按 auth、materials、notes、reader、graphs、review、ai 等域拆分到同目录文件。
 - 用户端全局样式由 `frontend-user/src/styles.css` 统一导入 `frontend-user/src/styles/` 下的分层 CSS 文件，新增样式应优先落到对应分层文件。
 - 图谱工作区的通用几何、导出、来源分组和焦点导航 helper 位于 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`；后续继续拆更细的交互 hooks。
+- 图谱文档 payload 兼容适配位于 `frontend-user/src/modules/graph/lib/graphDocumentPayload.ts`，后端共享默认化位于 `backend/internal/modules/graph/dto/document_contract.go`；新增图谱读写入口应复用这两层，而不是再次硬编码 `schemaVersion = 1` 或空文档默认值。
+- 图谱生命周期契约位于 `docs/architecture/GRAPH_API_LIFECYCLE.md`；所有写入型 graph 流程都必须由服务端权威覆盖 `graphId` / `version`，并在 restore/import 这类整份文档替换场景下同步维护 `currentVersion`、snapshot 索引和 `graph.mode`。
+- 图谱导出/缩略图/布局契约位于 `docs/architecture/GRAPH_EXPORT_LAYOUT_CONTRACT.md`；当前 graph head 已显式暴露 `thumbnailFileId`，来源泳道布局通过 `POST /api/v1/graphs/:id/layouts/preview` 进入统一 API 契约，工作区仅在接口不可用时回退本地 helper。
 
 ## Reader/Notes 回填与批注坐标
 
@@ -72,7 +75,7 @@ go list -m -json all
 
 ## 启动后端
 
-本地开发默认使用 MySQL，和项目最初规划保持一致。请先确认本机已经创建 `studymate` 数据库，并且 `root` 用户密码为 `123456`：
+本地开发默认使用 MySQL，和项目最初规划保持一致。请先确认本机已经创建 `studymate` 数据库，并为 StudyMate 准备专用数据库账号；不要再依赖仓库内置的 root 弱口令默认值。
 
 服务启动时会自动执行内置的 MySQL 迁移脚本，迁移目录位于 `backend/internal/migrations/mysql/`。
 当前默认包括：
@@ -122,14 +125,33 @@ mongosh "mongodb://127.0.0.1:27017/studymate_content" --file "backend/internal/m
 
 ```powershell
 cd backend
+$env:APP_ENV='development'
 $env:APP_PORT='8023'
 $env:DB_DRIVER='mysql'
-$env:MYSQL_DSN='root:123456@tcp(127.0.0.1:3306)/studymate?charset=utf8mb4&parseTime=True&loc=Local'
-$env:ADMIN_BOOTSTRAP_USERNAME='admin'
-$env:ADMIN_BOOTSTRAP_EMAIL='admin@studymate.local'
-$env:ADMIN_BOOTSTRAP_PASSWORD='StudyMate123!'
+$env:MYSQL_DSN='studymate:<local-password>@tcp(127.0.0.1:3306)/studymate?charset=utf8mb4&parseTime=True&loc=Local'
+$env:JWT_SECRET='<long-random-local-secret>'
+
+# 仅在需要自动创建首个管理员时填写；不需要时保持为空。
+$env:ADMIN_BOOTSTRAP_USERNAME=''
+$env:ADMIN_BOOTSTRAP_EMAIL=''
+$env:ADMIN_BOOTSTRAP_PASSWORD=''
+
 go run ./cmd/server
 ```
+
+### 环境变量分层建议
+
+- 开发环境：`APP_ENV=development`，使用本机专用 MySQL 账号、独立 JWT secret，可选本地 MongoDB/Redis。
+- 测试或 CI：`APP_ENV=test`，所有敏感值通过 CI secret 或临时环境变量注入，不依赖仓库内 fallback。
+- 生产环境：`APP_ENV=production`，必须使用强随机 `JWT_SECRET`、专用数据库账号、真实 CORS 域名和受控的管理员引导策略；首个管理员创建完成后应清空 `ADMIN_BOOTSTRAP_*`。
+
+### 启动前最小必填项
+
+- `DB_DRIVER=mysql`
+- `MYSQL_DSN`
+- `JWT_SECRET`
+
+如果缺失上述值，`go run ./cmd/server` 会在启动阶段直接失败，并明确指出缺失的环境变量，而不是静默回退到危险默认值。
 
 健康检查：
 
@@ -192,12 +214,14 @@ npm --workspace frontend-admin run dev -- --port 8004
 - 管理员登录
 - 审核队列读取
 - 帖子与资料通过 / 驳回 / 下架
-- 治理后台壳层和模块占位
+- 治理后台壳层与真实数据模块已接入，仍需继续补审批动作、审计模型与更完整回归测试
 
 ## 推荐验证命令
 
 ```powershell
 npm run lint
+npm run verify:backend:format
+npm run verify:config-safety
 npm run typecheck
 npm run build:user
 npm run build:admin
@@ -219,6 +243,8 @@ go test ./...
 - 每个功能里程碑必须同步更新 `README.md`、本文件、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`CHANGELOG.md`、`PROJECT_LOG.md`。
 - 提交前运行 `npm run verify:docs`，避免关键文档入口漂移。
 - CI 基线使用 Node 24、Go 1.26、Vitest、React Testing Library、Vue Test Utils、Playwright、`@studymate/graph-core` 测试和后端 `go test ./...`。
+- `npm run verify:backend:format` 会检查 `backend/` 下全部 Go 文件是否通过 `gofmt`。
+- `npm run verify:config-safety` 会检查 `backend/internal/config/config.go`、`.env.example` 和 `docs/DEVELOPMENT.md` 中是否回退到已禁用的危险默认值示例。
 
 ## 内容读取开关
 
@@ -231,6 +257,11 @@ go test ./...
 - 用户端路由入口位于 `frontend-user/src/app/routes.tsx`，`frontend-user/src/app/App.tsx` 只保留兼容导出。
 - 用户端工作区壳层位于 `frontend-user/src/app/shell/`，业务页面位于 `frontend-user/src/pages/`，跨页面特性 helper 位于 `frontend-user/src/features/`。
 - 图谱工作区入口 `frontend-user/src/modules/graph/GraphWorkspacePage.tsx` 只做薄壳导出；图谱实现边界按 `components/`、`hooks/`、`state/`、`lib/`、`exporters/`、`importers/` 继续收口。
+- 图谱状态边界继续下沉：节点选择复用 `useGraphSelectionState.ts` + `@studymate/graph-core/selection`，viewport 相机复用 `useGraphViewportCamera.ts` + `@studymate/graph-core/viewport`，历史栈与保存边界复用 `graphHistory.ts` + `@studymate/graph-core/history`。
+- 图谱文件与校验边界继续下沉：`graphFileImportExport.ts` 统一封装 StudyMate JSON / SVG 导出、JSON 导入阻断规则、Markdown / Mermaid 导入归一化和 validate 状态摘要；页面与 hook 层不再重复拼装这些标签与状态文案。
+- `packages/graph-core/src/file-format.ts` 现将缺失 `schemaVersion` 的旧图谱视为 v1 兼容输入，但仍拒绝数组 root 和非法 `document` 包装；相关序列化、导入错误和历史栈回归统一补到 `packages/graph-core/test/graphProductization.test.ts`。
+- `backend/internal/modules/graph/dto/document_contract.go` 现在会对 batch-save、import、restore 等写入路径强制覆盖服务端权威 `graphId` / `version`；`backend/internal/modules/graph/service/service.go` 在 restore snapshot 后也会基于恢复文档重算 `graph.mode`，避免 summary/head 与 current document 漂移。
+- `backend/internal/modules/graph/service/layout.go` 现集中承接来源泳道布局预览算法；后端 `PreviewLayout(...)` 只返回布局后的草稿 document，不推进 graph version，不创建 snapshot，也不修改 source relation。
 - 管理端入口 `frontend-admin/src/App.vue` 只挂载 `views/AdminWorkspaceView.vue`；治理模块路由元数据位于 `frontend-admin/src/router/index.ts`，后台通用组件和样式位于 `frontend-admin/src/components/admin/`。
 
 ## 编码说明
@@ -242,8 +273,15 @@ go test ./...
 
 ## Search/Admin/Share v1 接口
 
-- 搜索入口为 `GET /api/v1/search?q=&types=&limit=`。`types` 支持 `material,post,note,graph,card`；未登录请求只返回公开资料和社区内容，带 Bearer token 后会返回当前用户可访问的私有笔记、图谱和卡片。
+- 搜索入口为 `GET /api/v1/search?q=&types=&limit=`。`types` 支持 `material,post,note,graph,card`；省略 `types` 或传空值时会按这五组默认搜索；传入未知类型会返回 `400 invalid_search_type`。
+- `limit` 缺省或非法时回退到 `20`，最大钳制为 `50`，当前返回仍为 grouped payload 而非 offset/page 分页结构。
+- 搜索结果项固定包含 `type/id/title/summary/url/source`；其中 `source` 当前表示来源域：`material`、`community`、`note`、`graph`、`card`，不表示底层存储引擎。
+- fallback 组内结果按“标题命中优先、摘要命中次之”稳定排序；长摘要会折叠空白并裁剪到 160 个字符以内，避免直接返回整段正文。
+- 匿名请求只会实际搜索 `material` 与 `post`；`note`、`graph`、`card` 会直接短路为空结果。登录请求中，`note` 仅返回 owner 自己的笔记，`card` 仅返回 owner 自己的 `active` 卡片，`graph` 仅返回 `active` 且“owner 或 public”的图谱。
 - 用户端搜索页只消费后端 grouped payload，不再在浏览器中拉全量资料、帖子、笔记和图谱做本地过滤。
+- 用户端搜索页现支持 URL `types` 类型筛选，并有页面级 Vitest 回归覆盖无关键词空态、后端错误态、筛选请求形状与来源链接渲染。
+- 搜索页分页目前明确限定在“当前批次结果”内：前端每次最多请求每组 `12` 条结果，并按每页 `4` 条切换；若后续需要跨批次真分页，应先扩展后端 offset/cursor 契约。
+- 搜索专项回归入口为 `npm run verify:search`；契约、权限矩阵和自动化映射集中记录在 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`。
 - 分享入口为受保护的 `GET/POST /api/v1/share-links` 与 `DELETE /api/v1/share-links/:id`，公开解析为 `GET /api/v1/share/:token`；`share_links` 表由 `004_share_links.sql` 创建，`.down.sql` 可回滚。
 - 分享目标白名单为 `material,note,graph,deck`，模式为 `private,public,token`。创建时会校验 owner，公开解析只返回只读摘要和目标 URL，不暴露可写接口。
 - 管理后台治理 API 位于 `/api/v1/admin/users`、`/reports`、`/tags`、`/ai/tasks`、`/ai/usage`、`/audit-logs`、`/files`，全部要求 admin token。

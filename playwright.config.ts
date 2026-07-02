@@ -15,6 +15,11 @@ const chromiumUse = {
   ...(!process.env.CI && localEdgePath ? { launchOptions: { executablePath: localEdgePath } } : {})
 };
 
+const userPreviewPort = process.env.PLAYWRIGHT_USER_PORT ?? "44173";
+const adminPreviewPort = process.env.PLAYWRIGHT_ADMIN_PORT ?? "44174";
+const userBaseUrl = `http://127.0.0.1:${userPreviewPort}`;
+const adminBaseUrl = `http://127.0.0.1:${adminPreviewPort}`;
+
 export default defineConfig({
   testDir: "e2e",
   timeout: 30_000,
@@ -22,19 +27,19 @@ export default defineConfig({
     timeout: 5_000
   },
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: userBaseUrl,
     trace: "on-first-retry"
   },
   webServer: [
     {
-      command: "npm --workspace frontend-user run preview -- --host 127.0.0.1 --port 4173",
-      url: "http://127.0.0.1:4173",
+      command: `npm --workspace frontend-user run preview -- --host 127.0.0.1 --port ${userPreviewPort}`,
+      url: userBaseUrl,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000
     },
     {
-      command: "npm --workspace frontend-admin run preview -- --host 127.0.0.1 --port 4174",
-      url: "http://127.0.0.1:4174",
+      command: `npm --workspace frontend-admin run preview -- --host 127.0.0.1 --port ${adminPreviewPort}`,
+      url: adminBaseUrl,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000
     }

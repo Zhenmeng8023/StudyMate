@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject, type WheelEvent } from "react";
 import {
   buildGraphMinimapViewport,
-  centerGraphViewportOnRect
+  centerGraphViewportOnRect,
+  resetGraphViewport as resetViewportState,
+  zoomGraphViewport
 } from "@studymate/graph-core";
 import type {
   GraphDetailPayload,
@@ -11,7 +13,6 @@ import type {
 import {
   buildClearedFocusNavigationLocation,
   buildFocusPreviewViewport,
-  clampZoom,
   minimapScale,
   stageHeight,
   stageWidth,
@@ -72,7 +73,7 @@ export function useGraphViewportCamera(options: GraphViewportCameraOptions) {
     (delta: number, status: string) => {
       options.onViewportDocumentChange(
         (draft) => {
-          draft.viewport.zoom = clampZoom(draft.viewport.zoom + delta);
+          draft.viewport = zoomGraphViewport(draft.viewport, delta);
         },
         { captureHistory: false, status, label: "调整缩放" }
       );
@@ -83,7 +84,7 @@ export function useGraphViewportCamera(options: GraphViewportCameraOptions) {
   const resetViewport = useCallback(() => {
     options.onViewportDocumentChange(
       (draft) => {
-        draft.viewport = { x: 140, y: 120, zoom: 1 };
+        draft.viewport = resetViewportState(draft.viewport, { x: 140, y: 120, zoom: 1 });
       },
       { captureHistory: false, status: "已重置画布视野", label: "重置视野" }
     );

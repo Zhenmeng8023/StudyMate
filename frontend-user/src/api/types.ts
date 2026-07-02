@@ -250,6 +250,7 @@ export interface GraphSummaryPayload {
   status: string;
   graphType: string;
   mode: string;
+  thumbnailFileId?: string;
   currentVersion: number;
   nodeCount: number;
   edgeCount: number;
@@ -278,6 +279,16 @@ export interface GraphValidationIssuePayload {
 
 export interface GraphValidationResponse {
   issues: GraphValidationIssuePayload[];
+}
+
+export type GraphLayoutMode = "source-swimlane";
+
+export interface GraphLayoutPreviewPayload {
+  mode: GraphLayoutMode;
+  statusMessage: string;
+  document: GraphDocumentPayload;
+  selectedNodeIds: string[];
+  laneCount: number;
 }
 
 export interface GraphCardDraftPayload {
@@ -408,17 +419,20 @@ export interface AiDraftPayload {
   updatedAt: string;
 }
 
+export type SearchResultType = "material" | "post" | "note" | "graph" | "card";
+export type SearchResultSource = "material" | "community" | "note" | "graph" | "card";
+
 export interface SearchResultPayload {
-  type: string;
+  type: SearchResultType;
   id: string;
   title: string;
   summary: string;
   url: string;
-  source: string;
+  source: SearchResultSource;
 }
 
 export interface SearchGroupPayload {
-  type: string;
+  type: SearchResultType;
   count: number;
   results: SearchResultPayload[];
 }

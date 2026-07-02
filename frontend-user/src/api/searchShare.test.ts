@@ -44,7 +44,7 @@ describe("search and share API clients", () => {
               title: "图谱笔记",
               summary: "来自笔记",
               url: "/notes/note-1",
-              source: "mysql"
+              source: "note"
             }
           ]
         }
@@ -61,6 +61,25 @@ describe("search and share API clients", () => {
     expect(url.searchParams.get("limit")).toBe("10");
     expect(init?.headers).toMatchObject({
       Authorization: "Bearer access-token"
+    });
+  });
+
+  it("omits empty type filters so backend can apply the default search groups", async () => {
+    const fetchMock = mockApiResponse({
+      query: "图谱",
+      total: 0,
+      groups: []
+    });
+
+    await searchAll(null, { query: "图谱" });
+
+    const [path, init] = fetchMock.mock.calls[0];
+    const url = new URL(String(path), "http://localhost");
+    expect(url.pathname).toBe("/api/v1/search");
+    expect(url.searchParams.get("q")).toBe("图谱");
+    expect(url.searchParams.has("types")).toBe(false);
+    expect(init?.headers).not.toMatchObject({
+      Authorization: expect.any(String)
     });
   });
 

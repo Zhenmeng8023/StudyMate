@@ -224,7 +224,9 @@ export function GraphStageStatus(props: {
   alignmentHintLabels: string[];
   graphDetail: GraphDetailPayload | null;
   loading: boolean;
+  onStatusAction?: () => void;
   selectedNodeCount: number;
+  statusActionLabel?: string;
   statusMessage: string;
 }) {
   return (
@@ -246,8 +248,104 @@ export function GraphStageStatus(props: {
             {props.selectedNodeCount > 1 ? ` · 已选 ${props.selectedNodeCount} 个节点` : ""}
           </small>
         ) : null}
+        {props.statusActionLabel && props.onStatusAction ? (
+          <button className="ghost-button" onClick={props.onStatusAction} type="button">
+            {props.statusActionLabel}
+          </button>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+export function GraphConflictAssistCard(props: {
+  changeSummary: string[];
+  latestHeadAvailable?: boolean;
+  latestHeadError?: string;
+  latestHeadLoading?: boolean;
+  latestHeadSummary: string[];
+  manualMergeDeferred?: boolean;
+  materialsCaptured?: boolean;
+  onDeferManualMerge: () => void;
+  onExportConflictBundle: () => void;
+  onReloadLatest: () => void;
+  onCopyLatestJson: () => void;
+  onCopySummaryReport: () => void;
+  onCopyDraftJson: () => void;
+  onExportLatestJson: () => void;
+  onExportSummaryReport: () => void;
+  onExportDraftJson: () => void;
+}) {
+  return (
+    <article className="graph-meta-card warning" aria-label="图谱冲突辅助">
+      <strong>先留存当前草稿，再决定是否重载</strong>
+      <p>检测到当前画布仍有未保存修改。建议先复制或导出当前草稿 JSON，再使用上方的“重新加载最新图谱”。</p>
+      {props.changeSummary.length ? (
+        <ul className="graph-issue-list">
+          {props.changeSummary.map((item) => (
+            <li className="graph-issue-item" key={item}>
+              <strong>未保存修改</strong>
+              <p>{item}</p>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {props.latestHeadLoading ? (
+        <p>正在比对服务端最新图谱差异...</p>
+      ) : props.latestHeadError ? (
+        <p>{props.latestHeadError}</p>
+      ) : props.latestHeadSummary.length ? (
+        <ul className="graph-issue-list">
+          {props.latestHeadSummary.map((item) => (
+            <li className="graph-issue-item" key={`latest-${item}`}>
+              <strong>与最新图谱相比</strong>
+              <p>{item}</p>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {props.materialsCaptured ? <p>已留存冲突材料，可安全重载最新图谱</p> : null}
+      {props.manualMergeDeferred ? <p>已标记为稍后人工合并，当前继续保留本地草稿</p> : null}
+      <div className="graph-inline-copy">
+        <p>如果确认放弃本地修改：可直接重载最新图谱</p>
+        <p>如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱</p>
+      </div>
+      <div className="graph-inline-actions">
+        <button className="secondary-button" onClick={props.onCopySummaryReport} type="button">
+          复制冲突摘要
+        </button>
+        <button className="ghost-button" onClick={props.onExportSummaryReport} type="button">
+          导出冲突摘要
+        </button>
+        {props.latestHeadAvailable ? (
+          <button className="secondary-button" onClick={props.onCopyLatestJson} type="button">
+            复制最新图谱 JSON
+          </button>
+        ) : null}
+        {props.latestHeadAvailable ? (
+          <button className="ghost-button" onClick={props.onExportLatestJson} type="button">
+            导出最新图谱 JSON
+          </button>
+        ) : null}
+        {props.latestHeadAvailable ? (
+          <button className="secondary-button" onClick={props.onExportConflictBundle} type="button">
+            导出冲突处理包
+          </button>
+        ) : null}
+        <button className="ghost-button" onClick={props.onDeferManualMerge} type="button">
+          先保留本地，稍后人工合并
+        </button>
+        <button className="secondary-button" onClick={props.onCopyDraftJson} type="button">
+          复制当前草稿 JSON
+        </button>
+        <button className="ghost-button" onClick={props.onExportDraftJson} type="button">
+          导出当前草稿 JSON
+        </button>
+        <button className="primary-button" onClick={props.onReloadLatest} type="button">
+          放弃本地并重载最新图谱
+        </button>
+      </div>
+    </article>
   );
 }
 

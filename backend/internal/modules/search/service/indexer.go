@@ -2,6 +2,8 @@ package service
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	searchdto "studymate/backend/internal/modules/search/dto"
 	"studymate/backend/internal/pkg/apperrors"
@@ -25,6 +27,15 @@ type searchRow struct {
 	Source  string
 }
 
+type searchQuerySpec struct {
+	table     string
+	selectSQL string
+	whereSQL  string
+	whereArgs []any
+	orderSQL  string
+	limit     int
+}
+
 func NewMySQLFallbackIndexer(db *gorm.DB) SearchIndexer {
 	if db == nil {
 		return nil
@@ -33,72 +44,157 @@ func NewMySQLFallbackIndexer(db *gorm.DB) SearchIndexer {
 }
 
 func (i *mysqlFallbackIndexer) Search(itemType string, keyword string, limit int, userID string) ([]searchdto.Result, error) {
-	like := "%" + keyword + "%"
-	var rows []searchRow
-	var err error
-
-	switch itemType {
-	case "material":
-		err = i.db.Table("materials").
-			Select("id, title, description AS summary, CONCAT('/materials?selected=', id) AS url, 'material' AS source").
-			Where("status = ? AND (title LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ?)", "approved", like, like, like, like).
-			Order("updated_at DESC").
-			Limit(limit).
-			Scan(&rows).Error
-	case "post":
-		err = i.db.Table("posts").
-			Select("id, title, body AS summary, CONCAT('/community?selected=', id) AS url, 'community' AS source").
-			Where("status = ? AND visibility = ? AND (title LIKE ? OR body LIKE ?)", "approved", "public", like, like).
-			Order("updated_at DESC").
-			Limit(limit).
-			Scan(&rows).Error
-	case "note":
-		if userID == "" {
-			return []searchdto.Result{}, nil
-		}
-		err = i.db.Table("notes").
-			Select("id, title, summary, CONCAT('/notes?selected=', id) AS url, 'note' AS source").
-			Where("owner_user_id = ? AND (title LIKE ? OR summary LIKE ? OR content LIKE ? OR folder_name LIKE ?)", userID, like, like, like, like).
-			Order("updated_at DESC").
-			Limit(limit).
-			Scan(&rows).Error
-	case "graph":
-		if userID == "" {
-			return []searchdto.Result{}, nil
-		}
-		err = i.db.Table("graphs").
-			Select("id, title, description AS summary, CONCAT('/graph?graphId=', id) AS url, 'graph' AS source").
-			Where("(owner_user_id = ? OR visibility = ?) AND (title LIKE ? OR description LIKE ?)", userID, "public", like, like).
-			Order("updated_at DESC").
-			Limit(limit).
-			Scan(&rows).Error
-	case "card":
-		if userID == "" {
-			return []searchdto.Result{}, nil
-		}
-		err = i.db.Table("cards").
-			Select("id, front AS title, back AS summary, '/review' AS url, 'card' AS source").
-			Where("owner_user_id = ? AND status = ? AND (front LIKE ? OR back LIKE ?)", userID, "active", like, like).
-			Order("updated_at DESC").
-			Limit(limit).
-			Scan(&rows).Error
-	default:
-		return nil, apperrors.New(400, "invalid_search_type", fmt.Sprintf("unsupported search type: %s", itemType))
-	}
+	query, shortCircuit, err := buildSearchQuery(i.db, itemType, keyword, limit, userID)
 	if err != nil {
+		return nil, err
+	}
+	if shortCircuit {
+		return []searchdto.Result{}, nil
+	}
+
+	var rows []searchRow
+	if err := query.Scan(&rows).Error; err != nil {
 		return nil, apperrors.Internal("鎼滅储澶辫触")
 	}
 
+	rows = rankAndLimitSearchRows(rows, keyword, limit)
 	results := make([]searchdto.Result, 0, len(rows))
 	for _, row := range rows {
 		results = append(results, searchdto.Result{
 			Type:    itemType,
 			ID:      row.ID,
 			Title:   row.Title,
-			Summary: row.Summary,
+			Summary: normalizeSearchSummary(row.Summary),
 			URL:     row.URL,
 			Source:  row.Source,
 		})
 	}
 	return results, nil
+}
+
+func buildSearchQuery(db *gorm.DB, itemType string, keyword string, limit int, userID string) (*gorm.DB, bool, error) {
+	if db == nil {
+		return nil, false, apperrors.Internal("鎼滅储绱㈠紩鏈厤缃?")
+	}
+
+	spec, shortCircuit, err := buildSearchQuerySpec(itemType, keyword, limit, userID)
+	if err != nil || shortCircuit {
+		return nil, shortCircuit, err
+	}
+
+	return db.Table(spec.table).
+		Select(spec.selectSQL).
+		Where(spec.whereSQL, spec.whereArgs...).
+		Order(spec.orderSQL).
+		Limit(spec.limit), false, nil
+}
+
+func buildSearchQuerySpec(itemType string, keyword string, limit int, userID string) (*searchQuerySpec, bool, error) {
+	like := "%" + keyword + "%"
+	candidateLimit := limit * 4
+	if candidateLimit < limit {
+		candidateLimit = limit
+	}
+	if candidateLimit > 200 {
+		candidateLimit = 200
+	}
+
+	switch itemType {
+	case "material":
+		return &searchQuerySpec{
+			table:     "materials",
+			selectSQL: "id, title, description AS summary, CONCAT('/materials?selected=', id) AS url, 'material' AS source",
+			whereSQL:  "status = ? AND (title LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ?)",
+			whereArgs: []any{"approved", like, like, like, like},
+			orderSQL:  "updated_at DESC",
+			limit:     candidateLimit,
+		}, false, nil
+	case "post":
+		return &searchQuerySpec{
+			table:     "posts",
+			selectSQL: "id, title, body AS summary, CONCAT('/community?selected=', id) AS url, 'community' AS source",
+			whereSQL:  "status = ? AND visibility = ? AND (title LIKE ? OR body LIKE ?)",
+			whereArgs: []any{"approved", "public", like, like},
+			orderSQL:  "updated_at DESC",
+			limit:     candidateLimit,
+		}, false, nil
+	case "note":
+		if userID == "" {
+			return nil, true, nil
+		}
+		return &searchQuerySpec{
+			table:     "notes",
+			selectSQL: "id, title, summary, CONCAT('/notes?selected=', id) AS url, 'note' AS source",
+			whereSQL:  "owner_user_id = ? AND (title LIKE ? OR summary LIKE ? OR content LIKE ? OR folder_name LIKE ?)",
+			whereArgs: []any{userID, like, like, like, like},
+			orderSQL:  "updated_at DESC",
+			limit:     candidateLimit,
+		}, false, nil
+	case "graph":
+		if userID == "" {
+			return nil, true, nil
+		}
+		return &searchQuerySpec{
+			table:     "graphs",
+			selectSQL: "id, title, description AS summary, CONCAT('/graph?graphId=', id) AS url, 'graph' AS source",
+			whereSQL:  "status = ? AND (owner_user_id = ? OR visibility = ?) AND (title LIKE ? OR description LIKE ?)",
+			whereArgs: []any{"active", userID, "public", like, like},
+			orderSQL:  "updated_at DESC",
+			limit:     candidateLimit,
+		}, false, nil
+	case "card":
+		if userID == "" {
+			return nil, true, nil
+		}
+		return &searchQuerySpec{
+			table:     "cards",
+			selectSQL: "id, front AS title, back AS summary, '/review' AS url, 'card' AS source",
+			whereSQL:  "owner_user_id = ? AND status = ? AND (front LIKE ? OR back LIKE ?)",
+			whereArgs: []any{userID, "active", like, like},
+			orderSQL:  "updated_at DESC",
+			limit:     candidateLimit,
+		}, false, nil
+	default:
+		return nil, false, apperrors.New(400, "invalid_search_type", fmt.Sprintf("unsupported search type: %s", itemType))
+	}
+}
+
+func rankAndLimitSearchRows(rows []searchRow, keyword string, limit int) []searchRow {
+	ranked := append([]searchRow(nil), rows...)
+	sort.SliceStable(ranked, func(left int, right int) bool {
+		return searchRowMatchRank(ranked[left], keyword) < searchRowMatchRank(ranked[right], keyword)
+	})
+	if limit > 0 && len(ranked) > limit {
+		return ranked[:limit]
+	}
+	return ranked
+}
+
+func searchRowMatchRank(row searchRow, keyword string) int {
+	normalizedKeyword := strings.ToLower(strings.TrimSpace(keyword))
+	if normalizedKeyword == "" {
+		return 2
+	}
+	title := strings.ToLower(strings.TrimSpace(row.Title))
+	summary := strings.ToLower(strings.TrimSpace(row.Summary))
+	switch {
+	case strings.Contains(title, normalizedKeyword):
+		return 0
+	case strings.Contains(summary, normalizedKeyword):
+		return 1
+	default:
+		return 2
+	}
+}
+
+func normalizeSearchSummary(summary string) string {
+	normalized := strings.Join(strings.Fields(summary), " ")
+	if normalized == "" {
+		return ""
+	}
+	runes := []rune(normalized)
+	if len(runes) <= 160 {
+		return normalized
+	}
+	return string(runes[:157]) + "..."
 }

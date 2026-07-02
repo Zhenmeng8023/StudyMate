@@ -10,6 +10,9 @@ import (
 
 func main() {
 	cfg := config.Load()
+	if err := config.ValidateMySQLConfig(cfg); err != nil {
+		log.Fatal(err)
+	}
 
 	sqlDB, _, err := database.ConnectPrimarySQL(cfg.Database)
 	if err != nil {

@@ -3,6 +3,584 @@
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
+## 2026-07-02 15:10:20 +08:00 | v1.1.0-alpha.88 | 推进 WB-032 延后人工合并状态提示子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把当前冲突辅助从“材料已留存、可以安全重载”再推进一步。
+- 本轮目标是在用户决定这次先不重载时，提供显式的“先保留本地，稍后人工合并”入口和状态提示，让“继续保留本地草稿”也成为可见决策，而不是停留在隐含操作。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，冲突辅助卡片新增 `先保留本地，稍后人工合并` 动作，并支持 `manualMergeDeferred` 状态展示 `已标记为稍后人工合并，当前继续保留本地草稿`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `manualMergeDeferred` 状态和 `deferManualMergeUntilLater()` 交互；用户显式选择稍后人工合并后，会保留当前 dirty 草稿和冲突辅助卡片，同时给出匹配的状态提示。
+- 重写并补强 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`，顺手清理该文件的乱码文案，锁定冲突卡片在“稍后人工合并”路径下的按钮、提示和回调。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，锁定页面级“导出冲突处理包 -> 先保留本地，稍后人工合并 -> 仍可稍后再重载”的完整路径。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 当前边界推进到“安全重载提示 + 延后人工合并提示”并存。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱冲突辅助现在不只是在“放弃本地并重载”这条路径上更明确，也能显式表达“这次先保留本地、稍后人工合并”的决策状态，让冲突处理从单一出口推进到双路径状态化。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的多端 conflict handling、冲突取舍材料组织，以及更强的人工合并辅助。
+
+## 2026-07-02 01:08:10 +08:00 | v1.1.0-alpha.87 | 推进 WB-032 冲突材料留存状态标记子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把冲突处置从“路径更明确”再推进到“状态更明确”。
+- 本轮目标是在用户成功复制或导出冲突材料后，显式提示“已留存冲突材料，可安全重载最新图谱”，让用户不用再凭记忆判断自己是否已经留好证据。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `conflictArtifactsCaptured` 状态；当复制/导出当前草稿 JSON、冲突摘要、最新图谱 JSON 或冲突处理包成功后，会统一点亮该状态；当冲突态消失时会自动清零。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，冲突辅助卡片现支持 `materialsCaptured`，并在材料已成功留存时显示 `已留存冲突材料，可安全重载最新图谱`。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `GraphWorkspacePage.test.tsx`，锁定材料已留存时的显式提示与页面级行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 当前边界推进到“材料留存 + 留存状态可见 + 处置引导”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱冲突辅助现在不仅告诉用户“怎么处理”，还会在材料已经留存后显式告诉用户“可以安全重载”，让冲突决策从静态说明变成带状态感的流程。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是“仅保留本地但暂不重载”的专门引导，或更完整的多端 conflict handling。
+
+## 2026-07-02 01:03:10 +08:00 | v1.1.0-alpha.86 | 推进 WB-032 冲突处置引导子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把当前冲突辅助从“材料准备充分”继续推进到“处置路径更明确”。
+- 本轮目标是在冲突卡片里直接告诉用户三类典型决策路径，并把“放弃本地并重载最新图谱”的动作下沉到卡片本身，减少来回寻找入口的成本。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在冲突辅助卡片中新增两条显式引导：
+  - `如果确认放弃本地修改：可直接重载最新图谱`
+  - `如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱`
+- 同文件新增卡片内动作 `放弃本地并重载最新图谱`，让用户在冲突现场就能完成最后一步，而不必再回到状态栏找入口。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把卡片内动作接到既有 `reloadLatestGraph()` 决策流，保持确认放弃、拉取最新 head、重置历史和状态提示的原有行为一致。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `GraphWorkspacePage.test.tsx`，锁定显式处置文案、卡片内重载按钮和页面级确认流程。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 当前边界推进到“材料留存 + 显式处置引导 + 卡片内重载入口”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱冲突辅助现在已经不只是在同一张卡片里堆动作按钮，而是开始显式表达“放弃本地”和“稍后人工合并”这两条最常见的处置路径，离完整冲突解决流更近一步。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是“保留本地后暂不重载”的处置说明、导出后状态标记，或更完整的多端 conflict handling。
+
+## 2026-07-02 00:57:10 +08:00 | v1.1.0-alpha.85 | 推进 WB-032 冲突处理包导出子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把“留存材料”从分散的多个按钮再推进成更接近人工合并的单一导出入口。
+- 本轮目标是在 dirty 冲突态下提供 `导出冲突处理包`，把本地草稿 JSON、服务端最新图谱 JSON 和可读冲突摘要一起打包，减少后续人工比对时重新拼材料的成本。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictBundleArtifact(...)`，把当前图谱元信息、本地草稿摘要、本地草稿 JSON、最新图谱 JSON 和冲突摘要报告收口为单个 JSON 包。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，当冲突辅助卡片已拿到服务端最新 head 时，额外展示 `导出冲突处理包`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `exportConflictBundle()`，直接基于当前工作区、最新 head 和冲突摘要 artifact 导出单一处理包，并保持冲突建议状态不被清掉。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`GraphWorkspaceStageChrome.test.tsx` 和 `GraphWorkspacePage.test.tsx`，锁定处理包格式、按钮出现条件和页面级状态反馈。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 当前边界推进到“本地草稿 JSON + 最新图谱 JSON + 可读摘要 + 单文件冲突处理包”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱冲突辅助现在不只是在冲突现场给出若干“复制/导出”按钮，而是已经能把后续人工比对最常需要的三类材料收口成一个处理包，明显缩短“先留证据、后做决策”的路径。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是明确的“保留本地 / 放弃本地 / 稍后人工合并”处置引导，以及更完整的多端 conflict handling。
+
+## 2026-07-02 00:51:30 +08:00 | v1.1.0-alpha.84 | 推进 WB-032 服务端最新图谱 JSON 留存子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把冲突辅助从“留存本地草稿”和“带走可读摘要”再往前推一步。
+- 本轮目标是在 dirty 冲突态下也能一键带走“服务端最新图谱 JSON”，让用户后续做人工比对、外部 diff 或半手工合并时，不必自己重新去抓最新 head。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，让冲突辅助卡片在拿到最新 head 后额外提供 `复制最新图谱 JSON` / `导出最新图谱 JSON`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `copyLatestConflictJson()` 与 `exportLatestConflictJson()`，直接基于已拉取的 `latestConflictDetail` 构建 StudyMate JSON，并保持冲突建议状态不被辅助动作清掉。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `GraphWorkspacePage.test.tsx`，锁定最新图谱 JSON 留存按钮的出现条件、交互和状态反馈。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 当前边界推进到“本地草稿 JSON + 可读冲突摘要 + 最新图谱 JSON”三轨留存辅助。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱冲突辅助现在已经可以同时带走“本地草稿 JSON”“服务端最新图谱 JSON”和“人类可读摘要”，这为后续人工比对、外部 diff 和合并取舍提供了更完整的原始材料。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更明确的“保留本地 / 放弃本地 / 稍后人工合并”处置引导，以及更完整的多端 conflict handling。
+
+## 2026-07-02 00:45:30 +08:00 | v1.1.0-alpha.83 | 推进 WB-032 可带走的图谱冲突摘要子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“关键对象名级冲突摘要”基础上，再补一层真正可带走的冲突取舍信息。
+- 本轮目标是不让用户在冲突现场只能复制原始草稿 JSON，而是还能一键复制或导出一份人类可读的“图谱冲突摘要”，方便在重载前同步给自己、同事或后续人工合并流程。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictReportArtifact(...)`，把当前图谱标题、版本、当前未保存修改摘要和“与最新图谱相比”的差异摘要组装成可复制/导出的 Markdown 报告。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `copyConflictSummaryReport()` 与 `exportConflictSummaryReport()`，让 dirty 冲突态下可以直接复制或导出人类可读摘要，并保持“建议重载最新图谱”的冲突状态不被辅助动作清掉。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在冲突辅助卡片里新增 `复制冲突摘要` / `导出冲突摘要` 按钮，把“留存可读取舍信息”和“留存完整 JSON 草稿”拆成两条显式路径。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`GraphWorkspaceStageChrome.test.tsx`、`GraphWorkspacePage.test.tsx`，锁定摘要报告格式、按钮交互和页面级状态反馈。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 的当前边界推进到“可读冲突摘要 + 原始草稿 JSON 双轨留存辅助”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱冲突辅助现在不再只提供“完整 JSON 草稿留存”这一条偏工程化的路径，也能直接带走一份摘要化、可沟通的冲突报告，降低用户在重载前做判断和同步上下文的门槛。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是围绕“保留本地 / 放弃本地 / 后续人工合并”的更强取舍辅助，以及更完整的多端 conflict handling。
+
+## 2026-07-02 00:38:10 +08:00 | v1.1.0-alpha.82 | 推进 WB-032 关键对象名级冲突摘要子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“面向最新 head 的冲突差异摘要”基础上，再把摘要粒度从“只有数量”推进到“数量 + 关键对象名”。
+- 本轮目标是让用户在冲突卡片里不只看到“新增 1 个节点”，而是能更快知道“新增的是新概念节点”“标题和最新图谱不一致”等更具体的提示。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，让摘要在保持高层概览的前提下，补充关键对象名：标题/说明差异会显示当前值与基线值，节点/连线/分组差异会展示前两个关键名称并在需要时追加“等”。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，补齐“关键对象名摘要”和“超过两个对象时的样本截断”回归，锁定摘要口径。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 和 `GraphWorkspaceStageChrome.test.tsx`，让页面与组件回归直接验证“新概念”“Graph on server”这类更具体的冲突提示，而不是只盯数量。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 的当前边界明确为“本地草稿留存辅助 + 本地摘要 + 最新 head 摘要 + 关键对象名级提示”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱冲突辅助卡片现在已经不只是“有差异、差异有几条”，而是能在保留摘要简洁度的前提下，把最关键的对象名直接带出来，显著降低用户理解冲突上下文的成本。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是保留/放弃/后续人工合并的取舍辅助，以及更完整的多端 conflict handling，让冲突卡片不只解释问题，还能更积极地帮助用户做决策。
+
+## 2026-07-02 00:33:20 +08:00 | v1.1.0-alpha.81 | 推进 WB-032 面向最新 head 的冲突差异摘要子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“当前未保存修改摘要”之后，再补一层真正面向服务端最新图谱的冲突差异提示。
+- 本轮目标是不让冲突辅助卡片只停留在“你本地改了什么”，而是进一步告诉用户“这些本地修改与服务端最新 head 相比主要差在哪里”。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`：当工作区进入 dirty 冲突态且建议重载最新图谱时，会静默拉取一次服务端最新 graph head，并把结果保存在冲突辅助状态里，而不打断用户当前决策流。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`：冲突辅助卡片现在除了“当前未保存修改”外，还会展示“与最新图谱相比”的第二组差异摘要；如果最新 head 尚在拉取中或暂时不可用，也会给出对应说明。
+- 继续复用 `graphConflictSummary` helper，让本地 vs 最新 head 的差异摘要保持和“当前未保存修改摘要”一致的口径，避免两套不同的差异规则在 UI 上互相打架。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 和 `GraphWorkspaceStageChrome.test.tsx`，锁定“冲突现场同时展示本地未保存修改摘要与面向最新 head 的差异摘要”的页面与组件行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 当前边界推进到“本地草稿留存辅助 + 当前未保存修改摘要 + 最新 head 差异摘要”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱工作区现在在 dirty 冲突态下不再只会说“你本地有未保存修改”，而是会并列展示“本地改了什么”和“与最新图谱相比差了什么”，让用户在决定留存、放弃或重载前有更完整的上下文。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更细粒度的冲突差异、合并/保留取舍辅助，以及更完整的多端 conflict handling，让用户不只看到摘要，还能更主动地处理冲突。
+
+## 2026-07-02 00:27:40 +08:00 | v1.1.0-alpha.80 | 推进 WB-032 当前未保存修改摘要子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“冲突态本地草稿留存辅助”之后，再补一层更可理解的冲突摘要。
+- 本轮目标是让用户在 dirty 冲突态下不仅知道“可以复制/导出本地草稿”，还知道“当前这份本地草稿相对最后一次已同步成功的图谱到底改了什么”。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts` 及对应测试，基于“当前工作区图谱”与“最后一次已同步成功的图谱基线”生成当前未保存修改摘要，覆盖标题/说明变化、节点/连线/分组的新增、修改、删除，以及仅视口变化时的兜底提示。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，显式维护 `lastSyncedDetailRef` 作为最后同步基线，并在 dirty 冲突态下把摘要传给冲突辅助卡片。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，让冲突辅助卡片显示“当前未保存修改摘要”，把“你将放弃什么”直接放到冲突现场，而不是只给动作按钮。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 与 `GraphWorkspaceStageChrome.test.tsx`，锁定“冲突现场显示修改摘要、同时保留复制/导出/重载动作”的页面与组件行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 的边界明确为“先看本地未保存修改摘要，再决定是否留存或放弃”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱工作区现在在 dirty 冲突态下不再只是“能不能留存当前草稿”的问题，而是会先把当前未保存修改摘要展示出来，帮助用户更清楚地判断自己是不是要先留存、是否可以接受放弃。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是面向“服务端最新 head”的更完整冲突差异展示与更强的多端 conflict handling，让用户不只知道自己本地改了什么，还能知道这些改动与最新版本的关系。
+
+## 2026-07-01 20:21:30 +08:00 | v1.1.0-alpha.79 | 推进 WB-032 冲突态本地草稿留存辅助子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“显式重载最新图谱”之后，再补一层更稳妥的冲突取舍辅助。
+- 本轮目标是避免用户在版本冲突时只能二选一地“立刻放弃并重载”或“自己摸索怎么留存本地修改”，而是把留存本地草稿的动作显式放到冲突现场。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，新增图谱冲突辅助卡片；当当前工作区处于 dirty 冲突态时，会明确展示 `复制当前草稿 JSON` 和 `导出当前草稿 JSON`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `copyConflictDraftJson()` 与 `exportConflictDraftJson()`：直接基于当前工作区的实时图谱构建 StudyMate JSON，在放弃重载前为本地修改提供留存路径，并保持“重新加载最新图谱”的冲突决策状态不被辅助动作清掉。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 和 `GraphWorkspaceStageChrome.test.tsx`，补齐页面级与组件级回归，锁定“冲突现场显示留存辅助动作、点击辅助动作后仍保留重载决策流”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 的当前边界从“显式重载”推进到“先留存本地修改，再决定是否重载”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱工作区现在在 dirty 冲突态下不再只有“要不要放弃并重载”这一条单线决策，而是把“先复制/导出当前草稿，再决定是否放弃”变成显式、就地、可测试的辅助流程。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是冲突差异摘要和更完整的多端 conflict handling，让用户不仅能留存本地修改，还能更清楚地理解自己即将放弃的内容与服务端最新 head 的差异。
+
+## 2026-07-01 20:08:30 +08:00 | v1.1.0-alpha.78 | 推进 WB-032 显式重载最新图谱决策流子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把此前“另一窗口正在编辑 / 已保存更高版本”的提醒，进一步升级为用户可执行的最小决策流。
+- 本轮目标是先收口安全的显式重载边界：当当前标签页已经落后时，允许用户主动拉取最新图谱；如果本地仍有未保存修改，必须明确确认放弃后才能继续。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，让图谱状态栏支持可选动作按钮，并在需要时展示 `重新加载最新图谱`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `reloadLatestGraph()` 流程：dirty 状态下先弹确认，随后重新拉取最新 `getGraph(...)` head、重置 history/save-state、刷新 snapshot 列表，并在成功后明确提示“已重新加载最新图谱，未保存更改已放弃”。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`，让“另一窗口已保存更高版本”与 `batch-save` 命中 `graph_version_conflict` 时都能稳定保留“建议重载最新图谱”的页面状态，不再被后续失败文案意外清掉。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`、`GraphWorkspaceStageChrome.test.tsx` 和 `useGraphWorkspacePersistence.test.tsx`，补齐页面级、状态栏级与 hook 级回归，锁定“出现冲突后展示重载动作、dirty 时确认放弃、重载后清理失败状态”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 的冲突处理边界从“前置提醒”推进到“用户可控的显式重载动作”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 先因版本冲突路径没有保留重载动作而 RED，修正状态流转顺序后通过。
+- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx` 先因测试支架未补 `onReloadLatestSuggestionChange` 而 RED，补齐 harness 与回归断言后通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱工作区现在不只会告诉用户“你已经落后于最新版本”，还会把“放弃当前未保存修改并重载最新图谱”变成一个明确、可预期、可测试的动作，减少用户停在失败态却不知道下一步该怎么做的情况。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是冲突差异展示、本地修改导出/复制辅助，以及更完整的多端 conflict handling，而不是再停留在只有提醒或只有失败文案的状态。
+
+## 2026-07-01 19:57:20 +08:00 | v1.1.0-alpha.77 | 推进 WB-032 跨窗口冲突提示与 stale 草稿解释子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“同图谱本地草稿恢复”之后，再补上一层更主动的冲突提示：用户不应只在保存时报 `409` 时才第一次知道另一个窗口已经编辑或保存了同一图谱。
+- 本轮同时补 stale local draft 的可解释反馈，避免工作区静默丢弃旧草稿时，用户误以为系统把内容吞掉了。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphWorkspaceConcurrencySignal.ts` 与对应测试，按 `graphId + sessionId` 把当前窗口的 `dirty/currentVersion` 状态写入 `localStorage`，作为跨窗口轻量 signal。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`：工作区现在会监听同图谱的 `storage` 事件；检测到另一窗口仍在编辑时，提示“请保存前确认最新版本”；检测到另一窗口已保存更高版本时，提示“请刷新图谱后再继续编辑”。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`：当本地草稿因为服务端 head 已推进而被放弃时，页面会明确提示“本地草稿基于旧版本，已放弃恢复并加载最新图谱”，不再静默回退到最新画布。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`、`useGraphWorkspacePersistence.test.tsx` 和 `graphPersistenceState.test.ts`，把 stale 草稿解释文案与跨窗口冲突提示固定为页面级/Hook 级回归。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 先因缺少并发 signal helper 与 stale draft 解释文案而 RED，补实现后通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱工作区现在已经不只是在“保存失败后不丢本地编辑”，而是能更早告诉用户“另一个窗口也在动这张图”，从而降低静默冲突和误操作概率。
+- `WB-032` 仍处于进行中；下一步最值得继续补的是显式刷新/重载确认和更完整的冲突决策流，让“提醒”升级成“用户可控的恢复/取舍动作”。
+
+## 2026-07-01 19:49:30 +08:00 | v1.1.0-alpha.76 | 推进 WB-032 同图谱本地草稿恢复子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“保存冲突可见”和“dirty 时禁止恢复快照”之后，补上同一图谱重新打开时的本地未保存草稿恢复能力。
+- 本轮目标是先收口最小安全恢复边界：只有服务端 head 版本未变化时才恢复本地草稿；如果 head 已推进，则宁可放弃旧草稿，也不能静默覆盖当前图谱。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphWorkspaceDraftRecovery.ts` 与 `graphWorkspaceDraftRecovery.test.ts`，把图谱本地草稿恢复规则收口为独立 helper：按 `graphId` 落盘 `title` / `description` / `document` / `currentVersion`，支持读取、清理和基于版本一致性的恢复判定。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`：当前工作区一旦进入 `dirty` 状态，就把草稿写入 `sessionStorage`；保存成功或重新回到非 dirty 状态时，自动清理对应图谱草稿。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`：工作区首次加载或切换图谱时，会优先检查同图谱本地草稿；若 `currentVersion` 与服务端一致，则恢复本地草稿并维持 dirty 状态；若版本不一致，则清理 stale draft，继续以服务端 head 为准。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，新增页面级回归锁定“同图谱 + 同版本”重开后会看到恢复提示、继续处于 dirty 状态，且本地节点仍能在画布中找到。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/GraphWorkspacePage.test.tsx` 先因缺少恢复模块而 RED，补实现后通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱工作区现在已经具备“同图谱未保存编辑找回”的最小恢复能力，用户刷新或重新进入同一图谱时，不再只能依赖远端 autosave 或手动保存才能保住刚做的修改。
+- `WB-032` 仍处于进行中；下一步应继续补多窗口/多端冲突提示、stale draft 的可解释反馈，以及更完整的恢复决策流，避免用户在并发编辑场景下只看到“草稿消失”而不知道原因。
+
+## 2026-07-01 19:33:56 +08:00 | v1.1.0-alpha.75 | 推进 WB-032 图谱快照恢复前保护子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，补上保存冲突可见性之后的下一条恢复安全边界：当前画布仍有本地未保存修改时，不允许直接恢复历史快照。
+- 本轮目标不是完成完整的 autosave 恢复链路，而是先阻断“dirty 画布一键恢复快照导致本地编辑被静默覆盖”的高风险路径。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/lib/graphPersistenceState.ts`，新增快照恢复前保护状态，明确输出“当前图谱仍有未保存修改，请先保存后再恢复快照”提示，并保持保存态为 `dirty`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`：`restoreSnapshot(...)` 现在会先检查 `options.dirty`；存在未保存编辑时直接阻断恢复请求，不进入远端 restore API，也不重置历史状态。
+- 更新 `frontend-user/src/modules/graph/lib/graphPersistenceState.test.ts`，锁定恢复前保护状态对象。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，新增页面级回归：先制造 dirty 编辑，再点击恢复快照时，应继续显示“有未保存修改”状态并给出保护提示，同时不得发出 `restoreGraphSnapshot(...)` 请求。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/GraphWorkspacePage.test.tsx` 先因缺少恢复前保护 helper 和 dirty guard 而 RED，补实现后通过。
+- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱工作区现在已经不仅能防止旧版本保存静默覆盖，也能防止 dirty 状态下的快照恢复静默替换当前画布，`WB-032` 的“恢复安全”边界因此更完整了一层。
+- `WB-032` 仍处于进行中；下一步仍应优先补 autosave 草稿恢复与更完整的多窗口冲突提示，让保存、恢复与离页三条链路真正闭环。
+
+## 2026-07-01 14:55:51 +08:00 | v1.1.0-alpha.74 | 推进 WB-032 图谱保存版本冲突可见性子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，先从风险最直接的一刀切入：避免旧标签页、旧草稿或落后版本的 batch-save 静默覆盖已经更新过的 graph head。
+- 本轮不把 `WB-032` 误报成整体完成，而是先收口“保存冲突必须可见、失败后本地脏编辑不能丢”的最小可靠性边界，为后续 autosave 恢复和 snapshot 安全恢复继续打底。
+### 完成结果
+- 更新 `backend/internal/modules/graph/service/service.go`：`BatchSave(...)` 现在会在任何持久化前校验 `request.document.version == graph.current_version`；如果客户端版本落后，则返回 `409 graph_version_conflict`，并直接阻断写入。
+- 更新 `backend/internal/modules/graph/service/service_test.go`：新增回归测试锁定旧版本保存必须失败，且不得写入 `graphs.current_version`、`graph_versions` 或 Mongo current document。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx`：新增冲突失败态回归，锁定保存失败后仍保持 `dirty:true` 和冲突文案，确保本地未保存编辑不会被失败流程吞掉。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 标记为进行中，并把 `batch-save` 的 `409 graph_version_conflict` 契约写入文档。
+### 验证结果
+- `go test ./internal/modules/graph/service` 先因新测试命中“旧版本保存被静默覆盖”而 RED，补上版本前置校验后转绿。
+- `go test ./internal/modules/graph/...` 通过。
+- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱保存链路现在至少已经具备“旧版本不能静默覆盖新 head”的最小安全边界，后续 autosave 与多窗口编辑可以在明确冲突信号上继续建设，而不需要先回头补底层版本保护。
+- `WB-032` 仍处于进行中；接下来最值得继续推进的是 autosave 草稿恢复、snapshot 恢复前保护，以及更明确的多端冲突提示与用户决策流。
+
+## 2026-07-01 15:05:00 +08:00 | v1.1.0-alpha.73 | 完成 WB-031 图谱导出、缩略图与布局契约收口
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-031`，把图谱现有的 JSON/SVG/PNG 导出、缩略图主记录字段和来源泳道布局能力整理成统一契约，避免这些能力长期分散在前端局部 helper、数据库字段和隐含实现里。
+- 本轮重点不是继续扩张新的图谱功能，而是先把“导出产物怎么定义”“graph head 如何挂缩略图”“布局能力如何进入统一 API 生命周期”这三件事收口清楚，为后续 autosave、冲突处理和工程图谱导入提供稳定边界。
+### 完成结果
+- 新增 `docs/architecture/GRAPH_EXPORT_LAYOUT_CONTRACT.md`，集中说明 JSON/SVG/PNG 导出边界、`thumbnailFileId` head 字段、以及 `POST /api/v1/graphs/:id/layouts/preview` 的请求/响应与不推进版本语义。
+- 更新后端 graph DTO、summary builder 和前端 API types，让 `thumbnailFileId` 从数据库字段提升为前后端共享的 graph 摘要契约。
+- 新增后端来源泳道布局预览入口：`POST /graphs/:id/layouts/preview`。该接口会用服务端权威 `graphId` / `version` 归一化客户端文档草稿，返回布局后的 document、laneCount 和 selectedNodeIds，但不会写入 current document、snapshot 或 graph version。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，图谱工作区生成来源泳道时优先调用后端 preview API；接口不可用时仍回退到本地 `buildGraphSourceSwimlaneDocument(...)`，保持本地容错与统一契约并存。
+### 验证结果
+- `go test ./internal/modules/graph/service ./internal/modules/graph/handler` 先因缺失 `PreviewLayout` DTO/handler/service 而 RED，补实现后转绿。
+- `go test ./internal/modules/graph/...` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts` 先因缺失 `previewGraphLayout(...)` 而 RED，补实现后通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱布局现在已经不再只是工作区内部行为，而是进入了统一 graph API 契约；后续无论接更多布局算法、工程图模板还是后台治理入口，都有了稳定的 request/response 形状。
+- `thumbnailFileId` 现在成为 graph head 的显式一部分，后续 `WB-032` 和更远的分享/搜索卡片展示可以直接围绕这个字段建立异步缩略图链路，而不需要再次回头改 summary contract。
+
+## 2026-07-01 14:40:00 +08:00 | v1.1.0-alpha.72 | 完成 WB-030 图谱 API 生命周期契约收口
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-030`，把图谱后端已存在的 graph/document/snapshot/version/relation 读写路径整理成单一生命周期契约，并补上能锁定版本推进语义的后端与前端测试。
+- 本轮重点不是扩张新的图谱功能，而是先修掉“restore 后 current document 版本号可能回写旧值”和“graph summary mode 可能与恢复后文档语义漂移”这两个生命周期风险，为后续自动保存、冲突处理和导出能力打地基。
+### 完成结果
+- 新增 `docs/architecture/GRAPH_API_LIFECYCLE.md`，集中说明 graph head、Mongo current document、Mongo snapshot、MySQL version 索引和 source relation 的职责边界、endpoint 矩阵、版本推进规则，以及 restore 以旧内容生成新 head 的语义。
+- 重构 `backend/internal/modules/graph/service/service.go` 的依赖为最小接口，并新增 `backend/internal/modules/graph/service/service_test.go`，锁定 create graph 初始化 version 1、batch-save 推进 head 版本并落地 lifecycle artifact、restore snapshot 生成新 head 且重算 `graph.mode` 的行为。
+- 更新 `backend/internal/modules/graph/dto/document_contract.go` 与 `backend/internal/modules/graph/dto/document_contract_test.go`，让所有写入型 graph 路径都以服务端权威覆盖 `graphId` / `version`，不再信任客户端或旧 snapshot 自带的过期版本号。
+- 新增 `frontend-user/src/api/graphs.test.ts`，把 batch-save、snapshots、restore、Markdown/Mermaid import、validate 和 diagram templates 的 path / method / body 契约固定下来，避免前端调用点后续漂移。
+### 验证结果
+- `go test ./internal/modules/graph/service` 初始以 RED 方式暴露 service 依赖无法注入 fake、以及 restore 后 `document.version` 与 `currentVersion` 不一致的问题；完成重构和修复后转绿。
+- `go test ./internal/modules/graph/dto ./internal/modules/graph/service` 通过。
+- `go test ./internal/modules/graph/...` 通过，graph dto / handler / repository / service 回归全绿。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，32 条 graph-core 用例全绿。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过，22 条图谱前端用例全绿。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱生命周期现在已经明确由服务端掌控 head version，restore/import/batch-save 这类整份文档替换流程不再静默带回旧版本号；后续 `WB-032` 做 autosave / conflict handling 时可以直接建立在这条边界上。
+- `WB-030` 完成后，下一工作包应进入 `WB-031`，优先补图谱导出产物、缩略图和布局任务模型，让当前已经稳定的 lifecycle 契约真正承载更完整的图谱产品化能力。
+
+## 2026-07-01 14:12:29 +08:00 | v1.1.0-alpha.71 | 完成 WB-023 图谱内核测试与迁移回归
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-023`，把图谱内核的“序列化、导入错误、旧数据兼容、历史栈边界”回归测试补齐到 `@studymate/graph-core`。
+- 本轮重点不扩张新的图谱功能，而是锁定 `.smtg` 旧数据迁移兼容和 history 状态机边界，避免后续 `WB-030` 进入 API 生命周期整理时再次引入导入回归。
+### 完成结果
+- 扩展 `packages/graph-core/test/graphProductization.test.ts`，新增旧 root-level `.smtg` 缺失 `schemaVersion` 的兼容导入、非法 JSON / 数组 root / 非法 `document` 包装拒绝、history readable label / fallback label，以及 past/future 栈上限回归测试。
+- 更新 `packages/graph-core/src/file-format.ts`，将缺失 `schemaVersion` 的旧 StudyMate 图谱按 v1 兼容导入处理，同时继续拒绝数组 root 和非对象 `document` 包装，避免宽松兼容误放过坏 payload。
+- 复核 graph-core history 行为，确认 undo / redo / fallback label 与栈裁剪逻辑已由回归测试锁定，无需再在前端包装层重复维护额外兼容分支。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test -- --testNamePattern="legacy root documents|graph history respects|graph history stores readable|round trips and rejects invalid schema"` 先因缺失 `schemaVersion` 旧图谱被拒绝、以及数组 root 被误放行而失败，补实现后通过。
+- `npm --workspace @studymate/graph-core run test` 通过，32 条 graph-core 用例全绿。
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- graph-core 现在已经明确区分“旧版缺省 schema 的兼容导入”和“结构非法 payload 的拒绝导入”，后续图谱 API 契约整理可以直接复用这层边界，而不必再在 hook 或 handler 中补兜底。
+- `WB-023` 完成后，下一工作包应回到 `WB-030`，优先收口图谱 document/node/edge/group/snapshot 生命周期契约，并把前后端现在已经稳定下沉的 core 能力接回统一 API 边界。
+
+## 2026-07-01 14:03:06 +08:00 | v1.1.0-alpha.70 | 完成 WB-022 图谱 import / export / validation 统一接口
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-022`，把图谱工作区里分散在 `useGraphImportExport.ts`、controller 和 JSON helper 中的 import/export/validation 分支收口成统一接口。
+- 本轮重点不新增新的导入格式，而是把现有 Markdown / Mermaid / StudyMate JSON / SVG / validate 行为统一到单一 facade，并保留已有兼容性与回归覆盖。
+### 完成结果
+- 重写 `frontend-user/src/modules/graph/lib/graphFileImportExport.ts`，新增统一 facade：`buildGraphExportArtifact(...)` 统一 JSON/SVG 导出描述，`parseGraphJsonImport(...)` 统一 JSON 导入阻断计数与状态消息，`buildRemoteGraphImportOutcome(...)` 统一 Markdown/Mermaid 远端导入归一化，`buildGraphValidationOutcome(...)` 统一 validate 状态摘要。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphImportExport.ts`，让 hook 只保留下载、PNG 渲染、远端 API 调用和保存态副作用，不再重复维护导入模式分支文案和错误计数逻辑。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把远端 `validateGraph(...)` 的状态消息拼装也切到统一 facade，避免 controller 再次复制规则。
+- 扩展 `frontend-user/src/modules/graph/lib/graphFileImportExport.test.ts`，补齐统一 facade 的 JSON/SVG 导出、JSON 阻断导入、Markdown/Mermaid 归一化和 validate 状态摘要测试。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphFileImportExport.test.ts` 先因统一接口缺失失败，补实现后通过。
+- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphImportExport.test.tsx src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/hooks/useGraphViewportCamera.test.tsx src/modules/graph/hooks/useGraphSelectionState.test.tsx src/modules/graph/lib/graphHistory.test.ts` 通过。
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过。
+### 后续影响
+- 图谱导入/导出/校验现在已经具备单一的前端纯逻辑入口，后续 `WB-023` 可以更专注在 graph-core 序列化、导入错误、旧数据兼容和历史栈回归测试，而不是继续在 hook/controller 中追踪分支漂移。
+- 这次收口主要聚焦接口统一，没有继续扩张新的导入协议；PlantUML / OpenAPI / SQL DDL 之类工程图谱导入仍属于后续 `WB-051` 及其前置工作。
+
+## 2026-07-01 09:50:06 +08:00 | v1.1.0-alpha.69 | 完成 WB-021 图谱 viewport / selection / history 状态抽离
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-021`，把图谱工作区里剩余的 selection / viewport / history 状态转移从“前端 hook 各自维护”继续收口到 `@studymate/graph-core` 纯逻辑边界。
+- 本轮重点不扩张 import/export 或持久化能力，只让选择、多选、缩放/重置视野、撤销/重做转换具备稳定的共享状态模型与回归测试。
+### 完成结果
+- 更新 `packages/graph-core/src/selection.ts`、`viewport.ts` 与 `history.ts`，新增 `replaceGraphNodeSelection(...)`、`zoomGraphViewport(...)`、`resetGraphViewport(...)`，并把 core history label/undo/redo 转换清理为可复用实现。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphSelectionState.ts`，将显式多选替换、单选、toggle、框选统一委托给 `@studymate/graph-core` selection helper，不再分别维护散落的 `selectedNodeId` / `selectedNodeIds` 写法。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphViewportCamera.ts`，让工具栏缩放、滚轮缩放和重置视野全部复用 graph-core viewport transition helper。
+- 重写 `frontend-user/src/modules/graph/lib/graphHistory.ts`，让前端 undo/redo/history 捕获包装层委托给 graph-core history state，同时保留 StudyMate 自己的 `GraphDocumentPayload` 规范化与保存边界摘要。
+- 更新 graph-core 与前端图谱测试，补齐显式多选替换、viewport zoom/reset、history label 和 undo/redo 包装层回归。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 通过，30 条 graph-core 用例全绿。
+- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphSelectionState.test.tsx src/modules/graph/hooks/useGraphViewportCamera.test.tsx src/modules/graph/lib/graphHistory.test.ts` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱工作区的选择、视野和历史状态现在已经具备更明确的“core 状态机 + 前端包装层”边界，后续 `WB-022` 可以专注统一 import / export / validation，而不是继续在 controller 里复制状态转移逻辑。
+- 本轮顺手清理了 `graphHistory.ts` 的历史乱码标签，但没有扩散到更大范围 UI 文案；其他图谱旧文案编码问题仍应在独立工作包里有计划收口。
+
+## 2026-07-01 09:27:42 +08:00 | v1.1.0-alpha.68 | 完成 WB-020 图谱文档模型与版本策略收口
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-020`，把图谱 `GraphDocument` / `schemaVersion` / 兼容读写默认化从“分散在前后端多处硬编码”收口成显式契约。
+- 本轮重点不扩张 viewport/history/import-export 新能力，只稳定旧图谱 payload、空文档、Mongo current document 与 snapshot 的兼容读取路径。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphDocumentPayload.ts` 与 `graphDocumentPayload.test.ts`，把用户端图谱 payload 兼容适配集中起来，并复用 `@studymate/graph-core` 的 `normalizeGraphDocument(...)` 与 `supportedGraphSchemaVersion`。
+- 更新 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`，让工作区 `normalizeDocument(...)` / `createEmptyDocument(...)` 统一委托给新的 payload 适配层，而不是继续在页面侧散落 `schemaVersion: 1` 和空对象/空数组默认值。
+- 新增 `backend/internal/modules/graph/dto/document_contract.go` 与 `document_contract_test.go`，提供 `SupportedGraphSchemaVersion`、`NormalizeDocumentPayload(...)` 与 `NewEmptyDocumentPayload(...)` 三个共享契约入口。
+- 更新后端 graph repository/service/helpers：Mongo current document 与 snapshot 读出后会再次经过共享默认化；批量保存、导入、快照恢复和空文档创建也都复用同一层 helper，不再各自补 `SchemaVersion = 1`。
+- 新增 `docs/architecture/GRAPH_DOCUMENT_CONTRACT.md`，并同步更新 `README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-020` 标记为完成并切换下一优先级到 `WB-021`。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphDocumentPayload.test.ts src/modules/graph/lib/graphWorkspaceLoadState.test.ts` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 条用例全绿。
+- `cd backend && go test ./internal/modules/graph/dto ./internal/modules/graph/repository ./internal/modules/graph/service` 通过。
+### 后续影响
+- 图谱文档契约现在已经具备清晰的单一来源和显式兼容层，后续 `WB-021` 可以更专注在 viewport / selection / history 状态抽离，而不是继续在读写默认值上来回修补。
+- 当前仍保留前端工作区默认 viewport `{ x: 140, y: 120, zoom: 1 }` 与后端空文档 `{ x: 0, y: 0, zoom: 1 }` 的语义差异，这是有意保留的 UI/持久化边界，不属于本轮要合并的范围。
+
+## 2026-07-01 09:11:18 +08:00 | v1.1.0-alpha.67 | 完成 WB-014 搜索文档与回归记录收口
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-014`，把 `/api/v1/search` 的当前契约、权限矩阵、页面边界和自动化验证入口集中沉淀下来。
+- 本轮重点不是继续加搜索功能，而是把已经收口的搜索能力变成后续可复用、可追踪、可执行的工程资产。
+### 完成结果
+- 新增 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`，集中记录搜索 endpoint、查询参数、grouped payload、权限/可见性、排序/摘要规则，以及用户端 URL 筛选和当前批次分页边界。
+- 更新 `package.json`，新增 `test:search:frontend`、`test:search:backend`、`test:search:e2e` 和 `verify:search`，把搜索专项回归从零散命令收口成固定入口。
+- 更新 `README.md`、`docs/DEVELOPMENT.md`、路线/版本文档和变更记录，让主文档明确知道搜索契约总表和 `npm run verify:search` 的存在。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，将 `WB-014` 标记为完成，并把下一优先级切回 `WB-020` 图谱文档模型与版本策略。
+### 验证结果
+- `npm run verify:search` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过（仅存在既有 CRLF 提示，无 diff 错误）。
+- `npm run ci` 通过。
+### 后续影响
+- 搜索链路现在已经不只是“代码和测试存在”，而是具备了单点文档和固定验证命令；后续改 `SearchIndexer`、搜索页或知识链接时，更容易判断有没有发生契约漂移。
+- 下一优先级应切换到 `WB-020`，开始收口图谱 `GraphDocument` / schema version / 版本策略这条主线，而不是继续在搜索层做重复整理。
+
+## 2026-07-01 09:05:12 +08:00 | v1.1.0-alpha.66 | 完成 WB-013 搜索页体验与页面级回归补强
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-013`，在不修改 `/api/v1/search` grouped payload 契约的前提下，补用户端搜索页的空态、错误态、类型筛选、来源跳转和分页回归。
+- 本轮重点收口“真实可验证的页面交互”，不假装后端已经支持 offset/page 分页。
+### 完成结果
+- 更新 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`，新增 URL 驱动的 `types` 类型筛选，让页面状态、地址栏和 `searchAll(...)` 请求保持同步。
+- 新增 `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx`，按页面级 TDD 回归覆盖无关键词空态、后端错误态、筛选请求形状，以及来源链接与分页切换。
+- 更新搜索页结果展示：每组当前批次最多请求 `12` 条结果，并按每页 `4` 条切换；界面会明确说明这只是当前批次内分页，不代表后端已有 offset/page 契约。
+- 更新 `frontend-user/src/styles/search-review.css`、`README.md`、`docs/DEVELOPMENT.md`、路线/版本文档和变更记录，把搜索页最新交互边界写回文档。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test` 通过，42 个测试文件、147 条用例全绿。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过（仅存在既有 CRLF 提示，无 diff 错误）。
+- `npm run ci` 通过。
+### 后续影响
+- 搜索页现在已经具备最小可用的页面交互护栏，后续代理不需要再靠手工点点点判断筛选、空态和来源跳转是否退化。
+- 下一优先级应切换到 `WB-014`，把搜索 API / 页面交互的当前契约与验证记录继续沉淀到文档与回归清单里。
+
+## 2026-07-01 02:09:34 +08:00 | v1.1.0-alpha.65 | 完成 WB-012 搜索权限与可见性过滤补强
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-012`，把 fallback 搜索的权限/可见性约束从“读代码推断”收口成可回归测试。
+- 本轮重点覆盖匿名短路、owner 归属和未发布内容过滤，不改变搜索路由与 grouped payload 结构。
+### 完成结果
+- 更新 `backend/internal/modules/search/service/indexer.go`，把查询拼装抽成纯 `searchQuerySpec`，便于在不连接真实数据库的前提下回归各类型结果的可见性条件。
+- 更新 `backend/internal/modules/search/service/indexer_test.go`，新增权限矩阵测试：匿名请求会直接短路 `note/graph/card`；`material/post` 继续显式限定公开内容；`card` 仅返回 owner 自己的 `active` 卡片；`graph` 仅返回 `active` 且“owner 或 public”的图谱。
+- 顺手补上 graph 搜索缺失的 `status = active` 过滤，避免把非活跃图谱带进搜索候选集。
+- 更新 `README.md`、`docs/DEVELOPMENT.md`、路线/版本文档和执行记录，把搜索权限矩阵写回文档，减少后续代理误判。
+### 验证结果
+- `go test ./internal/modules/search/service` 通过。
+- `go test ./internal/modules/search/...` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过。
+- `npm run ci` 通过。
+### 后续影响
+- 搜索现在不仅契约稳定、结果质量可回归，连核心权限矩阵也已经被显式锁住；后续可以更放心地继续做用户端搜索体验和交互回归。
+- 下一优先级应切换到 `WB-013`，补搜索页的空态、错误态、筛选与来源跳转回归。
+
+## 2026-07-01 02:00:32 +08:00 | v1.1.0-alpha.64 | 完成 WB-011 聚合搜索结果质量补强
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-011`，在不改搜索路由与 grouped payload 结构的前提下，补强 fallback 搜索的组内排序和摘要展示质量。
+- 本轮重点只收口“标题命中优先”和“摘要可读预览”两条最小规则，不引入新索引引擎，也不扩展到权限矩阵。
+### 完成结果
+- 更新 `backend/internal/modules/search/service/indexer.go`，让 MySQL fallback 先抓取一小批候选，再按“标题命中优先、摘要命中次之”的规则稳定排序，同级继续保留数据库返回的最新顺序。
+- 新增 `backend/internal/modules/search/service/indexer_test.go`，通过纯逻辑测试锁定标题命中优先规则，以及长摘要折叠空白并裁剪到 160 个字符以内的行为。
+- 搜索结果摘要现在会统一压成单行预览，避免把整段帖子正文或长文本原样灌进搜索结果卡片。
+- 更新 `docs/DEVELOPMENT.md`、`README.md`、路线/版本文档和执行记录，把搜索结果质量规则写回文档，避免后续继续依赖“更新倒序但相关性不清楚”的隐含行为。
+### 验证结果
+- `go test ./internal/modules/search/service` 通过。
+- `go test ./internal/modules/search/...` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过。
+- `npm run ci` 通过。
+### 后续影响
+- 搜索 fallback 现在已经具备更稳定的组内排序和更可读的摘要预览，后续继续补强时可以把重点放在权限/可见性矩阵和更强的索引抽象，而不是继续修基础展示质量。
+- 下一优先级应切换到 `WB-012`，系统补齐私有笔记、私有图谱和未发布内容的权限过滤测试。
+
+## 2026-07-01 01:55:11 +08:00 | v1.1.0-alpha.63 | 完成 WB-010 统一搜索契约收口
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-010`，在现有 search module 基础上固定搜索契约，而不是重做搜索模块。
+- 本轮重点收口默认分组、非法 `types` 校验、`limit` 边界，以及前端 DTO / 开发文档中的返回字段语义。
+### 完成结果
+- 更新 `backend/internal/modules/search/service/service.go` 与 `handler.go`，让省略 `types` 或传空值时稳定回退到 `material/post/note/graph/card` 五组默认搜索；未知类型会在 service 层直接返回 `400 invalid_search_type`，不再继续落到 indexer。
+- 调整 `limit` 规则：缺省或非法时回退到 `20`，超上限时钳制为 `50`，避免大页参数又被静默收回到默认值。
+- 补充后端 `search/service`、`search/handler` 测试，覆盖空 `types` 默认行为、非法类型短路失败和分页上限边界。
+- 更新 `frontend-user/src/api/types.ts`，显式固定 `SearchResult.type` 与 `source` 的联合类型；补充 `searchShare.test.ts`，锁定用户端在无类型筛选时不会发送空 `types=` 参数。
+- 更新 `docs/DEVELOPMENT.md`、`README.md`、路线/版本文档和执行记录，明确 `source` 表示来源域而不是底层存储引擎。
+### 验证结果
+- `go test ./internal/modules/search/service` 通过。
+- `go test ./internal/modules/search/handler` 通过。
+- `go test ./internal/modules/search/...` 通过。
+- `npm --workspace frontend-user run test -- src/api/searchShare.test.ts` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过。
+- `npm run ci` 通过。
+### 后续影响
+- 统一搜索现在已经从“有接口”进入“契约稳定”阶段，后续工作可以更聚焦在结果质量、排序规则、权限过滤和用户端交互回归，而不是继续修请求边界漂移。
+- 下一优先级应切换到 `WB-011`，继续补资料、笔记、图谱、帖子四类结果的聚合质量与摘要/排序规则。
+
+## 2026-07-01 01:45:11 +08:00 | v1.1.0-alpha.62 | 完成 WB-004 版本与里程碑文档对齐
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-004`，把外层版本文档、发布清单和执行文档与已经完成的 `WB-002`、`WB-003` 工程基线重新对齐。
+- 不扩散到新功能开发，只收口 README、ROADMAP、VERSION_PLAN、CHANGELOG、release checklist 与执行记录。
+### 完成结果
+- 更新 `README.md`，补记 `WB-002` 的配置安全收口、`WB-003` 的最小 CI 质量门禁、显式 `MYSQL_DSN` / `JWT_SECRET` 要求，以及 Playwright 默认 preview 端口 `44173` / `44174`。
+- 更新 `docs/planning/ROADMAP.md` 与 `docs/planning/VERSION_PLAN.md`，把配置安全、Go 格式门禁、配置安全回归检查和当前完整验证基线写回里程碑文档。
+- 更新 `CHANGELOG.md` 与 `docs/planning/versions/v1.0.0-release.md`，同步 release gate、环境变量要求和 Playwright 端口约定，避免发布文档继续滞后于代码。
+- 更新 `docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，将 `WB-004` 标记为完成，并把下一优先级重新收口到 `WB-010` 统一搜索契约。
+### 验证结果
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过。
+- `npm run ci` 通过，确认文档收口后当前默认验证链路仍保持全绿。
+### 后续影响
+- 现在外层说明、发布清单和执行面都已经与真实工程基线同步，后续推进不会再被“配置安全未收口”“CI 门禁未补齐”这类过期文档误导。
+- 下一优先级应切换到 `WB-010`，先固定统一搜索契约，再继续做权限与用户端回归补强。
+
+## 2026-07-01 01:37:48 +08:00 | v1.1.0-alpha.61 | 完成 WB-003 最小 CI 质量门禁补强
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-003`，在已有 GitHub Actions 的基础上补最小质量门禁，而不是重写整条流水线。
+- 优先锁住最容易回退的两类问题：Go 未格式化文件和已禁用的危险配置默认值。
+### 完成结果
+- 新增 `scripts/check-go-format.mjs`，显式检查 `backend/` 下全部 Go 文件是否通过 `gofmt`。
+- 新增 `scripts/check-config-safety.mjs`，检查 `backend/internal/config/config.go`、`.env.example` 和 `docs/DEVELOPMENT.md` 中是否回退到已禁用的危险默认值。
+- 更新根 `package.json`，新增 `verify:backend:format`、`verify:config-safety`，并把它们纳入 `npm run lint`。
+- 更新 `.github/workflows/ci.yml`，在 typecheck 前显式增加 Go 格式和配置安全检查步骤。
+- 对 `backend/` 全量 Go 文件执行 `gofmt -w`，修复仓库中原本就存在的大批未格式化文件，使新门禁可实际通过。
+- 更新 `playwright.config.ts` 与 `e2e/v1-admin-governance.spec.ts`，把 E2E preview 默认端口从 4173/4174 收口为更稳的 44173/44174，并支持环境变量覆盖，解决当前 Windows 环境下的 preview 绑定失败。
+- 更新 `docs/DEVELOPMENT.md`，同步新的门禁脚本和 Playwright 默认端口。
+### 验证结果
+- `npm run verify:backend:format` 通过，确认 138 个 Go 文件均已满足 `gofmt`。
+- `npm run verify:config-safety` 通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例通过。
+- `npm run ci` 通过，完整覆盖 lint、build、Vitest、graph-core、Playwright、后端测试与文档校验。
+### 后续影响
+- 现在 `gofmt` 与配置安全已经从“约定”变成了会阻断 CI 的显式门禁。
+- 下一优先级应转到 `WB-004`，把 README 和里程碑文档与本轮已经落地的工程基线继续对齐。
+
+## 2026-07-01 01:30:47 +08:00 | v1.1.0-alpha.60 | 完成 WB-002 环境变量与安全默认值收口
+### 任务内容
+- 沿着 `CODEX_MASTER_PROMPT.md` 继续执行 `WB-002`，收口环境变量和危险默认值，不扩散到业务功能开发。
+- 目标是移除可直接运行的敏感 fallback，明确开发/测试/生产的最小配置边界，并让启动失败信息可读。
+### 完成结果
+- 更新 `backend/internal/config/config.go`，移除 `JWT_SECRET` 与 `MYSQL_DSN` 的危险 fallback，并新增 `ValidateMySQLConfig` 与 `ValidateServerConfig`。
+- 新增 `backend/internal/config/config_test.go`，覆盖安全空 fallback、MySQL 必填校验、占位 JWT secret 拒绝、管理员引导配置完整性等场景。
+- 更新 `backend/internal/app/server.go`，在服务启动前显式校验 `MYSQL_DSN`、`JWT_SECRET` 和管理员引导配置。
+- 更新 `backend/cmd/migrate/main.go` 与 `backend/cmd/backfill-note-documents/main.go`，让数据库相关命令在缺失关键环境变量时直接失败，并输出明确错误。
+- 更新 `.env.example`，保留占位型 `JWT_SECRET` 提示，移除 root 弱口令 DSN 和默认启用的管理员引导账号。
+- 更新 `docs/DEVELOPMENT.md`，把后端启动示例改为专用数据库账号与显式环境变量方式，并补充开发、测试、生产环境分层建议。
+### 验证结果
+- `gofmt -w backend/internal/config/config.go backend/internal/config/config_test.go backend/internal/app/server.go backend/cmd/migrate/main.go backend/cmd/backfill-note-documents/main.go` 通过。
+- `cd backend && go test ./internal/config` 通过。
+- `cd backend && go test ./...` 通过。
+- `npm run verify:docs` 通过。
+- `npm run typecheck` 通过。
+- `cd backend && $env:JWT_SECRET=''; $env:MYSQL_DSN=''; go run ./cmd/server` 按预期失败，报错 `MYSQL_DSN is required; JWT_SECRET is required`。
+- `cd backend && $env:MYSQL_DSN=''; go run ./cmd/migrate` 按预期失败，报错 `MYSQL_DSN is required`。
+### 后续影响
+- 本地环境如果此前依赖 `config.Load()` 的隐式 fallback，将需要显式设置 `MYSQL_DSN` 和 `JWT_SECRET` 后再启动。
+- 当前下一优先级应转向 `WB-003`，在现有 CI 基础上显式补 `gofmt`、secret scan 和更清晰的质量门禁。
+
+## 2026-07-01 01:24:51 +08:00 | v1.1.0-alpha.59 | 完成 WB-001 基线核验与执行文档收口
+### 任务内容
+- 按 `CODEX_MASTER_PROMPT.md` 执行 `WB-001`，先核验当前分支真实基线，再决定后续工作包，不直接进入大范围功能开发。
+- 只允许修改执行文档和 `.env.example` 草案，不改变运行时业务逻辑。
+### 完成结果
+- 核验出当前仓库已经真实具备 `search`、`share`、后台治理 API、GitHub Actions CI、`@studymate/graph-core` 测试包，以及已拆薄的 `frontend-user/src/app/App.tsx` 和 `frontend-admin/src/App.vue`。
+- 更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，纠正“搜索后端缺失”“CI 缺失”“前端根文件过大”等过期判断。
+- 新增 `docs/engineering/WB-001_BASELINE_AUDIT.md`，固定 2026-07-01 的真实构建/测试矩阵、配置风险、文档漂移和后续文件级计划。
+- 更新 `docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，将后续重点调整为“补强现有能力”而不是“从零创建能力”，并把 `WB-001` 标记为已核验完成。
+- 更新 `.env.example`，移除可直接使用的 root 弱口令示例，补全 `MONGO_TIMEOUT`、`REDIS_TIMEOUT`、`NOTE_READ_MODEL` 等当前代码已读取的环境变量。
+### 验证结果
+- `npm run verify:docs` 通过。
+- `npm run typecheck` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个用例通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:user` 通过，41 个文件、142 个用例通过。
+- `npm run test:admin` 通过，3 个文件、3 个用例通过。
+- `npm run build:user` 通过。
+- `npm run build:admin` 通过。
+### 后续影响
+- 后续 Codex 进入仓库时，将不再被“搜索未实现”“CI 未建立”“App 根文件过大”等过期判断误导。
+- 当前最应优先推进的是 `WB-002` 环境变量与安全默认值收口，以及 `WB-003` 在现有 CI 基础上的质量门禁补强。
+- `backend/internal/config/config.go` 中的危险 fallback 仍未移除，下一工作包需要优先处理。
+
 ## 2026-07-01 01:12:37 +08:00 | v1.1.0-alpha.58 | 工程图节点支持结构化模式选择
 ### 任务内容
 - 继续推进自由/UML/ERD/C4/流程图模式能力，把工程图节点的 `diagramKind` 从自由文本输入升级为结构化选择。

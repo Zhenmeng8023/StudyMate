@@ -39,6 +39,22 @@ export function projectClientPointToGraph(options: GraphClientPointProjection): 
   };
 }
 
+export function zoomGraphViewport(viewport: GraphViewport, delta: number): GraphViewport {
+  return {
+    x: viewport.x,
+    y: viewport.y,
+    zoom: clampGraphZoom(viewport.zoom + delta)
+  };
+}
+
+export function resetGraphViewport(_: GraphViewport, nextViewport: GraphViewport): GraphViewport {
+  return {
+    x: roundLayoutNumber(nextViewport.x),
+    y: roundLayoutNumber(nextViewport.y),
+    zoom: clampGraphZoom(nextViewport.zoom)
+  };
+}
+
 export function buildGraphMinimapViewport(options: GraphMinimapViewportOptions) {
   if (options.stage.width <= 0 || options.stage.height <= 0 || options.viewport.zoom <= 0 || options.scale <= 0) {
     return null;

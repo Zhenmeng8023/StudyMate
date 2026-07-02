@@ -103,7 +103,7 @@ func BuildDocumentFromMarkdownOutline(graphID string, version int64, source stri
 	return graphdto.GraphDocumentPayload{
 		GraphID:       graphID,
 		Version:       version,
-		SchemaVersion: 1,
+		SchemaVersion: graphdto.SupportedGraphSchemaVersion,
 		Viewport: graphdto.GraphViewportPayload{
 			X:    120,
 			Y:    90,
@@ -170,7 +170,7 @@ func BuildDocumentFromMermaid(graphID string, version int64, source string) (gra
 	return graphdto.GraphDocumentPayload{
 		GraphID:       graphID,
 		Version:       version,
-		SchemaVersion: 1,
+		SchemaVersion: graphdto.SupportedGraphSchemaVersion,
 		Viewport:      graphdto.GraphViewportPayload{X: 120, Y: 90, Zoom: 1},
 		Nodes:         nodes,
 		Edges:         edges,

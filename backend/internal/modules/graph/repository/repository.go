@@ -110,18 +110,19 @@ func (r *Repository) ReplaceSourceRelations(graphID string, relations []graphmod
 
 func BuildSummary(graph graphmodel.Graph) graphdto.GraphSummaryPayload {
 	return graphdto.GraphSummaryPayload{
-		ID:             graph.ID,
-		OwnerUserID:    graph.OwnerUserID,
-		Title:          graph.Title,
-		Description:    graph.Description,
-		Visibility:     graph.Visibility,
-		Status:         graph.Status,
-		GraphType:      graph.GraphType,
-		Mode:           graph.Mode,
-		CurrentVersion: graph.CurrentVersion,
-		NodeCount:      graph.NodeCount,
-		EdgeCount:      graph.EdgeCount,
-		CreatedAt:      graph.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:      graph.UpdatedAt.Format(time.RFC3339),
+		ID:              graph.ID,
+		OwnerUserID:     graph.OwnerUserID,
+		Title:           graph.Title,
+		Description:     graph.Description,
+		Visibility:      graph.Visibility,
+		Status:          graph.Status,
+		GraphType:       graph.GraphType,
+		Mode:            graph.Mode,
+		ThumbnailFileID: graph.ThumbnailFileID,
+		CurrentVersion:  graph.CurrentVersion,
+		NodeCount:       graph.NodeCount,
+		EdgeCount:       graph.EdgeCount,
+		CreatedAt:       graph.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:       graph.UpdatedAt.Format(time.RFC3339),
 	}
 }

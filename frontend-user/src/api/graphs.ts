@@ -13,6 +13,8 @@ import type {
   GraphCardDraftPayload,
   GraphDetailPayload,
   GraphDocumentPayload,
+  GraphLayoutMode,
+  GraphLayoutPreviewPayload,
   GraphSnapshotPayload,
   GraphSummaryPayload,
   GraphValidationResponse,
@@ -132,6 +134,22 @@ export async function validateGraph(session: AuthSession, graphId: string) {
   return request<GraphValidationResponse>(`/graphs/${graphId}/validate`, {
     method: "POST",
     headers: withAuth(session)
+  });
+}
+
+export async function previewGraphLayout(
+  session: AuthSession,
+  graphId: string,
+  input: {
+    mode: GraphLayoutMode;
+    nodeIds: string[];
+    document: GraphDocumentPayload;
+  }
+) {
+  return request<GraphLayoutPreviewPayload>(`/graphs/${graphId}/layouts/preview`, {
+    method: "POST",
+    headers: withAuth(session),
+    body: JSON.stringify(input)
   });
 }
 

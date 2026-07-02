@@ -1,6 +1,8 @@
 import { useCallback, useState } from "react";
 import {
   clearGraphNodeSelection,
+  createGraphSelectionState,
+  replaceGraphNodeSelection,
   selectGraphNodesInRect,
   setGraphNodeSelection,
   toggleGraphNodeSelection
@@ -26,8 +28,7 @@ type GraphWorldSelectionRect = {
 
 export function useGraphSelectionState(options: GraphSelectionStateOptions = {}) {
   const { onClearEdgeSelection } = options;
-  const [selectedNodeId, setSelectedNodeId] = useState("");
-  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [selection, setSelection] = useState(createGraphSelectionState);
 
   const clearEdgeSelection = useCallback(
     (enabled = true) => {
@@ -40,45 +41,43 @@ export function useGraphSelectionState(options: GraphSelectionStateOptions = {})
 
   const selectSingleNode = useCallback(
     (nodeId: string) => {
-      const nextSelection = setGraphNodeSelection({ selectedNodeId, selectedNodeIds }, nodeId);
-      setSelectedNodeId(nextSelection.selectedNodeId);
-      setSelectedNodeIds(nextSelection.selectedNodeIds);
+      const nextSelection = setGraphNodeSelection(selection, nodeId);
+      setSelection(nextSelection);
       clearEdgeSelection();
       return nextSelection;
     },
-    [clearEdgeSelection, selectedNodeId, selectedNodeIds]
+    [clearEdgeSelection, selection]
   );
 
   const clearNodeSelection = useCallback(() => {
-    const nextSelection = clearGraphNodeSelection({ selectedNodeId, selectedNodeIds });
-    setSelectedNodeId(nextSelection.selectedNodeId);
-    setSelectedNodeIds(nextSelection.selectedNodeIds);
+    const nextSelection = clearGraphNodeSelection(selection);
+    setSelection(nextSelection);
     return nextSelection;
-  }, [selectedNodeId, selectedNodeIds]);
+  }, [selection]);
 
   const resetNodeSelection = useCallback(() => {
-    setSelectedNodeId("");
-    setSelectedNodeIds([]);
+    setSelection(createGraphSelectionState());
   }, []);
 
   const toggleNodeSelection = useCallback(
     (nodeId: string) => {
-      const nextSelection = toggleGraphNodeSelection({ selectedNodeId, selectedNodeIds }, nodeId);
-      setSelectedNodeId(nextSelection.selectedNodeId);
-      setSelectedNodeIds(nextSelection.selectedNodeIds);
+      const nextSelection = toggleGraphNodeSelection(selection, nodeId);
+      setSelection(nextSelection);
       clearEdgeSelection();
       return nextSelection;
     },
-    [clearEdgeSelection, selectedNodeId, selectedNodeIds]
+    [clearEdgeSelection, selection]
   );
 
   const selectNodeIds = useCallback(
     (nodeIds: string[], selectOptions: SelectNodeIdsOptions = {}) => {
-      setSelectedNodeIds([...nodeIds]);
-      setSelectedNodeId(selectOptions.activeNodeId ?? nodeIds[0] ?? "");
+      const nextSelection = replaceGraphNodeSelection(selection, nodeIds, {
+        activeNodeId: selectOptions.activeNodeId
+      });
+      setSelection(nextSelection);
       clearEdgeSelection(selectOptions.clearEdgeSelection ?? true);
     },
-    [clearEdgeSelection]
+    [clearEdgeSelection, selection]
   );
 
   const selectNodesInWorldRect = useCallback(
@@ -97,8 +96,8 @@ export function useGraphSelectionState(options: GraphSelectionStateOptions = {})
     clearNodeSelection,
     resetNodeSelection,
     selectNodeIds,
-    selectedNodeId,
-    selectedNodeIds,
+    selectedNodeId: selection.selectedNodeId,
+    selectedNodeIds: selection.selectedNodeIds,
     selectNodesInWorldRect,
     selectSingleNode,
     toggleNodeSelection

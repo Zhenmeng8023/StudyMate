@@ -23,8 +23,11 @@
 - 后端继续补 search/share/admin/review/graph/AI 的 handler/service 边界测试；search/share/card/graph/AI handler 已切到最小 service interface，admin handler 已补 limit 解析测试。涉及数据库的用例优先用 repository interface 或轻量 fixture，不把真实 MySQL/Mongo 作为单元测试前置条件。
 - 后端 search service 已新增 `SearchIndexer` 抽象，默认仍走 MySQL fallback；这一层只提供可替换边界，不引入新的搜索引擎依赖。
 - 图谱工作区已新增 `graphHistory.ts`，并把 `@studymate/graph-core` 扩展为覆盖文档规范化、验证规则、`.smtg` JSON 导入导出、学习模板、history label 和 200 节点性能 fixture 的纯逻辑边界；大型控制器后续继续拆数据加载、画布交互、validation/draft 与设置面板逻辑。
+- 图谱导出、缩略图与布局契约已完成一轮收口：graph 摘要显式暴露 `thumbnailFileId`，来源泳道布局新增 `POST /graphs/:id/layouts/preview`，并通过独立架构文档固定 JSON/SVG/PNG 导出和缩略图任务模型。
 - Reader 当前已补 `frontend-user/src/api/reader.test.ts`、`frontend-user/src/pages/ReaderPage.test.tsx`、`backend/internal/modules/reader/handler/handler_test.go` 和 `backend/internal/modules/reader/service/service_test.go`，锁定进度回写、书签、批注 `rects`、来源展示，以及鉴权、请求体、资料可见性与批注选择边界。
 - Playwright 已补公共壳层、搜索、分享只读页、复习队列、后台治理和图谱 200 节点工作区 smoke，且 API 请求已改为测试内拦截；后续继续按同样方式补高风险受保护工作流。
+- `WB-002` 已完成：`JWT_SECRET` 与 `MYSQL_DSN` 不再使用危险 fallback，`server` / `migrate` / `backfill-note-documents` 会显式校验关键环境变量。
+- `WB-003` 已完成：新增 Go 格式化检查、配置安全回归检查，并把它们接入默认 `lint` / `ci`；Playwright preview 默认端口改为 `44173` / `44174`。
 
 退出标准：
 
@@ -74,13 +77,14 @@
 - README 当前阶段、文档导航、设计入口更新。
 - `docs/planning/ROADMAP.md`、`docs/planning/VERSION_PLAN.md`、`CHANGELOG.md`、`PROJECT_LOG.md` 同步。
 - `.github/PULL_REQUEST_TEMPLATE.md`、`.github/workflows/ci.yml`、`scripts/verify-doc-sync.mjs` 补齐。
+- 新增 `scripts/check-go-format.mjs` 与 `scripts/check-config-safety.mjs`，用于显式阻断 Go 未格式化文件与危险默认值回退。
 
 退出标准：
 
 - 文档同步脚本通过。
 - 当前阶段描述不再夸大或滞后。
 - 根 `package.json` 提供 `lint`、`test:user`、`test:admin`、`test:e2e`、`verify:docs`、`ci`。
-- CI 覆盖 Node 24、Go 1.26、前后台构建、Vitest、Playwright、图谱核心测试、后端测试和文档同步。
+- CI 覆盖 Node 24、Go 1.26、Go 格式检查、配置安全检查、前后台构建、Vitest、Playwright、图谱核心测试、后端测试和文档同步。
 
 ### B. 拆分超大文件
 
@@ -238,6 +242,8 @@
 
 ```powershell
 npm run lint
+npm run verify:backend:format
+npm run verify:config-safety
 npm run build:user
 npm run build:admin
 npm run test:user
@@ -261,8 +267,9 @@ npm run verify:docs
 ## D 阶段当前完成
 
 - SM-2 已通过 `Scheduler` 接口包裹，保持 v1 可解释默认算法，同时给后续替换调度器留下稳定边界。
-- `GET /api/v1/search?q=&types=&limit=` 已接入 MySQL fallback，响应按 `material/post/note/graph/card` 分组，每条结果包含 `type/id/title/summary/url/source`。
-- 用户端搜索页已改为消费后端 grouped payload；公开请求只返回公开内容，登录请求包含当前用户私有学习数据。
+- `GET /api/v1/search?q=&types=&limit=` 已接入 MySQL fallback，响应按 `material/post/note/graph/card` 分组，每条结果包含 `type/id/title/summary/url/source`；省略 `types` 时默认搜索五组，未知类型返回 `400 invalid_search_type`，`limit` 缺省为 `20` 且最大为 `50`。
+- 用户端搜索页已改为消费后端 grouped payload；公开请求只返回公开内容，登录请求包含当前用户私有学习数据；fallback 组内结果按标题命中优先稳定排序，长摘要统一压缩为单行 160 字符内预览；页面层现支持 URL 类型筛选、来源跳转与当前批次内分页回归，并新增 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md` 与 `npm run verify:search` 作为集中化验收入口。
+- 搜索权限矩阵已由纯 `spec` 测试锁定：匿名请求直接短路 `note/graph/card`，登录后 `graph` 仅允许 `active` 且 owner/public 的记录进入候选集。
 - `share_links` 表和分享 API 已接入，支持 owner 创建/列表/撤销，以及公开 token 只读解析页 `/share/:token`。
 - 后台治理 API 已覆盖 users、reports、tags、AI tasks/usage、audit logs、files；管理端视图按模块读取真实 API 数据。
 

@@ -19,6 +19,7 @@ type fakeGraphService struct {
 	batchSaveReq     graphdto.GraphBatchSaveRequest
 	generateCardsReq graphdto.GraphCardDraftRequest
 	restoreReq       graphdto.RestoreGraphRequest
+	previewLayoutReq graphdto.PreviewGraphLayoutRequest
 	commitChangesReq graphdto.CommitGraphChangeDraftsRequest
 }
 
@@ -86,6 +87,22 @@ func (s *fakeGraphService) ValidateGraph(ownerUserID string, graphID string) (*g
 	s.ownerID = ownerUserID
 	s.graphID = graphID
 	return &graphdto.GraphValidationResponse{Issues: []graphdto.GraphValidationIssuePayload{}}, nil
+}
+
+func (s *fakeGraphService) PreviewLayout(ownerUserID string, graphID string, request graphdto.PreviewGraphLayoutRequest) (*graphdto.GraphLayoutPreviewPayload, error) {
+	s.ownerID = ownerUserID
+	s.graphID = graphID
+	s.previewLayoutReq = request
+	return &graphdto.GraphLayoutPreviewPayload{
+		Mode:          request.Mode,
+		StatusMessage: "已生成 2 条来源泳道",
+		Document:      request.Document,
+		SelectedNodeIDs: []string{
+			"material-1",
+			"note-1",
+		},
+		LaneCount: 2,
+	}, nil
 }
 
 func (s *fakeGraphService) GenerateCardDrafts(ownerUserID string, graphID string, request graphdto.GraphCardDraftRequest) ([]graphdto.GraphCardDraftPayload, error) {
@@ -174,6 +191,48 @@ func TestRestoreSnapshotPassesVersionToService(t *testing.T) {
 	}
 	if service.restoreReq.VersionNumber != 7 {
 		t.Fatalf("expected version 7, got %#v", service.restoreReq)
+	}
+}
+
+func TestPreviewLayoutPassesDocumentAndModeToService(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeGraphService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.POST("/graphs/:id/layouts/preview", withGraphUser(handler.PreviewLayout))
+
+	body := bytes.NewBufferString(`{
+		"mode":"source-swimlane",
+		"nodeIds":["material-1","note-1"],
+		"document":{
+			"graphId":"graph-1",
+			"version":4,
+			"schemaVersion":1,
+			"viewport":{"x":0,"y":0,"zoom":1},
+			"nodes":[
+				{"id":"material-1","type":"material","title":"资料 A","x":240,"y":180,"width":120,"height":80,"source":{"type":"material","id":"m1","label":"资料 A"}},
+				{"id":"note-1","type":"rich-note","title":"笔记 A","x":80,"y":120,"width":140,"height":80,"source":{"type":"note","id":"n1","label":"笔记 A"}}
+			],
+			"edges":[],
+			"groups":[],
+			"theme":{},
+			"metadata":{}
+		}
+	}`)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/graphs/graph-1/layouts/preview", body))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if service.ownerID != "user-1" || service.graphID != "graph-1" {
+		t.Fatalf("expected owner and graph id to pass through, got owner=%q graph=%q", service.ownerID, service.graphID)
+	}
+	if service.previewLayoutReq.Mode != "source-swimlane" || len(service.previewLayoutReq.NodeIDs) != 2 {
+		t.Fatalf("unexpected preview layout request: %#v", service.previewLayoutReq)
+	}
+	if service.previewLayoutReq.Document.Version != 4 || len(service.previewLayoutReq.Document.Nodes) != 2 {
+		t.Fatalf("unexpected preview document payload: %#v", service.previewLayoutReq.Document)
 	}
 }
 

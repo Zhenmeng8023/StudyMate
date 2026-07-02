@@ -40,4 +40,3 @@ type NoteVersionSummary struct {
 	Content       string `json:"content"`
 	CreatedAt     string `json:"createdAt"`
 }
-

@@ -30,7 +30,7 @@ export function markGraphHistoryClean(history: GraphHistoryCoreState, label = "�
   return {
     ...history,
     dirty: false,
-    lastLabel: label
+    lastLabel: label.trim() || "保存图谱"
   };
 }
 

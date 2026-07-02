@@ -1,3 +1,10 @@
+import type { GraphDocument, GraphHistoryCoreState } from "@studymate/graph-core";
+import {
+  redoGraphHistory,
+  supportedGraphSchemaVersion,
+  undoGraphHistory,
+  withGraphHistoryChange
+} from "@studymate/graph-core";
 import type { GraphDetailPayload, GraphDocumentPayload } from "../../../api/client";
 import type { GraphWorkspaceSaveState } from "../state/types";
 import { cloneDocument, maxHistoryEntries, normalizeDocument, rebuildDetail } from "./workspaceControllerHelpers";
@@ -52,12 +59,9 @@ export function applyGraphDocumentChange(
           dirty: true,
           lastLabel: label
         }
-      : {
-          past: [...history.past.slice(-(maxHistoryEntries - 1)), { label, document: cloneDocument(current.document) }],
-          future: [],
-          dirty: true,
-          lastLabel: label
-        };
+      : fromCoreHistoryState(
+          withGraphHistoryChange(toCoreHistoryState(current, history), toCoreGraphDocument(normalized), label)
+        );
 
   return {
     detail: rebuildDetail(current, normalized),
@@ -88,36 +92,26 @@ export function buildGraphHistoryBoundarySummary(options: {
 }
 
 export function undoGraphDocument(current: GraphDetailPayload, history: GraphHistoryState) {
-  if (history.past.length === 0) {
+  const nextHistory = undoGraphHistory(toCoreHistoryState(current, history));
+  if (!nextHistory) {
     return null;
   }
 
-  const previous = history.past[history.past.length - 1];
   return {
-    detail: rebuildDetail(current, cloneDocument(previous.document)),
-    history: {
-      past: history.past.slice(0, -1),
-      future: [{ label: previous.label, document: cloneDocument(current.document) }, ...history.future].slice(0, maxHistoryEntries),
-      dirty: true,
-      lastLabel: `撤销：${previous.label}`
-    }
+    detail: rebuildDetail(current, fromCoreGraphDocument(nextHistory.present)),
+    history: fromCoreHistoryState(nextHistory)
   };
 }
 
 export function redoGraphDocument(current: GraphDetailPayload, history: GraphHistoryState) {
-  if (history.future.length === 0) {
+  const nextHistory = redoGraphHistory(toCoreHistoryState(current, history));
+  if (!nextHistory) {
     return null;
   }
 
-  const [next, ...rest] = history.future;
   return {
-    detail: rebuildDetail(current, cloneDocument(next.document)),
-    history: {
-      past: [...history.past.slice(-(maxHistoryEntries - 1)), { label: next.label, document: cloneDocument(current.document) }],
-      future: rest,
-      dirty: true,
-      lastLabel: `重做：${next.label}`
-    }
+    detail: rebuildDetail(current, fromCoreGraphDocument(nextHistory.present)),
+    history: fromCoreHistoryState(nextHistory)
   };
 }
 
@@ -154,4 +148,82 @@ function buildHistoryRiskLabel(saveState: GraphWorkspaceSaveState) {
     default:
       return "当前没有待处理保存风险。";
   }
+}
+
+function toCoreHistoryState(current: GraphDetailPayload, history: GraphHistoryState): GraphHistoryCoreState {
+  return {
+    past: history.past.slice(-maxHistoryEntries).map((entry) => ({
+      label: entry.label,
+      document: toCoreGraphDocument(entry.document)
+    })),
+    present: toCoreGraphDocument(current.document),
+    future: history.future.slice(0, maxHistoryEntries).map((entry) => ({
+      label: entry.label,
+      document: toCoreGraphDocument(entry.document)
+    })),
+    dirty: history.dirty,
+    lastLabel: history.lastLabel
+  };
+}
+
+function fromCoreHistoryState(history: GraphHistoryCoreState): GraphHistoryState {
+  return {
+    past: history.past.map((entry) => ({
+      label: entry.label,
+      document: fromCoreGraphDocument(entry.document)
+    })),
+    future: history.future.map((entry) => ({
+      label: entry.label,
+      document: fromCoreGraphDocument(entry.document)
+    })),
+    dirty: history.dirty,
+    lastLabel: history.lastLabel
+  };
+}
+
+function toCoreGraphDocument(document: GraphDocumentPayload): GraphDocument {
+  const cloned = cloneDocument(document);
+  return {
+    id: cloned.graphId,
+    version: cloned.version,
+    schemaVersion: cloned.schemaVersion,
+    viewport: { ...cloned.viewport },
+    nodes: cloned.nodes,
+    edges: cloned.edges,
+    groups: cloned.groups,
+    theme: cloned.theme ?? {},
+    metadata: cloned.metadata ?? {}
+  };
+}
+
+function fromCoreGraphDocument(document: GraphDocument): GraphDocumentPayload {
+  return normalizeDocument(document.id, document.version, {
+    graphId: document.id,
+    version: document.version,
+    schemaVersion: document.schemaVersion ?? supportedGraphSchemaVersion,
+    viewport: { ...document.viewport },
+    nodes: document.nodes.map((node) => ({
+      ...node,
+      source: node.source
+        ? {
+            type: node.source.type ?? "",
+            id: node.source.id ?? "",
+            label: node.source.label,
+            excerpt: node.source.excerpt
+          }
+        : null,
+      metadata: node.metadata ? { ...node.metadata } : undefined
+    })),
+    edges: document.edges.map((edge) => ({
+      ...edge,
+      metadata: edge.metadata ? { ...edge.metadata } : undefined
+    })),
+    groups: document.groups.map((group) => ({
+      ...group,
+      nodeIds: [...group.nodeIds],
+      metadata: group.metadata ? { ...group.metadata } : undefined
+    })),
+    theme: document.theme ?? {},
+    metadata: document.metadata ?? {}
+  });
 }

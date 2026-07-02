@@ -30,17 +30,25 @@ export function parseStudymateGraphJson(
   } catch (error) {
     throw new Error(`Invalid StudyMate graph JSON: ${(error as Error).message}`);
   }
-  if (!parsed || typeof parsed !== "object") {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error("Invalid StudyMate graph JSON: root must be an object");
   }
 
   const root = parsed as Record<string, unknown>;
-  const rawSchemaVersion = Number(root.schemaVersion ?? (root.document as Record<string, unknown> | undefined)?.schemaVersion);
-  if (rawSchemaVersion !== supportedGraphSchemaVersion) {
-    throw new Error(`Unsupported StudyMate graph schema: ${rawSchemaVersion || "missing"}`);
+  const wrappedDocument = root.document;
+  if (wrappedDocument !== undefined && (!wrappedDocument || typeof wrappedDocument !== "object" || Array.isArray(wrappedDocument))) {
+    throw new Error("Invalid StudyMate graph JSON: document must be an object");
+  }
+  const declaredSchemaVersion = root.schemaVersion ?? (root.document as Record<string, unknown> | undefined)?.schemaVersion;
+  const schemaVersion =
+    declaredSchemaVersion === undefined || declaredSchemaVersion === null
+      ? supportedGraphSchemaVersion
+      : Number(declaredSchemaVersion);
+  if (schemaVersion !== supportedGraphSchemaVersion) {
+    throw new Error(`Unsupported StudyMate graph schema: ${declaredSchemaVersion ?? "missing"}`);
   }
 
-  const rawDocument = (root.document && typeof root.document === "object" ? root.document : root) as GraphDocument;
+  const rawDocument = (wrappedDocument && typeof wrappedDocument === "object" ? wrappedDocument : root) as GraphDocument;
   const graphId = options.graphId ?? rawDocument.id;
   const version = options.version ?? rawDocument.version ?? 1;
   const document = normalizeGraphDocument(graphId, version, rawDocument);

@@ -71,6 +71,10 @@ type Server struct {
 }
 
 func NewServer(cfg config.Config) (*Server, error) {
+	if err := config.ValidateServerConfig(cfg); err != nil {
+		return nil, err
+	}
+
 	deps, err := database.Connect(cfg)
 	if err != nil {
 		return nil, err
