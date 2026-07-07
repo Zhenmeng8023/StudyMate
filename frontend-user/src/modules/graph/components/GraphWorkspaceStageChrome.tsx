@@ -13,7 +13,8 @@ import {
   getGraphConflictResolutionChoiceLabel,
   type GraphConflictObjectDetail,
   type GraphConflictObjectScope,
-  type GraphConflictResolutionChoice
+  type GraphConflictResolutionChoice,
+  type GraphConflictResolutionValidationIssue
 } from "../lib/graphConflictSummary";
 import { buildNodeStyle } from "../nodeAppearance";
 import {
@@ -276,6 +277,7 @@ export function GraphConflictAssistCard(props: {
   latestHeadSummary: string[];
   manualMergeDeferred?: boolean;
   materialsCaptured?: boolean;
+  resolutionBlockingIssues?: GraphConflictResolutionValidationIssue[];
   resolutionDraftCount: number;
   resolutionSelections: Record<string, GraphConflictResolutionChoice>;
   onApplyResolutionDrafts: () => void;
@@ -294,6 +296,11 @@ export function GraphConflictAssistCard(props: {
   onExportSummaryReport: () => void;
   onExportDraftJson: () => void;
 }) {
+  const applyDisabled =
+    !props.latestHeadAvailable ||
+    props.resolutionDraftCount === 0 ||
+    Boolean(props.resolutionBlockingIssues?.length);
+
   return (
     <article className="graph-meta-card warning" aria-label="图谱冲突辅助">
       <strong>先留存当前草稿，再决定是否重载</strong>
@@ -325,7 +332,12 @@ export function GraphConflictAssistCard(props: {
       <div className="graph-inline-copy" aria-label="对象级冲突明细">
         <strong>建议优先核对的对象</strong>
         <ul className="graph-issue-list">
-          {buildConflictObjectItems("当前未保存修改", "localDraft", props.changeDetails, "当前没有可优先核对的节点、连线或分组对象").map((item) => (
+          {buildConflictObjectItems(
+            "当前未保存修改",
+            "localDraft",
+            props.changeDetails,
+            "当前没有可优先核对的节点、连线或分组对象"
+          ).map((item) => (
             <li className="graph-issue-item" key={`local-object-${item.label}-${item.value}`}>
               <strong>{item.label}</strong>
               <p>{item.value}</p>
@@ -367,11 +379,24 @@ export function GraphConflictAssistCard(props: {
           ))}
         </ul>
       </div>
-      {props.materialsCaptured ? <p>已留存冲突材料，可安全重载最新图谱</p> : null}
-      {props.manualMergeDeferred ? <p>已标记为稍后人工合并，当前继续保留本地草稿</p> : null}
+      {props.resolutionBlockingIssues?.length ? (
+        <div className="graph-inline-copy" aria-label="取舍依赖校验问题">
+          <strong>应用前需要先处理以下跨对象依赖问题</strong>
+          <ul className="graph-issue-list">
+            {props.resolutionBlockingIssues.map((issue, index) => (
+              <li className="graph-issue-item" key={`${issue.ruleType}-${issue.targetId ?? "unknown"}-${index}`}>
+                <strong>{issue.targetId ?? "未命名对象"}</strong>
+                <p>{issue.message}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {props.materialsCaptured ? <p>已留存冲突材料，可安全重载最新图谱。</p> : null}
+      {props.manualMergeDeferred ? <p>已标记为稍后人工合并，当前继续保留本地草稿。</p> : null}
       <div className="graph-inline-copy">
-        <p>如果确认放弃本地修改：可直接重载最新图谱</p>
-        <p>如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱</p>
+        <p>如果确认放弃本地修改：可直接重载最新图谱。</p>
+        <p>如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱。</p>
       </div>
       <div className="graph-inline-actions">
         <button className="secondary-button" onClick={props.onCopySummaryReport} type="button">
@@ -395,12 +420,7 @@ export function GraphConflictAssistCard(props: {
             导出冲突处理包
           </button>
         ) : null}
-        <button
-          className="secondary-button"
-          disabled={!props.latestHeadAvailable || props.resolutionDraftCount === 0}
-          onClick={props.onApplyResolutionDrafts}
-          type="button"
-        >
+        <button className="secondary-button" disabled={applyDisabled} onClick={props.onApplyResolutionDrafts} type="button">
           应用已标记取舍到当前草稿
         </button>
         <button className="ghost-button" onClick={props.onDeferManualMerge} type="button">

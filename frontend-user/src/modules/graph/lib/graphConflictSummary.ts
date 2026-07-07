@@ -1,4 +1,9 @@
-import { sanitizeGraphExportFilename } from "@studymate/graph-core";
+import {
+  sanitizeGraphExportFilename,
+  type GraphDocument,
+  type GraphValidationIssue,
+  validateGraphDocument
+} from "@studymate/graph-core";
 import type { GraphDetailPayload, GraphDocumentPayload } from "../../../api/client";
 import { cloneDocument, normalizeDocument, rebuildDetail } from "./workspaceControllerHelpers";
 
@@ -30,6 +35,11 @@ export type GraphConflictResolutionDraft = {
   detail: GraphConflictObjectDetail;
   scope: GraphConflictObjectScope;
 };
+
+export type GraphConflictResolutionValidationIssue = Pick<
+  GraphValidationIssue,
+  "message" | "ruleType" | "severity" | "targetId"
+>;
 
 type GraphConflictChecklistInput = {
   changeDetails: GraphConflictObjectDetail[];
@@ -159,6 +169,27 @@ export function applyGraphConflictResolutionDrafts(input: {
     },
     normalized
   );
+}
+
+export function validateGraphConflictResolutionDrafts(input: {
+  current: GraphDetailPayload;
+  drafts: GraphConflictResolutionDraft[];
+  latestHead: GraphDetailPayload;
+}) {
+  const merged = applyGraphConflictResolutionDrafts(input);
+  const latestIssues = buildBlockingValidationIssueMap(validateGraphDocument(toCoreGraphDocument(input.latestHead.document)));
+  const blockingIssues = validateGraphDocument(toCoreGraphDocument(merged.document))
+    .filter((issue) => issue.severity === "error")
+    .filter((issue) => consumeValidationIssue(latestIssues, issue) === false)
+    .map((issue) => ({
+      ...issue,
+      message: buildResolutionBlockingIssueMessage(issue, merged.document)
+    }));
+
+  return {
+    blockingIssues,
+    merged
+  };
 }
 
 export function buildGraphConflictReportArtifact(
@@ -398,6 +429,82 @@ function formatLabelExamples(labels: string[]) {
   }
   const samples = uniqueLabels.slice(0, 2);
   return `${samples.join("、")}${uniqueLabels.length > 2 ? " 等" : ""}`;
+}
+
+function toCoreGraphDocument(document: GraphDocumentPayload): GraphDocument {
+  return {
+    id: document.graphId,
+    version: document.version,
+    schemaVersion: document.schemaVersion,
+    viewport: { ...document.viewport },
+    nodes: document.nodes.map((node) => ({
+      ...node,
+      source: node.source
+        ? {
+            type: node.source.type ?? "",
+            id: node.source.id ?? "",
+            label: node.source.label,
+            excerpt: node.source.excerpt
+          }
+        : null,
+      metadata: node.metadata ? { ...node.metadata } : undefined
+    })),
+    edges: document.edges.map((edge) => ({
+      ...edge,
+      metadata: edge.metadata ? { ...edge.metadata } : undefined
+    })),
+    groups: document.groups.map((group) => ({
+      ...group,
+      nodeIds: [...group.nodeIds],
+      metadata: group.metadata ? { ...group.metadata } : undefined
+    })),
+    theme: document.theme ? { ...document.theme } : {},
+    metadata: document.metadata ? { ...document.metadata } : {}
+  };
+}
+
+function buildBlockingValidationIssueMap(issues: GraphValidationIssue[]) {
+  const counts = new Map<string, number>();
+  for (const issue of issues) {
+    if (issue.severity !== "error") {
+      continue;
+    }
+    const key = buildValidationIssueKey(issue);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function consumeValidationIssue(issueMap: Map<string, number>, issue: GraphValidationIssue) {
+  const key = buildValidationIssueKey(issue);
+  const count = issueMap.get(key) ?? 0;
+  if (count <= 0) {
+    return false;
+  }
+  if (count === 1) {
+    issueMap.delete(key);
+    return true;
+  }
+  issueMap.set(key, count - 1);
+  return true;
+}
+
+function buildValidationIssueKey(issue: GraphValidationIssue) {
+  return `${issue.severity}:${issue.ruleType}:${issue.targetId ?? ""}:${issue.message}`;
+}
+
+function buildResolutionBlockingIssueMessage(issue: GraphValidationIssue, document: GraphDocumentPayload) {
+  if (issue.ruleType === "dangling_edge") {
+    const edge = document.edges.find((item) => item.id === issue.targetId);
+    const label = edge?.label?.trim() || issue.targetId || "该连线";
+    return `连线“${label}”会引用未保留的节点，请先同步保留相关节点或改为保留服务端。`;
+  }
+  if (issue.ruleType === "invalid_group_node") {
+    const group = document.groups.find((item) => item.id === issue.targetId);
+    const label = group?.title?.trim() || issue.targetId || "该分组";
+    return `分组“${label}”仍引用未保留的节点，请先同步保留相关节点或改为保留服务端。`;
+  }
+  return issue.message;
 }
 
 export function formatGraphConflictObjectDetail(detail: GraphConflictObjectDetail) {

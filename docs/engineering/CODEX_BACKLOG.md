@@ -23,6 +23,11 @@
 | FE-010 | VERIFY | 多布局壳层与基础组件 | FE-000 | `frontend-user/src/app/`、`frontend-user/src/design-system/`、样式 | Standard / Studio / Canvas / Focus 路由布局可解析；Canvas 不挂全局 ContextPanel；基础组件与单测已添加，待完整依赖安装后跑类型检查与测试。 |
 | FE-020 | VERIFY | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；待完整依赖安装后跑类型检查、Vitest、构建和 Playwright。 |
 | FE-030 | VERIFY | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，待完整依赖安装后跑类型检查、Vitest、构建和 Playwright。 |
+| FE-040 | TODO | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。 |
+| FE-041 | TODO | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | Button、IconButton、Input、Select、Tag、DataState、Drawer、Inspector、ConfirmDialog、CommandBar、PageHeader 至少具备共享 token、变体、禁用/加载/错误状态与最小测试或文档示例。 |
+| API-010 | TODO | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/shared/api` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
+| API-011 | TODO | Token refresh 与统一 401 会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；补 HttpOnly Refresh Token 迁移说明。 |
+| DEV-010 | TODO | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 不再依赖 `node --test` 对 `.ts` 的隐式执行差异。 |
 
 ## P1：在 P0 稳定后推进
 
@@ -31,11 +36,17 @@
 | WB-030 | DONE | 图谱 API 契约与生命周期整理 | WB-020 | graph routers/handlers/services/docs | graph/document/node/edge/group/snapshot 关系和版本策略清晰。 |
 | WB-031 | DONE | 图谱导出、缩略图与布局能力 | WB-030 | graph backend + frontend | 至少 JSON/SVG 导出；缩略图和布局有明确 API/任务模型。 |
 | WB-032 | IN_PROGRESS | 自动保存/快照/冲突处理可靠性 | WB-030, WB-021 | graph persistence | 保存可追溯、冲突可见、恢复安全；无静默覆盖，冲突导出物可携带人工合并清单、对象级明细与取舍草稿，并支持把已标记取舍显式应用为可保存合并草稿。 |
-| WB-033 | TODO | 图谱-复习学习反馈闭环 | WB-030 | graph/card/review | 复习结果可回写节点熟练度；卡片与来源节点可追溯。 |
+| WB-033 | TODO | 图谱-复习学习反馈闭环 | WB-030, FE-030 | graph/card/review | 复习结果可回写节点熟练度；卡片与来源节点可追溯；学习工作台能解释复习反馈如何影响图谱与后续学习。 |
+| WB-034 | TODO | 图谱 API 与工作区回归验证矩阵 | WB-032 | graph backend + frontend + e2e | 覆盖 create/save/restore/export/layout/conflict/权限路径；图谱工作区在桌面与窄屏至少有 smoke 回归，不再只依赖零散组件测试。 |
+| GPH-040 | TODO | 图谱工作区 store / commands / features 拆分 | WB-032, FE-020 | `frontend-user/src/modules/graph/`、`packages/graph-core` | `useGraphWorkspaceController` 不再继续承接新增业务；选中、相机、面板、保存、冲突等浏览器状态进入 store，新增节点/连线/分组/模板/恢复等用户意图进入 commands。 |
+| LC-010 | TODO | 主学习闭环演示路径收口 | WB-033, FE-030 | material/reader/note/graph/card/review/AI | “资料上传 -> PDF 阅读 -> 高亮批注 -> 摘录池 -> 笔记 -> 图谱节点草稿 -> 图谱关系整理 -> 卡片草稿 -> 今日复习”可端到端验收，来源回跳、草稿确认和失败状态清晰。 |
 | WB-040 | TODO | 管理端真实只读数据页第一批 | WB-001 | admin backend + frontend-admin | 用户、内容、AI 任务/用量、审计至少展示真实数据。 |
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
-| WB-043 | TODO | SearchIndexer 升级与 Meilisearch 评估 | WB-014 | search module/config/deploy | 前端 API 不变；索引实现可替换，具备配置开关。 |
+| ADM-010 | TODO | 管理端 Vue Router 模块化与 URL 状态 | WB-040, FE-040 | `frontend-admin/src/app/`、`frontend-admin/src/features/`、`frontend-admin/src/pages/` | `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/materials`、`/admin/reports`、`/admin/ai`、`/admin/files`、`/admin/audit-logs` 可刷新、可回退、可分享。 |
+| ADM-011 | TODO | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 用户封禁/解封、资料下架/恢复、举报处理备注、AI 任务重试/取消、图谱模板审核/发布/下架至少落地一批，并进入权限与审计链路。 |
+| SE-020 | TODO | MySQL fallback 搜索服务端分页与真实统计 | WB-014 | search service/handler/frontend search | `GET /search` 支持 cursor/limit/sort 或等价分页；每类结果有真实命中数、搜索耗时、排序语义、空结果建议和来源跳转契约。 |
+| WB-043 | TODO | SearchIndexer 升级与 Meilisearch 评估 | SE-020 | search module/config/deploy | 前端 API 不变；索引实现可替换，具备配置开关；明确是否进入 Meilisearch 的采用/不采用结论。 |
 | WB-044 | TODO | 搜索同步与失败恢复任务 | WB-043 | jobs/queue/search | 具备重建索引、失败重试、幂等与可观测字段。 |
 
 ## P2/P3：在上述稳定后推进
@@ -49,6 +60,18 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：PLAN-2026-07-08（PDF 评审导入）
+
+- 执行日期：2026-07-08
+- 输入材料：`StudyMate 代码审查与后续开发建议.pdf`
+- 本轮结论：
+  - PDF 中关于设计系统、共享 API、图谱控制器、后台单页工作台、搜索产品化和主学习闭环的建议仍成立，已拆为 `FE-040`、`FE-041`、`API-010`、`API-011`、`DEV-010`、`GPH-040`、`LC-010`、`ADM-010`、`ADM-011`、`SE-020` 等工作包。
+  - PDF 中关于“根目录工程入口、lockfile、CI 缺失”的判断不直接套用于当前 Git 仓库；真实仓库已有 `package.json`、`package-lock.json` 与 `.github/workflows/ci.yml`，因此只保留 `DEV-010` 做工具链和可复现命令二次收口。
+  - 新增任务不改变当前“先收口 P0/P1，再扩展工程图谱、桌面端、课程/协作”的项目边界。
+- 验证：
+  - 已抽取 PDF 全 16 页文本。
+  - 已核验 `packages/ui`、`packages/api-client`、`packages/editor-core`、重复 CSS token、图谱控制器大小、管理端工作台大小、根 lockfile 与 CI 文件存在性。
 
 ### 执行记录：FE-010（验证中）
 
@@ -120,6 +143,7 @@
 - 冲突辅助卡片、冲突摘要和冲突处理包现在还会共享对象级 `node / edge / group` 差异明细，统一使用 `节点｜新增｜新概念` 这类文本格式，为后续对象级保留 / 舍弃操作打底。
 - 冲突辅助卡片现在还允许对每条对象级明细标记 `保留本地 / 保留服务端 / 稍后处理`，这些取舍草稿会同步进入 Markdown 冲突摘要和冲突处理包的 `resolutionDraft` 字段。
 - 冲突辅助卡片现在还支持 `应用已标记取舍到当前草稿`，会基于最新 head 生成一份继续保持 dirty、但已经对齐最新版本号的合并草稿，供用户直接继续保存。
+- 在真正应用这些取舍前，前端现在还会执行最小跨对象依赖校验：若合并草稿会留下 dangling edge / invalid group node，会直接列出阻断问题并要求用户先补齐相关节点或改为保留服务端。
 - 验证：
   - `go test ./internal/modules/graph/service`
   - `go test ./internal/modules/graph/...`
@@ -137,7 +161,7 @@
   - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
   - `npm run verify:docs`
 - 后续待续：
-  - 继续补节点级 / 边级取舍草稿之上的显式应用动作与更强的多端 conflict handling，再将 `WB-032` 标记为完成。
+  - 继续补未标记对象的更强提示、更完整的跨对象联动取舍辅助与多端 conflict handling，再将 `WB-032` 标记为完成。
 
 ### 执行记录：WB-031
 

@@ -221,8 +221,8 @@ describe("GraphWorkspacePage persistence states", () => {
 
     await expect(screen.findByText("图谱已被其他窗口更新，请刷新当前图谱后再保存。")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("图谱冲突辅助")).toHaveTextContent("先留存当前草稿，再决定是否重载");
-    expect(screen.getByText("如果确认放弃本地修改：可直接重载最新图谱")).toBeInTheDocument();
-    expect(screen.getByText("如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱")).toBeInTheDocument();
+    expect(screen.getByText("如果确认放弃本地修改：可直接重载最新图谱。")).toBeInTheDocument();
+    expect(screen.getByText("如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱。")).toBeInTheDocument();
     expect(screen.getAllByText("节点：新增 1 个（新概念）")).toHaveLength(2);
     expect(screen.getByText("建议优先核对的对象")).toBeInTheDocument();
     expect(screen.getAllByText("节点｜新增｜新概念")).toHaveLength(2);
@@ -249,12 +249,12 @@ describe("GraphWorkspacePage persistence states", () => {
     await user.click(screen.getByRole("button", { name: "导出冲突处理包" }));
 
     await expect(screen.findByText("已导出冲突处理包，可稍后人工比对本地与最新版本")).resolves.toBeInTheDocument();
-    expect(screen.getByText("已留存冲突材料，可安全重载最新图谱")).toBeInTheDocument();
+    expect(screen.getByText("已留存冲突材料，可安全重载最新图谱。")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "先保留本地，稍后人工合并" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "先保留本地，稍后人工合并" }));
 
-    await expect(screen.findAllByText("已标记为稍后人工合并，当前继续保留本地草稿")).resolves.toHaveLength(2);
+    await expect(screen.findByText("已标记为稍后人工合并，当前继续保留本地草稿。")).resolves.toBeInTheDocument();
     expect(confirmSpy).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "复制当前草稿 JSON" }));

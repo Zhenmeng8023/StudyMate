@@ -6,6 +6,7 @@
 
 ### Added
 
+- v1.1 图谱冲突辅助新增对象级取舍依赖校验：当已标记取舍会留下 dangling edge / invalid group node 时，冲突卡片会直接列出问题并阻断“应用已标记取舍到当前草稿”。
 - 前端 FE-03 新增阅读、笔记、复习三类工作区：阅读与笔记采用可收起资源区 / Inspector，复习采用单任务舞台与按需卡组管理；新增对应页面回归测试和 `studio-workspaces.css` 响应式样式。
 - 前端 FE-00 / FE-01 新增能力矩阵、布局规格、`AppShell` 路由布局策略、紧凑导航、命令栏、Drawer、Inspector、DataState 与最小回归测试；图谱 Canvas 工作区现不再继承全局 `ContextPanel`。
 - Added `verify:backend:format` and `verify:config-safety` root scripts, plus CI workflow steps that explicitly gate Go formatting and configuration safety regressions.

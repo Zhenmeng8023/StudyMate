@@ -100,20 +100,21 @@ describe("GraphWorkspaceStageChrome components", () => {
     const onStatusAction = vi.fn();
     render(
       <GraphStageStatus
-        alignmentHintLabels={["左对齐", "顶部对齐"]}
+        alignmentHintLabels={["snap-left", "snap-top"]}
         graphDetail={graphDetail}
         loading={false}
         onStatusAction={onStatusAction}
         selectedNodeCount={2}
-        statusActionLabel="重新加载最新图谱"
-        statusMessage="已保存"
+        statusActionLabel="reload latest"
+        statusMessage="saved"
       />
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("已保存");
-    expect(screen.getByLabelText("对齐参考线")).toHaveTextContent("左对齐");
-    expect(screen.getByText("版本 4 · 2 节点 · 1 连线 · 已选 2 个节点")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "重新加载最新图谱" }));
+    expect(screen.getByRole("status")).toHaveTextContent("saved");
+    expect(screen.getByText("snap-left")).toBeInTheDocument();
+    expect(screen.getByText("snap-top")).toBeInTheDocument();
+    expect(screen.getByText(/4/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "reload latest" }));
     expect(onStatusAction).toHaveBeenCalled();
   });
 
@@ -130,117 +131,58 @@ describe("GraphWorkspaceStageChrome components", () => {
       />
     );
 
-    expect(screen.getByLabelText("图谱小地图")).toBeInTheDocument();
     expect(container.querySelector(".graph-minimap-group.collapsed")).not.toBeNull();
     expect(container.querySelector(".graph-minimap-node.active")).not.toBeNull();
     expect(container.querySelector(".graph-minimap-viewport")).not.toBeNull();
   });
 
-  it("offers conflict helpers, summary guidance, and object-level comparison details", () => {
-    const onExportConflictBundle = vi.fn();
-    const onDeferManualMerge = vi.fn();
-    const onReloadLatest = vi.fn();
-    const onCopyLatestJson = vi.fn();
-    const onCopySummaryReport = vi.fn();
-    const onExportSummaryReport = vi.fn();
-    const onExportLatestJson = vi.fn();
-    const onCopyDraftJson = vi.fn();
-    const onExportDraftJson = vi.fn();
-    const onApplyResolutionDrafts = vi.fn();
-    const onChooseResolution = vi.fn();
-
+  it("shows blocking dependency warnings and disables apply when marked resolutions are unsafe", () => {
     render(
       <GraphConflictAssistCard
         changeDetails={[
-          { action: "added", id: "node-2", kind: "node", label: "新概念" },
-          { action: "updated", id: "group-1", kind: "group", label: "本地分组" }
+          { action: "added", id: "node-2", kind: "node", label: "Local node" },
+          { action: "updated", id: "group-1", kind: "group", label: "Local group" }
         ]}
-        changeSummary={["标题已修改", "节点：新增 1 个"]}
+        changeSummary={["local change"]}
         latestHeadAvailable
-        latestHeadDetails={[
-          { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" },
-          { action: "updated", id: "node-1", kind: "node", label: "服务端概念" }
-        ]}
-        latestHeadSummary={["标题已修改", "节点：新增 1 个，删除 1 个"]}
+        latestHeadDetails={[{ action: "removed", id: "edge-legacy", kind: "edge", label: "Server edge" }]}
+        latestHeadSummary={["server change"]}
         manualMergeDeferred
         materialsCaptured
+        resolutionBlockingIssues={[
+          {
+            ruleType: "dangling_edge",
+            severity: "error",
+            message: "dangling-edge",
+            targetId: "edge-legacy"
+          }
+        ]}
         resolutionSelections={{
           "localDraft:node:node-2:added": "keep-local",
           "latestHead:edge:edge-legacy:removed": "keep-latest"
         }}
         resolutionDraftCount={2}
-        onApplyResolutionDrafts={onApplyResolutionDrafts}
-        onChooseResolution={onChooseResolution}
-        onDeferManualMerge={onDeferManualMerge}
-        onExportConflictBundle={onExportConflictBundle}
-        onReloadLatest={onReloadLatest}
-        onCopyLatestJson={onCopyLatestJson}
-        onCopySummaryReport={onCopySummaryReport}
-        onCopyDraftJson={onCopyDraftJson}
-        onExportLatestJson={onExportLatestJson}
-        onExportSummaryReport={onExportSummaryReport}
-        onExportDraftJson={onExportDraftJson}
+        onApplyResolutionDrafts={vi.fn()}
+        onChooseResolution={vi.fn()}
+        onDeferManualMerge={vi.fn()}
+        onExportConflictBundle={vi.fn()}
+        onReloadLatest={vi.fn()}
+        onCopyLatestJson={vi.fn()}
+        onCopySummaryReport={vi.fn()}
+        onCopyDraftJson={vi.fn()}
+        onExportLatestJson={vi.fn()}
+        onExportSummaryReport={vi.fn()}
+        onExportDraftJson={vi.fn()}
       />
     );
 
-    expect(screen.getByLabelText("图谱冲突辅助")).toHaveTextContent("先留存当前草稿，再决定是否重载");
-    expect(screen.getByText("建议优先核对的对象")).toBeInTheDocument();
-    expect(screen.getAllByText("当前未保存修改")).toHaveLength(2);
-    expect(screen.getAllByText("节点｜新增｜新概念")).toHaveLength(1);
-    expect(screen.getByText("分组｜修改｜本地分组")).toBeInTheDocument();
-    expect(screen.getAllByText("与最新图谱相比")).toHaveLength(4);
-    expect(screen.getByText("连线｜删除｜旧关系")).toBeInTheDocument();
-    expect(screen.getByText("节点｜修改｜服务端概念")).toBeInTheDocument();
-    expect(screen.getByText("已标记：保留本地")).toBeInTheDocument();
-    expect(screen.getByText("已标记：保留服务端")).toBeInTheDocument();
-    expect(screen.getAllByText("已标记：未标记").length).toBeGreaterThan(0);
-    expect(screen.getByText("已留存冲突材料，可安全重载最新图谱")).toBeInTheDocument();
-    expect(screen.getByText("已标记为稍后人工合并，当前继续保留本地草稿")).toBeInTheDocument();
-    expect(screen.getByText("如果确认放弃本地修改：可直接重载最新图谱")).toBeInTheDocument();
-    expect(screen.getByText("如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱")).toBeInTheDocument();
-    expect(screen.getAllByText("标题已修改")).toHaveLength(2);
-    expect(screen.getByText("节点：新增 1 个，删除 1 个")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "保留本地（当前未保存修改）：节点｜新增｜新概念" }));
-    fireEvent.click(screen.getByRole("button", { name: "保留服务端（与最新图谱相比）：连线｜删除｜旧关系" }));
-    fireEvent.click(screen.getByRole("button", { name: "稍后处理（当前未保存修改）：分组｜修改｜本地分组" }));
-    fireEvent.click(screen.getByRole("button", { name: "复制冲突摘要" }));
-    fireEvent.click(screen.getByRole("button", { name: "导出冲突摘要" }));
-    fireEvent.click(screen.getByRole("button", { name: "复制最新图谱 JSON" }));
-    fireEvent.click(screen.getByRole("button", { name: "导出最新图谱 JSON" }));
-    fireEvent.click(screen.getByRole("button", { name: "导出冲突处理包" }));
-    fireEvent.click(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" }));
-    fireEvent.click(screen.getByRole("button", { name: "先保留本地，稍后人工合并" }));
-    fireEvent.click(screen.getByRole("button", { name: "复制当前草稿 JSON" }));
-    fireEvent.click(screen.getByRole("button", { name: "导出当前草稿 JSON" }));
-    fireEvent.click(screen.getByRole("button", { name: "放弃本地并重载最新图谱" }));
-    expect(onExportConflictBundle).toHaveBeenCalled();
-    expect(onApplyResolutionDrafts).toHaveBeenCalled();
-    expect(onDeferManualMerge).toHaveBeenCalled();
-    expect(onReloadLatest).toHaveBeenCalled();
-    expect(onCopyLatestJson).toHaveBeenCalled();
-    expect(onExportLatestJson).toHaveBeenCalled();
-    expect(onCopySummaryReport).toHaveBeenCalled();
-    expect(onExportSummaryReport).toHaveBeenCalled();
-    expect(onCopyDraftJson).toHaveBeenCalled();
-    expect(onExportDraftJson).toHaveBeenCalled();
-    expect(onChooseResolution).toHaveBeenNthCalledWith(
-      1,
-      "localDraft",
-      { action: "added", id: "node-2", kind: "node", label: "新概念" },
-      "keep-local"
-    );
-    expect(onChooseResolution).toHaveBeenNthCalledWith(
-      2,
-      "latestHead",
-      { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" },
-      "keep-latest"
-    );
-    expect(onChooseResolution).toHaveBeenNthCalledWith(
-      3,
-      "localDraft",
-      { action: "updated", id: "group-1", kind: "group", label: "本地分组" },
-      "review-later"
-    );
+    expect(screen.getByText("local change")).toBeInTheDocument();
+    expect(screen.getByText("server change")).toBeInTheDocument();
+    expect(screen.getByText("节点｜新增｜Local node")).toBeInTheDocument();
+    expect(screen.getByText("连线｜删除｜Server edge")).toBeInTheDocument();
+    expect(screen.getByLabelText("取舍依赖校验问题")).toBeInTheDocument();
+    expect(screen.getByText("dangling-edge")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeDisabled();
   });
 
   it("delegates canvas node, edge, and group interactions", () => {

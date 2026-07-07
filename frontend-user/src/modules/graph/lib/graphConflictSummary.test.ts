@@ -6,7 +6,8 @@ import {
   buildGraphConflictObjectDetails,
   buildGraphConflictResolutionDrafts,
   buildGraphConflictReportArtifact,
-  buildGraphUnsavedChangeSummary
+  buildGraphUnsavedChangeSummary,
+  validateGraphConflictResolutionDrafts
 } from "./graphConflictSummary";
 
 function buildDocument(overrides?: Partial<GraphDocumentPayload>): GraphDocumentPayload {
@@ -321,6 +322,148 @@ describe("graphConflictSummary", () => {
     });
 
     expect(buildGraphUnsavedChangeSummary(current, baseline)).toEqual(["画布视口已调整"]);
+  });
+
+  it("reports blocking dependency issues when a kept local edge references a node that is not preserved", () => {
+    const current = buildDetail({
+      document: buildDocument({
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "姒傚康 A",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          },
+          {
+            id: "node-local",
+            type: "text",
+            title: "鏈湴鑺傜偣",
+            x: 260,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          }
+        ],
+        edges: [{ id: "edge-local", sourceNodeId: "node-1", targetNodeId: "node-local", kind: "curve", label: "鏈湴杩炵嚎" }],
+        groups: []
+      })
+    });
+    const latestHead = buildDetail({
+      currentVersion: 5,
+      document: buildDocument({
+        version: 5,
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "姒傚康 A",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          }
+        ],
+        edges: [],
+        groups: []
+      })
+    });
+
+    const result = validateGraphConflictResolutionDrafts({
+      current,
+      latestHead,
+      drafts: [
+        {
+          decision: "keep-local",
+          detail: { action: "added", id: "edge-local", kind: "edge", label: "鏈湴杩炵嚎" },
+          scope: "localDraft"
+        }
+      ]
+    });
+
+    expect(result.blockingIssues).toEqual([
+      expect.objectContaining({
+        ruleType: "dangling_edge",
+        severity: "error",
+        targetId: "edge-local"
+      })
+    ]);
+  });
+
+  it("reports blocking dependency issues when a kept local group references a node that is not preserved", () => {
+    const current = buildDetail({
+      document: buildDocument({
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "姒傚康 A",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          },
+          {
+            id: "node-local",
+            type: "text",
+            title: "鏈湴鑺傜偣",
+            x: 260,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          }
+        ],
+        edges: [],
+        groups: [{ id: "group-local", title: "鏈湴鍒嗙粍", nodeIds: ["node-local"], x: 0, y: 0, width: 320, height: 220, collapsed: false }]
+      })
+    });
+    const latestHead = buildDetail({
+      currentVersion: 5,
+      document: buildDocument({
+        version: 5,
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "姒傚康 A",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          }
+        ],
+        edges: [],
+        groups: []
+      })
+    });
+
+    const result = validateGraphConflictResolutionDrafts({
+      current,
+      latestHead,
+      drafts: [
+        {
+          decision: "keep-local",
+          detail: { action: "added", id: "group-local", kind: "group", label: "鏈湴鍒嗙粍" },
+          scope: "localDraft"
+        }
+      ]
+    });
+
+    expect(result.blockingIssues).toEqual([
+      expect.objectContaining({
+        ruleType: "invalid_group_node",
+        severity: "error",
+        targetId: "group-local"
+      })
+    ]);
   });
 
   it("returns an empty summary when there are no differences", () => {

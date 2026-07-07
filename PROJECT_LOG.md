@@ -1,3 +1,30 @@
+## 2026-07-08 02:50:42 +08:00 | v1.1.0-alpha.95 | 推进 WB-032 对象级取舍依赖校验子步骤
+
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“对象级取舍可显式应用”为基础上，补上真正能防止错误合并草稿落地的最小依赖校验。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，当用户只保留了依赖缺失的本地连线或分组时，能够在应用前直接阻断，并明确告诉用户还缺哪些跨对象依赖。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `validateGraphConflictResolutionDrafts(...)`：在把对象级取舍草稿 rebased 到最新 head 后，复用 `@studymate/graph-core` 校验 dangling edge / invalid group node 等结构错误，并过滤掉最新 head 本身已存在的问题。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，在 `applyMarkedConflictResolutions()` 前接入依赖校验；若当前取舍会留下跨对象依赖问题，则保持冲突态、阻断应用并给出明确状态提示。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在冲突辅助卡片中新增“取舍依赖校验问题”区块，列出阻断问题，并在存在问题时禁用 `应用已标记取舍到当前草稿`。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`、`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补齐 helper、组件与页面级回归，锁定“依赖缺失时阻断应用、显示问题说明、既有冲突路径仍可继续工作”的行为。
+- 同步更新 `CHANGELOG.md`、`docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“对象级取舍可显式应用，且带最小跨对象依赖校验”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在不会再把明显不完整的对象级取舍直接落成可保存草稿；用户如果只保留了依赖缺失的本地连线或分组，会在应用前就被拦下并得到具体说明。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是未标记对象的更强提示、更完整的跨对象联动取舍辅助，以及更系统的多端 conflict handling。
+
 ## 2026-07-07 21:27:40 +08:00 | v1.1.0-alpha.94 | 推进 WB-032 对象级取舍显式应用子步骤
 
 ### 任务内容

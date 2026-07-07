@@ -126,9 +126,11 @@ import {
   buildGraphUnsavedChangeSummary,
   formatGraphConflictObjectDetail,
   getGraphConflictResolutionChoiceLabel,
+  validateGraphConflictResolutionDrafts,
   type GraphConflictObjectDetail,
   type GraphConflictObjectScope,
-  type GraphConflictResolutionChoice
+  type GraphConflictResolutionChoice,
+  type GraphConflictResolutionValidationIssue
 } from "../lib/graphConflictSummary";
 import {
   clearGraphWorkspaceLocalDraft,
@@ -337,6 +339,18 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       }),
     [conflictResolutionSelections, latestHeadConflictDetails, unsavedChangeDetails]
   );
+  const conflictResolutionValidation = useMemo(() => {
+    if (!graphDetail || !latestConflictDetail || conflictResolutionDrafts.length === 0) {
+      return null;
+    }
+    return validateGraphConflictResolutionDrafts({
+      current: graphDetail,
+      drafts: conflictResolutionDrafts,
+      latestHead: latestConflictDetail
+    });
+  }, [conflictResolutionDrafts, graphDetail, latestConflictDetail]);
+  const conflictResolutionBlockingIssues: GraphConflictResolutionValidationIssue[] =
+    conflictResolutionValidation?.blockingIssues ?? [];
 
   useEffect(() => {
     if (!selectedNode && !selectedEdge) {
@@ -946,12 +960,20 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       setWorkspaceStatusMessage("请先标记至少一项对象级取舍后再应用", { suggestReload: true });
       return;
     }
+    if (conflictResolutionBlockingIssues.length > 0) {
+      setWorkspaceStatusMessage("当前取舍会留下跨对象依赖问题，请先调整标记后再应用", {
+        suggestReload: true
+      });
+      return;
+    }
 
-    const merged = applyGraphConflictResolutionDrafts({
-      current,
-      drafts: conflictResolutionDrafts,
-      latestHead: latest
-    });
+    const merged =
+      conflictResolutionValidation?.merged ??
+      applyGraphConflictResolutionDrafts({
+        current,
+        drafts: conflictResolutionDrafts,
+        latestHead: latest
+      });
 
     lastSyncedDetailRef.current = latest;
     detailRef.current = merged;
@@ -2179,6 +2201,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                     latestHeadSummary={latestHeadConflictSummary}
                     manualMergeDeferred={manualMergeDeferred}
                     materialsCaptured={conflictArtifactsCaptured}
+                    resolutionBlockingIssues={conflictResolutionBlockingIssues}
                     resolutionDraftCount={conflictResolutionDrafts.length}
                     resolutionSelections={conflictResolutionSelections}
                     onApplyResolutionDrafts={applyMarkedConflictResolutions}
