@@ -276,7 +276,9 @@ export function GraphConflictAssistCard(props: {
   latestHeadSummary: string[];
   manualMergeDeferred?: boolean;
   materialsCaptured?: boolean;
+  resolutionDraftCount: number;
   resolutionSelections: Record<string, GraphConflictResolutionChoice>;
+  onApplyResolutionDrafts: () => void;
   onChooseResolution: (
     scope: GraphConflictObjectScope,
     detail: GraphConflictObjectDetail,
@@ -393,6 +395,14 @@ export function GraphConflictAssistCard(props: {
             导出冲突处理包
           </button>
         ) : null}
+        <button
+          className="secondary-button"
+          disabled={!props.latestHeadAvailable || props.resolutionDraftCount === 0}
+          onClick={props.onApplyResolutionDrafts}
+          type="button"
+        >
+          应用已标记取舍到当前草稿
+        </button>
         <button className="ghost-button" onClick={props.onDeferManualMerge} type="button">
           先保留本地，稍后人工合并
         </button>

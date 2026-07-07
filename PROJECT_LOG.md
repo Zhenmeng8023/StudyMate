@@ -1,3 +1,30 @@
+## 2026-07-07 21:27:40 +08:00 | v1.1.0-alpha.94 | 推进 WB-032 对象级取舍显式应用子步骤
+
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“对象级冲突取舍草稿”继续推进为真正可执行的本地合并动作。
+- 本轮目标是在图谱 Inspector 的冲突卡片中允许用户将已标记的 `保留本地 / 保留服务端 / 稍后处理` 草稿显式应用到最新 head 之上，生成一份仍保持 dirty、但已经对齐最新版本号的可保存合并草稿。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `applyGraphConflictResolutionDrafts(...)` 纯函数：以最新图谱 head 为版本基线，保留当前本地标题/说明/视口，并把已标记为 `保留本地` 的节点、连线、分组对象覆盖回合并草稿。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `applyMarkedConflictResolutions()`：显式应用对象级取舍后，会把工作区切到 rebased draft、将基线推进到最新 head、清理冲突态并保持草稿可继续保存。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在冲突辅助卡片中新增 `应用已标记取舍到当前草稿` 动作按钮，仅在已拿到最新 head 且至少存在一条取舍草稿时可用。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补齐纯函数、卡片动作与“冲突后应用取舍再保存”的页面级回归。
+- 同步更新 `CHANGELOG.md`、`docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“对象级取舍草稿可显式应用生成合并草稿”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在已经不只会记录对象级取舍意图，还能把这些取舍显式应用到最新 head 上，生成一份可继续保存的合并草稿，避免用户只能导出材料后回到外部手工整理。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是未标记对象的更强提示、跨对象依赖的冲突校验，以及更完整的多端自动/半自动合并策略。
+
 ## 2026-07-07 21:13:40 +08:00 | v1.1.0-alpha.93 | 推进 WB-032 对象级冲突取舍草稿子步骤
 
 ### 任务内容

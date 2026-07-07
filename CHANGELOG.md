@@ -75,6 +75,7 @@
 - Graph conflict summary exports now append a concrete manual-merge checklist, and the conflict bundle JSON carries the same `manualMergeChecklist` field so users can reopen the local-vs-latest comparison with explicit next steps.
 - Graph conflict assist, summary exports, and conflict bundles now all carry object-level node/edge/group diffs using a shared `节点｜新增｜...` style, giving manual merge work a concrete review list instead of only summary counts.
 - Graph conflict assist now also lets users mark object-level merge intentions as `保留本地` / `保留服务端` / `稍后处理`, and both the Markdown summary and conflict bundle carry the same `resolutionDraft` trail for later manual merge work.
+- Graph conflict assist now also lets users explicitly apply those marked object-level decisions onto the latest server head, generating a rebased dirty draft that keeps the latest version number while remaining directly saveable.
 - Graph `.smtg` parsing now accepts legacy payloads that omit `schemaVersion` as v1-compatible imports, while still rejecting array roots and invalid wrapped `document` payloads; graph-core regressions now also cover history fallback labels and past/future stack limits.
 - Backend config no longer falls back to dangerous default `JWT_SECRET` and `MYSQL_DSN` values; startup and migration-related commands now fail fast with explicit configuration errors.
 - Playwright preview defaults moved from ports `4173/4174` to `44173/44174`, with environment-variable overrides for local or CI environments.

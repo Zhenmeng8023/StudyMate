@@ -146,6 +146,7 @@ describe("GraphWorkspaceStageChrome components", () => {
     const onExportLatestJson = vi.fn();
     const onCopyDraftJson = vi.fn();
     const onExportDraftJson = vi.fn();
+    const onApplyResolutionDrafts = vi.fn();
     const onChooseResolution = vi.fn();
 
     render(
@@ -167,6 +168,8 @@ describe("GraphWorkspaceStageChrome components", () => {
           "localDraft:node:node-2:added": "keep-local",
           "latestHead:edge:edge-legacy:removed": "keep-latest"
         }}
+        resolutionDraftCount={2}
+        onApplyResolutionDrafts={onApplyResolutionDrafts}
         onChooseResolution={onChooseResolution}
         onDeferManualMerge={onDeferManualMerge}
         onExportConflictBundle={onExportConflictBundle}
@@ -205,11 +208,13 @@ describe("GraphWorkspaceStageChrome components", () => {
     fireEvent.click(screen.getByRole("button", { name: "复制最新图谱 JSON" }));
     fireEvent.click(screen.getByRole("button", { name: "导出最新图谱 JSON" }));
     fireEvent.click(screen.getByRole("button", { name: "导出冲突处理包" }));
+    fireEvent.click(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" }));
     fireEvent.click(screen.getByRole("button", { name: "先保留本地，稍后人工合并" }));
     fireEvent.click(screen.getByRole("button", { name: "复制当前草稿 JSON" }));
     fireEvent.click(screen.getByRole("button", { name: "导出当前草稿 JSON" }));
     fireEvent.click(screen.getByRole("button", { name: "放弃本地并重载最新图谱" }));
     expect(onExportConflictBundle).toHaveBeenCalled();
+    expect(onApplyResolutionDrafts).toHaveBeenCalled();
     expect(onDeferManualMerge).toHaveBeenCalled();
     expect(onReloadLatest).toHaveBeenCalled();
     expect(onCopyLatestJson).toHaveBeenCalled();

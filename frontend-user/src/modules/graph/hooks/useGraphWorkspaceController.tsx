@@ -117,6 +117,7 @@ import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
 import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
 import { buildGraphTemplateImportDraft } from "../lib/graphTemplateApplication";
 import {
+  applyGraphConflictResolutionDrafts,
   buildGraphConflictBundleArtifact,
   buildGraphConflictObjectDetails,
   buildGraphConflictObjectDecisionKey,
@@ -933,6 +934,44 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         : "已保留本地草稿；如需稍后人工合并，建议先导出冲突处理包",
       { suggestReload: true }
     );
+  }
+
+  function applyMarkedConflictResolutions() {
+    const current = detailRef.current;
+    const latest = latestConflictDetail;
+    if (!current || !latest) {
+      return;
+    }
+    if (conflictResolutionDrafts.length === 0) {
+      setWorkspaceStatusMessage("请先标记至少一项对象级取舍后再应用", { suggestReload: true });
+      return;
+    }
+
+    const merged = applyGraphConflictResolutionDrafts({
+      current,
+      drafts: conflictResolutionDrafts,
+      latestHead: latest
+    });
+
+    lastSyncedDetailRef.current = latest;
+    detailRef.current = merged;
+    setGraphDetail(merged);
+    replaceGraphSummary(merged);
+    const nextHistory = {
+      ...resetGraphHistoryState(historyRef.current, "应用对象级冲突取舍"),
+      dirty: true
+    };
+    historyRef.current = nextHistory;
+    setHistoryState(nextHistory);
+    clearWorkspaceTransientState();
+    setSaveState("dirty");
+    setConflictArtifactsCaptured(false);
+    setManualMergeDeferred(false);
+    setConflictResolutionSelections({});
+    setLatestConflictDetail(null);
+    setLatestConflictError("");
+    setLatestConflictLoading(false);
+    setWorkspaceStatusMessage("已基于最新图谱生成合并草稿，请确认后保存");
   }
 
   function handleConflictResolutionChoice(
@@ -2140,7 +2179,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                     latestHeadSummary={latestHeadConflictSummary}
                     manualMergeDeferred={manualMergeDeferred}
                     materialsCaptured={conflictArtifactsCaptured}
+                    resolutionDraftCount={conflictResolutionDrafts.length}
                     resolutionSelections={conflictResolutionSelections}
+                    onApplyResolutionDrafts={applyMarkedConflictResolutions}
                     onChooseResolution={handleConflictResolutionChoice}
                     onDeferManualMerge={deferManualMergeUntilLater}
                     onExportConflictBundle={exportConflictBundle}

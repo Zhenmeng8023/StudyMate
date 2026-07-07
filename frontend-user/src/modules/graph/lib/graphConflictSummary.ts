@@ -1,5 +1,6 @@
 import { sanitizeGraphExportFilename } from "@studymate/graph-core";
 import type { GraphDetailPayload, GraphDocumentPayload } from "../../../api/client";
+import { cloneDocument, normalizeDocument, rebuildDetail } from "./workspaceControllerHelpers";
 
 export type GraphConflictReportArtifact = {
   content: string;
@@ -130,6 +131,34 @@ export function buildGraphConflictResolutionDrafts(input: {
     ...buildResolutionDraftsForScope("localDraft", input.changeDetails, input.selections),
     ...buildResolutionDraftsForScope("latestHead", input.latestHeadDetails, input.selections)
   ];
+}
+
+export function applyGraphConflictResolutionDrafts(input: {
+  current: GraphDetailPayload;
+  drafts: GraphConflictResolutionDraft[];
+  latestHead: GraphDetailPayload;
+}) {
+  const mergedDocument = cloneDocument(input.latestHead.document);
+  mergedDocument.viewport = { ...input.current.document.viewport };
+  mergedDocument.theme = input.current.document.theme ? { ...input.current.document.theme } : {};
+  mergedDocument.metadata = input.current.document.metadata ? { ...input.current.document.metadata } : {};
+
+  for (const draft of input.drafts) {
+    if (draft.decision !== "keep-local") {
+      continue;
+    }
+    applyKeepLocalDecision(mergedDocument, input.current.document, draft.detail);
+  }
+
+  const normalized = normalizeDocument(input.latestHead.id, input.latestHead.currentVersion, mergedDocument);
+  return rebuildDetail(
+    {
+      ...input.latestHead,
+      description: input.current.description,
+      title: input.current.title
+    },
+    normalized
+  );
 }
 
 export function buildGraphConflictReportArtifact(
@@ -388,6 +417,46 @@ function buildResolutionDraftsForScope(
     const decision = selections[buildGraphConflictObjectDecisionKey(scope, detail)];
     return decision ? [{ scope, detail, decision }] : [];
   });
+}
+
+function applyKeepLocalDecision(
+  target: GraphDocumentPayload,
+  source: GraphDocumentPayload,
+  detail: GraphConflictObjectDetail
+) {
+  if (detail.kind === "node") {
+    target.nodes = detail.action === "removed"
+      ? removeCollectionItemById(target.nodes, detail.id)
+      : upsertCollectionItem(target.nodes, source.nodes.find((node) => node.id === detail.id));
+    return;
+  }
+  if (detail.kind === "edge") {
+    target.edges = detail.action === "removed"
+      ? removeCollectionItemById(target.edges, detail.id)
+      : upsertCollectionItem(target.edges, source.edges.find((edge) => edge.id === detail.id));
+    return;
+  }
+  target.groups = detail.action === "removed"
+    ? removeCollectionItemById(target.groups, detail.id)
+    : upsertCollectionItem(target.groups, source.groups.find((group) => group.id === detail.id));
+}
+
+function upsertCollectionItem<T extends { id: string }>(items: T[], item: T | undefined) {
+  if (!item) {
+    return items;
+  }
+  const next = [...items];
+  const index = next.findIndex((entry) => entry.id === item.id);
+  if (index >= 0) {
+    next[index] = item;
+    return next;
+  }
+  next.push(item);
+  return next;
+}
+
+function removeCollectionItemById<T extends { id: string }>(items: T[], id: string) {
+  return items.filter((item) => item.id !== id);
 }
 
 function getGraphConflictScopeLabel(scope: GraphConflictObjectScope) {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GraphDetailPayload, GraphDocumentPayload } from "../../../api/client";
 import {
+  applyGraphConflictResolutionDrafts,
   buildGraphConflictBundleArtifact,
   buildGraphConflictObjectDetails,
   buildGraphConflictResolutionDrafts,
@@ -191,6 +192,123 @@ describe("graphConflictSummary", () => {
         detail: { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" },
         scope: "latestHead"
       }
+    ]);
+  });
+
+  it("rebases the local draft onto the latest head while applying keep-local object decisions", () => {
+    const current = buildDetail({
+      title: "Graph local",
+      description: "local desc",
+      currentVersion: 4,
+      document: buildDocument({
+        version: 4,
+        viewport: { x: 220, y: 140, zoom: 1.15 },
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "概念 A（本地）",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          },
+          {
+            id: "node-2",
+            type: "text",
+            title: "概念 B",
+            x: 260,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          }
+        ],
+        edges: [],
+        groups: []
+      })
+    });
+    const latestHead = buildDetail({
+      title: "Graph server",
+      description: "server desc",
+      currentVersion: 5,
+      document: buildDocument({
+        version: 5,
+        viewport: { x: 40, y: 24, zoom: 0.9 },
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "概念 A（服务端）",
+            x: 80,
+            y: 40,
+            width: 220,
+            height: 132,
+            metadata: {}
+          }
+        ],
+        edges: [{ id: "edge-legacy", sourceNodeId: "node-1", targetNodeId: "node-1", kind: "curve", label: "旧关系" }],
+        groups: [{ id: "group-1", title: "服务端分组", nodeIds: ["node-1"], x: 0, y: 0, width: 320, height: 200, collapsed: false }]
+      })
+    });
+
+    const merged = applyGraphConflictResolutionDrafts({
+      current,
+      latestHead,
+      drafts: [
+        {
+          decision: "keep-local",
+          detail: { action: "updated", id: "node-1", kind: "node", label: "概念 A（本地）" },
+          scope: "localDraft"
+        },
+        {
+          decision: "keep-local",
+          detail: { action: "added", id: "node-2", kind: "node", label: "概念 B" },
+          scope: "localDraft"
+        },
+        {
+          decision: "keep-latest",
+          detail: { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" },
+          scope: "latestHead"
+        }
+      ]
+    });
+
+    expect(merged.title).toBe("Graph local");
+    expect(merged.description).toBe("local desc");
+    expect(merged.currentVersion).toBe(5);
+    expect(merged.document.version).toBe(5);
+    expect(merged.document.viewport).toEqual({ x: 220, y: 140, zoom: 1.15 });
+    expect(merged.document.nodes).toEqual([
+      {
+        id: "node-1",
+        type: "text",
+        title: "概念 A（本地）",
+        x: 0,
+        y: 0,
+        width: 220,
+        height: 132,
+        source: null,
+        metadata: {}
+      },
+      {
+        id: "node-2",
+        type: "text",
+        title: "概念 B",
+        x: 260,
+        y: 0,
+        width: 220,
+        height: 132,
+        source: null,
+        metadata: {}
+      }
+    ]);
+    expect(merged.document.edges).toEqual([
+      { id: "edge-legacy", sourceNodeId: "node-1", targetNodeId: "node-1", kind: "curve", label: "旧关系" }
+    ]);
+    expect(merged.document.groups).toEqual([
+      { id: "group-1", title: "服务端分组", nodeIds: ["node-1"], x: 0, y: 0, width: 320, height: 200, collapsed: false }
     ]);
   });
 

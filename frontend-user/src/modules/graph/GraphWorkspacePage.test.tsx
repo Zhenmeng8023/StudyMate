@@ -273,6 +273,86 @@ describe("GraphWorkspacePage persistence states", () => {
     confirmSpy.mockRestore();
   });
 
+  it("applies marked object resolutions onto the latest head and saves the rebased draft", async () => {
+    const user = userEvent.setup();
+    batchSaveGraphMock
+      .mockRejectedValueOnce(new Error("图谱已被其他窗口更新，请刷新当前图谱后再保存。"))
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        currentVersion: 6,
+        nodeCount: 1,
+        updatedAt: "2026-07-01T20:25:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 6,
+          nodes: [
+            {
+              id: "node-local",
+              type: "concept",
+              title: "新概念",
+              x: 140,
+              y: 120,
+              width: 220,
+              height: 132,
+              source: null,
+              metadata: {}
+            }
+          ]
+        }
+      });
+    getGraphMock.mockReset();
+    getGraphMock
+      .mockResolvedValueOnce(graphDetail)
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        title: "Graph on server",
+        currentVersion: 5,
+        updatedAt: "2026-07-01T20:20:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 5
+        }
+      });
+
+    renderWorkspace();
+
+    await expect(screen.findByRole("button", { name: /保存/ })).resolves.toBeInTheDocument();
+    await user.click(screen.getByTitle("新建概念节点"));
+    await user.click(screen.getByRole("button", { name: /保存/ }));
+
+    await expect(screen.findByLabelText("图谱冲突辅助")).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "保留本地（当前未保存修改）：节点｜新增｜新概念" }));
+    await user.click(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" }));
+
+    await expect(screen.findByText("已基于最新图谱生成合并草稿，请确认后保存")).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
+    expect(screen.getByText(/版本 5 · 1 节点 · 0 连线/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("图谱冲突辅助")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /保存/ }));
+
+    await waitFor(() =>
+      expect(batchSaveGraphMock).toHaveBeenLastCalledWith(
+        session,
+        "graph-1",
+        expect.objectContaining({
+          document: expect.objectContaining({
+            version: 5,
+            nodes: expect.arrayContaining([
+              expect.objectContaining({
+                id: expect.any(String),
+                title: "新概念"
+              })
+            ])
+          })
+        })
+      )
+    );
+    await expect(screen.findByText("图谱已保存")).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("图谱保存状态：已保存")).toBeInTheDocument();
+    expect(screen.getByText(/版本 6 · 1 节点 · 0 连线/)).toBeInTheDocument();
+  });
+
   it("shows a failed restore state when snapshot restore rejects", async () => {
     const user = userEvent.setup();
     restoreGraphSnapshotMock.mockRejectedValueOnce(new Error("快照恢复失败"));
