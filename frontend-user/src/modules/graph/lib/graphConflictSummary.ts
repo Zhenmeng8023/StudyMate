@@ -13,6 +13,33 @@ export type GraphConflictPortableArtifact = {
   mimeType: string;
 };
 
+export type GraphConflictObjectDetail = {
+  action: "added" | "updated" | "removed";
+  id: string;
+  kind: "node" | "edge" | "group";
+  label: string;
+};
+
+export type GraphConflictObjectScope = "localDraft" | "latestHead";
+
+export type GraphConflictResolutionChoice = "keep-local" | "keep-latest" | "review-later";
+
+export type GraphConflictResolutionDraft = {
+  decision: GraphConflictResolutionChoice;
+  detail: GraphConflictObjectDetail;
+  scope: GraphConflictObjectScope;
+};
+
+type GraphConflictChecklistInput = {
+  changeDetails: GraphConflictObjectDetail[];
+  changeSummary: string[];
+  latestHeadDetails: GraphConflictObjectDetail[];
+  latestHeadError?: string;
+  latestHeadLoading?: boolean;
+  latestHeadSummary: string[];
+  resolutionDrafts: GraphConflictResolutionDraft[];
+};
+
 export function buildGraphUnsavedChangeSummary(
   current: GraphDetailPayload | null,
   baseline: GraphDetailPayload | null
@@ -29,32 +56,36 @@ export function buildGraphUnsavedChangeSummary(
     summary.push(buildTextFieldSummary("说明", current.description, baseline.description));
   }
 
-  const nodeSummary = buildCollectionSummary(
-    "节点",
+  const nodeDetails = buildCollectionDetails(
+    "node",
     current.document.nodes,
     baseline.document.nodes,
     (node) => node.title?.trim() || node.id
   );
-  if (nodeSummary) {
-    summary.push(nodeSummary);
-  }
-
-  const edgeSummary = buildCollectionSummary(
-    "连线",
+  const edgeDetails = buildCollectionDetails(
+    "edge",
     current.document.edges,
     baseline.document.edges,
     (edge) => edge.label?.trim() || `${edge.sourceNodeId} -> ${edge.targetNodeId}`
   );
-  if (edgeSummary) {
-    summary.push(edgeSummary);
-  }
-
-  const groupSummary = buildCollectionSummary(
-    "分组",
+  const groupDetails = buildCollectionDetails(
+    "group",
     current.document.groups,
     baseline.document.groups,
     (group) => group.title?.trim() || group.id
   );
+
+  const nodeSummary = buildCollectionSummaryFromDetails("节点", nodeDetails);
+  if (nodeSummary) {
+    summary.push(nodeSummary);
+  }
+
+  const edgeSummary = buildCollectionSummaryFromDetails("连线", edgeDetails);
+  if (edgeSummary) {
+    summary.push(edgeSummary);
+  }
+
+  const groupSummary = buildCollectionSummaryFromDetails("分组", groupDetails);
   if (groupSummary) {
     summary.push(groupSummary);
   }
@@ -66,16 +97,56 @@ export function buildGraphUnsavedChangeSummary(
   return summary;
 }
 
+export function buildGraphConflictObjectDetails(
+  current: GraphDetailPayload | null,
+  baseline: GraphDetailPayload | null
+): GraphConflictObjectDetail[] {
+  if (!current || !baseline) {
+    return [];
+  }
+
+  return [
+    ...buildCollectionDetails("node", current.document.nodes, baseline.document.nodes, (node) => node.title?.trim() || node.id),
+    ...buildCollectionDetails(
+      "edge",
+      current.document.edges,
+      baseline.document.edges,
+      (edge) => edge.label?.trim() || `${edge.sourceNodeId} -> ${edge.targetNodeId}`
+    ),
+    ...buildCollectionDetails("group", current.document.groups, baseline.document.groups, (group) => group.title?.trim() || group.id)
+  ];
+}
+
+export function buildGraphConflictObjectDecisionKey(scope: GraphConflictObjectScope, detail: GraphConflictObjectDetail) {
+  return `${scope}:${detail.kind}:${detail.id}:${detail.action}`;
+}
+
+export function buildGraphConflictResolutionDrafts(input: {
+  changeDetails: GraphConflictObjectDetail[];
+  latestHeadDetails: GraphConflictObjectDetail[];
+  selections: Record<string, GraphConflictResolutionChoice>;
+}): GraphConflictResolutionDraft[] {
+  return [
+    ...buildResolutionDraftsForScope("localDraft", input.changeDetails, input.selections),
+    ...buildResolutionDraftsForScope("latestHead", input.latestHeadDetails, input.selections)
+  ];
+}
+
 export function buildGraphConflictReportArtifact(
   input: {
+    changeDetails: GraphConflictObjectDetail[];
     changeSummary: string[];
     current: GraphDetailPayload;
+    latestHeadDetails: GraphConflictObjectDetail[];
     latestHeadError?: string;
     latestHeadLoading?: boolean;
     latestHeadSummary: string[];
+    resolutionDrafts: GraphConflictResolutionDraft[];
   },
   exportedAt = new Date().toISOString()
 ): GraphConflictReportArtifact {
+  const manualMergeChecklist = buildGraphManualMergeChecklist(input);
+
   return {
     filename: `${sanitizeGraphExportFilename(input.current.title, "graph")}-conflict-summary.md`,
     mimeType: "text/markdown;charset=utf-8",
@@ -91,19 +162,37 @@ export function buildGraphConflictReportArtifact(
       ...buildConflictReportSection(input.changeSummary, "当前没有可归纳的未保存修改摘要"),
       "",
       "## 与最新图谱相比",
-      ...buildLatestHeadReportSection(input)
+      ...buildLatestHeadReportSection(input),
+      "",
+      "## 建议优先核对的对象",
+      "### 当前未保存修改",
+      ...buildConflictObjectSection(input.changeDetails, "当前没有可优先核对的节点、连线或分组对象"),
+      "",
+      "### 与最新图谱相比",
+      ...buildLatestHeadObjectSection(input),
+      "",
+      "## 当前人工取舍草稿",
+      ...buildConflictResolutionSection(input.resolutionDrafts, "当前尚未标记对象级取舍草稿"),
+      "",
+      "## 建议的人工合并步骤",
+      ...manualMergeChecklist.map((item) => `- ${item}`)
     ].join("\n")
   };
 }
 
 export function buildGraphConflictBundleArtifact(
   input: {
+    changeDetails: GraphConflictObjectDetail[];
     changeSummary: string[];
     current: GraphDetailPayload;
     currentDraftArtifact: GraphConflictPortableArtifact;
     latestHeadArtifact: GraphConflictPortableArtifact | null;
+    latestHeadDetails: GraphConflictObjectDetail[];
+    latestHeadError?: string;
+    latestHeadLoading?: boolean;
     latestHeadSummary: string[];
     reportArtifact: GraphConflictPortableArtifact;
+    resolutionDrafts: GraphConflictResolutionDraft[];
   },
   exportedAt = new Date().toISOString()
 ): GraphConflictPortableArtifact {
@@ -121,14 +210,18 @@ export function buildGraphConflictBundleArtifact(
         },
         localDraft: {
           summary: input.changeSummary,
+          details: input.changeDetails,
           artifact: input.currentDraftArtifact
         },
         latestHead: input.latestHeadArtifact
           ? {
               summary: input.latestHeadSummary,
+              details: input.latestHeadDetails,
               artifact: input.latestHeadArtifact
             }
           : null,
+        resolutionDraft: input.resolutionDrafts,
+        manualMergeChecklist: buildGraphManualMergeChecklist(input),
         report: {
           artifact: input.reportArtifact
         }
@@ -139,6 +232,37 @@ export function buildGraphConflictBundleArtifact(
   };
 }
 
+function buildGraphManualMergeChecklist(input: GraphConflictChecklistInput): string[] {
+  const checklist = [
+    "先留存当前草稿 JSON，避免后续重载或误操作覆盖本地修改。",
+    "对照“当前未保存修改”摘要，确认这次本地草稿里需要保留的节点、连线和分组。"
+  ];
+
+  if (input.changeDetails.length) {
+    checklist.push("优先核对上方列出的关键对象明细，逐项确认哪些节点、连线或分组需要保留。");
+  }
+  if (input.resolutionDrafts.length) {
+    checklist.push("优先按照“当前人工取舍草稿”里已标记的对象级取舍执行，未标记项再继续逐项人工确认。");
+  }
+
+  if (input.latestHeadLoading) {
+    checklist.push("等待最新图谱差异拉取完成后，再决定是否做人工合并。");
+  } else if (input.latestHeadError) {
+    checklist.push("先重新获取最新图谱差异或最新图谱 JSON，再开始人工合并，避免只按本地草稿做判断。");
+  } else if (input.latestHeadSummary.length) {
+    checklist.push("对照“与最新图谱相比”摘要，确认服务端最新版本里需要补回或保留的改动。");
+    if (input.latestHeadDetails.length) {
+      checklist.push("结合最新版本的关键对象明细，逐项确认哪些节点、连线或分组需要从服务端保留。");
+    }
+    checklist.push("如果要在外部工具中比对，优先同时使用当前草稿 JSON、最新图谱 JSON 和这份冲突摘要。");
+  } else {
+    checklist.push("当前尚未归纳出与最新图谱的差异，可结合最新图谱 JSON 再做一次人工核对。");
+  }
+
+  checklist.push("完成取舍后，再决定是重载最新图谱，还是继续保留本地草稿整理后再保存。");
+  return checklist;
+}
+
 function buildTextFieldSummary(label: string, current: string, baseline: string) {
   return `${label}已修改（当前：${truncateSummaryValue(current)}；基线：${truncateSummaryValue(baseline)}）`;
 }
@@ -147,11 +271,7 @@ function buildConflictReportSection(items: string[], fallback: string) {
   return items.length ? items.map((item) => `- ${item}`) : [`- ${fallback}`];
 }
 
-function buildLatestHeadReportSection(input: {
-  latestHeadError?: string;
-  latestHeadLoading?: boolean;
-  latestHeadSummary: string[];
-}) {
+function buildLatestHeadReportSection(input: GraphConflictChecklistInput) {
   if (input.latestHeadLoading) {
     return ["- 正在比对服务端最新图谱差异"];
   }
@@ -161,39 +281,75 @@ function buildLatestHeadReportSection(input: {
   return buildConflictReportSection(input.latestHeadSummary, "当前没有可归纳的最新图谱差异摘要");
 }
 
-function buildCollectionSummary<T extends { id: string }>(
-  label: string,
+function buildConflictObjectSection(details: GraphConflictObjectDetail[], fallback: string) {
+  return details.length ? details.map((item) => `- ${formatGraphConflictObjectDetail(item)}`) : [`- ${fallback}`];
+}
+
+function buildConflictResolutionSection(drafts: GraphConflictResolutionDraft[], fallback: string) {
+  return drafts.length ? drafts.map((item) => `- ${formatGraphConflictResolutionDraft(item)}`) : [`- ${fallback}`];
+}
+
+function buildLatestHeadObjectSection(input: GraphConflictChecklistInput) {
+  if (input.latestHeadLoading) {
+    return ["- 正在准备最新图谱的对象级差异明细"];
+  }
+  if (input.latestHeadError) {
+    return ["- 暂时无法生成最新图谱的对象级差异明细"];
+  }
+  return buildConflictObjectSection(input.latestHeadDetails, "当前没有可优先核对的最新版本对象");
+}
+
+function buildCollectionDetails<T extends { id: string }>(
+  kind: GraphConflictObjectDetail["kind"],
   currentItems: T[],
   baselineItems: T[],
   selectLabel: (item: T) => string
 ) {
   const baselineMap = new Map(baselineItems.map((item) => [item.id, item]));
   const currentMap = new Map(currentItems.map((item) => [item.id, item]));
-  const addedLabels: string[] = [];
-  const removedLabels: string[] = [];
-  const updatedLabels: string[] = [];
+  const details: GraphConflictObjectDetail[] = [];
 
   for (const current of currentItems) {
     const baseline = baselineMap.get(current.id);
     if (!baseline) {
-      addedLabels.push(selectLabel(current));
+      details.push({
+        kind,
+        action: "added",
+        id: current.id,
+        label: selectLabel(current)
+      });
       continue;
     }
     if (JSON.stringify(current) !== JSON.stringify(baseline)) {
-      updatedLabels.push(selectLabel(current));
+      details.push({
+        kind,
+        action: "updated",
+        id: current.id,
+        label: selectLabel(current)
+      });
     }
   }
 
   for (const baseline of baselineItems) {
     if (!currentMap.has(baseline.id)) {
-      removedLabels.push(selectLabel(baseline));
+      details.push({
+        kind,
+        action: "removed",
+        id: baseline.id,
+        label: selectLabel(baseline)
+      });
     }
   }
 
+  return details;
+}
+
+function buildCollectionSummaryFromDetails(label: string, details: GraphConflictObjectDetail[]) {
+  const detailsForLabel = details.filter((item) => getConflictKindLabel(item.kind) === label);
   const parts = [
-    buildCollectionPart("新增", addedLabels),
-    buildCollectionPart("修改", updatedLabels),
-    buildCollectionPart("删除", removedLabels)
+    buildCollectionPart("新增", detailsForLabel.filter((item) => item.action === "added").map((item) => item.label)),
+    buildCollectionPart("修改", detailsForLabel.filter((item) => item.action === "updated").map((item) => item.label)),
+    buildCollectionPart("删除", detailsForLabel.filter((item) => item.action === "removed").map((item) => item.label))
   ].filter(Boolean);
 
   return parts.length ? `${label}：${parts.join("，")}` : "";
@@ -203,7 +359,7 @@ function buildCollectionPart(action: "新增" | "修改" | "删除", labels: str
   if (!labels.length) {
     return "";
   }
-  return `${action} ${labels.length} 个${formatLabelExamples(labels)}`;
+  return `${action} ${labels.length} 个（${formatLabelExamples(labels)}）`;
 }
 
 function formatLabelExamples(labels: string[]) {
@@ -212,7 +368,60 @@ function formatLabelExamples(labels: string[]) {
     return "";
   }
   const samples = uniqueLabels.slice(0, 2);
-  return `（${samples.join("、")}${uniqueLabels.length > 2 ? " 等" : ""}）`;
+  return `${samples.join("、")}${uniqueLabels.length > 2 ? " 等" : ""}`;
+}
+
+export function formatGraphConflictObjectDetail(detail: GraphConflictObjectDetail) {
+  return `${getConflictKindLabel(detail.kind)}｜${getConflictActionLabel(detail.action)}｜${detail.label}`;
+}
+
+export function formatGraphConflictResolutionDraft(draft: GraphConflictResolutionDraft) {
+  return `${getGraphConflictScopeLabel(draft.scope)}｜${formatGraphConflictObjectDetail(draft.detail)}｜${getGraphConflictResolutionChoiceLabel(draft.decision)}`;
+}
+
+function buildResolutionDraftsForScope(
+  scope: GraphConflictObjectScope,
+  details: GraphConflictObjectDetail[],
+  selections: Record<string, GraphConflictResolutionChoice>
+) {
+  return details.flatMap((detail) => {
+    const decision = selections[buildGraphConflictObjectDecisionKey(scope, detail)];
+    return decision ? [{ scope, detail, decision }] : [];
+  });
+}
+
+function getGraphConflictScopeLabel(scope: GraphConflictObjectScope) {
+  return scope === "localDraft" ? "当前未保存修改" : "与最新图谱相比";
+}
+
+function getConflictKindLabel(kind: GraphConflictObjectDetail["kind"]) {
+  if (kind === "node") {
+    return "节点";
+  }
+  if (kind === "edge") {
+    return "连线";
+  }
+  return "分组";
+}
+
+function getConflictActionLabel(action: GraphConflictObjectDetail["action"]) {
+  if (action === "added") {
+    return "新增";
+  }
+  if (action === "updated") {
+    return "修改";
+  }
+  return "删除";
+}
+
+export function getGraphConflictResolutionChoiceLabel(choice: GraphConflictResolutionChoice) {
+  if (choice === "keep-local") {
+    return "保留本地";
+  }
+  if (choice === "keep-latest") {
+    return "保留服务端";
+  }
+  return "稍后处理";
 }
 
 function truncateSummaryValue(value: string) {

@@ -6,6 +6,8 @@
 
 ### Added
 
+- 前端 FE-03 新增阅读、笔记、复习三类工作区：阅读与笔记采用可收起资源区 / Inspector，复习采用单任务舞台与按需卡组管理；新增对应页面回归测试和 `studio-workspaces.css` 响应式样式。
+- 前端 FE-00 / FE-01 新增能力矩阵、布局规格、`AppShell` 路由布局策略、紧凑导航、命令栏、Drawer、Inspector、DataState 与最小回归测试；图谱 Canvas 工作区现不再继承全局 `ContextPanel`。
 - Added `verify:backend:format` and `verify:config-safety` root scripts, plus CI workflow steps that explicitly gate Go formatting and configuration safety regressions.
 - v1.1 搜索契约补强新增后端 search handler/service 回归测试，覆盖空 `types` 默认五组搜索、非法类型 `400 invalid_search_type`，以及 `limit` 上限钳制到 `50`。
 - v1.1 搜索契约补强新增用户端 search API 回归测试，锁定“不传 `types` 时不发送空 `types=` 参数”的请求形状。
@@ -45,6 +47,7 @@
 
 ### Changed
 
+- 用户端阅读、笔记与复习页面已从通用内容页改为 Studio / Focus 工作区体验；既有 Reader、Note、Deck/Card、SM-2、草稿和来源 API 契约保持不变。
 - Search contract now treats omitted/blank `types` as the default `material/post/note/graph/card` groups, rejects unknown types before hitting the indexer, and documents `source` as a domain field rather than a storage-engine marker.
 - Search `limit` now defaults to `20` when missing/invalid and clamps to `50` when callers ask for a larger page size.
 - MySQL fallback search now fetches a slightly larger candidate set, keeps title matches ahead of summary-only matches within each group, and normalizes long summaries into single-line previews.
@@ -69,6 +72,9 @@
 - Graph conflict assist now also surfaces explicit disposal guidance and an in-card `放弃本地并重载最新图谱` action, so conflict handling is no longer split between material export and a separate status-bar-only reload entry.
 - Graph conflict assist now also marks when conflict materials have already been captured successfully, surfacing an explicit `已留存冲突材料，可安全重载最新图谱` cue before the user discards local edits.
 - Graph conflict assist now also lets users explicitly mark `先保留本地，稍后人工合并`, keeping the local draft in place while surfacing a matching status cue instead of forcing an immediate reload decision.
+- Graph conflict summary exports now append a concrete manual-merge checklist, and the conflict bundle JSON carries the same `manualMergeChecklist` field so users can reopen the local-vs-latest comparison with explicit next steps.
+- Graph conflict assist, summary exports, and conflict bundles now all carry object-level node/edge/group diffs using a shared `节点｜新增｜...` style, giving manual merge work a concrete review list instead of only summary counts.
+- Graph conflict assist now also lets users mark object-level merge intentions as `保留本地` / `保留服务端` / `稍后处理`, and both the Markdown summary and conflict bundle carry the same `resolutionDraft` trail for later manual merge work.
 - Graph `.smtg` parsing now accepts legacy payloads that omit `schemaVersion` as v1-compatible imports, while still rejecting array roots and invalid wrapped `document` payloads; graph-core regressions now also cover history fallback labels and past/future stack limits.
 - Backend config no longer falls back to dangerous default `JWT_SECRET` and `MYSQL_DSN` values; startup and migration-related commands now fail fast with explicit configuration errors.
 - Playwright preview defaults moved from ports `4173/4174` to `44173/44174`, with environment-variable overrides for local or CI environments.
@@ -103,3 +109,35 @@
 ### Verification
 
 - Final gate requires `npm run ci`, `npm run test:coverage`, secret scan, diff review, release smoke flow, and local annotated tag `v1.0.0`.
+
+## FE-02 - 2026-07-02
+
+### Changed
+
+- 用户端图谱工作区从固定 `252px + 画布 + 296px` 三栏改为 CanvasLayout：宽屏可并列资源/画布/检查器，中小屏两侧改为覆盖式 Dock，不再持续挤压画布。
+- 图谱顶部移除开发阶段长说明，改为图谱标题、保存状态、新建、保存和左右面板开关组成的紧凑命令栏。
+- 资源区改为图谱、来源、模板三类 Tab；检查器改为概览、属性、来源、历史、导入、冲突六类 Tab。
+- 版本冲突辅助从画布上方迁入检查器“冲突”Tab；检测到冲突时自动打开，仍保留草稿、最新 head、摘要和冲突处理包导出能力。
+- 快照、卡片草稿、导入与校验的开发阶段 `Phase` 文案替换为正式任务文案。
+
+### Added
+
+- `GraphWorkspaceCanvasChrome`、`GraphWorkspaceOverviewPanel` 与 `graph-canvas.css`。
+- 图谱 Canvas 命令栏和 Tab 切换的最小组件回归测试。
+
+## UI-04 - Product-wide interface redesign
+
+- Reworked the user shell into a task-first navigation and command-bar system.
+- Made graph canvas the default primary surface; docks now open on demand and use explicit grid columns.
+- Unified visual density across dashboard, library, community, AI, settings, reader, notes and review.
+- Rebuilt the admin workspace around operational metrics, searchable tables and record inspection.
+
+### UI-04 verification note
+
+- Added product-wide layout and information-density refresh for the user application and admin governance workspace; code-contract behavior remains unchanged.
+- Validated frontend source syntax, docs synchronization and archive integrity in the delivery environment. Full package typecheck/test/build remains pending a clean `npm ci` in local or CI.
+
+### UI-04 verification note
+
+- Added product-wide layout and information-density refresh for the user application and admin governance workspace; code-contract behavior remains unchanged.
+- Validated frontend source syntax, docs synchronization and archive integrity in the delivery environment. Full package typecheck/test/build remains pending a clean `npm ci` in local or CI.

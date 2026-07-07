@@ -1,5 +1,120 @@
+## 2026-07-07 21:13:40 +08:00 | v1.1.0-alpha.93 | 推进 WB-032 对象级冲突取舍草稿子步骤
+
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“对象级冲突明细”继续推进为可操作的人工合并前置草稿。
+- 本轮目标是在图谱 Inspector 的冲突卡片中允许用户对节点 / 连线 / 分组级对象先标记“保留本地 / 保留服务端 / 稍后处理”，并把这些取舍草稿带入冲突摘要与冲突处理包。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增对象级取舍草稿模型、决策 key、`resolutionDraft` 导出字段，以及冲突摘要中的“当前人工取舍草稿”段落。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `conflictResolutionSelections` 状态和 `handleConflictResolutionChoice(...)` 交互；对象级取舍一旦标记，会给出显式状态提示并进入冲突摘要 / 处理包导出链路。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，为每条对象级冲突明细补上 `保留本地 / 保留服务端 / 稍后处理` 按钮，并显示当前选择状态。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补齐对象级取舍草稿在 helper、组件和页面级冲突流中的回归。
+- 同步更新 `CHANGELOG.md`、`docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“对象级明细 + 对象级取舍草稿”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在已经不只会列出对象，还能提前记录对象级保留 / 舍弃意图，为真正的节点级 / 边级人工合并流程提供了第一层状态模型。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是基于这些对象级取舍草稿的显式应用流程，以及更强的多端 conflict handling。
+
+## 2026-07-07 21:02:14 +08:00 | v1.1.0-alpha.92 | 推进 WB-032 对象级冲突明细子步骤
+
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把已有的“摘要级冲突提示 + 人工合并清单”继续下沉一层。
+- 本轮目标是在新图谱 Inspector 的冲突卡片、Markdown 冲突摘要和冲突处理包里，统一补上节点 / 连线 / 分组级的对象明细，让后续人工合并不再只依赖总量和对象名摘要。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `unsavedChangeDetails` 与 `latestHeadConflictDetails` 计算，并把对象级差异同时接入冲突卡片、冲突摘要导出和冲突处理包导出链路。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，让冲突辅助卡片新增“建议优先核对的对象”区块，按统一格式展示 `节点｜新增｜...`、`连线｜删除｜...`、`分组｜修改｜...` 等对象级明细。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补齐对象级差异明细在摘要、处理包、组件和页面级冲突路径中的回归断言。
+- 同步更新 `CHANGELOG.md`、`docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“摘要 + 清单 + 对象级冲突明细”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在已经不只会告诉用户“改了多少、该怎么合并”，还会把真正需要优先核对的节点 / 连线 / 分组对象直接列出来，为下一步对象级保留 / 放弃取舍动作打底。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是对象级冲突明细上的显式保留 / 舍弃操作，以及更强的多端 conflict handling。
+
+## 2026-07-07 20:45:47 +08:00 | v1.1.0-alpha.91 | 推进 WB-032 人工合并清单子步骤
+
+### 任务内容
+
+- 继续收口图谱冲突辅助导出物，让“冲突摘要”和“冲突处理包”都能直接给出可执行的人工合并清单，而不只停留在差异罗列。
+
+### 实际变更
+
+- 重写 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，恢复干净的冲突摘要实现，并为 Markdown 冲突摘要新增“建议的人工合并步骤”段落。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，补齐人工合并清单在摘要与处理包中的导出断言。
+- 顺手把 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 中已漂移的按钮文案断言改为更稳的语义匹配，避免“保存修改 / 重载最新图谱”文案变化导致图谱回归误报。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
+- `npm run verify:docs`
+
+## 2026-07-02 10:00 | v1.1.0-alpha.90 | 前端 FE-03：阅读、笔记、复习工作区体验对齐
+
+### 任务内容
+
+- 在 FE-01 多布局壳层和 FE-02 图谱 CanvasLayout 的基础上，重构阅读、笔记与复习页面的空间结构与信息分层。
+- 保持现有资料、批注、笔记、版本、卡片、复习和 AI 草稿接口及数据契约不变。
+
+### 实际变更
+
+- 阅读器升级为 Studio 工作区：资料资源区、阅读主舞台和批注 / 书签 / 草稿 Inspector 支持按需展开。
+- 笔记页升级为 Studio 工作区：笔记资源区、富文本编辑器和来源 / 历史 / 复习 Inspector 分离。
+- 复习页升级为 Focus 工作区：单任务卡片舞台、键盘翻面与评分、复习进度、按需卡组管理。
+- 新增 `frontend-user/src/styles/studio-workspaces.css` 与阅读、笔记、复习页面回归测试。
+- 补充 FE-03 交付说明、前端布局设计文档、待办状态与变更记录。
+
+### 验证结果
+
+- 已完成修改 TS/TSX 文件的 TypeScript 语法转译、文档同步、空白字符与交付包完整性检查。
+- 当前执行环境缺少完整 npm 依赖缓存，类型检查、Vitest、Vite 构建和 Playwright 待在本机或 CI 执行。
+
+### 后续影响
+
+- 后续 WB-032 的节点级 / 边级人工冲突合并界面将接入新的图谱 Inspector，不再向旧三栏工作区堆叠卡片。
+
+---
+
 ﻿
 # StudyMate 项目记录
+
+## 2026-07-02 16:41:18 +08:00 | v1.1.0-alpha.89 | 启动前端布局重构 FE-00 / FE-01
+### 任务内容
+- 基于 `master@7b1e8f3a1e77dded69538d075758dc9529b31564`，先处理实际运行中“图谱画布被通用三栏壳层挤压、前端内容承载落后后端能力”的问题。
+- 不触碰图谱 document、版本、快照、来源 relation、导入导出和 `409 graph_version_conflict` 契约，先建立可承接后续图谱重构的前端布局基础。
+### 完成结果
+- 新增 FE-00 前端能力矩阵、布局重构规格和验收清单，明确 Standard / Studio / Canvas / Focus 四类工作模式及图谱重构断点。
+- 新增 `frontend-user/src/app/layouts/AppShell.tsx` 与 `layoutPolicy.ts`；`ShellFrame` 已降为路由兼容层。
+- 图谱改用 Canvas 模式、阅读/笔记改用 Studio 模式、复习改用 Focus 模式；Canvas / Focus 不再渲染通用 `ContextPanel`，图谱先收回全局右侧栏空间。
+- 新增 `PrimaryNavigation`、`CompactNavigation`、`CommandBar`、`Drawer`、`Inspector`、`DataState` 及相应的布局 / 组件最小回归测试。
+- 新增 `styles/layouts.css`，将新的布局变体与基础构件样式从既有全局样式中隔离，为 FE-020 图谱 Drawer / Inspector 重构预留边界。
+### 验证结果
+- 已运行 `git diff --check`，未发现空白错误；并使用全局 TypeScript 编译器进行新增 TS / TSX 文件语法转译检查。
+- 当前沙箱中 `npm ci` 因 npm 镜像 DNS `EAI_AGAIN` 未完成，尚未能运行用户端 `typecheck`、Vitest、构建和 Playwright；需要在正常开发机或具备依赖缓存的 CI 环境复核。
+### 后续影响
+- 图谱页面不再受全局 336px ContextPanel 的固定挤压，但内部 SourceRail / Inspector 仍是下一步 FE-020 的改造目标。
+- 接下来优先将图谱左侧资源区拆为可切换 Drawer，再把节点详情、历史、冲突和 AI 草稿收口进可折叠 Inspector。
 
 > 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
 
@@ -3204,3 +3319,58 @@
 
 ### 后续影响
 - 后续最值得继续推进的是把图谱数据加载、画布交互和 JSX view 完整拆成容器 hook + 纯 view；补齐 PNG/SVG/JSON 大图导出失败路径；再做事件节流和边路径缓存等有证据的性能优化。
+
+### 执行记录：FE-02 图谱 CanvasLayout
+
+- 执行日期：2026-07-02
+- 代码基线：`master@7b1e8f3a1e77dded69538d075758dc9529b31564`
+- 实际变更：
+  - 新增 `GraphWorkspaceCanvasChrome.tsx` 与 `GraphWorkspaceOverviewPanel.tsx`。
+  - 新增 `graph-canvas.css`，实现宽屏三列、中小屏覆盖式 Dock、手机近似全屏抽屉。
+  - 资源区改为图谱 / 来源 / 模板 Tab；检查器改为概览 / 属性 / 来源 / 历史 / 导入 / 冲突 Tab。
+  - 删除画布顶部产品说明，保留图谱标题、保存状态和高频操作。
+  - 既有 GraphDocument、保存、版本、快照、导入导出、来源 relation、409 冲突语义保持不变。
+- 已执行验证：
+  - 改动 TS / TSX 的 TypeScript transpile 语法检查。
+  - 完整 npm 依赖安装无法在当前环境离线完成：缺少 `zustand@5.0.13` 缓存，完整 typecheck / Vitest / build / Playwright 待本机或 CI 复核。
+- 下一建议任务：
+  - FE-03：阅读、笔记与复习工作区体验对齐；或在新 Inspector 中继续 WB-032 的节点级人工冲突合并。
+
+## UI-04 产品级 UI 收口
+
+- 根据实际运行截图完成图谱和管理端布局审计。
+- 图谱调整为画布优先：初始不展开资源/检查器，选中节点和冲突发生时按需打开。
+- 用户端 Standard / Studio / Canvas / Focus 统一为同一视觉系统，并清理开发期占位文案。
+- 管理端升级为治理工作台：可扫描表格、搜索、审核行操作与记录 Inspector。
+
+### 执行记录：UI-04 全站产品界面重构
+
+- 执行日期：2026-07-03
+- 代码基线：`master@7b1e8f3a1e77dded69538d075758dc9529b31564`
+- 触发原因：根据实际运行截图复核，图谱页面默认资源栏与检查器同时展开，画布空间不足；管理端用户治理按记录纵向堆叠，信息密度与可扫描性不足。
+- 本轮范围：
+  - 用户端全路由统一为任务优先的 Standard / Studio / Canvas / Focus 布局体系；
+  - 图谱改为默认全画布，资源 Drawer 与 Inspector 按需打开，节点选中或版本冲突时自动定位相应 Inspector；
+  - 工作台、资料库、社区、搜索、AI、设置、登录、分享、阅读、笔记、复习重新收口内容密度、操作层级与响应式布局；
+  - 管理端重构为运营治理工作台，提供概览指标、审核表格、治理记录表格、搜索与详情 Inspector。
+- 保护边界：不改变 API、权限、GraphDocument、图谱版本、快照、来源关联、导入导出和 `409 graph_version_conflict` 契约。
+- 验证结果：
+  - 前台全量 TS/TSX 与后台 Vue script 通过 TypeScript transpile 语法检查；
+  - 文档同步与前端文件格式检查通过；
+  - `npm ci` 在交付环境未完成依赖树最终链接，导致完整 tsc/Vitest/Vite/Playwright 留待本机或 CI 执行。
+
+### 执行记录：UI-04 全站产品界面重构
+
+- 执行日期：2026-07-03
+- 代码基线：`master@7b1e8f3a1e77dded69538d075758dc9529b31564`
+- 触发原因：根据实际运行截图复核，图谱页面默认资源栏与检查器同时展开，画布空间不足；管理端用户治理按记录纵向堆叠，信息密度与可扫描性不足。
+- 本轮范围：
+  - 用户端全路由统一为任务优先的 Standard / Studio / Canvas / Focus 布局体系；
+  - 图谱改为默认全画布，资源 Drawer 与 Inspector 按需打开，节点选中或版本冲突时自动定位相应 Inspector；
+  - 工作台、资料库、社区、搜索、AI、设置、登录、分享、阅读、笔记、复习重新收口内容密度、操作层级与响应式布局；
+  - 管理端重构为运营治理工作台，提供概览指标、审核表格、治理记录表格、搜索与详情 Inspector。
+- 保护边界：不改变 API、权限、GraphDocument、图谱版本、快照、来源关联、导入导出和 `409 graph_version_conflict` 契约。
+- 验证结果：
+  - 前台全量 TS/TSX 与后台 Vue script 通过 TypeScript transpile 语法检查；
+  - 文档同步与前端文件格式检查通过；
+  - `npm ci` 在交付环境未完成依赖树最终链接，导致完整 tsc/Vitest/Vite/Playwright 留待本机或 CI 执行。

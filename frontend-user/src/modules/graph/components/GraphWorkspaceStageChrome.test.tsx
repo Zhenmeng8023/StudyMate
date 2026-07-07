@@ -136,7 +136,7 @@ describe("GraphWorkspaceStageChrome components", () => {
     expect(container.querySelector(".graph-minimap-viewport")).not.toBeNull();
   });
 
-  it("offers conflict helpers and disposal guidance for dirty conflicts", () => {
+  it("offers conflict helpers, summary guidance, and object-level comparison details", () => {
     const onExportConflictBundle = vi.fn();
     const onDeferManualMerge = vi.fn();
     const onReloadLatest = vi.fn();
@@ -146,14 +146,28 @@ describe("GraphWorkspaceStageChrome components", () => {
     const onExportLatestJson = vi.fn();
     const onCopyDraftJson = vi.fn();
     const onExportDraftJson = vi.fn();
+    const onChooseResolution = vi.fn();
 
     render(
       <GraphConflictAssistCard
+        changeDetails={[
+          { action: "added", id: "node-2", kind: "node", label: "新概念" },
+          { action: "updated", id: "group-1", kind: "group", label: "本地分组" }
+        ]}
         changeSummary={["标题已修改", "节点：新增 1 个"]}
         latestHeadAvailable
+        latestHeadDetails={[
+          { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" },
+          { action: "updated", id: "node-1", kind: "node", label: "服务端概念" }
+        ]}
         latestHeadSummary={["标题已修改", "节点：新增 1 个，删除 1 个"]}
         manualMergeDeferred
         materialsCaptured
+        resolutionSelections={{
+          "localDraft:node:node-2:added": "keep-local",
+          "latestHead:edge:edge-legacy:removed": "keep-latest"
+        }}
+        onChooseResolution={onChooseResolution}
         onDeferManualMerge={onDeferManualMerge}
         onExportConflictBundle={onExportConflictBundle}
         onReloadLatest={onReloadLatest}
@@ -167,12 +181,25 @@ describe("GraphWorkspaceStageChrome components", () => {
     );
 
     expect(screen.getByLabelText("图谱冲突辅助")).toHaveTextContent("先留存当前草稿，再决定是否重载");
+    expect(screen.getByText("建议优先核对的对象")).toBeInTheDocument();
+    expect(screen.getAllByText("当前未保存修改")).toHaveLength(2);
+    expect(screen.getAllByText("节点｜新增｜新概念")).toHaveLength(1);
+    expect(screen.getByText("分组｜修改｜本地分组")).toBeInTheDocument();
+    expect(screen.getAllByText("与最新图谱相比")).toHaveLength(4);
+    expect(screen.getByText("连线｜删除｜旧关系")).toBeInTheDocument();
+    expect(screen.getByText("节点｜修改｜服务端概念")).toBeInTheDocument();
+    expect(screen.getByText("已标记：保留本地")).toBeInTheDocument();
+    expect(screen.getByText("已标记：保留服务端")).toBeInTheDocument();
+    expect(screen.getAllByText("已标记：未标记").length).toBeGreaterThan(0);
     expect(screen.getByText("已留存冲突材料，可安全重载最新图谱")).toBeInTheDocument();
     expect(screen.getByText("已标记为稍后人工合并，当前继续保留本地草稿")).toBeInTheDocument();
     expect(screen.getByText("如果确认放弃本地修改：可直接重载最新图谱")).toBeInTheDocument();
     expect(screen.getByText("如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱")).toBeInTheDocument();
     expect(screen.getAllByText("标题已修改")).toHaveLength(2);
     expect(screen.getByText("节点：新增 1 个，删除 1 个")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "保留本地（当前未保存修改）：节点｜新增｜新概念" }));
+    fireEvent.click(screen.getByRole("button", { name: "保留服务端（与最新图谱相比）：连线｜删除｜旧关系" }));
+    fireEvent.click(screen.getByRole("button", { name: "稍后处理（当前未保存修改）：分组｜修改｜本地分组" }));
     fireEvent.click(screen.getByRole("button", { name: "复制冲突摘要" }));
     fireEvent.click(screen.getByRole("button", { name: "导出冲突摘要" }));
     fireEvent.click(screen.getByRole("button", { name: "复制最新图谱 JSON" }));
@@ -191,6 +218,24 @@ describe("GraphWorkspaceStageChrome components", () => {
     expect(onExportSummaryReport).toHaveBeenCalled();
     expect(onCopyDraftJson).toHaveBeenCalled();
     expect(onExportDraftJson).toHaveBeenCalled();
+    expect(onChooseResolution).toHaveBeenNthCalledWith(
+      1,
+      "localDraft",
+      { action: "added", id: "node-2", kind: "node", label: "新概念" },
+      "keep-local"
+    );
+    expect(onChooseResolution).toHaveBeenNthCalledWith(
+      2,
+      "latestHead",
+      { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" },
+      "keep-latest"
+    );
+    expect(onChooseResolution).toHaveBeenNthCalledWith(
+      3,
+      "localDraft",
+      { action: "updated", id: "group-1", kind: "group", label: "本地分组" },
+      "review-later"
+    );
   });
 
   it("delegates canvas node, edge, and group interactions", () => {

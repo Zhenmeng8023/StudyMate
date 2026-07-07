@@ -7,6 +7,14 @@ import type {
   GraphEdgePayload,
   GraphNodePayload
 } from "../../../api/client";
+import {
+  buildGraphConflictObjectDecisionKey,
+  formatGraphConflictObjectDetail,
+  getGraphConflictResolutionChoiceLabel,
+  type GraphConflictObjectDetail,
+  type GraphConflictObjectScope,
+  type GraphConflictResolutionChoice
+} from "../lib/graphConflictSummary";
 import { buildNodeStyle } from "../nodeAppearance";
 import {
   buildEdgeLabelPosition,
@@ -259,13 +267,21 @@ export function GraphStageStatus(props: {
 }
 
 export function GraphConflictAssistCard(props: {
+  changeDetails: GraphConflictObjectDetail[];
   changeSummary: string[];
   latestHeadAvailable?: boolean;
+  latestHeadDetails: GraphConflictObjectDetail[];
   latestHeadError?: string;
   latestHeadLoading?: boolean;
   latestHeadSummary: string[];
   manualMergeDeferred?: boolean;
   materialsCaptured?: boolean;
+  resolutionSelections: Record<string, GraphConflictResolutionChoice>;
+  onChooseResolution: (
+    scope: GraphConflictObjectScope,
+    detail: GraphConflictObjectDetail,
+    choice: GraphConflictResolutionChoice
+  ) => void;
   onDeferManualMerge: () => void;
   onExportConflictBundle: () => void;
   onReloadLatest: () => void;
@@ -304,6 +320,51 @@ export function GraphConflictAssistCard(props: {
           ))}
         </ul>
       ) : null}
+      <div className="graph-inline-copy" aria-label="对象级冲突明细">
+        <strong>建议优先核对的对象</strong>
+        <ul className="graph-issue-list">
+          {buildConflictObjectItems("当前未保存修改", "localDraft", props.changeDetails, "当前没有可优先核对的节点、连线或分组对象").map((item) => (
+            <li className="graph-issue-item" key={`local-object-${item.label}-${item.value}`}>
+              <strong>{item.label}</strong>
+              <p>{item.value}</p>
+              {hasConflictObjectDetail(item) ? (
+                <>
+                  <div className="graph-inline-actions">
+                    {renderConflictResolutionButtons({
+                      detail: item.detail,
+                      onChooseResolution: props.onChooseResolution,
+                      resolutionSelections: props.resolutionSelections,
+                      scope: item.scope
+                    })}
+                  </div>
+                  <small>已标记：{getSelectedResolutionLabel(item.scope, item.detail, props.resolutionSelections)}</small>
+                </>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+        <ul className="graph-issue-list">
+          {buildLatestHeadConflictObjectItems(props).map((item) => (
+            <li className="graph-issue-item" key={`latest-object-${item.label}-${item.value}`}>
+              <strong>{item.label}</strong>
+              <p>{item.value}</p>
+              {hasConflictObjectDetail(item) ? (
+                <>
+                  <div className="graph-inline-actions">
+                    {renderConflictResolutionButtons({
+                      detail: item.detail,
+                      onChooseResolution: props.onChooseResolution,
+                      resolutionSelections: props.resolutionSelections,
+                      scope: item.scope
+                    })}
+                  </div>
+                  <small>已标记：{getSelectedResolutionLabel(item.scope, item.detail, props.resolutionSelections)}</small>
+                </>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </div>
       {props.materialsCaptured ? <p>已留存冲突材料，可安全重载最新图谱</p> : null}
       {props.manualMergeDeferred ? <p>已标记为稍后人工合并，当前继续保留本地草稿</p> : null}
       <div className="graph-inline-copy">
@@ -413,4 +474,91 @@ export function GraphStageEmptyState() {
       <span>正在准备图谱画布...</span>
     </div>
   );
+}
+
+type ConflictObjectCardItem =
+  | { label: string; value: string }
+  | { detail: GraphConflictObjectDetail; label: string; scope: GraphConflictObjectScope; value: string };
+
+function buildConflictObjectItems(
+  label: string,
+  scope: GraphConflictObjectScope,
+  details: GraphConflictObjectDetail[],
+  fallback: string
+): ConflictObjectCardItem[] {
+  if (!details.length) {
+    return [{ label, value: fallback }];
+  }
+  return details.map((detail) => ({
+    label,
+    scope,
+    detail,
+    value: formatGraphConflictObjectDetail(detail)
+  }));
+}
+
+function buildLatestHeadConflictObjectItems(props: {
+  latestHeadDetails: GraphConflictObjectDetail[];
+  latestHeadError?: string;
+  latestHeadLoading?: boolean;
+}) {
+  if (props.latestHeadLoading) {
+    return [{ label: "与最新图谱相比", value: "正在准备最新图谱的对象级差异明细" }];
+  }
+  if (props.latestHeadError) {
+    return [{ label: "与最新图谱相比", value: "暂时无法生成最新图谱的对象级差异明细" }];
+  }
+  return buildConflictObjectItems("与最新图谱相比", "latestHead", props.latestHeadDetails, "当前没有可优先核对的最新版本对象");
+}
+
+function hasConflictObjectDetail(item: ConflictObjectCardItem): item is Extract<ConflictObjectCardItem, { detail: GraphConflictObjectDetail }> {
+  return "detail" in item && "scope" in item;
+}
+
+function renderConflictResolutionButtons(input: {
+  detail: GraphConflictObjectDetail;
+  onChooseResolution: (
+    scope: GraphConflictObjectScope,
+    detail: GraphConflictObjectDetail,
+    choice: GraphConflictResolutionChoice
+  ) => void;
+  resolutionSelections: Record<string, GraphConflictResolutionChoice>;
+  scope: GraphConflictObjectScope;
+}) {
+  return conflictResolutionChoices.map((choice) => {
+    const selected = input.resolutionSelections[buildGraphConflictObjectDecisionKey(input.scope, input.detail)] === choice;
+    return (
+      <button
+        className={selected ? "secondary-button" : "ghost-button"}
+        key={`${input.scope}-${input.detail.id}-${choice}`}
+        onClick={() => input.onChooseResolution(input.scope, input.detail, choice)}
+        type="button"
+      >
+        {buildConflictResolutionButtonLabel(choice, input.scope, input.detail)}
+      </button>
+    );
+  });
+}
+
+function getSelectedResolutionLabel(
+  scope: GraphConflictObjectScope,
+  detail: GraphConflictObjectDetail,
+  resolutionSelections: Record<string, GraphConflictResolutionChoice>
+) {
+  const selected = resolutionSelections[buildGraphConflictObjectDecisionKey(scope, detail)];
+  return selected ? getGraphConflictResolutionChoiceLabel(selected) : "未标记";
+}
+
+function buildConflictResolutionButtonLabel(
+  choice: GraphConflictResolutionChoice,
+  scope: GraphConflictObjectScope,
+  detail: GraphConflictObjectDetail
+) {
+  return `${getGraphConflictResolutionChoiceLabel(choice)}（${getConflictScopeButtonLabel(scope)}）：${formatGraphConflictObjectDetail(detail)}`;
+}
+
+const conflictResolutionChoices: GraphConflictResolutionChoice[] = ["keep-local", "keep-latest", "review-later"];
+
+function getConflictScopeButtonLabel(scope: GraphConflictObjectScope) {
+  return scope === "localDraft" ? "当前未保存修改" : "与最新图谱相比";
 }

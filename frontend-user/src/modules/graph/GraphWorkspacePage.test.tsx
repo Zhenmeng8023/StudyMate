@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -105,6 +105,23 @@ function renderWorkspace() {
   );
 }
 
+async function openResourceTab(user: ReturnType<typeof userEvent.setup>, name: "图谱" | "来源" | "模板") {
+  const toggle = await screen.findByLabelText("打开资源面板");
+  await user.click(toggle);
+  await user.click(await screen.findByRole("button", { name }));
+}
+
+async function openInspectorTab(
+  user: ReturnType<typeof userEvent.setup>,
+  name: "概览" | "属性" | "来源" | "历史" | "导入"
+) {
+  const toggle = screen.queryByLabelText("打开检查器");
+  if (toggle) {
+    await user.click(toggle);
+  }
+  await user.click(await screen.findByRole("button", { name }));
+}
+
 describe("GraphWorkspacePage persistence states", () => {
   afterEach(() => {
     cleanup();
@@ -158,11 +175,11 @@ describe("GraphWorkspacePage persistence states", () => {
 
     renderWorkspace();
 
-    await expect(screen.findByRole("button", { name: "保存" })).resolves.toBeInTheDocument();
+    await expect(screen.findByRole("button", { name: /保存/ })).resolves.toBeInTheDocument();
     await user.click(screen.getByTitle("新建概念节点"));
     expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "保存" }));
+    await user.click(screen.getByRole("button", { name: /保存/ }));
 
     await expect(screen.findByText("保存服务暂不可用")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
@@ -198,16 +215,21 @@ describe("GraphWorkspacePage persistence states", () => {
 
     renderWorkspace();
 
-    await expect(screen.findByRole("button", { name: "保存" })).resolves.toBeInTheDocument();
+    await expect(screen.findByRole("button", { name: /保存/ })).resolves.toBeInTheDocument();
     await user.click(screen.getByTitle("新建概念节点"));
-    await user.click(screen.getByRole("button", { name: "保存" }));
+    await user.click(screen.getByRole("button", { name: /保存/ }));
 
     await expect(screen.findByText("图谱已被其他窗口更新，请刷新当前图谱后再保存。")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("图谱冲突辅助")).toHaveTextContent("先留存当前草稿，再决定是否重载");
     expect(screen.getByText("如果确认放弃本地修改：可直接重载最新图谱")).toBeInTheDocument();
     expect(screen.getByText("如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱")).toBeInTheDocument();
     expect(screen.getAllByText("节点：新增 1 个（新概念）")).toHaveLength(2);
+    expect(screen.getByText("建议优先核对的对象")).toBeInTheDocument();
+    expect(screen.getAllByText("节点｜新增｜新概念")).toHaveLength(2);
     await expect(screen.findByText("标题已修改（当前：Graph；基线：Graph on server）")).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "保留本地（当前未保存修改）：节点｜新增｜新概念" }));
+    await expect(screen.findByText("已标记对象级取舍：保留本地（节点｜新增｜新概念）")).resolves.toBeInTheDocument();
+    expect(screen.getByText("已标记：保留本地")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "复制冲突摘要" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "导出冲突摘要" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "复制最新图谱 JSON" })).toBeInTheDocument();
@@ -240,7 +262,7 @@ describe("GraphWorkspacePage persistence states", () => {
     await expect(
       screen.findByText(/已复制当前草稿 JSON，可在重载前留存本地修改|当前环境不支持复制当前草稿 JSON，请改用导出。/)
     ).resolves.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "重新加载最新图谱" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /重载最新图谱/ })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "放弃本地并重载最新图谱" }));
 
@@ -257,6 +279,7 @@ describe("GraphWorkspacePage persistence states", () => {
 
     renderWorkspace();
 
+    await openInspectorTab(user, "历史");
     await expect(screen.findByText("Before change")).resolves.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "恢复" }));
 
@@ -273,6 +296,7 @@ describe("GraphWorkspacePage persistence states", () => {
     await user.click(screen.getByRole("button", { name: /新建.*节点/ }));
     expect(screen.getByLabelText(/图谱保存状态：有未保存修改/)).toBeInTheDocument();
 
+    await openInspectorTab(user, "历史");
     await user.click(screen.getByRole("button", { name: /恢复/ }));
 
     await expect(screen.findByText(/未保存修改，请先保存后再恢复快照/)).resolves.toBeInTheDocument();
@@ -285,7 +309,7 @@ describe("GraphWorkspacePage persistence states", () => {
 
     renderWorkspace();
 
-    await expect(screen.findByRole("button", { name: "保存" })).resolves.toBeInTheDocument();
+    await expect(screen.findByRole("button", { name: /保存/ })).resolves.toBeInTheDocument();
     await user.click(screen.getByTitle("新建概念节点"));
     expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
     expect(window.sessionStorage.getItem(buildGraphWorkspaceDraftStorageKey("graph-1"))).not.toBeNull();
@@ -326,7 +350,7 @@ describe("GraphWorkspacePage persistence states", () => {
 
     renderWorkspace();
 
-    await expect(screen.findByRole("button", { name: "保存" })).resolves.toBeInTheDocument();
+    await expect(screen.findByRole("button", { name: /保存/ })).resolves.toBeInTheDocument();
     await user.click(screen.getByTitle("新建概念节点"));
     window.dispatchEvent(
       new StorageEvent("storage", {
@@ -343,7 +367,8 @@ describe("GraphWorkspacePage persistence states", () => {
     );
 
     await expect(screen.findByText("另一窗口已保存更高版本，请刷新图谱后再继续编辑。")).resolves.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "重新加载最新图谱" }));
+    await user.click(screen.getByRole("button", { name: "查看冲突处理" }));
+    await user.click(screen.getByRole("button", { name: "放弃本地并重载最新图谱" }));
 
     expect(confirmSpy).toHaveBeenCalledWith("重新加载最新图谱会丢弃当前未保存修改，确定继续吗？");
     await expect(screen.findByText("已重新加载最新图谱，未保存更改已放弃")).resolves.toBeInTheDocument();
@@ -411,7 +436,7 @@ describe("GraphWorkspacePage persistence states", () => {
 
     renderWorkspace();
 
-    await expect(screen.findByRole("button", { name: "保存" })).resolves.toBeInTheDocument();
+    await expect(screen.findByRole("button", { name: /保存/ })).resolves.toBeInTheDocument();
     expect(screen.getByRole("option", { name: "PDF 锚点" })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("选择新建节点类型"), { target: { value: "url" } });
@@ -437,6 +462,7 @@ describe("GraphWorkspacePage persistence states", () => {
 
     const { container } = renderWorkspace();
 
+    await openResourceTab(user, "模板");
     await expect(screen.findByRole("button", { name: /UML 类图/ })).resolves.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /UML 类图/ }));
 
@@ -451,8 +477,10 @@ describe("GraphWorkspacePage persistence states", () => {
 
     const { container } = renderWorkspace();
 
-    await expect(screen.findByRole("button", { name: "保存" })).resolves.toBeInTheDocument();
-    await user.click(screen.getAllByRole("button", { name: "JSON" })[1]);
+    await expect(screen.findByRole("button", { name: /保存/ })).resolves.toBeInTheDocument();
+    await openInspectorTab(user, "导入");
+    const inspector = screen.getByLabelText("图谱检查器");
+    await user.click(within(inspector).getByRole("button", { name: "JSON" }));
     const importInput = container.querySelector<HTMLTextAreaElement>(".graph-import-input");
     expect(importInput).not.toBeNull();
     fireEvent.change(
@@ -526,7 +554,7 @@ describe("GraphWorkspacePage persistence states", () => {
     await user.type(screen.getByLabelText("Updated URL URL"), "https://new.example.test/lesson");
 
     expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "保存" }));
+    await user.click(screen.getByRole("button", { name: /保存/ }));
 
     await waitFor(() => expect(batchSaveGraphMock).toHaveBeenCalled());
     const saveInput = batchSaveGraphMock.mock.calls.at(-1)?.[2];
@@ -584,7 +612,7 @@ describe("GraphWorkspacePage persistence states", () => {
     fireEvent.change(screen.getByLabelText("线条形态"), { target: { value: "curve" } });
 
     expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "保存" }));
+    await user.click(screen.getByRole("button", { name: /保存/ }));
 
     await waitFor(() => expect(batchSaveGraphMock).toHaveBeenCalled());
     const saveInput = batchSaveGraphMock.mock.calls.at(-1)?.[2];

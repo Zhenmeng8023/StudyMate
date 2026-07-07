@@ -19,6 +19,10 @@
 | WB-021 | DONE | 图谱 viewport/selection/history 抽离 | WB-020 | graph-core、GraphWorkspacePage | 撤销/重做、选择、视口状态可单测，页面层减少逻辑。 |
 | WB-022 | DONE | 图谱 import/export/validation 统一接口 | WB-020 | graph-core、graph module | Mermaid/Markdown/SVG 迁入统一接口并保留兼容性。 |
 | WB-023 | DONE | 图谱内核测试与迁移回归 | WB-021, WB-022 | graph-core tests | 序列化、撤销、导入错误、旧数据兼容有测试。 |
+| FE-000 | DONE | 前端现状审计与布局规格冻结 | WB-001 | `docs/engineering/`、`docs/design/` | 已固化前后端能力矩阵、页面状态矩阵、四类布局模式与图谱重构边界。 |
+| FE-010 | VERIFY | 多布局壳层与基础组件 | FE-000 | `frontend-user/src/app/`、`frontend-user/src/design-system/`、样式 | Standard / Studio / Canvas / Focus 路由布局可解析；Canvas 不挂全局 ContextPanel；基础组件与单测已添加，待完整依赖安装后跑类型检查与测试。 |
+| FE-020 | VERIFY | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；待完整依赖安装后跑类型检查、Vitest、构建和 Playwright。 |
+| FE-030 | VERIFY | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，待完整依赖安装后跑类型检查、Vitest、构建和 Playwright。 |
 
 ## P1：在 P0 稳定后推进
 
@@ -26,7 +30,7 @@
 |---|---|---|---|---|---|
 | WB-030 | DONE | 图谱 API 契约与生命周期整理 | WB-020 | graph routers/handlers/services/docs | graph/document/node/edge/group/snapshot 关系和版本策略清晰。 |
 | WB-031 | DONE | 图谱导出、缩略图与布局能力 | WB-030 | graph backend + frontend | 至少 JSON/SVG 导出；缩略图和布局有明确 API/任务模型。 |
-| WB-032 | IN_PROGRESS | 自动保存/快照/冲突处理可靠性 | WB-030, WB-021 | graph persistence | 保存可追溯、冲突可见、恢复安全；无静默覆盖。 |
+| WB-032 | IN_PROGRESS | 自动保存/快照/冲突处理可靠性 | WB-030, WB-021 | graph persistence | 保存可追溯、冲突可见、恢复安全；无静默覆盖，冲突导出物可携带人工合并清单、对象级明细与取舍草稿。 |
 | WB-033 | TODO | 图谱-复习学习反馈闭环 | WB-030 | graph/card/review | 复习结果可回写节点熟练度；卡片与来源节点可追溯。 |
 | WB-040 | TODO | 管理端真实只读数据页第一批 | WB-001 | admin backend + frontend-admin | 用户、内容、AI 任务/用量、审计至少展示真实数据。 |
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
@@ -45,6 +49,38 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：FE-010（验证中）
+
+- 执行日期：2026-07-02
+- 执行基线：`master@7b1e8f3a1e77dded69538d075758dc9529b31564`
+- 本轮完成：
+  - 新增 `layoutPolicy`，按路由解析 `standard` / `studio` / `canvas` / `focus` 四类工作模式。
+  - 将原 `ShellFrame` 缩为兼容层，新的 `AppShell` 统一编排布局、搜索、导航和上下文策略。
+  - 新增完整主导航、72px 紧凑导航和 `CommandBar`；图谱、阅读和笔记不再继承固定的 284px 主侧栏。
+  - Canvas 与 Focus 工作区不再渲染通用 `ContextPanel`；图谱第一步已回收全局右栏空间，未触碰图谱 document、保存、快照、导入导出或冲突协议。
+  - 新增 `Drawer`、`Inspector`、`DataState` 基础构件与布局 / 壳层 / 基础构件回归测试。
+  - 新增 FE-00 前端能力矩阵、布局重构规格和验收清单，作为 FE-020 的实现约束。
+- 验证状态：
+  - 已完成静态 diff 检查与 TypeScript 语法转译检查。
+  - 当前沙箱解析 npm 镜像时出现 `EAI_AGAIN`，因此 `npm --workspace frontend-user run typecheck`、Vitest、构建与 Playwright 仍待在具备依赖缓存或网络的开发环境中执行。
+- 后续推进：
+  - FE-020 图谱 CanvasLayout 与 FE-030 阅读、笔记、复习工作区体验对齐均已完成实现，待在具备完整 npm 依赖的环境复核运行测试。
+  - 下一项界面工作将继续把 WB-032 的节点级 / 边级人工冲突应用动作接入新的图谱 Inspector；当前已先落地对象级冲突明细与取舍草稿展示。
+
+### 执行记录：FE-020 / FE-030（验证中）
+
+- 执行日期：2026-07-02
+- 执行基线：`master@7b1e8f3a1e77dded69538d075758dc9529b31564`
+- 本轮完成：
+  - 图谱页面升级为 CanvasLayout：资源区、画布与 Inspector 按屏幕宽度自动切换为并列或覆盖式 Dock。
+  - 阅读与笔记升级为 StudioLayout：资料 / 笔记资源区与来源、版本、草稿检查器均可按需收起。
+  - 复习页升级为 FocusLayout：单任务卡片舞台、键盘翻面和评分、按需卡组管理面板。
+  - 保持 GraphDocument、版本、快照、来源关系、导入导出、阅读、笔记和复习 API 契约不变。
+- 验证状态：
+  - 已完成 TypeScript 源码语法转译、文档同步、空白字符和交付压缩包完整性检查。
+  - 当前环境缺少完整 npm 依赖，类型检查、Vitest、构建与 Playwright 待在本机或 CI 执行。
+
 
 ### 执行记录：WB-032（进行中）
 
@@ -80,6 +116,9 @@
   - 图谱冲突辅助卡片现在还会基于“最后一次已同步成功的图谱基线”展示当前未保存修改摘要，先告诉用户自己到底改了什么，再决定是否留存或放弃。
   - 图谱冲突辅助卡片现在还会静默拉取服务端最新 head，并并列展示“与最新图谱相比”的差异摘要，让用户不只知道自己本地改了什么，还知道这些改动与最新版本之间的主要差异。
   - 差异摘要已从“只有数量”进一步细化到“数量 + 关键对象名”，例如直接提示新增/修改的是哪些节点、哪些标题不一致，降低用户看到摘要后还要自己回画布猜测的成本。
+  - 新导出的冲突摘要和冲突处理包现在都会附带“建议的人工合并步骤”清单，把留存草稿、核对本地摘要、核对最新 head 差异和最终是否重载的顺序直接写进导出物。
+  - 冲突辅助卡片、冲突摘要和冲突处理包现在还会共享对象级 `node / edge / group` 差异明细，统一使用 `节点｜新增｜新概念` 这类文本格式，为后续对象级保留 / 舍弃操作打底。
+  - 冲突辅助卡片现在还允许对每条对象级明细标记 `保留本地 / 保留服务端 / 稍后处理`，这些取舍草稿会同步进入 Markdown 冲突摘要和冲突处理包的 `resolutionDraft` 字段。
 - 验证：
   - `go test ./internal/modules/graph/service`
   - `go test ./internal/modules/graph/...`
@@ -97,7 +136,7 @@
   - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
   - `npm run verify:docs`
 - 后续待续：
-  - 继续补保留/合并取舍辅助与更强的多端 conflict handling，再将 `WB-032` 标记为完成。
+  - 继续补节点级 / 边级取舍草稿之上的显式应用动作与更强的多端 conflict handling，再将 `WB-032` 标记为完成。
 
 ### 执行记录：WB-031
 

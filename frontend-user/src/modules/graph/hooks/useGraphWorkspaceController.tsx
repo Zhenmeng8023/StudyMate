@@ -1,15 +1,4 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Download,
-  Keyboard,
-  Plus,
-  Redo2,
-  Search,
-  Trash2,
-  Undo2,
-  ZoomIn,
-  ZoomOut
-} from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   parseGraphFocusPreviewSearch,
@@ -51,9 +40,7 @@ import {
 } from "../nodeAppearance";
 import {
   GraphContextMenuPanel,
-  GraphKeyboardGuidePanel,
-  GraphSettingsPanel,
-  GraphValidationIssueList
+  GraphKeyboardGuidePanel
 } from "../components/GraphWorkspacePanels";
 import {
   GraphConflictAssistCard,
@@ -62,10 +49,19 @@ import {
 } from "../components/GraphWorkspaceStageChrome";
 import { GraphWorkspaceRecoveryPanel } from "../components/GraphWorkspaceRecoveryPanel";
 import {
-  GraphWorkspaceHeader,
   GraphWorkspaceSourceRail,
-  GraphWorkspaceToolbar
+  GraphWorkspaceToolbar,
+  type GraphWorkspaceResourceTab
 } from "../components/GraphWorkspaceShell";
+import {
+  GraphWorkspaceCanvasCommandBar,
+  GraphWorkspaceDrawerHeading,
+  GraphWorkspaceInspectorHeading,
+  GraphWorkspaceInspectorTabs,
+  GraphWorkspaceResourceTabs,
+  type GraphInspectorTab
+} from "../components/GraphWorkspaceCanvasChrome";
+import { GraphWorkspaceOverviewPanel } from "../components/GraphWorkspaceOverviewPanel";
 import { GraphWorkspaceSourceSummary } from "../components/GraphWorkspaceSourceSummary";
 import { GraphWorkspaceSelectionPanel } from "../components/GraphWorkspaceSelectionPanel";
 import { GraphWorkspaceImportPanel } from "../components/GraphWorkspaceImportPanel";
@@ -122,8 +118,16 @@ import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
 import { buildGraphTemplateImportDraft } from "../lib/graphTemplateApplication";
 import {
   buildGraphConflictBundleArtifact,
+  buildGraphConflictObjectDetails,
+  buildGraphConflictObjectDecisionKey,
+  buildGraphConflictResolutionDrafts,
   buildGraphConflictReportArtifact,
-  buildGraphUnsavedChangeSummary
+  buildGraphUnsavedChangeSummary,
+  formatGraphConflictObjectDetail,
+  getGraphConflictResolutionChoiceLabel,
+  type GraphConflictObjectDetail,
+  type GraphConflictObjectScope,
+  type GraphConflictResolutionChoice
 } from "../lib/graphConflictSummary";
 import {
   clearGraphWorkspaceLocalDraft,
@@ -190,10 +194,15 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [reloadLatestSuggested, setReloadLatestSuggested] = useState(false);
   const [conflictArtifactsCaptured, setConflictArtifactsCaptured] = useState(false);
   const [manualMergeDeferred, setManualMergeDeferred] = useState(false);
+  const [conflictResolutionSelections, setConflictResolutionSelections] = useState<Record<string, GraphConflictResolutionChoice>>({});
   const [latestConflictDetail, setLatestConflictDetail] = useState<GraphDetailPayload | null>(null);
   const [latestConflictError, setLatestConflictError] = useState("");
   const [latestConflictLoading, setLatestConflictLoading] = useState(false);
   const [graphSearch, setGraphSearch] = useState("");
+  const [resourcePanelOpen, setResourcePanelOpen] = useState(false);
+  const [resourceTab, setResourceTab] = useState<GraphWorkspaceResourceTab>("graphs");
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [inspectorTab, setInspectorTab] = useState<GraphInspectorTab>("overview");
   const [importMode, setImportMode] = useState<ImportMode>("markdown");
   const [importSource, setImportSource] = useState("# 学习主题\n## 核心概念\n## 待复习问题");
   const [quickNodeType, setQuickNodeType] = useState<GraphNodeCreationType>("text");
@@ -306,10 +315,56 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     () => buildGraphUnsavedChangeSummary(graphDetail, lastSyncedDetailRef.current),
     [graphDetail]
   );
+  const unsavedChangeDetails = useMemo(
+    () => buildGraphConflictObjectDetails(graphDetail, lastSyncedDetailRef.current),
+    [graphDetail]
+  );
   const latestHeadConflictSummary = useMemo(
     () => buildGraphUnsavedChangeSummary(graphDetail, latestConflictDetail),
     [graphDetail, latestConflictDetail]
   );
+  const latestHeadConflictDetails = useMemo(
+    () => buildGraphConflictObjectDetails(graphDetail, latestConflictDetail),
+    [graphDetail, latestConflictDetail]
+  );
+  const conflictResolutionDrafts = useMemo(
+    () =>
+      buildGraphConflictResolutionDrafts({
+        changeDetails: unsavedChangeDetails,
+        latestHeadDetails: latestHeadConflictDetails,
+        selections: conflictResolutionSelections
+      }),
+    [conflictResolutionSelections, latestHeadConflictDetails, unsavedChangeDetails]
+  );
+
+  useEffect(() => {
+    if (!selectedNode && !selectedEdge) {
+      return;
+    }
+    setInspectorTab("selection");
+    setInspectorOpen(true);
+    if (typeof window !== "undefined" && window.innerWidth < 1600) {
+      setResourcePanelOpen(false);
+    }
+  }, [selectedEdge?.id, selectedNode?.id]);
+
+  useEffect(() => {
+    if (!reloadLatestSuggested || !dirty) {
+      return;
+    }
+    setInspectorTab("conflict");
+    setInspectorOpen(true);
+    if (typeof window !== "undefined" && window.innerWidth < 1600) {
+      setResourcePanelOpen(false);
+    }
+  }, [dirty, reloadLatestSuggested]);
+
+  useEffect(() => {
+    if (inspectorTab === "conflict" && (!reloadLatestSuggested || !dirty)) {
+      setInspectorTab("overview");
+    }
+  }, [dirty, inspectorTab, reloadLatestSuggested]);
+
   function setWorkspaceStatusMessage(message: string, options?: { suggestReload?: boolean }) {
     setStatusMessage(message);
     setReloadLatestSuggested(Boolean(options?.suggestReload));
@@ -320,6 +375,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     if (!reloadLatestSuggested || !dirty || !currentGraphId) {
       setConflictArtifactsCaptured(false);
       setManualMergeDeferred(false);
+      setConflictResolutionSelections({});
       setLatestConflictDetail(null);
       setLatestConflictError("");
       setLatestConflictLoading(false);
@@ -879,6 +935,32 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     );
   }
 
+  function handleConflictResolutionChoice(
+    scope: GraphConflictObjectScope,
+    detail: GraphConflictObjectDetail,
+    choice: GraphConflictResolutionChoice
+  ) {
+    const key = buildGraphConflictObjectDecisionKey(scope, detail);
+    const currentChoice = conflictResolutionSelections[key];
+    const nextChoice = currentChoice === choice ? null : choice;
+    const nextSelections = nextChoice
+      ? { ...conflictResolutionSelections, [key]: nextChoice }
+      : Object.fromEntries(Object.entries(conflictResolutionSelections).filter(([entryKey]) => entryKey !== key));
+
+    setConflictResolutionSelections(nextSelections);
+    setManualMergeDeferred(true);
+    if (nextChoice) {
+      setWorkspaceStatusMessage(
+        `已标记对象级取舍：${getGraphConflictResolutionChoiceLabel(nextChoice)}（${formatGraphConflictObjectDetail(detail)}）`,
+        { suggestReload: true }
+      );
+      return;
+    }
+    setWorkspaceStatusMessage(`已取消对象级取舍标记：${formatGraphConflictObjectDetail(detail)}`, {
+      suggestReload: true
+    });
+  }
+
   async function copyConflictDraftJson() {
     const current = detailRef.current;
     if (!current) {
@@ -909,11 +991,14 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
 
     try {
       const exported = buildGraphConflictReportArtifact({
+        changeDetails: unsavedChangeDetails,
         current,
         changeSummary: unsavedChangeSummary,
+        latestHeadDetails: latestHeadConflictDetails,
         latestHeadError: latestConflictError,
         latestHeadLoading: latestConflictLoading,
-        latestHeadSummary: latestHeadConflictSummary
+        latestHeadSummary: latestHeadConflictSummary,
+        resolutionDrafts: conflictResolutionDrafts
       });
       const clipboard = window.navigator?.clipboard;
       if (!clipboard || typeof clipboard.writeText !== "function") {
@@ -953,11 +1038,14 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
 
     try {
       const exported = buildGraphConflictReportArtifact({
+        changeDetails: unsavedChangeDetails,
         current,
         changeSummary: unsavedChangeSummary,
+        latestHeadDetails: latestHeadConflictDetails,
         latestHeadError: latestConflictError,
         latestHeadLoading: latestConflictLoading,
-        latestHeadSummary: latestHeadConflictSummary
+        latestHeadSummary: latestHeadConflictSummary,
+        resolutionDrafts: conflictResolutionDrafts
       });
       downloadTextFile(exported.filename, exported.content, exported.mimeType);
       setConflictArtifactsCaptured(true);
@@ -1016,19 +1104,25 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       const currentDraftArtifact = buildGraphExportArtifact({ detail: current, kind: "json" });
       const latestHeadArtifact = buildGraphExportArtifact({ detail: latest, kind: "json" });
       const reportArtifact = buildGraphConflictReportArtifact({
+        changeDetails: unsavedChangeDetails,
         current,
         changeSummary: unsavedChangeSummary,
+        latestHeadDetails: latestHeadConflictDetails,
         latestHeadError: latestConflictError,
         latestHeadLoading: latestConflictLoading,
-        latestHeadSummary: latestHeadConflictSummary
+        latestHeadSummary: latestHeadConflictSummary,
+        resolutionDrafts: conflictResolutionDrafts
       });
       const bundleArtifact = buildGraphConflictBundleArtifact({
+        changeDetails: unsavedChangeDetails,
         current,
         changeSummary: unsavedChangeSummary,
         currentDraftArtifact,
         latestHeadArtifact,
+        latestHeadDetails: latestHeadConflictDetails,
         latestHeadSummary: latestHeadConflictSummary,
-        reportArtifact
+        reportArtifact,
+        resolutionDrafts: conflictResolutionDrafts
       });
       downloadTextFile(bundleArtifact.filename, bundleArtifact.content, bundleArtifact.mimeType);
       setConflictArtifactsCaptured(true);
@@ -1517,6 +1611,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setImportMode(draft.importMode);
     setImportSource(draft.importSource);
     setWorkspaceStatusMessage(draft.status);
+    // Applying a template is an import-preparation action. Move the user directly
+    // to the dedicated inspector instead of leaving the generated draft hidden.
+    handleInspectorTabChange("import");
   }
 
   async function handleCreateGraph() {
@@ -1573,34 +1670,141 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     }
   }
 
+  function shouldUseOverlayDock() {
+    return typeof window !== "undefined" && window.innerWidth < 1600;
+  }
+
+  function handleResourceTabChange(tab: GraphWorkspaceResourceTab) {
+    setResourceTab(tab);
+    setResourcePanelOpen(true);
+    if (shouldUseOverlayDock()) {
+      setInspectorOpen(false);
+    }
+  }
+
+  function handleInspectorTabChange(tab: GraphInspectorTab) {
+    setInspectorTab(tab);
+    setInspectorOpen(true);
+    if (shouldUseOverlayDock()) {
+      setResourcePanelOpen(false);
+    }
+  }
+
+  function toggleResourcePanel() {
+    setResourcePanelOpen((current) => {
+      const next = !current;
+      if (next && shouldUseOverlayDock()) {
+        setInspectorOpen(false);
+      }
+      return next;
+    });
+  }
+
+  function toggleInspectorPanel() {
+    setInspectorOpen((current) => {
+      const next = !current;
+      if (next && shouldUseOverlayDock()) {
+        setResourcePanelOpen(false);
+      }
+      return next;
+    });
+  }
+
+  function handleGraphTitleChange(title: string) {
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
+    const nextDetail = { ...current, title };
+    const nextHistory = { ...historyRef.current, dirty: true };
+    detailRef.current = nextDetail;
+    historyRef.current = nextHistory;
+    setGraphDetail(nextDetail);
+    setHistoryState(nextHistory);
+    setSaveState("dirty");
+    replaceGraphSummary(nextDetail);
+  }
+
+  function handleGraphDescriptionChange(description: string) {
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
+    const nextDetail = { ...current, description };
+    const nextHistory = { ...historyRef.current, dirty: true };
+    detailRef.current = nextDetail;
+    historyRef.current = nextHistory;
+    setGraphDetail(nextDetail);
+    setHistoryState(nextHistory);
+    setSaveState("dirty");
+    replaceGraphSummary(nextDetail);
+  }
+
   const visibleMaterials = materials.slice(0, 6);
   const visibleNotes = notes.slice(0, 6);
+  const hasConflict = reloadLatestSuggested && dirty;
+  const hasSelection = Boolean(selectedNode || selectedEdge || selectedNodes.length > 1);
+
+  useEffect(() => {
+    if (hasSelection) {
+      setInspectorOpen(true);
+      setInspectorTab("selection");
+    }
+  }, [hasSelection, selectedEdgeId, selectedNodeId, selectedNodeIds.length]);
+
+  useEffect(() => {
+    if (hasConflict) {
+      setInspectorOpen(true);
+      setInspectorTab("conflict");
+    }
+  }, [hasConflict]);
 
   return (
-    <>
-      <GraphWorkspaceHeader
+    <div
+      className="graph-canvas-workspace"
+      data-inspector-open={inspectorOpen}
+      data-resource-open={resourcePanelOpen}
+    >
+      <GraphWorkspaceCanvasCommandBar
         graphDetail={graphDetail}
+        inspectorOpen={inspectorOpen}
         onCreateGraph={() => void handleCreateGraph()}
         onSave={() => void saveCurrentGraph("手动保存")}
+        onToggleInspector={toggleInspectorPanel}
+        onToggleResources={toggleResourcePanel}
+        resourcesOpen={resourcePanelOpen}
         saveState={saveState}
         saveStateLabel={saveStateLabel}
         saving={saving}
       />
 
-      <div className="graph-workspace-grid">
-        <GraphWorkspaceSourceRail
-          diagramTemplates={diagramTemplates}
-          graphDetail={graphDetail}
-          graphs={graphs}
-          materials={visibleMaterials}
-          notes={visibleNotes}
-          onAddMaterialNode={addMaterialNode}
-          onAddNoteNode={addNoteNode}
-          onApplyTemplate={applyTemplate}
-          onOpenGraph={(graphId) => void openGraph(graphId)}
-        />
+      <div className="graph-canvas-workspace__body">
+        {resourcePanelOpen ? (
+          <aside className="graph-resource-drawer" aria-label="图谱资源面板">
+            <GraphWorkspaceDrawerHeading
+              description="在图谱、来源资料和模板之间切换。"
+              onClose={() => setResourcePanelOpen(false)}
+              title="资源"
+            />
+            <GraphWorkspaceResourceTabs activeTab={resourceTab} onChange={handleResourceTabChange} />
+            <div className="graph-resource-drawer__body">
+              <GraphWorkspaceSourceRail
+                activeTab={resourceTab}
+                diagramTemplates={diagramTemplates}
+                graphDetail={graphDetail}
+                graphs={graphs}
+                materials={visibleMaterials}
+                notes={visibleNotes}
+                onAddMaterialNode={addMaterialNode}
+                onAddNoteNode={addNoteNode}
+                onApplyTemplate={applyTemplate}
+                onOpenGraph={(graphId) => void openGraph(graphId)}
+              />
+            </div>
+          </aside>
+        ) : null}
 
-        <section className="graph-stage-panel">
+        <section className="graph-canvas-stage-panel" aria-label="图谱画布">
           <GraphWorkspaceToolbar
             graphDetail={graphDetail}
             graphSearch={graphSearch}
@@ -1630,37 +1834,16 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             showKeyboardGuide={showKeyboardGuide}
           />
 
-          <div className="graph-stage-shell">
+          <div className="graph-stage-shell graph-stage-shell--canvas">
             <GraphStageStatus
               alignmentHintLabels={alignmentHintLabels}
               graphDetail={graphDetail}
               loading={loading}
-              onStatusAction={reloadLatestSuggested ? () => void reloadLatestGraph() : undefined}
+              onStatusAction={hasConflict ? () => handleInspectorTabChange("conflict") : undefined}
               selectedNodeCount={selectedNodeIds.length}
-              statusActionLabel={reloadLatestSuggested ? "重新加载最新图谱" : undefined}
+              statusActionLabel={hasConflict ? "查看冲突处理" : undefined}
               statusMessage={statusMessage}
             />
-
-            {reloadLatestSuggested && dirty ? (
-              <GraphConflictAssistCard
-                changeSummary={unsavedChangeSummary}
-                latestHeadAvailable={Boolean(latestConflictDetail)}
-                latestHeadError={latestConflictError}
-                latestHeadLoading={latestConflictLoading}
-                latestHeadSummary={latestHeadConflictSummary}
-                manualMergeDeferred={manualMergeDeferred}
-                materialsCaptured={conflictArtifactsCaptured}
-                onDeferManualMerge={deferManualMergeUntilLater}
-                onExportConflictBundle={exportConflictBundle}
-                onReloadLatest={() => void reloadLatestGraph()}
-                onCopyLatestJson={() => void copyLatestConflictJson()}
-                onCopySummaryReport={() => void copyConflictSummaryReport()}
-                onCopyDraftJson={() => void copyConflictDraftJson()}
-                onExportLatestJson={exportLatestConflictJson}
-                onExportSummaryReport={exportConflictSummaryReport}
-                onExportDraftJson={exportConflictDraftJson}
-              />
-            ) : null}
 
             <GraphStageCanvas
               alignmentGuides={alignmentGuides}
@@ -1693,296 +1876,293 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
               stageWidth={stageWidth}
               visibleNodes={visibleNodes}
             >
-                  {showKeyboardGuide ? <GraphKeyboardGuidePanel onClose={() => setShowKeyboardGuide(false)} /> : null}
-                  {contextMenu ? (
-                    <GraphContextMenuPanel
-                      contextMenu={contextMenu}
-                      hasSourceTarget={Boolean(contextMenuSourceBacklink)}
-                      isLinkStartSelected={linkFromNodeId === contextMenu.nodeId}
-                      onCreateCanvasMaterialNode={() => {
-                        createNode("material");
-                        closeContextMenu();
-                      }}
-                      onCreateCanvasNoteNode={() => {
-                        createNode("rich-note");
-                        closeContextMenu();
-                      }}
-                      onCreateCanvasTextNode={() => {
-                        createNode("text");
-                        closeContextMenu();
-                      }}
-                      onCreateGroup={() => {
-                        if (contextMenuNode) {
-                          createGroupForNode(contextMenuNode);
-                        }
-                        closeContextMenu();
-                      }}
-                      onDeleteEdge={() => {
-                        if (detailRef.current) {
-                          const result = deleteGraphWorkspaceSelection(detailRef.current.document, {
-                            linkFromNodeId,
-                            selectedEdgeId: contextMenu.edgeId || "",
-                            selectedNodeIds: []
-                          });
-                          applyWorkspaceMutation(result);
-                        }
-                        closeContextMenu();
-                      }}
-                      onDeleteNode={() => {
-                        const nodeId = contextMenu.nodeId || "";
-                        if (detailRef.current) {
-                          const result = deleteGraphWorkspaceNode(detailRef.current.document, nodeId, {
-                            linkFromNodeId,
-                            selectedNodeIds
-                          });
-                          applyWorkspaceMutation(result);
-                        }
-                        closeContextMenu();
-                      }}
-                      onDuplicateNode={() => {
-                        duplicateNode(contextMenu.nodeId || "");
-                        closeContextMenu();
-                      }}
-                      onExportPng={() => {
-                        void graphImportExport.exportPng();
-                        closeContextMenu();
-                      }}
-                      onFocusNode={() => {
-                        if (contextMenuNode) {
-                          graphViewport.focusNode(contextMenuNode);
-                        }
-                        closeContextMenu();
-                      }}
-                      onOpenSource={() => {
-                        if (contextMenuSourceBacklink) {
-                          navigate(contextMenuSourceBacklink.target);
-                        }
-                        closeContextMenu();
-                      }}
-                      onToggleEdgeKind={() => {
-                        mutateDocument((draft) => {
-                          draft.edges = draft.edges.map((edge) =>
-                            edge.id === contextMenu.edgeId
-                              ? { ...edge, kind: edge.kind === "curve" ? "straight" : "curve" }
-                              : edge
-                          );
-                        });
-                        closeContextMenu();
-                      }}
-                      onToggleLinkStart={() => {
-                        setLinkFromNodeId((current) => (current === contextMenu.nodeId ? "" : contextMenu.nodeId || ""));
-                        setSingleNodeSelection(contextMenu.nodeId || "");
-                        closeContextMenu();
-                      }}
-                    />
-                  ) : null}
+              {showKeyboardGuide ? <GraphKeyboardGuidePanel onClose={() => setShowKeyboardGuide(false)} /> : null}
+              {contextMenu ? (
+                <GraphContextMenuPanel
+                  contextMenu={contextMenu}
+                  hasSourceTarget={Boolean(contextMenuSourceBacklink)}
+                  isLinkStartSelected={linkFromNodeId === contextMenu.nodeId}
+                  onCreateCanvasMaterialNode={() => {
+                    createNode("material");
+                    closeContextMenu();
+                  }}
+                  onCreateCanvasNoteNode={() => {
+                    createNode("rich-note");
+                    closeContextMenu();
+                  }}
+                  onCreateCanvasTextNode={() => {
+                    createNode("text");
+                    closeContextMenu();
+                  }}
+                  onCreateGroup={() => {
+                    if (contextMenuNode) {
+                      createGroupForNode(contextMenuNode);
+                    }
+                    closeContextMenu();
+                  }}
+                  onDeleteEdge={() => {
+                    if (detailRef.current) {
+                      const result = deleteGraphWorkspaceSelection(detailRef.current.document, {
+                        linkFromNodeId,
+                        selectedEdgeId: contextMenu.edgeId || "",
+                        selectedNodeIds: []
+                      });
+                      applyWorkspaceMutation(result);
+                    }
+                    closeContextMenu();
+                  }}
+                  onDeleteNode={() => {
+                    const nodeId = contextMenu.nodeId || "";
+                    if (detailRef.current) {
+                      const result = deleteGraphWorkspaceNode(detailRef.current.document, nodeId, {
+                        linkFromNodeId,
+                        selectedNodeIds
+                      });
+                      applyWorkspaceMutation(result);
+                    }
+                    closeContextMenu();
+                  }}
+                  onDuplicateNode={() => {
+                    duplicateNode(contextMenu.nodeId || "");
+                    closeContextMenu();
+                  }}
+                  onExportPng={() => {
+                    void graphImportExport.exportPng();
+                    closeContextMenu();
+                  }}
+                  onFocusNode={() => {
+                    if (contextMenuNode) {
+                      graphViewport.focusNode(contextMenuNode);
+                    }
+                    closeContextMenu();
+                  }}
+                  onOpenSource={() => {
+                    if (contextMenuSourceBacklink) {
+                      navigate(contextMenuSourceBacklink.target);
+                    }
+                    closeContextMenu();
+                  }}
+                  onToggleEdgeKind={() => {
+                    mutateDocument((draft) => {
+                      draft.edges = draft.edges.map((edge) =>
+                        edge.id === contextMenu.edgeId
+                          ? { ...edge, kind: edge.kind === "curve" ? "straight" : "curve" }
+                          : edge
+                      );
+                    });
+                    closeContextMenu();
+                  }}
+                  onToggleLinkStart={() => {
+                    setLinkFromNodeId((current) => (current === contextMenu.nodeId ? "" : contextMenu.nodeId || ""));
+                    setSingleNodeSelection(contextMenu.nodeId || "");
+                    closeContextMenu();
+                  }}
+                />
+              ) : null}
             </GraphStageCanvas>
           </div>
         </section>
 
-        <section className="graph-inspector">
-          <div className="graph-rail-section">
-            <div className="section-frame-head compact">
-              <div>
-                <p className="eyebrow">图谱信息</p>
-                <h2>当前画布</h2>
-              </div>
-            </div>
+        {inspectorOpen ? (
+          <aside className="graph-canvas-inspector" aria-label="图谱检查器">
+            <GraphWorkspaceInspectorHeading
+              hasConflict={hasConflict}
+              onClose={() => setInspectorOpen(false)}
+              title={inspectorTab === "selection" ? "节点属性" : inspectorTab === "sources" ? "来源关系" : inspectorTab === "history" ? "历史与卡片" : inspectorTab === "import" ? "导入与校验" : inspectorTab === "conflict" ? "冲突处理" : "图谱概览"}
+            />
+            <GraphWorkspaceInspectorTabs
+              activeTab={inspectorTab}
+              hasConflict={hasConflict}
+              hasSelection={hasSelection}
+              onChange={handleInspectorTabChange}
+            />
+            <div className="graph-canvas-inspector__body">
+              {inspectorTab === "overview" ? (
+                <GraphWorkspaceOverviewPanel
+                  graphDetail={graphDetail}
+                  onDelete={() => void handleDeleteCurrentGraph()}
+                  onDescriptionChange={handleGraphDescriptionChange}
+                  onTitleChange={handleGraphTitleChange}
+                  saving={saving}
+                  settingsSections={settingsSections}
+                />
+              ) : null}
 
-            {graphDetail ? (
-              <div className="graph-form-stack">
-                <label>
-                  <span>标题</span>
-                  <input
-                    onChange={(event) => {
-                      const current = detailRef.current;
-                      if (!current) {
-                        return;
-                      }
-                      const nextDetail = { ...current, title: event.target.value };
-                      const nextHistory = { ...historyRef.current, dirty: true };
-                      detailRef.current = nextDetail;
-                      historyRef.current = nextHistory;
-                      setGraphDetail(nextDetail);
-                      setHistoryState(nextHistory);
-                      setSaveState("dirty");
-                      replaceGraphSummary(nextDetail);
-                    }}
-                    value={graphDetail.title}
+              {inspectorTab === "selection" ? (
+                <GraphWorkspaceSelectionPanel
+                  batchEmphasis={batchEmphasis ?? "default"}
+                  batchSizePreset={batchSizePreset ?? "default"}
+                  batchTone={batchTone ?? "neutral"}
+                  groups={document?.groups ?? []}
+                  onAlignSelectedNodes={alignSelectedNodes}
+                  onApplyBatchEmphasis={applyBatchEmphasis}
+                  onApplyBatchSizePreset={applyBatchSizePreset}
+                  onApplyBatchTone={applyBatchTone}
+                  onClearNodeSelection={clearNodeSelection}
+                  onCreateGroupFromSelectedNode={createGroupFromSelectedNode}
+                  onCreateSourceGroupsFromSelection={createSourceGroupsFromSelection}
+                  onCreateSourceSwimlanesFromSelection={createSourceSwimlanesFromSelection}
+                  onDeleteSelectedNodes={deleteSelectedNodes}
+                  onDistributeSelectedNodes={distributeSelectedNodes}
+                  onEdgeKindChange={(kind) =>
+                    selectedEdge
+                      ? mutateDocument((draft) => {
+                          draft.edges = draft.edges.map((edge) => (edge.id === selectedEdge.id ? { ...edge, kind } : edge));
+                        })
+                      : undefined
+                  }
+                  onEdgeLabelChange={(label) =>
+                    selectedEdge
+                      ? mutateDocument((draft) => {
+                          draft.edges = draft.edges.map((edge) => (edge.id === selectedEdge.id ? { ...edge, label } : edge));
+                        })
+                      : undefined
+                  }
+                  onGroupTitleChange={(groupId, title) =>
+                    mutateDocument((draft) => {
+                      draft.groups = draft.groups.map((item) => (item.id === groupId ? { ...item, title } : item));
+                    })
+                  }
+                  onNodeDetailChange={(detail) =>
+                    selectedNode
+                      ? mutateDocument((draft) => {
+                          draft.nodes = draft.nodes.map((node) =>
+                            node.id === selectedNode.id ? patchNodeAppearance(node, { detail }) : node
+                          );
+                        })
+                      : undefined
+                  }
+                  onNodeEmphasisChange={(emphasis) =>
+                    selectedNode
+                      ? mutateDocument((draft) => {
+                          draft.nodes = draft.nodes.map((node) =>
+                            node.id === selectedNode.id ? patchNodeAppearance(node, { emphasis }) : node
+                          );
+                        })
+                      : undefined
+                  }
+                  onNodeMetadataFieldChange={(field, value) =>
+                    selectedNode
+                      ? mutateDocument(
+                          (draft) => {
+                            draft.nodes = draft.nodes.map((node) =>
+                              node.id === selectedNode.id ? patchGraphNodeMetadataField(node, field, value) : node
+                            );
+                          },
+                          { label: `编辑${getGraphNodeMetadataEditorFields(selectedNode).find((item) => item.field === field)?.label ?? "节点元数据"}` }
+                        )
+                      : undefined
+                  }
+                  onNodeSizePresetChange={(preset) =>
+                    selectedNode
+                      ? mutateDocument((draft) => {
+                          draft.nodes = draft.nodes.map((node) =>
+                            node.id === selectedNode.id ? resizeNodeToPreset(node, preset) : node
+                          );
+                        })
+                      : undefined
+                  }
+                  onNodeTitleChange={(title) =>
+                    selectedNode
+                      ? mutateDocument((draft) => {
+                          draft.nodes = draft.nodes.map((node) => (node.id === selectedNode.id ? { ...node, title } : node));
+                        })
+                      : undefined
+                  }
+                  onNodeToneChange={(tone) =>
+                    selectedNode
+                      ? mutateDocument((draft) => {
+                          draft.nodes = draft.nodes.map((node) =>
+                            node.id === selectedNode.id ? patchNodeAppearance(node, { tone }) : node
+                          );
+                        })
+                      : undefined
+                  }
+                  onOpenSource={(target) => navigate(target)}
+                  onOrganizeSelectedNodesBySource={organizeSelectedNodesBySource}
+                  onToggleGroupCollapse={toggleGroupCollapse}
+                  selectedEdge={selectedEdge}
+                  selectedNode={selectedNode}
+                  selectedNodeIds={selectedNodeIds}
+                  selectedNodeSourceBacklink={selectedNodeSourceBacklink}
+                  selectedNodes={selectedNodes}
+                  selectedSourceSummary={selectedSourceSummary}
+                />
+              ) : null}
+
+              {inspectorTab === "sources" ? (
+                <GraphWorkspaceSourceSummary
+                  onOpenSource={(target) => navigate(target)}
+                  summary={sourceReferenceSummary}
+                />
+              ) : null}
+
+              {inspectorTab === "history" ? (
+                <GraphWorkspaceRecoveryPanel
+                  canGenerateCards={Boolean(selectedNode)}
+                  cardDrafts={cardDrafts}
+                  decks={decks}
+                  onCommitCardDrafts={() => void handleCommitCardDrafts()}
+                  onDraftDeckChange={setSelectedDraftDeckId}
+                  onDraftFieldChange={handleDraftFieldChange}
+                  onGenerateCards={() => void handleGenerateCards()}
+                  onRestoreSnapshot={(versionNumber) => void restoreSnapshot(versionNumber)}
+                  saving={saving}
+                  selectedDraftDeckId={selectedDraftDeckId}
+                  snapshots={snapshots}
+                />
+              ) : null}
+
+              {inspectorTab === "import" ? (
+                <GraphWorkspaceImportPanel
+                  canImport={Boolean(graphDetail)}
+                  canValidate={Boolean(graphDetail)}
+                  importMode={importMode}
+                  importSource={importSource}
+                  onImport={() => void graphImportExport.importGraph()}
+                  onImportModeChange={setImportMode}
+                  onImportSourceChange={setImportSource}
+                  onValidate={() => void handleValidateGraph()}
+                  saving={saving}
+                  validationIssues={validationIssues}
+                />
+              ) : null}
+
+              {inspectorTab === "conflict" ? (
+                hasConflict ? (
+                  <GraphConflictAssistCard
+                    changeDetails={unsavedChangeDetails}
+                    changeSummary={unsavedChangeSummary}
+                    latestHeadAvailable={Boolean(latestConflictDetail)}
+                    latestHeadDetails={latestHeadConflictDetails}
+                    latestHeadError={latestConflictError}
+                    latestHeadLoading={latestConflictLoading}
+                    latestHeadSummary={latestHeadConflictSummary}
+                    manualMergeDeferred={manualMergeDeferred}
+                    materialsCaptured={conflictArtifactsCaptured}
+                    resolutionSelections={conflictResolutionSelections}
+                    onChooseResolution={handleConflictResolutionChoice}
+                    onDeferManualMerge={deferManualMergeUntilLater}
+                    onExportConflictBundle={exportConflictBundle}
+                    onReloadLatest={() => void reloadLatestGraph()}
+                    onCopyLatestJson={() => void copyLatestConflictJson()}
+                    onCopySummaryReport={() => void copyConflictSummaryReport()}
+                    onCopyDraftJson={() => void copyConflictDraftJson()}
+                    onExportLatestJson={exportLatestConflictJson}
+                    onExportSummaryReport={exportConflictSummaryReport}
+                    onExportDraftJson={exportConflictDraftJson}
                   />
-                </label>
-                <label>
-                  <span>说明</span>
-                  <textarea
-                    onChange={(event) => {
-                      const current = detailRef.current;
-                      if (!current) {
-                        return;
-                      }
-                      const nextDetail = { ...current, description: event.target.value };
-                      const nextHistory = { ...historyRef.current, dirty: true };
-                      detailRef.current = nextDetail;
-                      historyRef.current = nextHistory;
-                      setGraphDetail(nextDetail);
-                      setHistoryState(nextHistory);
-                      setSaveState("dirty");
-                      replaceGraphSummary(nextDetail);
-                    }}
-                    rows={4}
-                    value={graphDetail.description}
-                  />
-                </label>
-                <button className="secondary-button danger" disabled={saving} onClick={() => void handleDeleteCurrentGraph()} type="button">
-                  <Trash2 size={16} />
-                  删除当前图谱
-                </button>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="graph-rail-section">
-            <div className="section-frame-head compact">
-              <div>
-                <p className="eyebrow">设置</p>
-                <h2>偏好与说明</h2>
-              </div>
+                ) : (
+                  <article className="graph-meta-card muted">
+                    <strong>当前没有版本冲突</strong>
+                    <p>自动保存会在发现服务端版本领先时保留本地草稿，并在这里提供安全的处理入口。</p>
+                  </article>
+                )
+              ) : null}
             </div>
-            <GraphSettingsPanel sections={settingsSections} />
-          </div>
-
-          <GraphWorkspaceImportPanel
-            canImport={Boolean(graphDetail)}
-            canValidate={Boolean(graphDetail)}
-            importMode={importMode}
-            importSource={importSource}
-            onImport={() => void graphImportExport.importGraph()}
-            onImportModeChange={setImportMode}
-            onImportSourceChange={setImportSource}
-            onValidate={() => void handleValidateGraph()}
-            saving={saving}
-            validationIssues={validationIssues}
-          />
-
-          <GraphWorkspaceRecoveryPanel
-            canGenerateCards={Boolean(selectedNode)}
-            cardDrafts={cardDrafts}
-            decks={decks}
-            onCommitCardDrafts={() => void handleCommitCardDrafts()}
-            onDraftDeckChange={setSelectedDraftDeckId}
-            onDraftFieldChange={handleDraftFieldChange}
-            onGenerateCards={() => void handleGenerateCards()}
-            onRestoreSnapshot={(versionNumber) => void restoreSnapshot(versionNumber)}
-            saving={saving}
-            selectedDraftDeckId={selectedDraftDeckId}
-            snapshots={snapshots}
-          />
-
-          <GraphWorkspaceSourceSummary
-            onOpenSource={(target) => navigate(target)}
-            summary={sourceReferenceSummary}
-          />
-
-          <GraphWorkspaceSelectionPanel
-            batchEmphasis={batchEmphasis ?? "default"}
-            batchSizePreset={batchSizePreset ?? "default"}
-            batchTone={batchTone ?? "neutral"}
-            groups={document?.groups ?? []}
-            onAlignSelectedNodes={alignSelectedNodes}
-            onApplyBatchEmphasis={applyBatchEmphasis}
-            onApplyBatchSizePreset={applyBatchSizePreset}
-            onApplyBatchTone={applyBatchTone}
-            onClearNodeSelection={clearNodeSelection}
-            onCreateGroupFromSelectedNode={createGroupFromSelectedNode}
-            onCreateSourceGroupsFromSelection={createSourceGroupsFromSelection}
-            onCreateSourceSwimlanesFromSelection={createSourceSwimlanesFromSelection}
-            onDeleteSelectedNodes={deleteSelectedNodes}
-            onDistributeSelectedNodes={distributeSelectedNodes}
-            onEdgeKindChange={(kind) =>
-              selectedEdge
-                ? mutateDocument((draft) => {
-                    draft.edges = draft.edges.map((edge) => (edge.id === selectedEdge.id ? { ...edge, kind } : edge));
-                  })
-                : undefined
-            }
-            onEdgeLabelChange={(label) =>
-              selectedEdge
-                ? mutateDocument((draft) => {
-                    draft.edges = draft.edges.map((edge) => (edge.id === selectedEdge.id ? { ...edge, label } : edge));
-                  })
-                : undefined
-            }
-            onGroupTitleChange={(groupId, title) =>
-              mutateDocument((draft) => {
-                draft.groups = draft.groups.map((item) => (item.id === groupId ? { ...item, title } : item));
-              })
-            }
-            onNodeDetailChange={(detail) =>
-              selectedNode
-                ? mutateDocument((draft) => {
-                    draft.nodes = draft.nodes.map((node) =>
-                      node.id === selectedNode.id ? patchNodeAppearance(node, { detail }) : node
-                    );
-                  })
-                : undefined
-            }
-            onNodeEmphasisChange={(emphasis) =>
-              selectedNode
-                ? mutateDocument((draft) => {
-                    draft.nodes = draft.nodes.map((node) =>
-                      node.id === selectedNode.id ? patchNodeAppearance(node, { emphasis }) : node
-                    );
-                  })
-                : undefined
-            }
-            onNodeMetadataFieldChange={(field, value) =>
-              selectedNode
-                ? mutateDocument(
-                    (draft) => {
-                      draft.nodes = draft.nodes.map((node) =>
-                        node.id === selectedNode.id ? patchGraphNodeMetadataField(node, field, value) : node
-                      );
-                    },
-                    { label: `编辑${getGraphNodeMetadataEditorFields(selectedNode).find((item) => item.field === field)?.label ?? "节点元数据"}` }
-                  )
-                : undefined
-            }
-            onNodeSizePresetChange={(preset) =>
-              selectedNode
-                ? mutateDocument((draft) => {
-                    draft.nodes = draft.nodes.map((node) =>
-                      node.id === selectedNode.id ? resizeNodeToPreset(node, preset) : node
-                    );
-                  })
-                : undefined
-            }
-            onNodeTitleChange={(title) =>
-              selectedNode
-                ? mutateDocument((draft) => {
-                    draft.nodes = draft.nodes.map((node) => (node.id === selectedNode.id ? { ...node, title } : node));
-                  })
-                : undefined
-            }
-            onNodeToneChange={(tone) =>
-              selectedNode
-                ? mutateDocument((draft) => {
-                    draft.nodes = draft.nodes.map((node) =>
-                      node.id === selectedNode.id ? patchNodeAppearance(node, { tone }) : node
-                    );
-                  })
-                : undefined
-            }
-            onOpenSource={(target) => navigate(target)}
-            onOrganizeSelectedNodesBySource={organizeSelectedNodesBySource}
-            onToggleGroupCollapse={toggleGroupCollapse}
-            selectedEdge={selectedEdge}
-            selectedNode={selectedNode}
-            selectedNodeIds={selectedNodeIds}
-            selectedNodeSourceBacklink={selectedNodeSourceBacklink}
-            selectedNodes={selectedNodes}
-            selectedSourceSummary={selectedSourceSummary}
-          />
-        </section>
+          </aside>
+        ) : null}
       </div>
-    </>
+    </div>
   );
 }

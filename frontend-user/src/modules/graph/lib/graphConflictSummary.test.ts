@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { GraphDetailPayload, GraphDocumentPayload } from "../../../api/client";
 import {
   buildGraphConflictBundleArtifact,
+  buildGraphConflictObjectDetails,
+  buildGraphConflictResolutionDrafts,
   buildGraphConflictReportArtifact,
   buildGraphUnsavedChangeSummary
 } from "./graphConflictSummary";
@@ -96,6 +98,102 @@ describe("graphConflictSummary", () => {
     ]);
   });
 
+  it("builds object-level conflict details for nodes, edges, and groups", () => {
+    const baseline = buildDetail({
+      document: buildDocument({
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "概念 A",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          },
+          {
+            id: "node-legacy",
+            type: "text",
+            title: "旧概念",
+            x: 260,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          }
+        ],
+        edges: [{ id: "edge-legacy", sourceNodeId: "node-legacy", targetNodeId: "node-1", kind: "curve", label: "旧关系" }],
+        groups: [{ id: "group-legacy", title: "旧分组", nodeIds: ["node-legacy"], x: 0, y: 0, width: 240, height: 180, collapsed: false }]
+      })
+    });
+    const current = buildDetail({
+      document: buildDocument({
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "概念 A（已修改）",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          },
+          {
+            id: "node-2",
+            type: "text",
+            title: "概念 B",
+            x: 520,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          }
+        ],
+        edges: [{ id: "edge-1", sourceNodeId: "node-1", targetNodeId: "node-2", kind: "curve", label: "新关系" }],
+        groups: [{ id: "group-1", title: "组 1", nodeIds: ["node-1", "node-2"], x: 0, y: 0, width: 520, height: 220, collapsed: false }]
+      })
+    });
+
+    expect(buildGraphConflictObjectDetails(current, baseline)).toEqual([
+      { action: "updated", id: "node-1", kind: "node", label: "概念 A（已修改）" },
+      { action: "added", id: "node-2", kind: "node", label: "概念 B" },
+      { action: "removed", id: "node-legacy", kind: "node", label: "旧概念" },
+      { action: "added", id: "edge-1", kind: "edge", label: "新关系" },
+      { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" },
+      { action: "added", id: "group-1", kind: "group", label: "组 1" },
+      { action: "removed", id: "group-legacy", kind: "group", label: "旧分组" }
+    ]);
+  });
+
+  it("builds resolution drafts only for explicitly selected object decisions", () => {
+    expect(
+      buildGraphConflictResolutionDrafts({
+        changeDetails: [
+          { action: "added", id: "node-2", kind: "node", label: "概念 B" },
+          { action: "updated", id: "group-1", kind: "group", label: "组 1" }
+        ],
+        latestHeadDetails: [{ action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" }],
+        selections: {
+          "localDraft:node:node-2:added": "keep-local",
+          "latestHead:edge:edge-legacy:removed": "keep-latest"
+        }
+      })
+    ).toEqual([
+      {
+        decision: "keep-local",
+        detail: { action: "added", id: "node-2", kind: "node", label: "概念 B" },
+        scope: "localDraft"
+      },
+      {
+        decision: "keep-latest",
+        detail: { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" },
+        scope: "latestHead"
+      }
+    ]);
+  });
+
   it("falls back to viewport changes when structure counts are unchanged", () => {
     const baseline = buildDetail();
     const current = buildDetail({
@@ -113,17 +211,19 @@ describe("graphConflictSummary", () => {
 
     expect(buildGraphUnsavedChangeSummary(current, baseline)).toEqual([]);
     expect(buildGraphUnsavedChangeSummary(current, null)).toEqual([]);
+    expect(buildGraphConflictObjectDetails(current, baseline)).toEqual([]);
+    expect(buildGraphConflictObjectDetails(current, null)).toEqual([]);
   });
 
   it("limits collection examples and truncates long text fields", () => {
     const baseline = buildDetail({
-      title: "一个很长很长很长很长的基线标题文本",
+      title: "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",
       document: buildDocument({
         nodes: []
       })
     });
     const current = buildDetail({
-      title: "一个很长很长很长很长的当前标题文本",
+      title: "abcdefghijklmnopqrstuvwxyz012345",
       document: buildDocument({
         nodes: [
           {
@@ -161,12 +261,12 @@ describe("graphConflictSummary", () => {
     });
 
     expect(buildGraphUnsavedChangeSummary(current, baseline)).toEqual([
-      "标题已修改（当前：一个很长很长很长很长的当前标题文本；基线：一个很长很长很长很长的基线标题文本）",
+      "标题已修改（当前：abcdefghijklmnopqrstuvwx...；基线：ABCDEFGHIJKLMNOPQRSTUVWX...）",
       "节点：新增 3 个（概念 A、概念 B 等）"
     ]);
   });
 
-  it("builds a portable conflict report artifact with local and latest-head summaries", () => {
+  it("builds a conflict report artifact with summary, object details, and a merge checklist", () => {
     const current = buildDetail({
       title: "图谱 / Draft",
       currentVersion: 5,
@@ -175,33 +275,46 @@ describe("graphConflictSummary", () => {
       })
     });
 
-    expect(
-      buildGraphConflictReportArtifact(
-        {
-          current,
-          changeSummary: ["节点：新增 1 个（概念 B）"],
-          latestHeadSummary: ["标题已修改（当前：图谱 / Draft；基线：图谱线上版）"]
-        },
-        "2026-07-02T09:10:00.000Z"
-      )
-    ).toEqual({
-      filename: "图谱 - Draft-conflict-summary.md",
-      mimeType: "text/markdown;charset=utf-8",
-      content: [
-        "# StudyMate 图谱冲突摘要",
-        "",
-        "- 导出时间：2026-07-02T09:10:00.000Z",
-        "- 图谱标题：图谱 / Draft",
-        "- 图谱 ID：graph-1",
-        "- 当前版本：5",
-        "",
-        "## 当前未保存修改",
-        "- 节点：新增 1 个（概念 B）",
-        "",
-        "## 与最新图谱相比",
-        "- 标题已修改（当前：图谱 / Draft；基线：图谱线上版）"
-      ].join("\n")
-    });
+    const artifact = buildGraphConflictReportArtifact(
+      {
+        changeDetails: [{ action: "added", id: "node-2", kind: "node", label: "概念 B" }],
+        changeSummary: ["节点：新增 1 个（概念 B）"],
+        current,
+        latestHeadDetails: [
+          { action: "updated", id: "node-1", kind: "node", label: "概念 A（服务端）" },
+          { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" }
+        ],
+        latestHeadSummary: ["标题已修改（当前：图谱 / Draft；基线：图谱线上版）"],
+        resolutionDrafts: [
+          {
+            decision: "keep-local",
+            detail: { action: "added", id: "node-2", kind: "node", label: "概念 B" },
+            scope: "localDraft"
+          },
+          {
+            decision: "keep-latest",
+            detail: { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" },
+            scope: "latestHead"
+          }
+        ]
+      },
+      "2026-07-02T09:10:00.000Z"
+    );
+
+    expect(artifact.filename).toBe("图谱 - Draft-conflict-summary.md");
+    expect(artifact.mimeType).toBe("text/markdown;charset=utf-8");
+    expect(artifact.content).toContain("## 建议优先核对的对象");
+    expect(artifact.content).toContain("### 当前未保存修改");
+    expect(artifact.content).toContain("- 节点｜新增｜概念 B");
+    expect(artifact.content).toContain("### 与最新图谱相比");
+    expect(artifact.content).toContain("- 节点｜修改｜概念 A（服务端）");
+    expect(artifact.content).toContain("- 连线｜删除｜旧关系");
+    expect(artifact.content).toContain("## 当前人工取舍草稿");
+    expect(artifact.content).toContain("- 当前未保存修改｜节点｜新增｜概念 B｜保留本地");
+    expect(artifact.content).toContain("- 与最新图谱相比｜连线｜删除｜旧关系｜保留服务端");
+    expect(artifact.content).toContain("- 优先核对上方列出的关键对象明细，逐项确认哪些节点、连线或分组需要保留。");
+    expect(artifact.content).toContain("- 优先按照“当前人工取舍草稿”里已标记的对象级取舍执行，未标记项再继续逐项人工确认。");
+    expect(artifact.content).toContain("- 结合最新版本的关键对象明细，逐项确认哪些节点、连线或分组需要从服务端保留。");
   });
 
   it("builds a conflict bundle artifact for later manual comparison", () => {
@@ -217,8 +330,9 @@ describe("graphConflictSummary", () => {
       JSON.parse(
         buildGraphConflictBundleArtifact(
           {
-            current,
+            changeDetails: [{ action: "added", id: "node-2", kind: "node", label: "概念 B" }],
             changeSummary: ["节点：新增 1 个（概念 B）"],
+            current,
             currentDraftArtifact: {
               filename: "draft.smtg",
               mimeType: "application/json",
@@ -229,12 +343,20 @@ describe("graphConflictSummary", () => {
               mimeType: "application/json",
               content: "{\"kind\":\"latest\"}"
             },
+            latestHeadDetails: [{ action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" }],
             latestHeadSummary: ["标题已修改（当前：图谱 / Draft；基线：图谱线上版）"],
             reportArtifact: {
               filename: "conflict-summary.md",
               mimeType: "text/markdown",
               content: "# summary"
-            }
+            },
+            resolutionDrafts: [
+              {
+                decision: "keep-local",
+                detail: { action: "added", id: "node-2", kind: "node", label: "概念 B" },
+                scope: "localDraft"
+              }
+            ]
           },
           "2026-07-02T09:20:00.000Z"
         ).content
@@ -253,6 +375,7 @@ describe("graphConflictSummary", () => {
           filename: "latest.smtg",
           mimeType: "application/json"
         },
+        details: [{ action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" }],
         summary: ["标题已修改（当前：图谱 / Draft；基线：图谱线上版）"]
       },
       localDraft: {
@@ -261,8 +384,26 @@ describe("graphConflictSummary", () => {
           filename: "draft.smtg",
           mimeType: "application/json"
         },
+        details: [{ action: "added", id: "node-2", kind: "node", label: "概念 B" }],
         summary: ["节点：新增 1 个（概念 B）"]
       },
+      resolutionDraft: [
+        {
+          decision: "keep-local",
+          detail: { action: "added", id: "node-2", kind: "node", label: "概念 B" },
+          scope: "localDraft"
+        }
+      ],
+      manualMergeChecklist: [
+        "先留存当前草稿 JSON，避免后续重载或误操作覆盖本地修改。",
+        "对照“当前未保存修改”摘要，确认这次本地草稿里需要保留的节点、连线和分组。",
+        "优先核对上方列出的关键对象明细，逐项确认哪些节点、连线或分组需要保留。",
+        "优先按照“当前人工取舍草稿”里已标记的对象级取舍执行，未标记项再继续逐项人工确认。",
+        "对照“与最新图谱相比”摘要，确认服务端最新版本里需要补回或保留的改动。",
+        "结合最新版本的关键对象明细，逐项确认哪些节点、连线或分组需要从服务端保留。",
+        "如果要在外部工具中比对，优先同时使用当前草稿 JSON、最新图谱 JSON 和这份冲突摘要。",
+        "完成取舍后，再决定是重载最新图谱，还是继续保留本地草稿整理后再保存。"
+      ],
       report: {
         artifact: {
           content: "# summary",
@@ -272,23 +413,56 @@ describe("graphConflictSummary", () => {
       }
     });
 
-    expect(
+    const withoutLatestHead = JSON.parse(
       buildGraphConflictBundleArtifact(
         {
-          current,
+          changeDetails: [{ action: "added", id: "node-2", kind: "node", label: "概念 B" }],
           changeSummary: ["节点：新增 1 个（概念 B）"],
+          current,
           currentDraftArtifact: {
             filename: "draft.smtg",
             mimeType: "application/json",
             content: "{\"kind\":\"draft\"}"
           },
           latestHeadArtifact: null,
+          latestHeadDetails: [],
+          latestHeadError: "暂时无法获取最新图谱差异摘要",
           latestHeadSummary: [],
           reportArtifact: {
             filename: "conflict-summary.md",
             mimeType: "text/markdown",
             content: "# summary"
-          }
+          },
+          resolutionDrafts: []
+        },
+        "2026-07-02T09:20:00.000Z"
+      ).content
+    );
+
+    expect(withoutLatestHead.latestHead).toBeNull();
+    expect(withoutLatestHead.manualMergeChecklist).toContain(
+      "先重新获取最新图谱差异或最新图谱 JSON，再开始人工合并，避免只按本地草稿做判断。"
+    );
+    expect(
+      buildGraphConflictBundleArtifact(
+        {
+          changeDetails: [{ action: "added", id: "node-2", kind: "node", label: "概念 B" }],
+          changeSummary: ["节点：新增 1 个（概念 B）"],
+          current,
+          currentDraftArtifact: {
+            filename: "draft.smtg",
+            mimeType: "application/json",
+            content: "{\"kind\":\"draft\"}"
+          },
+          latestHeadArtifact: null,
+          latestHeadDetails: [],
+          latestHeadSummary: [],
+          reportArtifact: {
+            filename: "conflict-summary.md",
+            mimeType: "text/markdown",
+            content: "# summary"
+          },
+          resolutionDrafts: []
         },
         "2026-07-02T09:20:00.000Z"
       ).filename
