@@ -1,3 +1,31 @@
+## 2026-07-09 06:28:00 +08:00 | v1.1.0-alpha.122 | 收口 SEC-010 依赖安全基线与 CI 审计门禁
+### 任务内容
+
+- 在 `DEV-010` 已提供 `verify:deps` 审计入口的基础上，继续选择一个覆盖面广但不深入产品功能的新工作包，把“审计已经能报出来”推进到“当前基线已经被收口并默认受 CI 保护”。
+- 本轮目标不是继续扩展业务模块，而是锁定前端锁文件中的安全版本、后端 Go toolchain 与关键依赖的 patch 下限，并把这组约束沉到可执行测试和默认流水线里。
+### 实际变更
+
+- 新增 `scripts/dependency-security-baseline.test.mjs`，先用 RED 锁定 `vite` / `esbuild` / `undici` / `glob` 的最低安全版本、`frontend-user` / `frontend-admin` 的 `vite` 版本下限、根 `vitest` / `@vitest/coverage-v8` / `@vue/test-utils` 版本下限，以及 `backend/go.mod` 中 `toolchain go1.26.5`、`golang.org/x/net v0.55.0`、`github.com/quic-go/quic-go v0.59.1` 与 CI 的 Go patch 版本。
+- 更新根 `package.json`、`frontend-user/package.json`、`frontend-admin/package.json` 与 `package-lock.json`，把前端依赖声明和锁文件一起拉回 `vite ^7.3.6`、`vitest ^4.1.10`、`@vitest/coverage-v8 ^4.1.10`、`@vue/test-utils ^2.4.11` 的安全基线，并清掉锁文件里残留的 `esbuild` / `undici` / `glob` 旧版本。
+- 更新 `backend/go.mod` 与 `backend/go.sum`，显式加入 `toolchain go1.26.5`，并升级 `golang.org/x/net` 到 `v0.55.0`、`github.com/quic-go/quic-go` 到 `v0.59.1`，同步带上 `qpack` 与 `x/*` 依赖的新安全版本。
+- 更新 [.github/workflows/ci.yml](/E:/Code/1108026_rust_go/StudyMate/.github/workflows/ci.yml)、[docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)、[docs/engineering/CODEX_BACKLOG.md](/E:/Code/1108026_rust_go/StudyMate/docs/engineering/CODEX_BACKLOG.md)、[docs/engineering/CODEX_EXECUTION_ROADMAP.md](/E:/Code/1108026_rust_go/StudyMate/docs/engineering/CODEX_EXECUTION_ROADMAP.md) 与 [docs/engineering/CODEX_PROJECT_CONTEXT.md](/E:/Code/1108026_rust_go/StudyMate/docs/engineering/CODEX_PROJECT_CONTEXT.md)，把 Go `1.26.5`、`verify:deps` 门禁和本轮依赖安全收口状态同步回工程文档。
+### 验证结果
+
+- RED：`node --test scripts/dependency-security-baseline.test.mjs`
+- GREEN：`node --test scripts/dependency-security-baseline.test.mjs`
+- `npm run verify:deps`
+- `npm run verify:runtimes`
+- `npm --workspace frontend-user run typecheck`
+- `npm --workspace frontend-admin run typecheck`
+- `npm --workspace frontend-user run test -- src/styles/tokenSource.test.ts`
+- `npm --workspace frontend-admin run test -- src/tokenSource.test.ts`
+- `cd backend && go test ./...`
+- `npm run verify:docs`
+### 后续影响
+
+- `verify:deps` 现在不再只是“能把漏洞打出来”的辅助入口，而是当前基线本身已经转绿，并被纳入默认 CI 门禁；后续如果锁文件或 Go 依赖回退到已知漏洞版本，会先在本地基线测试和 CI 中暴露出来。
+- 剩余的工程级 P0 缺口不再是“依赖审计结果尚未处理”，而是覆盖率硬门槛与更完整的 secret scan；后续应继续优先收口这些全局质量门禁，而不是扩新功能域。
+
 ## 2026-07-09 05:26:00 +08:00 | v1.1.0-alpha.120 | 收口 API-011 会话失效原因与统一提示语义
 ### 任务内容
 

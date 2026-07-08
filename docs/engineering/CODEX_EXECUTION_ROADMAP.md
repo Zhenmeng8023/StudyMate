@@ -165,13 +165,19 @@
 - API-010：把前后台 request/error/pagination/upload 基础能力沉入 `packages/api-client`。
 - API-011：继续补自动 refresh、401 单次重放、刷新失败统一退出与会话失效原因记录，并预留 HttpOnly Refresh Token 迁移说明；当前已完成前后台第一段共享刷新骨架。
 - DEV-010：补工具链版本、bootstrap、依赖审计、graph-core TS 测试运行方式和可复现命令矩阵。
+- SEC-010：在 `DEV-010` 的审计入口之上清空前端锁文件与 Go 依赖的高危命中，并把 `verify:deps` 纳入默认 CI。
 
 ### 2026-07-09 DEV-010 工程可复现性二次核验与工具链收口
 - 根 `package.json` 现已固定 `packageManager = npm@11.6.2` 与 `engines.node >=24 <25`、`engines.npm >=11 <12`，并新增 `bootstrap`、`verify:runtimes`、`verify:deps` 三个仓库级入口。
 - `scripts/verify-runtime-baseline.mjs` + `scripts/workspace-repro.test.mjs` 现会校验运行时版本、manifest 约束、CI 预检链路，以及 `@studymate/graph-core` 是否使用显式 TypeScript 测试命令。
 - `packages/graph-core/package.json` 不再直接依赖 `node --test test/*.test.ts`，而是改为显式 `--experimental-strip-types` 的测试与覆盖率命令，降低不同 Node 小版本对 `.ts` 测试执行差异带来的漂移。
 - `scripts/run-dependency-audits.mjs` 把 npm 与 Go 的依赖审计统一收口到单一入口，并强制让 `npm audit` 使用 `registry.npmjs.org`，绕过 `npmmirror` 缺失 audit API 的历史阻塞。
-- 本轮仍未清空依赖审计结果：`verify:deps` 当前会稳定暴露 npm 高危依赖与 `govulncheck` 命中的 Go 漏洞，后续更适合作为独立安全工作包继续收口。
+
+### 2026-07-09 SEC-010 依赖安全基线收口
+- 根 `package-lock.json` 现已同步到安全基线：`vite >= 7.3.6`、`esbuild >= 0.28.1`、`undici >= 7.28.0`、`glob >= 10.5.0`，并由 `scripts/dependency-security-baseline.test.mjs` 锁定这些最低版本不再回退。
+- `frontend-user/package.json` 与 `frontend-admin/package.json` 现已把 `vite` 依赖下限提升到 `^7.3.6`；根 `package.json` 也同步将 `vitest`、`@vitest/coverage-v8` 与 `@vue/test-utils` 提升到能拉起安全锁文件的版本下限。
+- `backend/go.mod` 现已显式锁定 `toolchain go1.26.5`，并将 `golang.org/x/net` 升级到 `v0.55.0`、`github.com/quic-go/quic-go` 升级到 `v0.59.1`，把 `govulncheck` 命中的标准库 patch 漏洞与 Go 侧依赖漏洞一起收口。
+- `.github/workflows/ci.yml` 现已显式使用 Go `1.26.5` 并执行 `npm run verify:deps`，因此默认流水线不再只“提供审计入口”，而是开始把依赖安全基线本身作为门禁。
 
 ## Iteration 5：后台治理与搜索索引升级（P1）
 

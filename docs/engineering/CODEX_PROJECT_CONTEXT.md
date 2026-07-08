@@ -97,7 +97,7 @@ StudyMate/
 - `packages/ui` 已同时承接共享 `DataStateKind` / `dataStateKinds` / `getDataStateLabel(...)` 与共享 `tokens.css`；但更多 primitives、管理端更深层的视觉契约与跨端共享层仍未收口。`packages/api-client/src/index.ts` 已开始承接共享 `requestApi(...)`、`readApiResponse(...)`、`createAuthHeaders(...)`、`buildApiPath(...)`、JSON 请求体归一化、`ApiRequestError`、`createSessionRequest(...)` 与 refresh 失败后的 `SessionInvalidationState`；其中用户端 `frontend-user/src/api/core.ts` 与 `frontend-user/src/app/sessionStore.ts`、管理端 `frontend-admin/src/api/client.ts` 与 `frontend-admin/src/api/sessionStore.ts` 都已接入共享 401 refresh/replay、会话失效原因记录与统一 fail-logout 提示第一段骨架，但更完整的 pagination、更多后台模块请求边界与 HttpOnly Refresh Token 迁移说明仍未收口。`packages/editor-core/src/index.ts` 仍只有最小类型定义；这些包仍需要继续进入真实共享能力建设，而不是继续作为占位目录存在。
 - `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 约 79KB，仍包含大量 `useState` 与跨领域函数；`WB-032` 的冲突处理已经很深，下一步必须把状态边界、commands 与 features 从控制器中拆出，避免继续集中膨胀。
 - `frontend-admin/src/views/AdminWorkspaceView.vue` 约 22KB，后台仍主要是单工作台组件内切换模块；不过最基础的请求边界与后台 session store 已开始抽到 `frontend-admin/src/api/client.ts` 和 `frontend-admin/src/api/sessionStore.ts`，启动时 refresh 失败也会显式清空本地会话并回退登录页。`frontend-admin/src/router/index.ts` 目前只是 route key 列表，尚未形成可刷新、可分享、可回退的 Vue Router 模块 URL。
-- 根 `package.json`、`package-lock.json` 与 `.github/workflows/ci.yml` 在真实仓库中存在，因此 PDF 中“压缩包缺少根工程入口/CI”的判断不作为当前事实；当前仓库已进一步补上 `packageManager` / `engines`、`npm run bootstrap`、`npm run verify:runtimes`、`npm run verify:deps` 与 `@studymate/graph-core` 显式 `--experimental-strip-types` 测试命令，工程可复现性底座已从“缺入口”推进到“有统一入口但仍有审计结果待消化”。
+- 根 `package.json`、`package-lock.json` 与 `.github/workflows/ci.yml` 在真实仓库中存在，因此 PDF 中“压缩包缺少根工程入口/CI”的判断不作为当前事实；当前仓库已进一步补上 `packageManager` / `engines`、`npm run bootstrap`、`npm run verify:runtimes`、`npm run verify:deps`、`@studymate/graph-core` 显式 `--experimental-strip-types` 测试命令，以及 `toolchain go1.26.5`、前端安全锁文件与默认 CI 里的依赖审计门禁，工程可复现性与依赖安全基线都已进入可执行状态。
 
 ## 4. 当前阶段判断
 
@@ -116,7 +116,7 @@ StudyMate/
 2. “CI 尚未建立”不成立：`.github/workflows/ci.yml` 已覆盖 typecheck、build、Vitest、graph-core test、Playwright、Go test 与文档校验。
 3. “管理端大量占位”只部分成立：后台治理入口已接入多组真实 API，但仍需更强的测试、审计与可操作性。
 4. “前端根文件过大”不成立：根文件已基本瘦身，后续问题更多在模块内部边界和回归测试。
-5. “工程压缩包不可复现”不能直接套用于当前 Git 工作区：真实仓库已有根 workspace、lockfile 与 CI；当前已补齐工具链版本约束、graph-core 显式 TS 测试运行方式、bootstrap 与依赖审计入口，剩余主要缺口转为“已有审计结果但尚未完成漏洞清理”。
+5. “工程压缩包不可复现”不能直接套用于当前 Git 工作区：真实仓库已有根 workspace、lockfile 与 CI；当前已补齐工具链版本约束、graph-core 显式 TS 测试运行方式、bootstrap、依赖审计入口，以及 `verify:deps` 对前端锁文件与 Go 依赖的安全下限收口，剩余主要缺口转为覆盖率硬门槛与更完整的 secret scan。
 
 ## 6. 当前真正需要优先收口的问题
 
@@ -125,7 +125,7 @@ StudyMate/
 1. **配置安全默认值已完成第一轮收口，但仍需继续分层**  
    `JWT_SECRET` 与 `MYSQL_DSN` 的危险 fallback 已移除，启动阶段会显式校验缺失项；下一步仍需把开发 / 测试 / 生产配置策略、CORS 与 secret scan 门禁继续固化。
 2. **CI 第一轮质量门禁已补齐，但仍未到发布级**  
-   当前 workflow 已显式运行 `gofmt` 检查、配置安全回归检查、typecheck、build、Vitest、Playwright、Go test 与文档校验；剩余缺口主要是依赖审计、覆盖率门槛和更完整的 secret scan。
+   当前 workflow 已显式运行 `verify:deps`、`gofmt` 检查、配置安全回归检查、typecheck、build、Vitest、Playwright、Go test 与文档校验；剩余缺口主要是覆盖率门槛和更完整的 secret scan。
 3. **工程执行文档落后于代码**  
    `docs/engineering/*` 仍把“搜索缺失、CI 缺失、App 根文件过大”写成现状，容易误导后续代理。
 4. **搜索进入了“补强期”而非“从零建设期”**  

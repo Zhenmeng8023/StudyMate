@@ -58,6 +58,9 @@ test("dependency security baseline requires safe npm lockfile versions and Go to
   assert.equal(rootPackageJson.devDependencies?.vitest, "^4.1.10");
   assert.equal(rootPackageJson.devDependencies?.["@vitest/coverage-v8"], "^4.1.10");
   assert.equal(rootPackageJson.devDependencies?.["@vue/test-utils"], "^2.4.11");
+  assert.equal(rootPackageJson.overrides?.esbuild, "0.28.1");
+  assert.equal(rootPackageJson.overrides?.undici, "7.28.0");
+  assert.equal(rootPackageJson.overrides?.glob, "10.5.0");
 
   assertPackageVersionAtLeast(packageLock, "node_modules/vite", "7.3.6");
   assertPackageVersionAtLeast(packageLock, "node_modules/esbuild", "0.28.1");

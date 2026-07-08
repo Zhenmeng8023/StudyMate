@@ -30,7 +30,7 @@
 
 ## 环境要求
 
-- Go 1.26+
+- Go 1.26.5+（`backend/go.mod` 已通过 `toolchain go1.26.5` 锁定安全 patch 基线）
 - Node.js 24+
 - npm 11+
 - MySQL 8+
@@ -66,6 +66,8 @@ npm run verify:runtimes
 ```powershell
 npm run verify:deps
 ```
+
+- `backend/go.mod` 已锁定 `toolchain go1.26.5`；首次执行 `go test`、`go mod tidy` 或 `npm run verify:deps` 时，如果本机只有更低 patch 版本，Go 会自动下载并切换到该安全 toolchain。
 
 说明：
 
@@ -275,7 +277,7 @@ go test ./...
 - `docs/planning/VERSION_PLAN.md` 记录当前真实状态、范围取舍、性能预算和里程碑流程。
 - 每个功能里程碑必须同步更新 `README.md`、本文件、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`CHANGELOG.md`、`PROJECT_LOG.md`。
 - 提交前运行 `npm run verify:docs`，避免关键文档入口漂移。
-- CI 基线使用 Node 24、Go 1.26、Vitest、React Testing Library、Vue Test Utils、Playwright、`@studymate/graph-core` 测试和后端 `go test ./...`。
+- CI 基线使用 Node 24、Go 1.26.5、`npm run verify:deps`、Vitest、React Testing Library、Vue Test Utils、Playwright、`@studymate/graph-core` 测试和后端 `go test ./...`。
 - `npm run verify:backend:format` 会检查 `backend/` 下全部 Go 文件是否通过 `gofmt`。
 - `npm run verify:config-safety` 会检查 `backend/internal/config/config.go`、`.env.example` 和 `docs/DEVELOPMENT.md` 中是否回退到已禁用的危险默认值示例。
 

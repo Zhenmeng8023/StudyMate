@@ -28,6 +28,7 @@
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一 401 会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；补 HttpOnly Refresh Token 迁移说明。 |
 | DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
+| SEC-010 | DONE | 依赖安全基线收口 | DEV-010 | `package-lock.json`、前台/后台 package manifest、`backend/go.mod`、CI、开发文档 | 锁定 `vite` / `esbuild` / `undici` / `glob` 与 Go toolchain / `golang.org/x/net` / `quic-go` 安全下限；`npm run verify:deps` 通过并纳入默认 CI。 |
 
 ## P1：在 P0 稳定后推进
 
@@ -80,7 +81,29 @@
   - `npm run verify:deps`
 - 风险与后续：
   - `npm run bootstrap` 现已能在当前 Windows 工作区完成依赖补齐，但仍可能因为占用中的 `esbuild` / `rollup` 二进制在清理旧目录时输出 `EPERM cleanup` 警告；它不影响本轮 bootstrap 成功，但说明本地活跃工具进程仍会干扰包管理器清理。
-  - `npm run verify:deps` 已经能稳定产出真实审计结果，但当前仓库仍存在 npm 高危依赖告警（`esbuild`、`glob`、`undici`、`vite`）以及 `govulncheck` 命中的 Go / `golang.org/x/net` / `quic-go` 漏洞；这属于后续安全收口任务，而不是本轮入口缺失。
+  - `npm run verify:deps` 已经能稳定产出真实审计结果；后续若再次命中 npm 或 Go 漏洞，应优先沿依赖基线而不是业务代码做独立安全收口。
+
+### 执行记录：SEC-010（依赖安全基线收口）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - 新增 `scripts/dependency-security-baseline.test.mjs`，先用 RED 锁定 `frontend-user` / `frontend-admin` 的 `vite` 安全下限、根 `vitest` / `@vitest/coverage-v8` / `@vue/test-utils` 版本下限、`package-lock.json` 中 `vite` / `esbuild` / `undici` / `glob` 的最低安全版本，以及 `backend/go.mod` 的 `toolchain go1.26.5`、`golang.org/x/net v0.55.0`、`github.com/quic-go/quic-go v0.59.1` 与 CI 的 Go patch 版本。
+  - 更新根 `package.json`、`frontend-user/package.json`、`frontend-admin/package.json` 与 `package-lock.json`，把前端安全基线收口到 `vite ^7.3.6`、`vitest ^4.1.10`、`@vitest/coverage-v8 ^4.1.10`、`@vue/test-utils ^2.4.11`，并同步清理锁文件里的 `esbuild` / `undici` / `glob` 旧漏洞版本。
+  - 更新 `backend/go.mod` 与 `backend/go.sum`，锁定 `toolchain go1.26.5`，并将 `golang.org/x/net` 升级到 `v0.55.0`、`github.com/quic-go/quic-go` 升级到 `v0.59.1`，同步带上 `qpack` 与相关 `x/*` 模块的新安全版本。
+  - 更新 `.github/workflows/ci.yml` 与 `docs/DEVELOPMENT.md`，让默认 CI 显式使用 Go `1.26.5` 并执行 `npm run verify:deps`，同时把本地 toolchain 自动下载与依赖审计行为写回开发基线。
+- 已执行验证：
+  - RED：`node --test scripts/dependency-security-baseline.test.mjs`
+  - GREEN：`node --test scripts/dependency-security-baseline.test.mjs`
+  - `npm run verify:deps`
+  - `npm run verify:runtimes`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm --workspace frontend-user run test -- src/styles/tokenSource.test.ts`
+  - `npm --workspace frontend-admin run test -- src/tokenSource.test.ts`
+  - `cd backend && go test ./...`
+  - `npm run verify:docs`
+- 风险与后续：
+  - Windows 下如果本地仍有 `esbuild.exe` 被占用，`npm install` 可能继续出现 `EBUSY` / `EPERM cleanup` 一类文件锁问题；当前已通过停止仓库内残留构建进程完成升级，但这仍是本地开发环境的已知噪音。
+  - 默认 CI 现已补上依赖审计，但覆盖率硬门槛与更完整的 secret scan 仍未纳入默认流水线，仍属于后续 P0 质量门禁收口项。
 
 ### 执行记录：FE-040（管理端接入共享 token 起步）
 - 执行日期：2026-07-09
