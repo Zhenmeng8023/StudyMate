@@ -40,7 +40,7 @@
 | 前端页面 | 图谱工作区真实冲突路径、latest-head 组合场景、页面级联动建议 | `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`、`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx` | `npm run test:graph:conflicts:frontend` |
 | 前端持久化 | 本地草稿恢复、跨窗口提醒、冲突后状态保持 | `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx`、`frontend-user/src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx` | `npm run test:graph:conflicts:frontend` |
 | 后端 DTO / handler / service | 版本权威、`409 graph_version_conflict`、restore 生命周期 | `backend/internal/modules/graph/dto/*.go`、`handler/*.go`、`service/*.go` | `npm run test:graph:conflicts:backend` |
-| E2E smoke | 图谱工作区真实预览环境下的加载、保存、导入、历史与失败态 | `e2e/v1-graph-workspace.spec.ts` | `npm run test:graph:conflicts:e2e` |
+| E2E smoke | 图谱工作区真实预览环境下的加载、保存、导入、历史、失败态与版本冲突处理 | `e2e/v1-graph-workspace.spec.ts` | `npm run test:graph:conflicts:e2e` |
 | 文档同步 | 路线图、backlog、主文档与里程碑记录一致 | `README.md` / `docs/DEVELOPMENT.md` / `PROJECT_LOG.md` 等 | `npm run verify:docs` |
 
 ## 3. 推荐执行入口

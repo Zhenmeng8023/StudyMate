@@ -1,3 +1,25 @@
+## 2026-07-09 07:33:00 +08:00 | v1.1.0-alpha.133 | 收口图谱冲突 E2E 的真实版本冲突路径
+### 任务内容
+
+- 延续 `verify:graph-conflicts` 的固定入口建设，继续沿 `WB-032/WB-034` 做一个最小但更贴近真实用户操作的回归收口。
+- 本轮目标是不改图谱业务逻辑，只把图谱工作区 Playwright smoke 从“加载/保存/导入/历史”推进到“真实 `graph_version_conflict` 后的冲突处理路径”，让固定入口至少覆盖一次真实版本冲突提示、人工暂存与重载最新 head 的操作链。
+### 实际变更
+
+- 更新 `scripts/graph-conflict-regression-baseline.test.mjs`，先用 RED 锁定缺口：当前 `e2e/v1-graph-workspace.spec.ts` 虽已接入固定入口，但还没有真正覆盖版本冲突处理路径，回归矩阵文档里也没有把这条 E2E 描述明确提升到“版本冲突处理”层。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增图谱工作区真实版本冲突 smoke：构造 `batch-save` 返回 `409 graph_version_conflict`、随后拉取服务端最新 head 的场景，断言页面会展示 `查看冲突处理`、`图谱冲突辅助`、`先保留本地，稍后人工合并` 与 `放弃本地并重载最新图谱`，并在确认后成功切回最新版本的空闲状态。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`、`README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把图谱工作区 E2E 的描述从泛化 smoke 提升到“已覆盖真实 `graph_version_conflict` 处理路径”。
+### 验证结果
+
+- RED：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- GREEN：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- `npm run test:graph:conflicts:e2e`
+- `npm run verify:graph-conflicts`
+- `npm run verify:docs`
+### 后续影响
+
+- `verify:graph-conflicts` 现在不仅能跑通图谱工作区预览环境，还能覆盖一次真实版本冲突后的冲突处理入口和重载最新 head 路径，为后续 `WB-034` 继续补更完整的 Playwright 冲突矩阵提供了更扎实的 E2E 基座。
+- 当前仍未覆盖桌面/窄屏双布局下的冲突路径，以及更完整的 create/save/restore/export/layout/conflict/权限矩阵；后续应继续在这条固定入口上扩展，而不是重新分散成手工命令。
+
 ## 2026-07-09 07:18:00 +08:00 | v1.1.0-alpha.132 | 收口图谱冲突固定入口的 E2E smoke
 ### 任务内容
 
