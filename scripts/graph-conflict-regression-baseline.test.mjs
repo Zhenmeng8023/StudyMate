@@ -21,6 +21,7 @@ test("graph conflict regression entrypoint is wired into scripts and docs", () =
   const roadmap = readText("docs/engineering/CODEX_EXECUTION_ROADMAP.md");
   const backlog = readText("docs/engineering/CODEX_BACKLOG.md");
   const regressionDoc = readText("docs/engineering/GRAPH_CONFLICT_REGRESSION.md");
+  const graphWorkspaceE2E = readText("e2e/v1-graph-workspace.spec.ts");
 
   assert.equal(
     packageJson.scripts?.["verify:graph-conflicts"],
@@ -40,4 +41,8 @@ test("graph conflict regression entrypoint is wired into scripts and docs", () =
   assert.match(regressionDoc, /GraphWorkspaceConflictResolutionDependencies\.test\.tsx/);
   assert.match(regressionDoc, /graphConflictSummary\.test\.ts/);
   assert.match(regressionDoc, /v1-graph-workspace\.spec\.ts/);
+  assert.match(graphWorkspaceE2E, /version conflict/i);
+  assert.match(graphWorkspaceE2E, /图谱冲突辅助/);
+  assert.match(graphWorkspaceE2E, /放弃本地并重载最新图谱/);
+  assert.match(regressionDoc, /版本冲突处理/);
 });
