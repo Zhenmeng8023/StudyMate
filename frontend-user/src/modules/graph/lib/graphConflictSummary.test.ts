@@ -5,6 +5,7 @@ import {
   buildGraphConflictBundleArtifact,
   buildGraphConflictObjectDetails,
   buildGraphConflictResolutionDrafts,
+  buildGraphConflictResolutionSuggestions,
   buildGraphConflictReportArtifact,
   buildGraphUnsavedChangeSummary,
   validateGraphConflictResolutionDrafts
@@ -463,6 +464,71 @@ describe("graphConflictSummary", () => {
         severity: "error",
         targetId: "group-local"
       })
+    ]);
+  });
+
+  it("builds linked resolution suggestions for dependency blocking issues", () => {
+    const current = buildDetail({
+      document: buildDocument({
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "概念 A",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          },
+          {
+            id: "node-local",
+            type: "text",
+            title: "本地节点",
+            x: 260,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          }
+        ],
+        edges: [{ id: "edge-local", sourceNodeId: "node-1", targetNodeId: "node-local", kind: "curve", label: "本地连线" }],
+        groups: []
+      })
+    });
+
+    expect(
+      buildGraphConflictResolutionSuggestions({
+        blockingIssues: [
+          {
+            message: "dangling-edge",
+            ruleType: "dangling_edge",
+            severity: "error",
+            targetId: "edge-local"
+          }
+        ],
+        changeDetails: [
+          { action: "added", id: "node-local", kind: "node", label: "本地节点" },
+          { action: "added", id: "edge-local", kind: "edge", label: "本地连线" }
+        ],
+        current,
+        resolutionSelections: {
+          "localDraft:edge:edge-local:added": "keep-local"
+        }
+      })
+    ).toEqual([
+      {
+        choice: "keep-local",
+        description: "补齐这条依赖需要同时保留相关节点。",
+        detail: { action: "added", id: "node-local", kind: "node", label: "本地节点" },
+        scope: "localDraft"
+      },
+      {
+        choice: "keep-latest",
+        description: "如果不打算保留这个对象，可改为保留服务端版本。",
+        detail: { action: "added", id: "edge-local", kind: "edge", label: "本地连线" },
+        scope: "localDraft"
+      }
     ]);
   });
 

@@ -89,7 +89,7 @@
   - 当前沙箱解析 npm 镜像时出现 `EAI_AGAIN`，因此 `npm --workspace frontend-user run typecheck`、Vitest、构建与 Playwright 仍待在具备依赖缓存或网络的开发环境中执行。
 - 后续推进：
   - FE-020 图谱 CanvasLayout 与 FE-030 阅读、笔记、复习工作区体验对齐均已完成实现，待在具备完整 npm 依赖的环境复核运行测试。
-- 下一项界面工作将继续把 WB-032 的更完整跨对象联动取舍辅助和更强的多端合并策略接入新的图谱 Inspector；当前已落地对象级冲突明细、取舍草稿展示、未标记对象默认行为提示，以及显式应用到最新 head 的合并草稿动作。
+- 下一项界面工作将继续把 WB-032 的更系统多端合并策略接入新的图谱 Inspector；当前已落地对象级冲突明细、取舍草稿展示、未标记对象默认行为提示、阻断问题旁的联动取舍建议，以及显式应用到最新 head 的合并草稿动作。
 
 ### 执行记录：FE-020 / FE-030（验证中）
 
@@ -145,6 +145,7 @@
 - 冲突辅助卡片现在还支持 `应用已标记取舍到当前草稿`，会基于最新 head 生成一份继续保持 dirty、但已经对齐最新版本号的合并草稿，供用户直接继续保存。
 - 在真正应用这些取舍前，前端现在还会执行最小跨对象依赖校验：若合并草稿会留下 dangling edge / invalid group node，会直接列出阻断问题并要求用户先补齐相关节点或改为保留服务端。
 - 当只标记了部分对象级取舍时，冲突辅助卡片现在还会显式统计剩余未标记对象，并说明“如果现在直接应用，这些对象会默认沿用最新图谱版本”；同样的默认行为也会写入人工合并清单，减少误操作。
+- 当依赖校验真的触发阻断时，冲突辅助卡片现在还会直接给出联动取舍建议，例如一键补齐本地依赖节点，或一键把问题对象改为保留服务端，避免用户回到对象列表逐项搜索。
 - 验证：
   - `go test ./internal/modules/graph/service`
   - `go test ./internal/modules/graph/...`
@@ -162,7 +163,7 @@
   - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
   - `npm run verify:docs`
 - 后续待续：
-- 继续补更完整的跨对象联动取舍辅助与多端 conflict handling，再将 `WB-032` 标记为完成。
+- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成。
 
 ### 执行记录：WB-031
 

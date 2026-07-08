@@ -14,6 +14,7 @@ import {
   type GraphConflictObjectDetail,
   type GraphConflictObjectScope,
   type GraphConflictResolutionChoice,
+  type GraphConflictResolutionSuggestion,
   type GraphConflictResolutionValidationIssue
 } from "../lib/graphConflictSummary";
 import { buildNodeStyle } from "../nodeAppearance";
@@ -278,6 +279,7 @@ export function GraphConflictAssistCard(props: {
   manualMergeDeferred?: boolean;
   materialsCaptured?: boolean;
   resolutionBlockingIssues?: GraphConflictResolutionValidationIssue[];
+  resolutionSuggestions?: GraphConflictResolutionSuggestion[];
   resolutionDraftCount: number;
   resolutionSelections: Record<string, GraphConflictResolutionChoice>;
   onApplyResolutionDrafts: () => void;
@@ -392,6 +394,30 @@ export function GraphConflictAssistCard(props: {
               <li className="graph-issue-item" key={`${issue.ruleType}-${issue.targetId ?? "unknown"}-${index}`}>
                 <strong>{issue.targetId ?? "未命名对象"}</strong>
                 <p>{issue.message}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {props.resolutionSuggestions?.length ? (
+        <div className="graph-inline-copy" aria-label="联动取舍建议">
+          <strong>可直接补齐以下联动取舍</strong>
+          <ul className="graph-issue-list">
+            {props.resolutionSuggestions.map((suggestion) => (
+              <li
+                className="graph-issue-item"
+                key={`${suggestion.scope}:${suggestion.detail.kind}:${suggestion.detail.id}:${suggestion.detail.action}:${suggestion.choice}`}
+              >
+                <p>{suggestion.description}</p>
+                <div className="graph-inline-actions">
+                  <button
+                    className="secondary-button"
+                    onClick={() => props.onChooseResolution(suggestion.scope, suggestion.detail, suggestion.choice)}
+                    type="button"
+                  >
+                    {buildConflictResolutionSuggestionButtonLabel(suggestion)}
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -630,6 +656,10 @@ function buildConflictResolutionButtonLabel(
   detail: GraphConflictObjectDetail
 ) {
   return `${getGraphConflictResolutionChoiceLabel(choice)}（${getConflictScopeButtonLabel(scope)}）：${formatGraphConflictObjectDetail(detail)}`;
+}
+
+function buildConflictResolutionSuggestionButtonLabel(suggestion: GraphConflictResolutionSuggestion) {
+  return `联动${getGraphConflictResolutionChoiceLabel(suggestion.choice)}：${formatGraphConflictObjectDetail(suggestion.detail)}`;
 }
 
 const conflictResolutionChoices: GraphConflictResolutionChoice[] = ["keep-local", "keep-latest", "review-later"];

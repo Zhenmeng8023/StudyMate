@@ -137,6 +137,8 @@ describe("GraphWorkspaceStageChrome components", () => {
   });
 
   it("shows blocking dependency warnings and disables apply when marked resolutions are unsafe", () => {
+    const onChooseResolution = vi.fn();
+
     render(
       <GraphConflictAssistCard
         changeDetails={[
@@ -157,13 +159,21 @@ describe("GraphWorkspaceStageChrome components", () => {
             targetId: "edge-legacy"
           }
         ]}
+        resolutionSuggestions={[
+          {
+            choice: "keep-local",
+            description: "补齐这条依赖需要同时保留相关节点。",
+            detail: { action: "updated", id: "group-1", kind: "group", label: "Local group" },
+            scope: "localDraft"
+          }
+        ]}
         resolutionSelections={{
           "localDraft:node:node-2:added": "keep-local",
           "latestHead:edge:edge-legacy:removed": "keep-latest"
         }}
         resolutionDraftCount={2}
         onApplyResolutionDrafts={vi.fn()}
-        onChooseResolution={vi.fn()}
+        onChooseResolution={onChooseResolution}
         onDeferManualMerge={vi.fn()}
         onExportConflictBundle={vi.fn()}
         onReloadLatest={vi.fn()}
@@ -185,6 +195,13 @@ describe("GraphWorkspaceStageChrome components", () => {
     expect(screen.getByText("当前未保存修改：分组｜修改｜Local group")).toBeInTheDocument();
     expect(screen.getByLabelText("取舍依赖校验问题")).toBeInTheDocument();
     expect(screen.getByText("dangling-edge")).toBeInTheDocument();
+    expect(screen.getByLabelText("联动取舍建议")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "联动保留本地：分组｜修改｜Local group" }));
+    expect(onChooseResolution).toHaveBeenCalledWith(
+      "localDraft",
+      { action: "updated", id: "group-1", kind: "group", label: "Local group" },
+      "keep-local"
+    );
     expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeDisabled();
   });
 

@@ -41,6 +41,13 @@ export type GraphConflictResolutionValidationIssue = Pick<
   "message" | "ruleType" | "severity" | "targetId"
 >;
 
+export type GraphConflictResolutionSuggestion = {
+  choice: GraphConflictResolutionChoice;
+  description: string;
+  detail: GraphConflictObjectDetail;
+  scope: GraphConflictObjectScope;
+};
+
 type GraphConflictChecklistInput = {
   changeDetails: GraphConflictObjectDetail[];
   changeSummary: string[];
@@ -190,6 +197,97 @@ export function validateGraphConflictResolutionDrafts(input: {
     blockingIssues,
     merged
   };
+}
+
+export function buildGraphConflictResolutionSuggestions(input: {
+  blockingIssues: GraphConflictResolutionValidationIssue[];
+  changeDetails: GraphConflictObjectDetail[];
+  current: GraphDetailPayload;
+  latestHeadDetails?: GraphConflictObjectDetail[];
+  resolutionSelections: Record<string, GraphConflictResolutionChoice>;
+}): GraphConflictResolutionSuggestion[] {
+  const suggestions = new Map<string, GraphConflictResolutionSuggestion>();
+  const findSuggestionDetail = (kind: GraphConflictObjectDetail["kind"], id: string) => {
+    const localDetail = input.changeDetails.find((detail) => detail.kind === kind && detail.id === id);
+    if (localDetail) {
+      return { detail: localDetail, scope: "localDraft" as const };
+    }
+    const latestHeadDetail = input.latestHeadDetails?.find((detail) => detail.kind === kind && detail.id === id);
+    if (latestHeadDetail) {
+      return { detail: latestHeadDetail, scope: "latestHead" as const };
+    }
+    return null;
+  };
+
+  const pushSuggestion = (
+    suggestionTarget: { detail: GraphConflictObjectDetail; scope: GraphConflictObjectScope } | null,
+    choice: GraphConflictResolutionChoice,
+    description: string
+  ) => {
+    if (!suggestionTarget) {
+      return;
+    }
+    const { detail, scope } = suggestionTarget;
+    if (input.resolutionSelections[buildGraphConflictObjectDecisionKey(scope, detail)] === choice) {
+      return;
+    }
+    const key = `${scope}:${detail.kind}:${detail.id}:${detail.action}:${choice}`;
+    if (suggestions.has(key)) {
+      return;
+    }
+    suggestions.set(key, {
+      choice,
+      description,
+      detail,
+      scope
+    });
+  };
+
+  for (const issue of input.blockingIssues) {
+    if (issue.ruleType === "dangling_edge") {
+      const edge = input.current.document.edges.find((item) => item.id === issue.targetId);
+      if (!edge) {
+        continue;
+      }
+      pushSuggestion(
+        findSuggestionDetail("node", edge.sourceNodeId),
+        "keep-local",
+        "补齐这条依赖需要同时保留相关节点。"
+      );
+      pushSuggestion(
+        findSuggestionDetail("node", edge.targetNodeId),
+        "keep-local",
+        "补齐这条依赖需要同时保留相关节点。"
+      );
+      pushSuggestion(
+        findSuggestionDetail("edge", edge.id),
+        "keep-latest",
+        "如果不打算保留这个对象，可改为保留服务端版本。"
+      );
+      continue;
+    }
+
+    if (issue.ruleType === "invalid_group_node") {
+      const group = input.current.document.groups.find((item) => item.id === issue.targetId);
+      if (!group) {
+        continue;
+      }
+      for (const nodeId of group.nodeIds) {
+        pushSuggestion(
+          findSuggestionDetail("node", nodeId),
+          "keep-local",
+          "补齐这条依赖需要同时保留相关节点。"
+        );
+      }
+      pushSuggestion(
+        findSuggestionDetail("group", group.id),
+        "keep-latest",
+        "如果不打算保留这个对象，可改为保留服务端版本。"
+      );
+    }
+  }
+
+  return [...suggestions.values()];
 }
 
 export function buildGraphConflictReportArtifact(

@@ -199,4 +199,75 @@ describe("GraphWorkspacePage conflict dependency guard", () => {
     expect(screen.getByText("Local edge")).toBeInTheDocument();
     expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
   });
+
+  it("offers linked resolution actions that can clear dependency blockers", async () => {
+    const user = userEvent.setup();
+    window.sessionStorage.setItem(
+      buildGraphWorkspaceDraftStorageKey("graph-1"),
+      JSON.stringify({
+        currentVersion: 4,
+        description: "local draft",
+        document: {
+          ...graphDetail.document,
+          nodes: [
+            ...graphDetail.document.nodes,
+            {
+              id: "node-local",
+              type: "concept",
+              title: "Local concept",
+              x: 420,
+              y: 120,
+              width: 220,
+              height: 132,
+              source: null,
+              metadata: {}
+            }
+          ],
+          edges: [
+            {
+              id: "edge-local",
+              kind: "curve",
+              sourceNodeId: "node-1",
+              targetNodeId: "node-local",
+              label: "Local edge",
+              metadata: {}
+            }
+          ],
+          groups: []
+        },
+        graphId: "graph-1",
+        savedAt: "2026-07-01T20:10:00Z",
+        title: "Recovered graph"
+      })
+    );
+    batchSaveGraphMock.mockRejectedValueOnce(new Error("graph_version_conflict"));
+    getGraphMock.mockReset();
+    getGraphMock
+      .mockResolvedValueOnce(graphDetail)
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        currentVersion: 5,
+        updatedAt: "2026-07-01T20:20:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 5
+        }
+      });
+
+    renderWorkspace();
+
+    await expect(screen.findByRole("button", { name: "保存修改" })).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "保存修改" }));
+    await expect(screen.findByLabelText("图谱冲突辅助")).resolves.toBeInTheDocument();
+
+    const localEdgeRow = screen.getByText("连线｜新增｜Local edge").closest("li");
+    expect(localEdgeRow).not.toBeNull();
+    await user.click(within(localEdgeRow as HTMLElement).getAllByRole("button")[0]);
+
+    await expect(screen.findByLabelText("联动取舍建议")).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "联动保留本地：节点｜新增｜Local concept" }));
+
+    expect(screen.queryByLabelText("取舍依赖校验问题")).toBeNull();
+    expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeEnabled();
+  });
 });

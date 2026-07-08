@@ -122,6 +122,7 @@ import {
   buildGraphConflictObjectDetails,
   buildGraphConflictObjectDecisionKey,
   buildGraphConflictResolutionDrafts,
+  buildGraphConflictResolutionSuggestions,
   buildGraphConflictReportArtifact,
   buildGraphUnsavedChangeSummary,
   formatGraphConflictObjectDetail,
@@ -130,6 +131,7 @@ import {
   type GraphConflictObjectDetail,
   type GraphConflictObjectScope,
   type GraphConflictResolutionChoice,
+  type GraphConflictResolutionSuggestion,
   type GraphConflictResolutionValidationIssue
 } from "../lib/graphConflictSummary";
 import {
@@ -351,6 +353,18 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   }, [conflictResolutionDrafts, graphDetail, latestConflictDetail]);
   const conflictResolutionBlockingIssues: GraphConflictResolutionValidationIssue[] =
     conflictResolutionValidation?.blockingIssues ?? [];
+  const conflictResolutionSuggestions: GraphConflictResolutionSuggestion[] = useMemo(() => {
+    if (!graphDetail || conflictResolutionBlockingIssues.length === 0) {
+      return [];
+    }
+    return buildGraphConflictResolutionSuggestions({
+      blockingIssues: conflictResolutionBlockingIssues,
+      changeDetails: unsavedChangeDetails,
+      current: graphDetail,
+      latestHeadDetails: latestHeadConflictDetails,
+      resolutionSelections: conflictResolutionSelections
+    });
+  }, [conflictResolutionBlockingIssues, conflictResolutionSelections, graphDetail, latestHeadConflictDetails, unsavedChangeDetails]);
 
   useEffect(() => {
     if (!selectedNode && !selectedEdge) {
@@ -2204,6 +2218,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                     resolutionBlockingIssues={conflictResolutionBlockingIssues}
                     resolutionDraftCount={conflictResolutionDrafts.length}
                     resolutionSelections={conflictResolutionSelections}
+                    resolutionSuggestions={conflictResolutionSuggestions}
                     onApplyResolutionDrafts={applyMarkedConflictResolutions}
                     onChooseResolution={handleConflictResolutionChoice}
                     onDeferManualMerge={deferManualMergeUntilLater}

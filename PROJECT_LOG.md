@@ -1,3 +1,30 @@
+## 2026-07-08 12:54:17 +08:00 | v1.1.0-alpha.97 | 推进 WB-032 联动取舍建议子步骤
+
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“未标记对象提示”基础上，把依赖阻断从“只告诉用户哪里错了”继续推进到“告诉用户下一步可以怎么点”。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，当对象级取舍触发 `dangling_edge` / `invalid_group_node` 阻断时，直接给出可点击的联动取舍建议，帮助用户补齐依赖或改回保留服务端。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionSuggestions(...)`：会根据阻断问题、当前图谱文档、对象级差异明细和已选取舍，自动生成“联动保留本地依赖节点”或“改为保留服务端”的建议。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `conflictResolutionSuggestions` 计算并传入冲突卡片；查找面同时覆盖本地差异和 latest-head 差异，避免恢复草稿场景下的联动建议漏掉对象。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在“取舍依赖校验问题”后追加“联动取舍建议”区块，允许用户直接点击快捷动作，把建议转成正式的对象级取舍标记。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，补齐 helper、组件与页面级回归，锁定“阻断出现时有建议、点击建议后阻断可解除”的行为。
+- 同步更新 `CHANGELOG.md`、`docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“对象级依赖阻断旁可直接补齐联动取舍”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在不只会在对象级取舍无效时阻断应用，还能直接把“该补哪些节点”或“该把哪个对象改回服务端”转成可点击动作，减少用户在冲突列表和依赖关系之间来回切换。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更系统的多端 conflict handling，例如更完整的对象联动策略、更多冲突类型的可执行建议，以及更清晰的多端合并结果反馈。
+
 ## 2026-07-08 12:33:39 +08:00 | v1.1.0-alpha.96 | 推进 WB-032 未标记对象提示子步骤
 
 ### 任务内容
