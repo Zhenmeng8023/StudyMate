@@ -5,6 +5,7 @@ import {
   buildGraphConflictBundleArtifact,
   buildGraphConflictObjectDetails,
   buildGraphConflictResolutionDrafts,
+  buildGraphConflictResolutionOutcomeMessage,
   buildGraphConflictResolutionSuggestions,
   buildGraphConflictReportArtifact,
   buildGraphUnsavedChangeSummary,
@@ -530,6 +531,30 @@ describe("graphConflictSummary", () => {
         scope: "localDraft"
       }
     ]);
+  });
+
+  it("builds a readable outcome message for applied conflict resolution drafts", () => {
+    expect(
+      buildGraphConflictResolutionOutcomeMessage([
+        {
+          decision: "keep-local",
+          detail: { action: "added", id: "node-2", kind: "node", label: "姒傚康 B" },
+          scope: "localDraft"
+        },
+        {
+          decision: "keep-latest",
+          detail: { action: "removed", id: "edge-legacy", kind: "edge", label: "鏃у叧绯?" },
+          scope: "latestHead"
+        },
+        {
+          decision: "review-later",
+          detail: { action: "updated", id: "group-1", kind: "group", label: "缁?1" },
+          scope: "localDraft"
+        }
+      ])
+    ).toBe("已基于最新图谱生成合并草稿：保留本地 1 项，保留服务端 1 项，稍后处理 1 项（已沿用最新版本），请确认后保存");
+
+    expect(buildGraphConflictResolutionOutcomeMessage([])).toBe("已基于最新图谱生成合并草稿，请确认后保存");
   });
 
   it("builds a keep-latest suggestion for invalid local node source references", () => {

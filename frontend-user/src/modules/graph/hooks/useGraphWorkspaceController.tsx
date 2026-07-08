@@ -122,6 +122,7 @@ import {
   buildGraphConflictObjectDetails,
   buildGraphConflictObjectDecisionKey,
   buildGraphConflictResolutionDrafts,
+  buildGraphConflictResolutionOutcomeMessage,
   buildGraphConflictResolutionSuggestions,
   buildGraphConflictReportArtifact,
   buildGraphUnsavedChangeSummary,
@@ -1007,7 +1008,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setLatestConflictDetail(null);
     setLatestConflictError("");
     setLatestConflictLoading(false);
-    setWorkspaceStatusMessage("已基于最新图谱生成合并草稿，请确认后保存");
+    setWorkspaceStatusMessage(buildGraphConflictResolutionOutcomeMessage(conflictResolutionDrafts));
   }
 
   function handleConflictResolutionChoice(

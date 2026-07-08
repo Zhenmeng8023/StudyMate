@@ -1,3 +1,28 @@
+## 2026-07-08 18:50:34 +08:00 | v1.1.0-alpha.100 | 推进 WB-032 合并结果反馈子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“节点级冲突建议”基础上，把“应用已标记取舍”后的结果反馈从固定提示继续推进到可解释的合并结果摘要。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，用户把对象级取舍应用到最新 head 后，立即知道这次合并草稿里到底保留了多少本地对象、沿用了多少服务端对象，以及多少对象被标记为稍后处理。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionOutcomeMessage(...)`，把对象级取舍草稿转换为可读的合并结果反馈，覆盖 `keep-local`、`keep-latest` 与 `review-later` 三类决策。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，在 `applyMarkedConflictResolutions()` 成功后改为使用结果摘要文案，而不是固定的“已生成合并草稿”提示。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 与 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补齐 helper 与页面级回归，锁定“应用取舍后显示带计数的合并结果反馈”。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“对象级取舍应用后会返回可解释的结果摘要”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在不只会告诉用户“已经生成合并草稿”，还会直接说明本次合并里保留了多少本地对象、沿用了多少服务端对象，以及是否存在“稍后处理但已沿用最新版本”的对象，降低用户在多端合并后的不确定感。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的对象联动策略，以及覆盖更多冲突类型的批量取舍辅助，让这套多端冲突处理从“单条建议可点击”继续推进到“整组取舍更高效”。
+
 ## 2026-07-08 18:45:24 +08:00 | v1.1.0-alpha.99 | 推进 WB-032 节点级冲突建议子步骤
 ### 任务内容
 

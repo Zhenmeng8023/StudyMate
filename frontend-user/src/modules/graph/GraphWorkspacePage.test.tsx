@@ -336,7 +336,7 @@ describe("GraphWorkspacePage persistence states", () => {
     await user.click(screen.getByRole("button", { name: "保留本地（当前未保存修改）：节点｜新增｜新概念" }));
     await user.click(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" }));
 
-    await expect(screen.findByText("已基于最新图谱生成合并草稿，请确认后保存")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("已基于最新图谱生成合并草稿：保留本地 1 项，请确认后保存")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
     expect(screen.getByText(/版本 5 · 1 节点 · 0 连线/)).toBeInTheDocument();
     expect(screen.queryByLabelText("图谱冲突辅助")).toBeNull();

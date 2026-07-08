@@ -150,6 +150,27 @@ export function buildGraphConflictResolutionDrafts(input: {
   ];
 }
 
+export function buildGraphConflictResolutionOutcomeMessage(drafts: GraphConflictResolutionDraft[]) {
+  if (!drafts.length) {
+    return "已基于最新图谱生成合并草稿，请确认后保存";
+  }
+
+  const keepLocalCount = drafts.filter((draft) => draft.decision === "keep-local").length;
+  const keepLatestCount = drafts.filter((draft) => draft.decision === "keep-latest").length;
+  const reviewLaterCount = drafts.filter((draft) => draft.decision === "review-later").length;
+  const parts = [
+    keepLocalCount > 0 ? `保留本地 ${keepLocalCount} 项` : "",
+    keepLatestCount > 0 ? `保留服务端 ${keepLatestCount} 项` : "",
+    reviewLaterCount > 0 ? `稍后处理 ${reviewLaterCount} 项（已沿用最新版本）` : ""
+  ].filter(Boolean);
+
+  if (!parts.length) {
+    return "已基于最新图谱生成合并草稿，请确认后保存";
+  }
+
+  return `已基于最新图谱生成合并草稿：${parts.join("，")}，请确认后保存`;
+}
+
 export function applyGraphConflictResolutionDrafts(input: {
   current: GraphDetailPayload;
   drafts: GraphConflictResolutionDraft[];
