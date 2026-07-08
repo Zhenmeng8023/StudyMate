@@ -20,6 +20,17 @@ export interface ApiSuccessPayload<T> {
 
 type ApiQueryPrimitive = string | number | boolean;
 type ApiQueryValue = ApiQueryPrimitive | ApiQueryPrimitive[] | null | undefined;
+export type ApiJsonBody = Record<string, unknown> | unknown[];
+type ApiRawBody = Exclude<NonNullable<BodyInit>, string>;
+
+export interface ApiRequestInit extends Omit<RequestInit, "body"> {
+  body?: BodyInit | ApiJsonBody | null;
+}
+
+interface NormalizedApiRequestBody {
+  body?: BodyInit;
+  usesJsonContentType: boolean;
+}
 
 export function createAuthHeaders(token?: string | null): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -59,11 +70,40 @@ export async function readApiResponse<T>(response: Response): Promise<T> {
   return payload.data;
 }
 
-export async function requestApi<T>(input: string, init?: RequestInit): Promise<T> {
+function isBinaryBody(body: unknown): body is ApiRawBody {
+  return (
+    body instanceof FormData ||
+    body instanceof Blob ||
+    body instanceof URLSearchParams ||
+    body instanceof ArrayBuffer ||
+    ArrayBuffer.isView(body) ||
+    (typeof ReadableStream !== "undefined" && body instanceof ReadableStream)
+  );
+}
+
+function normalizeRequestBody(body: ApiRequestInit["body"]): NormalizedApiRequestBody {
+  if (body === null || body === undefined) {
+    return { body: undefined, usesJsonContentType: false };
+  }
+
+  if (typeof body === "string") {
+    return { body, usesJsonContentType: true };
+  }
+
+  if (isBinaryBody(body)) {
+    return { body, usesJsonContentType: false };
+  }
+
+  return { body: JSON.stringify(body), usesJsonContentType: true };
+}
+
+export async function requestApi<T>(input: string, init?: ApiRequestInit): Promise<T> {
+  const normalizedBody = normalizeRequestBody(init?.body);
   const response = await fetch(input, {
     ...init,
+    body: normalizedBody.body,
     headers: {
-      ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...(normalizedBody.usesJsonContentType ? { "Content-Type": "application/json" } : {}),
       ...(init?.headers ?? {})
     }
   });

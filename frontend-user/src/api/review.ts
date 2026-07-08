@@ -44,7 +44,7 @@ export async function createDeck(
   return request<DeckPayload>("/decks", {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -68,7 +68,7 @@ export async function createDeckCard(
   return request<CardPayload>(`/decks/${deckId}/cards`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -87,7 +87,7 @@ export async function bulkCreateDeckCards(
   return request<CardPayload[]>(`/decks/${deckId}/cards/bulk`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify({ cards })
+    body: { cards }
   });
 }
 
@@ -108,6 +108,6 @@ export async function reviewCard(
   return request<ReviewResultPayload>(`/cards/${cardId}/review`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }

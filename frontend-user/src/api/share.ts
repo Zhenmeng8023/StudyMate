@@ -14,7 +14,7 @@ export async function createShareLink(
   return request<ShareLinkPayload>("/share-links", {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 

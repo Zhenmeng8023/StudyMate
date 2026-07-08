@@ -51,7 +51,7 @@ export async function updateReaderProgress(
   return request<ReaderStatePayload>(`/materials/${materialId}/reader/progress`, {
     method: "PUT",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -69,7 +69,7 @@ export async function createReaderAnnotation(
   return request<ReaderAnnotationPayload>(`/materials/${materialId}/reader/annotations`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -95,7 +95,7 @@ export async function generateAnnotationCardDrafts(
   return request<CardDraftPayload[]>(`/materials/${materialId}/reader/annotations/generate-cards`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify({ annotationIds })
+    body: { annotationIds }
   });
 }
 
@@ -107,6 +107,6 @@ export async function generateAnnotationGraphDrafts(
   return request<AiDraftPayload[]>(`/materials/${materialId}/reader/annotations/generate-graph-drafts`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify({ annotationIds })
+    body: { annotationIds }
   });
 }

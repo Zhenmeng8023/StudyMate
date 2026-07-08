@@ -50,7 +50,7 @@ export async function createGraph(
   return request<GraphDetailPayload>("/graphs", {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -72,7 +72,7 @@ export async function updateGraph(
   return request<GraphSummaryPayload>(`/graphs/${graphId}`, {
     method: "PUT",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -96,7 +96,7 @@ export async function batchSaveGraph(
   return request<GraphDetailPayload>(`/graphs/${graphId}/batch-save`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -110,7 +110,7 @@ export async function restoreGraphSnapshot(session: AuthSession, graphId: string
   return request<GraphDetailPayload>(`/graphs/${graphId}/restore`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify({ versionNumber })
+    body: { versionNumber }
   });
 }
 
@@ -118,7 +118,7 @@ export async function importGraphMarkdown(session: AuthSession, graphId: string,
   return request<GraphDetailPayload>(`/graphs/${graphId}/import/markdown`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify({ source })
+    body: { source }
   });
 }
 
@@ -126,7 +126,7 @@ export async function importGraphMermaid(session: AuthSession, graphId: string, 
   return request<GraphDetailPayload>(`/graphs/${graphId}/import/mermaid`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify({ source })
+    body: { source }
   });
 }
 
@@ -149,7 +149,7 @@ export async function previewGraphLayout(
   return request<GraphLayoutPreviewPayload>(`/graphs/${graphId}/layouts/preview`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -157,7 +157,7 @@ export async function generateGraphCardDrafts(session: AuthSession, graphId: str
   return request<GraphCardDraftPayload[]>(`/graphs/${graphId}/ai/generate-cards`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify({ nodeIds })
+    body: { nodeIds }
   });
 }
 
@@ -172,7 +172,7 @@ export async function commitGraphCardDrafts(
   return request<CardPayload[]>(`/graphs/${graphId}/ai/commit-cards`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -186,7 +186,7 @@ export async function commitGraphChangeDrafts(session: AuthSession, graphId: str
   return request<GraphDetailPayload>(`/graphs/${graphId}/ai/commit-changes`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify({ draftIds })
+    body: { draftIds }
   });
 }
 
@@ -204,6 +204,6 @@ export async function commitGraphChangeDraftSelection(
   return request<GraphDetailPayload>(`/graphs/${graphId}/ai/commit-changes`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }

@@ -1,3 +1,33 @@
+## 2026-07-09 04:24:00 +08:00 | v1.1.0-alpha.117 | 推进 API-010 共享 JSON 请求体编码起步
+### 任务内容
+
+- 在 `API-010` 已完成共享 request/error/auth-header、管理端请求边界抽离与 query/pagination 参数拼接起步的基础上，继续选择一个范围小但覆盖面广的共享层收口点。
+- 本轮目标是把 plain object / array 的 JSON 请求体编码从前后台各个 API 调用点收回到 `packages/api-client`，避免继续在业务 API 文件里散落 `JSON.stringify(...)`。
+### 实际变更
+
+- 更新 `packages/api-client/src/index.ts`，新增 `ApiRequestInit`、JSON/body 归一化逻辑与类型守卫，让 `requestApi(...)` 可直接接收 plain object / array，并统一序列化为 JSON；同时继续保留 `FormData`、`Blob`、`URLSearchParams`、`ArrayBuffer` 等原生 body 的直通能力。
+- 更新 `packages/api-client/src/index.test.ts`，把共享请求层测试改为直接传对象请求体，锁定“共享层负责 JSON 序列化并补齐 `Content-Type`”的新边界。
+- 更新 `frontend-user/src/api/core.ts`，把用户端基础 request 入参类型切到共享 `ApiRequestInit`，让业务域 API 可以直接把对象请求体交给共享层。
+- 更新 `frontend-user/src/api/auth.ts`、`community.ts`、`graphs.ts`、`materials.ts`、`notes.ts`、`reader.ts`、`review.ts` 与 `share.ts`，移除各自手写的 `JSON.stringify(...)`，统一改为直接传对象或数组。
+- 更新 `frontend-admin/src/api/client.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.vue`，让管理端 `adminPost(...)` 与页面内 `post(...)` 包装函数直接复用共享层的 JSON 请求体约定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把 `API-010` 推进到“共享层已开始承接 JSON 请求体编码”的最新状态。
+### 验证结果
+
+- `npx vitest run packages/api-client/src/index.test.ts`
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/api/reader.test.ts src/api/reviewAi.test.ts src/api/searchShare.test.ts`
+- `npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-user run typecheck`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:user`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `API-010` 现在不仅统一了 request/error/auth-header 与 query/pagination 参数拼接，也开始统一 JSON 请求体编码；后续新增前后台 API 时，不需要再从各端业务文件里重复写序列化细节。
+- 这一轮仍然只是“JSON 请求体编码起步”，还没有形成完整的分页响应 DTO、上传语义矩阵、401 refresh/replay/fail-logout 与统一会话失效处理，后续仍应继续沿 `API-010 / API-011` 推进。
+
 ## 2026-07-09 04:15:00 +08:00 | v1.1.0-alpha.116 | 推进 API-010 共享 query 与分页参数拼接起步
 ### 任务内容
 

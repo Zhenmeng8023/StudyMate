@@ -53,7 +53,7 @@ export async function createMaterial(
   return request<MaterialPayload>("/materials", {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -72,7 +72,7 @@ export async function updateMaterial(
   return request<MaterialPayload>(`/materials/${materialId}`, {
     method: "PUT",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -94,6 +94,6 @@ export async function rateMaterial(session: AuthSession, materialId: string, sco
   return request<MaterialRatingPayload>(`/materials/${materialId}/rating`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify({ score })
+    body: { score }
   });
 }

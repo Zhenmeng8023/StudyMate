@@ -46,7 +46,7 @@ export async function createPost(
   return request<PostDetailPayload>("/posts", {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -54,7 +54,7 @@ export async function createComment(session: AuthSession, postId: string, body: 
   return request<PostDetailPayload>(`/posts/${postId}/comments`, {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify({ body })
+    body: { body }
   });
 }
 

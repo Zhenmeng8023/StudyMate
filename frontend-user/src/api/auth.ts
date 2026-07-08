@@ -39,14 +39,14 @@ export async function registerUser(input: {
 }) {
   return request<AuthPayload>("/auth/register", {
     method: "POST",
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
 export async function loginUser(input: { login: string; password: string }) {
   return request<AuthPayload>("/auth/login", {
     method: "POST",
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -54,7 +54,7 @@ export async function logoutUser(session: AuthSession) {
   return request<{ message: string }>("/auth/logout", {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify({ refreshToken: session.refreshToken })
+    body: { refreshToken: session.refreshToken }
   });
 }
 
@@ -71,6 +71,6 @@ export async function updateProfile(
   return request<ProfilePayload>("/users/me", {
     method: "PUT",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }

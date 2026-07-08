@@ -58,7 +58,7 @@ export async function createNote(
   return request<NotePayload>("/notes", {
     method: "POST",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 
@@ -76,7 +76,7 @@ export async function updateNote(
   return request<NotePayload>(`/notes/${noteId}`, {
     method: "PUT",
     headers: withAuth(session),
-    body: JSON.stringify(input)
+    body: input
   });
 }
 

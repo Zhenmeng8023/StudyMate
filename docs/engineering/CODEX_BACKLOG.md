@@ -122,16 +122,19 @@
 - 执行日期：2026-07-09
 - 本轮完成：
   - `packages/api-client/src/index.ts` 不再只暴露健康检查；新增共享 `ApiSuccessPayload` / `ApiErrorPayload`、`readApiResponse(...)`、`requestApi(...)` 与 `createAuthHeaders(...)`，并让 `getHealth(...)` 复用这层共享请求入口。
-  - `packages/api-client` 现已新增共享 `buildApiPath(...)`，开始承接数组 filters、`limit` 等 query/pagination 参数拼接，避免搜索与后台治理列表继续各自手写 `URLSearchParams` 或 `?limit=20`。
+- `packages/api-client` 现已新增共享 `buildApiPath(...)`，开始承接数组 filters、`limit` 等 query/pagination 参数拼接，避免搜索与后台治理列表继续各自手写 `URLSearchParams` 或 `?limit=20`。
+- `packages/api-client` 现也开始承接 JSON 请求体归一化：`requestApi(...)` 可直接接收 plain object / array 并统一序列化为 JSON，同时继续保持 `FormData` 等上传路径不被强塞 `Content-Type`。
   - `packages/api-client/src/index.test.ts` 先以 RED 锁定鉴权 header、JSON envelope 解析、`FormData` 上传不强塞 `Content-Type` 与 API 错误抛出，再转 GREEN。
   - `frontend-user/src/api/core.ts` 已改为复用 `@studymate/api-client` 的共享 request/auth-header 层；`frontend-user/src/api/types.ts` 不再重复维护本地 success/error envelope 类型。
-  - `frontend-user/src/api/search.ts` 已改为通过 `buildApiPath(...)` 构造 `q`、`types`、`limit` 查询参数，不再本地拼接 `URLSearchParams`。
+- `frontend-user/src/api/search.ts` 已改为通过 `buildApiPath(...)` 构造 `q`、`types`、`limit` 查询参数，不再本地拼接 `URLSearchParams`。
+- 用户端 `auth/community/graphs/materials/notes/reader/review/share` 等 API 模块现已改为直接把对象请求体交给共享层，不再各自手写 `JSON.stringify(...)`。
   - `frontend-admin/src/views/AdminWorkspaceView.vue` 已改为通过共享 client 访问后台 API，并移除不再使用的本地响应解析分支。
-  - 新增 `frontend-admin/src/api/client.ts` 与 `frontend-admin/src/api/client.test.ts`，把管理端 `get/post` 请求边界从页面中抽出，并让治理列表的 `limit=20` 改为通过共享 query helper 生成。
+- 新增 `frontend-admin/src/api/client.ts` 与 `frontend-admin/src/api/client.test.ts`，把管理端 `get/post` 请求边界从页面中抽出，并让治理列表的 `limit=20` 改为通过共享 query helper 生成、JSON POST body 改为由共享层统一编码。
   - `frontend-user/package.json`、`frontend-admin/package.json` 与 `package-lock.json` 已显式接入 `@studymate/api-client` workspace 依赖。
 - 已执行验证：
   - RED：`npx vitest run packages/api-client/src/index.test.ts`
   - GREEN：`npx vitest run packages/api-client/src/index.test.ts`
+  - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/api/reader.test.ts src/api/reviewAi.test.ts src/api/searchShare.test.ts`
   - `npm --workspace frontend-user run test -- src/api/searchShare.test.ts`
   - RED：`npm --workspace frontend-admin run test -- src/api/client.test.ts`
   - GREEN：`npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`

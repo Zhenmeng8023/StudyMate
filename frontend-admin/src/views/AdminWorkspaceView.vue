@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import "../components/admin/admin.css";
 import { adminGet, adminPost } from "../api/client";
+import type { ApiRequestInit } from "@studymate/api-client";
 import { computed, reactive, ref } from "vue";
 
 interface AuthUser {
@@ -255,7 +256,7 @@ async function get<T>(path: string, query?: { limit?: number }) {
   return adminGet<T>(path, session.value, query);
 }
 
-async function post<T>(path: string, body: unknown) {
+async function post<T>(path: string, body: ApiRequestInit["body"]) {
   return adminPost<T>(path, body, session.value);
 }
 

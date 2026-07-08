@@ -38,13 +38,13 @@ describe("@studymate/api-client", () => {
     ).toBe("/api/v1/admin/users?sort=recent&limit=20");
   });
 
-  it("adds json content type and unwraps the API success envelope", async () => {
+  it("serializes plain object bodies with json content type and unwraps the API success envelope", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(apiPayload({ ok: true }));
 
     await expect(
       requestApi<{ ok: boolean }>("/api/v1/test", {
         method: "POST",
-        body: JSON.stringify({ hello: "world" })
+        body: { hello: "world" }
       })
     ).resolves.toEqual({ ok: true });
 
@@ -53,7 +53,8 @@ describe("@studymate/api-client", () => {
       expect.objectContaining({
         headers: expect.objectContaining({
           "Content-Type": "application/json"
-        })
+        }),
+        body: JSON.stringify({ hello: "world" })
       })
     );
   });
