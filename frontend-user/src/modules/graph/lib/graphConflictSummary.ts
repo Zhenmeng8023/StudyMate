@@ -178,6 +178,7 @@ export function buildGraphConflictResolutionOutcomeMessage(drafts: GraphConflict
 export function buildGraphConflictResolutionPreflightMessage(input: {
   blockingIssues: GraphConflictResolutionValidationIssue[];
   drafts: GraphConflictResolutionDraft[];
+  unmarkedSummary?: string;
 }) {
   if (!input.drafts.length) {
     return "";
@@ -187,12 +188,44 @@ export function buildGraphConflictResolutionPreflightMessage(input: {
   if (!summary.length) {
     return "";
   }
+  const unmarkedClause = input.unmarkedSummary ? `；${input.unmarkedSummary}` : "";
+
+  const withUnmarkedSummary = (message: string) => {
+    if (!input.unmarkedSummary) {
+      return message;
+    }
+    return `${message.slice(0, -1)}${unmarkedClause}。`;
+  };
 
   if (input.blockingIssues.length > 0) {
-    return `如果现在应用：已标记取舍会被 ${input.blockingIssues.length} 个依赖问题阻断（${buildGraphConflictResolutionBlockingIssueSummary(input.blockingIssues)}）；当前计划${summary.join("，")}。`;
+    return withUnmarkedSummary(
+      `如果现在应用：已标记取舍会被 ${input.blockingIssues.length} 个依赖问题阻断（${buildGraphConflictResolutionBlockingIssueSummary(input.blockingIssues)}）；当前计划${summary.join("，")}。`
+    );
   }
 
-  return `如果现在应用：${summary.join("，")}。`;
+  return withUnmarkedSummary(`如果现在应用：${summary.join("，")}。`);
+}
+
+export function buildGraphConflictResolutionUnmarkedSummary(input: {
+  changeDetails: GraphConflictObjectDetail[];
+  latestHeadDetails: GraphConflictObjectDetail[];
+  resolutionSelections: Record<string, GraphConflictResolutionChoice>;
+}) {
+  const examples = [
+    ...buildGraphConflictResolutionUnmarkedExamples("当前未保存修改", "localDraft", input.changeDetails, input.resolutionSelections),
+    ...buildGraphConflictResolutionUnmarkedExamples(
+      "与最新图谱相比",
+      "latestHead",
+      input.latestHeadDetails,
+      input.resolutionSelections
+    )
+  ];
+
+  if (!examples.length) {
+    return "";
+  }
+
+  return `另外 ${examples.length} 个未标记对象会默认沿用最新图谱版本（${examples.join("、")}）`;
 }
 
 export function buildGraphConflictResolutionSuggestionOutcomeMessage(input: {
@@ -758,6 +791,17 @@ function buildGraphConflictResolutionDecisionSummary(
         : `稍后处理 ${reviewLaterCount} 项`
       : ""
   ].filter(Boolean);
+}
+
+function buildGraphConflictResolutionUnmarkedExamples(
+  prefix: string,
+  scope: GraphConflictObjectScope,
+  details: GraphConflictObjectDetail[],
+  selections: Record<string, GraphConflictResolutionChoice>
+) {
+  return details
+    .filter((detail) => selections[buildGraphConflictObjectDecisionKey(scope, detail)] === undefined)
+    .map((detail) => `${prefix}：${formatGraphConflictObjectDetail(detail)}`);
 }
 
 function applyKeepLocalDecision(

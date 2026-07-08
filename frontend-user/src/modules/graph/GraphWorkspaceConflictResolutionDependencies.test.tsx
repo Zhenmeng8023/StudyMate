@@ -272,6 +272,73 @@ describe("GraphWorkspacePage conflict dependency guard", () => {
     expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeEnabled();
   });
 
+  it("includes unmarked-object fallback guidance in the apply preflight summary", async () => {
+    const user = userEvent.setup();
+    window.sessionStorage.setItem(
+      buildGraphWorkspaceDraftStorageKey("graph-1"),
+      JSON.stringify({
+        currentVersion: 4,
+        description: "local draft",
+        document: {
+          ...graphDetail.document,
+          nodes: [
+            ...graphDetail.document.nodes,
+            {
+              id: "node-local",
+              type: "concept",
+              title: "Local concept",
+              x: 420,
+              y: 120,
+              width: 220,
+              height: 132,
+              source: null,
+              metadata: {}
+            }
+          ],
+          edges: [
+            {
+              id: "edge-local",
+              kind: "curve",
+              sourceNodeId: "node-1",
+              targetNodeId: "node-local",
+              label: "Local edge",
+              metadata: {}
+            }
+          ],
+          groups: []
+        },
+        graphId: "graph-1",
+        savedAt: "2026-07-01T20:10:00Z",
+        title: "Recovered graph"
+      })
+    );
+    batchSaveGraphMock.mockRejectedValueOnce(new Error("graph_version_conflict"));
+    getGraphMock.mockReset();
+    getGraphMock
+      .mockResolvedValueOnce(graphDetail)
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        currentVersion: 5,
+        updatedAt: "2026-07-01T20:20:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 5
+        }
+      });
+
+    renderWorkspace();
+
+    await expect(screen.findByRole("button", { name: "保存修改" })).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "保存修改" }));
+    await expect(screen.findByLabelText("图谱冲突辅助")).resolves.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /保留本地.*Local edge/ }));
+
+    await expect(screen.findByLabelText("取舍应用预检")).resolves.toHaveTextContent(
+      "另外 1 个未标记对象会默认沿用最新图谱版本"
+    );
+  });
+
   it("can batch-apply linked resolution suggestions to clear dependency blockers", async () => {
     const user = userEvent.setup();
     window.sessionStorage.setItem(

@@ -128,6 +128,7 @@ import {
   buildGraphConflictResolutionPreflightMessage,
   buildGraphConflictResolutionSuggestionOutcomeMessage,
   buildGraphConflictResolutionSuggestions,
+  buildGraphConflictResolutionUnmarkedSummary,
   buildGraphConflictReportArtifact,
   buildGraphUnsavedChangeSummary,
   formatGraphConflictObjectDetail,
@@ -370,13 +371,23 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       resolutionSelections: conflictResolutionSelections
     });
   }, [conflictResolutionBlockingIssues, conflictResolutionSelections, graphDetail, latestHeadConflictDetails, unsavedChangeDetails]);
+  const conflictResolutionUnmarkedSummary = useMemo(
+    () =>
+      buildGraphConflictResolutionUnmarkedSummary({
+        changeDetails: unsavedChangeDetails,
+        latestHeadDetails: latestHeadConflictDetails,
+        resolutionSelections: conflictResolutionSelections
+      }),
+    [conflictResolutionSelections, latestHeadConflictDetails, unsavedChangeDetails]
+  );
   const conflictResolutionPreflightMessage = useMemo(
     () =>
       buildGraphConflictResolutionPreflightMessage({
         blockingIssues: conflictResolutionBlockingIssues,
-        drafts: conflictResolutionDrafts
+        drafts: conflictResolutionDrafts,
+        unmarkedSummary: conflictResolutionUnmarkedSummary
       }),
-    [conflictResolutionBlockingIssues, conflictResolutionDrafts]
+    [conflictResolutionBlockingIssues, conflictResolutionDrafts, conflictResolutionUnmarkedSummary]
   );
 
   useEffect(() => {

@@ -1,3 +1,27 @@
+## 2026-07-09 02:00:43 +08:00 | v1.1.0-alpha.106 | 推进 WB-032 预检并入未标记默认回退子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“应用前预检摘要”再补完整一层。
+- 本轮目标是在图谱 Inspector 的冲突卡片里，让“如果现在应用”不只说明已标记取舍会怎么处理，也直接说明还有哪些未标记对象会默认沿用最新图谱版本。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionUnmarkedSummary(...)`，把未标记对象的默认回退结果统一压成可复用摘要，并让 `buildGraphConflictResolutionPreflightMessage(...)` 支持把这段结果并入最终预检提示。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，基于当前 `unsavedChangeDetails`、`latestHeadConflictDetails` 与 `conflictResolutionSelections` 计算未标记对象摘要，再把它一并传给现有的 `resolutionPreflightMessage`。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，补齐 helper 级与页面级回归，锁定“应用前预检会把未标记对象默认沿用最新版本的结果一起说清楚”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“应用前预检同时解释已标记取舍与未标记默认回退结果”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+
+### 后续影响
+
+- 图谱冲突辅助现在能在最终点击前，把“已标记对象会如何合并”和“未标记对象会如何默认回退”同时说清楚，减少用户在对象级取舍场景里的合并不确定感。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是把这套预检从摘要扩展到更完整的对象级合并预检反馈，并覆盖更多冲突类型的联动取舍策略。
+
 ## 2026-07-09 01:41:18 +08:00 | v1.1.0-alpha.105 | 推进 WB-032 应用前预检摘要子步骤
 ### 任务内容
 

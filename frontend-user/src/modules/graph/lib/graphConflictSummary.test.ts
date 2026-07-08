@@ -10,6 +10,7 @@ import {
   buildGraphConflictResolutionOutcomeMessage,
   buildGraphConflictResolutionPreflightMessage,
   buildGraphConflictResolutionSuggestionOutcomeMessage,
+  buildGraphConflictResolutionUnmarkedSummary,
   buildGraphConflictResolutionSuggestions,
   buildGraphConflictReportArtifact,
   buildGraphUnsavedChangeSummary,
@@ -743,6 +744,35 @@ describe("graphConflictSummary", () => {
         ]
       })
     ).toBe("如果现在应用：保留本地 1 项，稍后处理 1 项（已沿用最新版本）。");
+  });
+
+  it("extends the preflight summary with unmarked objects that would fall back to the latest head", () => {
+    expect(
+      buildGraphConflictResolutionUnmarkedSummary({
+        changeDetails: [{ action: "added", id: "node-local", kind: "node", label: "本地节点" }],
+        latestHeadDetails: [{ action: "removed", id: "edge-legacy", kind: "edge", label: "服务端连线" }],
+        resolutionSelections: {}
+      })
+    ).toBe(
+      "另外 2 个未标记对象会默认沿用最新图谱版本（当前未保存修改：节点｜新增｜本地节点、与最新图谱相比：连线｜删除｜服务端连线）"
+    );
+
+    expect(
+      buildGraphConflictResolutionPreflightMessage({
+        blockingIssues: [],
+        drafts: [
+          {
+            decision: "keep-local",
+            detail: { action: "added", id: "node-local", kind: "node", label: "本地节点" },
+            scope: "localDraft"
+          }
+        ],
+        unmarkedSummary:
+          "另外 2 个未标记对象会默认沿用最新图谱版本（当前未保存修改：节点｜新增｜本地节点、与最新图谱相比：连线｜删除｜服务端连线）"
+      })
+    ).toBe(
+      "如果现在应用：保留本地 1 项；另外 2 个未标记对象会默认沿用最新图谱版本（当前未保存修改：节点｜新增｜本地节点、与最新图谱相比：连线｜删除｜服务端连线）。"
+    );
   });
 
   it("builds a concise blocking issue summary with a remainder count", () => {
