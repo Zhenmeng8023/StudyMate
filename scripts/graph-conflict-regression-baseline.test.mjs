@@ -1,0 +1,38 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+function readJson(relativePath) {
+  return JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8"));
+}
+
+function readText(relativePath) {
+  return fs.readFileSync(path.join(root, relativePath), "utf8");
+}
+
+test("graph conflict regression entrypoint is wired into scripts and docs", () => {
+  const packageJson = readJson("package.json");
+  const readme = readText("README.md");
+  const developmentDoc = readText("docs/DEVELOPMENT.md");
+  const roadmap = readText("docs/engineering/CODEX_EXECUTION_ROADMAP.md");
+  const backlog = readText("docs/engineering/CODEX_BACKLOG.md");
+  const regressionDoc = readText("docs/engineering/GRAPH_CONFLICT_REGRESSION.md");
+
+  assert.equal(
+    packageJson.scripts?.["verify:graph-conflicts"],
+    "npm run test:graph:conflicts:frontend && npm run test:graph:conflicts:backend && npm run verify:docs"
+  );
+  assert.ok(packageJson.scripts?.["test:graph:conflicts:frontend"]);
+  assert.equal(packageJson.scripts?.["test:graph:conflicts:backend"], "cd backend && go test ./internal/modules/graph/dto ./internal/modules/graph/handler ./internal/modules/graph/service");
+  assert.match(readme, /npm run verify:graph-conflicts/);
+  assert.match(developmentDoc, /npm run verify:graph-conflicts/);
+  assert.match(roadmap, /npm run verify:graph-conflicts/);
+  assert.match(backlog, /npm run verify:graph-conflicts/);
+  assert.match(regressionDoc, /npm run verify:graph-conflicts/);
+  assert.match(regressionDoc, /GraphWorkspaceConflictResolutionDependencies\.test\.tsx/);
+  assert.match(regressionDoc, /graphConflictSummary\.test\.ts/);
+});
