@@ -8,7 +8,8 @@
 
 - `packages/ui` 已从纯占位包升级为最小共享状态契约层，先导出 `DataStateKind`、`dataStateKinds` 与 `getDataStateLabel(...)`。
 - 用户端 `DataState` 已改为直接消费这层共享契约，并补齐 `conflict` 页面状态语义，作为阅读、笔记、复习等工作台后续统一状态协议的第一步。
-- Iteration 4 的下一步应继续收口设计 token 单一来源，并把更多现有 primitives 迁入 `@studymate/ui`，而不是继续散落在各端页面里维护。
+- `packages/ui` 已新增共享 `tokens.css`，并通过 `@studymate/ui/tokens.css` 接入用户端样式入口；`app.css` 与 `ui-redesign.css` 内重复的根 token 块已经移除，FE-040 从“要做”推进到“已开始落地”。
+- Iteration 4 的下一步应继续让管理端与更多现有 primitives 消费这层共享 token 和状态契约，而不是继续散落在各端页面里维护。
 
 ### 2026-07-08 FE / UI 验证收口更新
 
@@ -20,7 +21,7 @@
 
 本次读取《StudyMate 代码审查与后续开发建议》后，与当前真实仓库进度对齐：
 
-- 仍成立：设计 token 重复、`packages/ui` / `packages/api-client` / `packages/editor-core` 仍接近占位、页面状态协议未全站统一、图谱工作区控制器过大、管理端仍是单工作台组件、共享 API/会话层不足、搜索仍缺服务端真分页与真实命中统计。
+- 仍成立：共享设计 token 虽已起步，但管理端与更多基础组件仍未接入；`packages/ui` / `packages/api-client` / `packages/editor-core` 仍整体偏薄、页面状态协议未全站统一、图谱工作区控制器过大、管理端仍是单工作台组件、共享 API/会话层不足、搜索仍缺服务端真分页与真实命中统计。
 - 需修正：真实仓库已有根 `package.json`、`package-lock.json`、`.github/workflows/ci.yml` 与默认 CI；因此不再把“缺少根工程入口/CI”作为事实，只保留 graph-core TypeScript 测试运行方式、工具链版本与 bootstrap 可复现性的二次收口任务。
 - 执行策略：不新开课程、协作、桌面端或向量搜索；先把现有 Web 主站、后台、图谱和学习闭环收成统一的产品工作台。
 

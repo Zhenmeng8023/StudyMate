@@ -1,3 +1,29 @@
+## 2026-07-09 03:46:30 +08:00 | v1.1.0-alpha.112 | 推进 FE-040 共享设计 token 单一来源起步
+### 任务内容
+
+- 延续新的快速原型方向，继续围绕 `FE-040` 做“先把全局骨架收起来”的小步推进，而不是回到单一冲突子场景深挖。
+- 本轮目标是在不大改现有页面结构的前提下，把用户端当前生效的 UI-04 根 token 从页面样式里抽出到共享包，建立最小可复用的单一来源。
+### 实际变更
+
+- 新增 `packages/ui/src/tokens.css`，沉淀用户端当前生效的 `--bg-*`、`--surface*`、`--accent*`、`--radius-*`、`--sidebar-width`、`--panel-blur` 等根 token，并在 `packages/ui/package.json` 暴露 `./tokens.css` 导出入口。
+- 更新 `frontend-user/src/styles.css`，先导入 `@studymate/ui/tokens.css`，让用户端样式入口显式接入共享 token 层。
+- 更新 `frontend-user/src/styles/app.css` 与 `frontend-user/src/styles/ui-redesign.css`，移除重复的 `:root` token 定义，避免同名变量继续依赖样式加载顺序覆盖。
+- 新增 `packages/ui/src/tokens.test.ts` 与 `frontend-user/src/styles/tokenSource.test.ts`，锁定共享 token 文件存在、用户端入口已接线，以及本地样式文件不再重复声明核心 token。
+- 为了让前端测试在类型检查与构建链上可编译，补充 `frontend-user/src/vite-env.d.ts` 与 `frontend-user` 的 `@types/node` 开发依赖，把 Node 文件读取能力显式限定到前端测试环境。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 FE-040 从“重复 token 待收口”推进到“共享 token 已起步落地”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/tokens.test.ts frontend-user/src/styles/tokenSource.test.ts`
+- GREEN：`npx vitest run packages/ui/src/tokens.test.ts frontend-user/src/styles/tokenSource.test.ts`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+
+### 后续影响
+
+- `packages/ui` 现在不只承接共享页面状态语义，也开始承接共享视觉 token，后续继续让管理端和更多 primitives 接这层共享来源的成本明显更低。
+- 这一轮仍只完成了用户端的共享 token 接线，管理端尚未接入，`@studymate/ui` 也还没有形成更完整的基础组件契约；这些仍然是 `FE-040 / FE-041` 下一步最值得继续推进的方向。
+
 ## 2026-07-09 03:34:30 +08:00 | v1.1.0-alpha.111 | 推进 FE-040 FE-041 共享页面状态契约起步
 ### 任务内容
 

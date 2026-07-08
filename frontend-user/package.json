@@ -12,8 +12,8 @@
     "test:coverage": "vitest run --coverage --config vitest.config.ts"
   },
   "dependencies": {
-    "@studymate/ui": "0.0.2",
     "@studymate/graph-core": "0.0.2",
+    "@studymate/ui": "0.0.2",
     "@tiptap/extension-link": "^3.23.6",
     "@tiptap/extension-placeholder": "^3.23.6",
     "@tiptap/extension-underline": "^3.23.6",
@@ -31,6 +31,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@types/node": "^26.1.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0"
   }

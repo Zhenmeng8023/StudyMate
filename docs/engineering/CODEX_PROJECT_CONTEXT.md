@@ -93,8 +93,8 @@ StudyMate/
 
 ### 3.6 2026-07-08 PDF 评审后新增核验结论
 
-- `frontend-user/src/styles/app.css` 与 `frontend-user/src/styles/ui-redesign.css` 仍重复定义 `--bg-0`、`--surface`、`--accent`、`--radius-*`、`--sidebar-width` 等 token，当前视觉体系仍依赖后加载 CSS 覆盖，而不是单一设计 token 来源。
-- `packages/ui` 已补出共享 `DataStateKind` / `dataStateKinds` / `getDataStateLabel(...)`，并被用户端 `DataState` 直接消费；但设计 token、更多 primitives 与管理端共享层仍未收口。`packages/api-client/src/index.ts` 仍以健康检查为主，`packages/editor-core/src/index.ts` 仍只有最小类型定义；这些包仍需要继续进入真实共享能力建设，而不是继续作为占位目录存在。
+- `frontend-user/src/styles.css` 现已先导入 `@studymate/ui/tokens.css`，`app.css` 与 `ui-redesign.css` 内重复的根 token 定义已经移除；用户端至少完成了共享设计 token 的单一来源起步，不再依赖同名 `:root` 变量的后加载覆盖。
+- `packages/ui` 已同时承接共享 `DataStateKind` / `dataStateKinds` / `getDataStateLabel(...)` 与共享 `tokens.css`；但更多 primitives、管理端 token 接入与跨端共享层仍未收口。`packages/api-client/src/index.ts` 仍以健康检查为主，`packages/editor-core/src/index.ts` 仍只有最小类型定义；这些包仍需要继续进入真实共享能力建设，而不是继续作为占位目录存在。
 - `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 约 79KB，仍包含大量 `useState` 与跨领域函数；`WB-032` 的冲突处理已经很深，下一步必须把状态边界、commands 与 features 从控制器中拆出，避免继续集中膨胀。
 - `frontend-admin/src/views/AdminWorkspaceView.vue` 约 22KB，后台仍主要是单工作台组件内切换模块；`frontend-admin/src/router/index.ts` 目前只是 route key 列表，尚未形成可刷新、可分享、可回退的 Vue Router 模块 URL。
 - 根 `package.json`、`package-lock.json` 与 `.github/workflows/ci.yml` 在真实仓库中存在，因此 PDF 中“压缩包缺少根工程入口/CI”的判断不作为当前事实；但 `@studymate/graph-core` 仍直接使用 `node --test test/*.test.ts` 执行 TypeScript 测试，工程可复现性仍需二次收口。

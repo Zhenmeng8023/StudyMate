@@ -61,6 +61,21 @@
 
 ## 执行记录
 
+### 执行记录：FE-040（共享设计 token 单一来源起步）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `packages/ui/src/tokens.css` 新增共享根 token 定义，并通过 `packages/ui/package.json` 暴露 `@studymate/ui/tokens.css` 入口，让共享设计 token 不再停留在规划态。
+  - `frontend-user/src/styles.css` 现已先导入共享 token 样式，`frontend-user/src/styles/app.css` 与 `frontend-user/src/styles/ui-redesign.css` 内重复的 `:root` token 块已经移除，用户端完成 FE-040 的最小单一来源接线。
+  - 新增 `packages/ui/src/tokens.test.ts` 与 `frontend-user/src/styles/tokenSource.test.ts`，锁定共享 token 文件存在、样式入口接线存在，以及用户端本地样式文件不再重复声明核心 token。
+- 已执行验证：
+  - RED：`npx vitest run packages/ui/src/tokens.test.ts frontend-user/src/styles/tokenSource.test.ts`
+  - GREEN：`npx vitest run packages/ui/src/tokens.test.ts frontend-user/src/styles/tokenSource.test.ts`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm run build:user`
+- 后续建议：
+  - 继续沿 `FE-040` 让 `frontend-admin` 消费 `@studymate/ui/tokens.css`，避免前后台视觉 token 再次分叉。
+  - 继续沿 `FE-041` 把更多 primitives 的视觉变量与状态契约收敛到 `@studymate/ui`，而不是继续在页面层维护局部副本。
+
 ### 执行记录：FE-040 / FE-041（共享页面状态契约起步）
 - 执行日期：2026-07-09
 - 本轮完成：
