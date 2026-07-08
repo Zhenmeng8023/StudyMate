@@ -1,3 +1,23 @@
+## 2026-07-09 07:18:00 +08:00 | v1.1.0-alpha.132 | 收口图谱冲突固定入口的 E2E smoke
+### 任务内容
+
+- 在上一轮已经建立 `verify:graph-conflicts` 固定入口的基础上，继续做一个更完整但仍然可控的全局收口。
+- 本轮目标是把现有 `e2e/v1-graph-workspace.spec.ts` 也纳进这条固定入口，让图谱冲突专项验证不再只覆盖前端 Vitest、后端 Go test 和文档同步，而是至少带上一条真实预览环境下的图谱工作区 smoke。
+### 实际变更
+
+- 更新 `scripts/graph-conflict-regression-baseline.test.mjs`，先用 RED 锁定缺口：`verify:graph-conflicts` 还没有串上专门的图谱工作区 E2E smoke，也没有在回归矩阵文档中把这条 Playwright 覆盖映射进来。
+- 更新 `package.json`，新增 `test:graph:conflicts:e2e`，并让 `verify:graph-conflicts` 顺序执行前端冲突回归、后端 graph 生命周期测试、图谱工作区 Playwright smoke 与文档同步。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`、`README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把 `e2e/v1-graph-workspace.spec.ts` 纳入图谱冲突固定入口和回归映射。
+### 验证结果
+
+- RED：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- GREEN：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- `npm run verify:graph-conflicts`
+### 后续影响
+
+- `verify:graph-conflicts` 现在已经不只是“单元/组件/页面回归集合”，而是能至少在真实预览环境下跑通一条图谱工作区 smoke，为后续 `WB-034` 补更完整的图谱回归矩阵提供了更可靠的固定基座。
+- 当前仍未覆盖真正的冲突 Playwright 场景、窄屏/桌面双布局矩阵和更完整的 create/save/restore/export/layout/conflict/权限路径；后续应继续在这条固定入口之上扩展，而不是另起零散命令。
+
 ## 2026-07-09 07:14:00 +08:00 | v1.1.0-alpha.131 | 收口 WB-032 图谱冲突固定验证入口
 ### 任务内容
 
