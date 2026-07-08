@@ -86,4 +86,57 @@ describe("AdminWorkspaceView governance modules", () => {
     expect(wrapper.text()).toContain("alice");
     expect(wrapper.text()).toContain("1");
   });
+
+  it("returns to the login screen when refresh fails during admin bootstrap", async () => {
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "stale-admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      const authorization = new Headers(init?.headers as HeadersInit).get("Authorization");
+
+      if (path === "/api/v1/admin/me") {
+        expect(authorization).toBe("Bearer stale-admin-token");
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "token_expired", message: "访问令牌已过期" } }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      if (path === "/api/v1/auth/refresh") {
+        expect(init?.method).toBe("POST");
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "refresh_expired", message: "刷新令牌已失效" } }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      throw new Error(`Unexpected request: ${path} ${authorization}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/auth/refresh",
+      expect.objectContaining({
+        method: "POST"
+      })
+    );
+    expect(window.localStorage.getItem("studymate.admin.session")).toBeNull();
+    expect(wrapper.text()).toContain("进入管理后台");
+  });
 });
