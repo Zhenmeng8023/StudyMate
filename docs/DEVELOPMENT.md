@@ -3,7 +3,8 @@
 ## v1.0.0 覆盖率与本地化门禁
 
 - 完整回归仍以 `npm run ci` 为每个里程碑的硬门禁。
-- 发布前追加运行 `npm run test:coverage`，该命令覆盖用户端 Vitest、管理端 Vitest、`@studymate/graph-core` Node test coverage 和后端 `go test ./... -cover`。
+- `npm run verify:coverage` 现已进入默认 CI，按当前仓库已验证基线阻断覆盖率回退：`frontend-user`、`frontend-admin` 读取 Vitest JSON summary，`@studymate/graph-core` 读取 Node coverage report，后端读取 `go tool cover -func` 总体 statements。
+- 发布前仍追加运行 `npm run test:coverage`，该命令保留用户端 Vitest、管理端 Vitest、`@studymate/graph-core` Node test coverage 和后端 `go test ./... -cover` 的详细汇总。
 - 变更包要求 80% 聚焦覆盖率；如果某个模块暂时无法达到，需要在 `PROJECT_LOG.md` 写明原因、风险和补测计划。
 - `v1.1` 质量硬化从 v1 新增接口开始补测：用户端已新增 search/share API 合约测试，管理端已新增治理页真实 API 加载回归测试。后续同类改动应先补最小 RED/GREEN 测试，再进入实现或重构。
 - 用户端 review/AI API 合约测试已覆盖 deck 创建、AI draft 批量确认成卡片、今日复习队列、复习回写、AI tasks/usage/drafts 请求形状，以及图谱变更草稿按 `draftIds` / `nodeSelections` 确认写入目标图谱的请求形状。
@@ -332,5 +333,5 @@ go test ./...
 ## v1.0.0 Release Gate
 
 - 发布操作说明位于 `docs/planning/versions/v1.0.0-release.md`。
-- 最终验证顺序：`npm run ci`、`npm run test:coverage`、`npm run verify:secrets`、`git diff --check`、release smoke flow、本地 `git tag -a v1.0.0`。
+- 最终验证顺序：`npm run ci`、`npm run verify:coverage`、`npm run test:coverage`、`npm run verify:secrets`、`git diff --check`、release smoke flow、本地 `git tag -a v1.0.0`。
 - 回滚优先恢复上一版应用工件；`004_share_links.sql` 是 additive migration，只有确认需要清理分享链表时才执行 `.down.sql`。

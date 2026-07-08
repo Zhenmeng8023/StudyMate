@@ -116,7 +116,7 @@ StudyMate/
 2. “CI 尚未建立”不成立：`.github/workflows/ci.yml` 已覆盖 typecheck、build、Vitest、graph-core test、Playwright、Go test 与文档校验。
 3. “管理端大量占位”只部分成立：后台治理入口已接入多组真实 API，但仍需更强的测试、审计与可操作性。
 4. “前端根文件过大”不成立：根文件已基本瘦身，后续问题更多在模块内部边界和回归测试。
-5. “工程压缩包不可复现”不能直接套用于当前 Git 工作区：真实仓库已有根 workspace、lockfile 与 CI；当前已补齐工具链版本约束、graph-core 显式 TS 测试运行方式、bootstrap、依赖审计入口，以及 `verify:deps` 对前端锁文件与 Go 依赖的安全下限收口、`verify:secrets` 对仓库级硬编码密钥的默认扫描，剩余主要缺口转为覆盖率硬门槛。
+5. “工程压缩包不可复现”不能直接套用于当前 Git 工作区：真实仓库已有根 workspace、lockfile 与 CI；当前已补齐工具链版本约束、graph-core 显式 TS 测试运行方式、bootstrap、依赖审计入口，以及 `verify:deps` 对前端锁文件与 Go 依赖的安全下限收口、`verify:secrets` 对仓库级硬编码密钥的默认扫描、`verify:coverage` 对前后台 / graph-core / 后端覆盖率基线的默认门禁，主要缺口已回到共享底座和产品化能力本身。
 
 ## 6. 当前真正需要优先收口的问题
 
@@ -124,10 +124,10 @@ StudyMate/
 
 1. **配置安全默认值已完成第一轮收口，但仍需继续分层**  
    `JWT_SECRET` 与 `MYSQL_DSN` 的危险 fallback 已移除，启动阶段会显式校验缺失项；当前已补上仓库级 secret scan 门禁，下一步仍需继续把开发 / 测试 / 生产配置策略与 CORS 策略固化。
-2. **CI 第一轮质量门禁已补齐，但仍未到发布级**  
-   当前 workflow 已显式运行 `verify:deps`、`verify:secrets`、`gofmt` 检查、配置安全回归检查、typecheck、build、Vitest、Playwright、Go test 与文档校验；剩余缺口主要是覆盖率门槛。
-3. **工程执行文档落后于代码**  
-   `docs/engineering/*` 仍把“搜索缺失、CI 缺失、App 根文件过大”写成现状，容易误导后续代理。
+2. **CI 第一轮质量门禁已补齐，并开始进入“逐步抬线”阶段**
+   当前 workflow 已显式运行 `verify:deps`、`verify:secrets`、`verify:coverage`、`gofmt` 检查、配置安全回归检查、typecheck、build、Vitest、Playwright、Go test 与文档校验；下一步重点不再是“有没有门禁”，而是逐步提高基线，并把重点变更代码持续推向 80% 聚焦覆盖率。
+3. **工程执行文档需要持续跟随代码演进**
+   当前主文档已补齐搜索、CI、secret scan 与 coverage gate 的最新事实；后续每个里程碑仍需同步更新 `docs/engineering/*`、README 与 `PROJECT_LOG.md`，避免新的状态漂移。
 4. **搜索进入了“补强期”而非“从零建设期”**  
    后续重点应转向权限过滤、结果质量、测试矩阵、文档契约和可替换索引，而不是重新创建 search module。
 5. **设计系统与 API 契约仍未完全成为共享底座**

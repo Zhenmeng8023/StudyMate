@@ -1,3 +1,25 @@
+## 2026-07-09 07:18:00 +08:00 | v1.1.0-alpha.124 | 收口 QA-010 默认覆盖率基线门禁
+### 任务内容
+
+- 在 `SEC-011` 已把仓库级 secret scan 纳入默认 CI 之后，继续按“先收口全局骨架”的优先级，补上剩余的 P0 工程门禁缺口，把覆盖率从 release 前的人工汇总推进为默认流水线的显式硬门禁。
+- 本轮目标不是强行把全仓立刻拉到 80%，而是先把当前已验证覆盖率固化为“不回退”基线，并把这条约束沉到可执行测试、统一脚本和默认 CI 里。
+### 实际变更
+
+- 新增 `scripts/coverage-baseline.test.mjs`，先以 RED 锁定四类缺口：仓库缺少 `verify:coverage` 命令、`ci` 未显式执行覆盖率门禁、GitHub Actions 没有 coverage gate 步骤，以及 README / 开发说明 / 版本计划 / release checklist 仍只记录 `test:coverage` 而没有默认硬门禁入口。
+- 新增 `scripts/verify-coverage-gates.mjs`，统一收口四套覆盖率来源：`frontend-user` 与 `frontend-admin` 运行 Vitest coverage 并读取 JSON summary，`@studymate/graph-core` 解析 Node test coverage 的 `all files` 汇总，后端运行 `go test ./... -coverprofile` 并用 `go tool cover -func` 读取总体 statements。
+- 将当前仓库已验证覆盖率固化为默认“不回退”基线：`frontend-user` `statements/branches/functions/lines >= 68/63/67/68`，`frontend-admin >= 70/67/64/75`，`graph-core lines/branches/functions >= 96/79/100`，后端总体 `statements >= 25`。
+- 更新 `package.json`、`.github/workflows/ci.yml`、`README.md`、`docs/DEVELOPMENT.md`、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`docs/planning/versions/v1.0.0-release.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_PROJECT_CONTEXT.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把默认覆盖率门禁入口收口为 `npm run verify:coverage`，并明确 `npm run test:coverage` 继续承担发布前详细汇总职责。
+### 验证结果
+
+- RED：`node --test scripts/coverage-baseline.test.mjs`
+- GREEN：`node --test scripts/coverage-baseline.test.mjs`
+- `npm run verify:coverage`
+- `npm run verify:docs`
+### 后续影响
+
+- 默认 CI 现在不再只在 release checklist 里“提醒要看覆盖率汇总”，而是会直接执行 `npm run verify:coverage`，先把前后台、graph-core 和后端覆盖率回退挡在本地与流水线入口。
+- 这一轮收口的是“基线不回退”硬门禁，而不是“全仓 80% 一步到位”；后续仍应沿 `FE-040`、`API-010`、`WB-032` 等里程碑继续补测试、提升真实覆盖率，并逐步抬高默认阈值。
+
 ## 2026-07-09 06:28:00 +08:00 | v1.1.0-alpha.122 | 收口 SEC-010 依赖安全基线与 CI 审计门禁
 ### 任务内容
 

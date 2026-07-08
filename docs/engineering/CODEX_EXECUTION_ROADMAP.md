@@ -167,6 +167,7 @@
 - DEV-010：补工具链版本、bootstrap、依赖审计、graph-core TS 测试运行方式和可复现命令矩阵。
 - SEC-010：在 `DEV-010` 的审计入口之上清空前端锁文件与 Go 依赖的高危命中，并把 `verify:deps` 纳入默认 CI。
 - SEC-011：补仓库级 `verify:secrets` 扫描器，把默认 secret scan 门禁从 release checklist 落到可执行脚本与 CI。
+- QA-010：补默认覆盖率基线门禁，把 `verify:coverage` 纳入 CI，同时保留 `test:coverage` 作为发布前详细汇总。
 
 ### 2026-07-09 DEV-010 工程可复现性二次核验与工具链收口
 - 根 `package.json` 现已固定 `packageManager = npm@11.6.2` 与 `engines.node >=24 <25`、`engines.npm >=11 <12`，并新增 `bootstrap`、`verify:runtimes`、`verify:deps` 三个仓库级入口。
@@ -185,6 +186,12 @@
 - 扫描器当前会递归检查仓库中的文本文件，默认跳过 `node_modules`、`dist`、`coverage`、锁文件与二进制资源，并识别私钥块、常见 API Token 格式、DSN 内联凭据，以及 `apiKey` / `secret` / `token` / `password` 一类硬编码赋值。
 - placeholder 示例值（如 `change-me-in-local-env`、`<secret-manager-value>`、`<local-password>`）会被显式忽略，同时支持通过 `secret-scan: allow` 为个别测试样例做最小范围豁免，避免把开发说明和示例 env 误判成生产泄漏。
 - 根 `package.json`、`.github/workflows/ci.yml`、README、开发说明与 release checklist 现已统一改为 `npm run verify:secrets`，默认 CI 也开始把 secret scan 本身作为门禁。
+
+### 2026-07-09 QA-010 默认覆盖率基线门禁收口
+- 新增 `scripts/coverage-baseline.test.mjs` 与 `scripts/verify-coverage-gates.mjs`，把覆盖率门禁从“发布前手工查看汇总”推进到“默认 CI 显式阻断回退”的第一阶段。
+- `verify:coverage` 当前会统一执行并解析四套结果：用户端与管理端读取 Vitest JSON summary，`@studymate/graph-core` 读取 Node test coverage 的 `all files` 汇总，后端读取 `go tool cover -func` 的总体 statements。
+- 现阶段门禁策略是“不低于已验证仓库基线”，默认阈值收口为：`frontend-user 68/63/67/68`、`frontend-admin 70/67/64/75`、`graph-core 96/79/100`、`backend statements 25`。
+- 根 `package.json`、`.github/workflows/ci.yml`、README、开发说明、版本计划、路线图与 release checklist 现已统一改为 `npm run verify:coverage` 作为默认入口，同时保留 `npm run test:coverage` 作为发布前详细汇总证据。
 
 ## Iteration 5：后台治理与搜索索引升级（P1）
 

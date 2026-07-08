@@ -30,6 +30,7 @@
 | DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
 | SEC-010 | DONE | 依赖安全基线收口 | DEV-010 | `package-lock.json`、前台/后台 package manifest、`backend/go.mod`、CI、开发文档 | 锁定 `vite` / `esbuild` / `undici` / `glob` 与 Go toolchain / `golang.org/x/net` / `quic-go` 安全下限；`npm run verify:deps` 通过并纳入默认 CI。 |
 | SEC-011 | DONE | 默认 secret scan 门禁收口 | SEC-010 | 根 `package.json`、`.github/workflows/ci.yml`、`scripts/`、发布/开发文档 | 新增 `npm run verify:secrets`、仓库级扫描脚本与基线测试；默认 CI 执行 secret scan，并对 placeholder 示例值保持低误报。 |
+| QA-010 | DONE | 默认覆盖率基线门禁收口 | DEV-010, SEC-011 | 根 `package.json`、`.github/workflows/ci.yml`、`scripts/`、发布/开发文档 | 新增 `npm run verify:coverage`、覆盖率基线测试与统一解析脚本；默认 CI 阻断前后台、graph-core 与后端覆盖率回退，同时保留 `npm run test:coverage` 作为发布前详细汇总。 |
 
 ## P1：在 P0 稳定后推进
 
@@ -62,6 +63,22 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：QA-010（默认覆盖率基线门禁收口）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - 新增 `scripts/coverage-baseline.test.mjs`，先用 RED 锁定四类缺口：仓库缺少 `verify:coverage` 命令、默认 `ci` 未显式执行覆盖率门禁、GitHub Actions 未接入覆盖率基线步骤，以及 README / 开发说明 / 版本计划 / release checklist 仍只记录 `test:coverage` 而没有默认硬门禁入口。
+  - 新增 `scripts/verify-coverage-gates.mjs`，把覆盖率门禁收口为单一入口：`frontend-user` 与 `frontend-admin` 运行 Vitest coverage 并读取 JSON summary，`@studymate/graph-core` 解析 Node test coverage 的 `all files` 汇总，后端运行 `go test ./... -coverprofile` 并用 `go tool cover -func` 读取总体 statements。
+  - 将当前仓库已验证覆盖率固化为默认“不回退”基线：`frontend-user` `statements/branches/functions/lines >= 68/63/67/68`，`frontend-admin >= 70/67/64/75`，`graph-core lines/branches/functions >= 96/79/100`，后端总体 `statements >= 25`。
+  - 更新根 `package.json`、`.github/workflows/ci.yml`、`README.md`、`docs/DEVELOPMENT.md`、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`docs/planning/versions/v1.0.0-release.md`，统一把默认覆盖率门禁入口收口为 `npm run verify:coverage`，并明确 `npm run test:coverage` 继续承担发布前详细汇总职责。
+- 已执行验证：
+  - RED：`node --test scripts/coverage-baseline.test.mjs`
+  - GREEN：`node --test scripts/coverage-baseline.test.mjs`
+  - `npm run verify:coverage`
+  - `npm run verify:docs`
+- 风险与后续：
+  - 当前 `verify:coverage` 是第一阶段“基线不回退”硬门禁，而不是全仓整体 80% 总线；后续仍应在 `FE-040`、`API-010`、`WB-032` 等里程碑中持续补测试并逐步抬高阈值。
+  - 发布前仍应保留 `npm run test:coverage` 作为详细汇总证据，重点变更代码继续以 80% 聚焦覆盖率为目标。
 
 ### 执行记录：SEC-011（默认 secret scan 门禁收口）
 - 执行日期：2026-07-09

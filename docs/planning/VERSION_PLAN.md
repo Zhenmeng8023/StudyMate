@@ -3,7 +3,7 @@
 ## A 阶段当前收口
 
 - `NOTE_READ_MODEL` 已完成后端配置、读取策略解析、Mongo 当前文档读取和 MySQL 回退路径。
-- 覆盖率脚本已纳入根命令：`npm run test:coverage` 汇总用户端、管理端、图谱核心和 Go 后端覆盖率。
+- 覆盖率脚本已纳入根命令：`npm run verify:coverage` 作为默认 CI 的基线硬门禁，`npm run test:coverage` 继续汇总用户端、管理端、图谱核心和 Go 后端覆盖率。
 - 本地化框架以 `zh-CN` 为源语言，先建立 `en-US` 占位字典和键一致性测试，不把完整英文翻译列为 v1.0.0 阻塞项。
 - 后续 B 阶段继续拆分 `useGraphWorkspaceController.tsx`、`frontend-user/src/api/client.ts` 和全局样式文件。
 - B 阶段第一批拆分完成：API client 已按域拆分并保留 barrel，CSS 已按 app/workspace/graph/reader-notes/search-review/responsive 分层，图谱通用 helper 已抽到 `workspaceControllerHelpers.ts`。
@@ -33,7 +33,7 @@
 
 - 每个 v1 新增公共接口至少有一层 API 或 UI 合约测试。
 - `npm run ci` 持续通过。
-- 覆盖率缺口在 `PROJECT_LOG.md` 记录，发布前用 `npm run test:coverage` 汇总。
+- 覆盖率缺口在 `PROJECT_LOG.md` 记录；默认 CI 先用 `npm run verify:coverage` 阻断回退，发布前再用 `npm run test:coverage` 留存详细汇总。
 
 本文档以 [docs/design/UPGRADE_DESIGN.md](../design/UPGRADE_DESIGN.md) 为设计主入口，根目录《学伴项目-设计说明书》保留为兼容入口。当前主线是在 `v1.0.0` 可发布基线上推进 v1.1 质量硬化。
 
@@ -277,4 +277,4 @@ npm run verify:docs
 
 - `docs/planning/versions/v1.0.0-release.md` 已补齐 release checklist、env var matrix、migration order、demo data steps、rollback steps 和 known non-blockers。
 - `CHANGELOG.md` 已新增 `v1.0.0 - 2026-06-01`。
-- 最终验证必须记录 `npm run ci`、覆盖率汇总、`npm run verify:secrets`、diff review、release smoke flow 和本地 annotated tag。
+- 最终验证必须记录 `npm run ci`、`npm run verify:coverage`、覆盖率汇总、`npm run verify:secrets`、diff review、release smoke flow 和本地 annotated tag。

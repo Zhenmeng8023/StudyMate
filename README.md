@@ -125,7 +125,7 @@ go test ./...
 - `NOTE_READ_MODEL=mongo_primary` 会优先读取 MongoDB `note_documents.html`，当内容文档缺失或读取失败时回退 MySQL。
 - 后端启动、迁移和回填命令现在要求显式提供 `MYSQL_DSN`；服务启动还要求显式提供 `JWT_SECRET`，不再静默回退到仓库内置弱默认值。
 - 本地化先以 `zh-CN` 为源语言，用户端和管理端已建立 `en-US` 占位字典框架；v1.0.0 不要求完整英文翻译。
-- 覆盖率门禁：每个里程碑继续运行 `npm run ci`；发布前追加运行 `npm run test:coverage`，变更包的重点代码需要达到 80% 聚焦覆盖率或在 `PROJECT_LOG.md` 说明缺口。
+- 覆盖率门禁：每个里程碑继续运行 `npm run ci`；默认基线由 `npm run verify:coverage` 收口为“不低于当前仓库基线”的硬门禁，发布前仍追加运行 `npm run test:coverage` 留存详细汇总，变更包的重点代码继续以 80% 聚焦覆盖率为目标，暂时达不到时需在 `PROJECT_LOG.md` 说明缺口。
 - `npm run lint` 现在默认包含 `npm run verify:backend:format` 与 `npm run verify:config-safety`，用于阻断未格式化 Go 文件和已禁用的危险默认值回退。
 - 拆分边界：用户端 API client 已按域拆入 `frontend-user/src/api/*.ts`，全局样式已拆入 `frontend-user/src/styles/`，图谱控制器通用 helper 已移入 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`，selection 状态位于 `frontend-user/src/modules/graph/hooks/useGraphSelectionState.ts`，viewport 相机位于 `frontend-user/src/modules/graph/hooks/useGraphViewportCamera.ts`，history/autosave/undo-redo 状态位于 `frontend-user/src/modules/graph/lib/graphHistory.ts`。
 - 图谱导入导出边界：`frontend-user/src/modules/graph/lib/graphFileImportExport.ts` 作为统一 facade，负责 JSON/SVG 导出描述、JSON 导入阻断规则、Markdown/Mermaid 远端导入归一化，以及 validate 结果状态消息；`useGraphImportExport.ts` 只保留下载、渲染和保存态副作用。
@@ -148,5 +148,5 @@ go test ./...
 ## v1.0.0 发布与回滚
 
 - 发布清单位于 `docs/planning/versions/v1.0.0-release.md`，包含环境变量矩阵、MySQL/Mongo 迁移顺序、演示数据步骤、回滚步骤和已知非阻塞项。
-- 最终发布闸门：`npm run ci`、`npm run test:coverage`、`npm run verify:secrets`、diff review、release smoke flow，以及本地 annotated tag `v1.0.0`。
+- 最终发布闸门：`npm run ci`、`npm run verify:coverage`、`npm run test:coverage`、`npm run verify:secrets`、diff review、release smoke flow，以及本地 annotated tag `v1.0.0`。
 - 本地可以创建 tag；除非明确授权，不推送 commit 或 tag 到远端。

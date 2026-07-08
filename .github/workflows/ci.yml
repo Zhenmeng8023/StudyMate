@@ -72,5 +72,8 @@ jobs:
         working-directory: backend
         run: go test ./...
 
+      - name: Verify coverage baseline
+        run: npm run verify:coverage
+
       - name: Verify docs
         run: npm run verify:docs

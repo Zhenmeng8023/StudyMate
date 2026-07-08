@@ -3,7 +3,7 @@
 ## 当前执行备注
 
 - A 阶段补齐 `NOTE_READ_MODEL` 文档、覆盖率脚本和 `zh-CN` / `en-US` 字典框架后进入提交门禁。
-- 覆盖率命令为 `npm run test:coverage`；每个里程碑仍必须先通过 `npm run ci`。
+- 覆盖率命令现分为两层：`npm run verify:coverage` 负责默认 CI 基线门禁，`npm run test:coverage` 负责发布前详细汇总；每个里程碑仍必须先通过 `npm run ci`。
 - B 阶段从超大文件继续拆分，优先处理图谱控制器、用户端 API client 和全局样式。
 - B 阶段第一批已完成 API client 域拆分、CSS 分层和图谱 helper 抽取；图谱交互 hook 后续随 C 阶段继续下沉。
 - C 阶段先完成 reader/notes 数据收口：历史笔记可回填到 Mongo，批注坐标具备兼容字段，来源信息可在阅读器侧展示。
@@ -73,7 +73,7 @@
 - 文档同步脚本通过。
 - README、开发说明、版本计划、路线图、变更记录和项目日志一致。
 - Node 24 / Go 1.26 CI 基线覆盖前后台构建、Vitest、Playwright、图谱核心测试、后端测试和文档同步。
-- 当前 CI 已纳入依赖审计与仓库级 secret scan，剩余主要增强项收敛为覆盖率硬门槛与覆盖率汇总治理。
+- 当前 CI 已纳入依赖审计、仓库级 secret scan 与覆盖率基线门禁；后续工程增强重点转为逐步抬高覆盖率基线，并把重点变更代码持续推向 80% 聚焦覆盖率。
 
 ## B. 拆分超大文件
 
