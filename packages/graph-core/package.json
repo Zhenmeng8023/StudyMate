@@ -6,7 +6,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "test": "node --test test/*.test.ts",
-    "test:coverage": "node --experimental-test-coverage --test test/*.test.ts"
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "test:coverage": "node --experimental-strip-types --experimental-test-coverage --test test/*.test.ts"
   }
 }

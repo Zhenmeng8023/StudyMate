@@ -27,7 +27,7 @@
 | FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | Button、IconButton、Input、Select、Tag、DataState、Drawer、Inspector、ConfirmDialog、CommandBar、PageHeader 至少具备共享 token、变体、禁用/加载/错误状态与最小测试或文档示例。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一 401 会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；补 HttpOnly Refresh Token 迁移说明。 |
-| DEV-010 | TODO | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 不再依赖 `node --test` 对 `.ts` 的隐式执行差异。 |
+| DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
 
 ## P1：在 P0 稳定后推进
 
@@ -60,6 +60,27 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：DEV-010（工程可复现性二次核验与工具链收口）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - 新增 `scripts/verify-runtime-baseline.mjs` 与 `scripts/workspace-repro.test.mjs`，把 Node 24 / npm 11 / Go 1.26、`packageManager`、`bootstrap`、`verify:runtimes`、`verify:deps`、`ci` 前置运行时检查，以及 `@studymate/graph-core` 显式 TypeScript 测试命令锁成可执行契约。
+  - 新增 `scripts/run-dependency-audits.mjs`，统一收口 `npm audit --registry=https://registry.npmjs.org/ --audit-level=high` 与 `go run golang.org/x/vuln/cmd/govulncheck@latest ./...` 两条依赖审计入口，避免 `npmmirror` 缺失 audit API 时直接卡在 `[NOT_IMPLEMENTED]`。
+  - 更新根 `package.json`：补 `packageManager`、`engines`、`bootstrap`、`verify:runtimes`、`verify:deps`，并让 `ci` 在更大验证链路前先执行运行时基线校验。
+  - 更新 `packages/graph-core/package.json`，将测试与覆盖率命令改为显式 `node --experimental-strip-types --test ...` 与 `node --experimental-strip-types --experimental-test-coverage --test ...`，不再依赖 Node 对 `.ts` 测试的隐式执行差异。
+  - 更新 `docs/DEVELOPMENT.md`、`README.md` 与 `.github/workflows/ci.yml`，把 bootstrap / runtime baseline / dependency audit 入口同步进开发文档、命令清单和 CI 步骤。
+- 已执行验证：
+  - RED：`node --test scripts/workspace-repro.test.mjs`
+  - GREEN：`node --test scripts/workspace-repro.test.mjs`
+  - `npm run verify:runtimes`
+  - `npm --workspace @studymate/graph-core run test`
+  - `npm --workspace @studymate/graph-core run test:coverage`
+  - `npm run bootstrap`
+  - `npm run verify:docs`
+  - `npm run verify:deps`
+- 风险与后续：
+  - `npm run bootstrap` 现已能在当前 Windows 工作区完成依赖补齐，但仍可能因为占用中的 `esbuild` / `rollup` 二进制在清理旧目录时输出 `EPERM cleanup` 警告；它不影响本轮 bootstrap 成功，但说明本地活跃工具进程仍会干扰包管理器清理。
+  - `npm run verify:deps` 已经能稳定产出真实审计结果，但当前仓库仍存在 npm 高危依赖告警（`esbuild`、`glob`、`undici`、`vite`）以及 `govulncheck` 命中的 Go / `golang.org/x/net` / `quic-go` 漏洞；这属于后续安全收口任务，而不是本轮入口缺失。
 
 ### 执行记录：FE-040（管理端接入共享 token 起步）
 - 执行日期：2026-07-09

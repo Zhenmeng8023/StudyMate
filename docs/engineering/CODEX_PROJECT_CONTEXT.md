@@ -97,7 +97,7 @@ StudyMate/
 - `packages/ui` 已同时承接共享 `DataStateKind` / `dataStateKinds` / `getDataStateLabel(...)` 与共享 `tokens.css`；但更多 primitives、管理端更深层的视觉契约与跨端共享层仍未收口。`packages/api-client/src/index.ts` 已开始承接共享 `requestApi(...)`、`readApiResponse(...)`、`createAuthHeaders(...)`、`buildApiPath(...)`、JSON 请求体归一化、`ApiRequestError`、`createSessionRequest(...)` 与 refresh 失败后的 `SessionInvalidationState`；其中用户端 `frontend-user/src/api/core.ts` 与 `frontend-user/src/app/sessionStore.ts`、管理端 `frontend-admin/src/api/client.ts` 与 `frontend-admin/src/api/sessionStore.ts` 都已接入共享 401 refresh/replay、会话失效原因记录与统一 fail-logout 提示第一段骨架，但更完整的 pagination、更多后台模块请求边界与 HttpOnly Refresh Token 迁移说明仍未收口。`packages/editor-core/src/index.ts` 仍只有最小类型定义；这些包仍需要继续进入真实共享能力建设，而不是继续作为占位目录存在。
 - `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 约 79KB，仍包含大量 `useState` 与跨领域函数；`WB-032` 的冲突处理已经很深，下一步必须把状态边界、commands 与 features 从控制器中拆出，避免继续集中膨胀。
 - `frontend-admin/src/views/AdminWorkspaceView.vue` 约 22KB，后台仍主要是单工作台组件内切换模块；不过最基础的请求边界与后台 session store 已开始抽到 `frontend-admin/src/api/client.ts` 和 `frontend-admin/src/api/sessionStore.ts`，启动时 refresh 失败也会显式清空本地会话并回退登录页。`frontend-admin/src/router/index.ts` 目前只是 route key 列表，尚未形成可刷新、可分享、可回退的 Vue Router 模块 URL。
-- 根 `package.json`、`package-lock.json` 与 `.github/workflows/ci.yml` 在真实仓库中存在，因此 PDF 中“压缩包缺少根工程入口/CI”的判断不作为当前事实；但 `@studymate/graph-core` 仍直接使用 `node --test test/*.test.ts` 执行 TypeScript 测试，工程可复现性仍需二次收口。
+- 根 `package.json`、`package-lock.json` 与 `.github/workflows/ci.yml` 在真实仓库中存在，因此 PDF 中“压缩包缺少根工程入口/CI”的判断不作为当前事实；当前仓库已进一步补上 `packageManager` / `engines`、`npm run bootstrap`、`npm run verify:runtimes`、`npm run verify:deps` 与 `@studymate/graph-core` 显式 `--experimental-strip-types` 测试命令，工程可复现性底座已从“缺入口”推进到“有统一入口但仍有审计结果待消化”。
 
 ## 4. 当前阶段判断
 
@@ -116,7 +116,7 @@ StudyMate/
 2. “CI 尚未建立”不成立：`.github/workflows/ci.yml` 已覆盖 typecheck、build、Vitest、graph-core test、Playwright、Go test 与文档校验。
 3. “管理端大量占位”只部分成立：后台治理入口已接入多组真实 API，但仍需更强的测试、审计与可操作性。
 4. “前端根文件过大”不成立：根文件已基本瘦身，后续问题更多在模块内部边界和回归测试。
-5. “工程压缩包不可复现”不能直接套用于当前 Git 工作区：真实仓库已有根 workspace、lockfile 与 CI；后续只保留工具链版本、graph-core TS 测试运行方式、bootstrap 与依赖审计等仍成立的复现性缺口。
+5. “工程压缩包不可复现”不能直接套用于当前 Git 工作区：真实仓库已有根 workspace、lockfile 与 CI；当前已补齐工具链版本约束、graph-core 显式 TS 测试运行方式、bootstrap 与依赖审计入口，剩余主要缺口转为“已有审计结果但尚未完成漏洞清理”。
 
 ## 6. 当前真正需要优先收口的问题
 

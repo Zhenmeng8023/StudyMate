@@ -4093,3 +4093,30 @@
   - 前台全量 TS/TSX 与后台 Vue script 通过 TypeScript transpile 语法检查；
   - 文档同步与前端文件格式检查通过；
   - `npm ci` 在交付环境未完成依赖树最终链接，导致完整 tsc/Vitest/Vite/Playwright 留待本机或 CI 执行。
+## 2026-07-09 06:02:00 +08:00 | v1.1.0-alpha.121 | 收口 DEV-010 工程可复现性基线与审计入口
+### 任务内容
+
+- 按“先把全局骨架补齐”的节奏，继续从 `CODEX_BACKLOG.md` 选择覆盖面更广、但不深挖单一产品功能的 `DEV-010`，优先收口工程可复现性而不是再扩新业务模块。
+- 本轮目标是把工具链版本约束、bootstrap 入口、依赖审计入口和 `@studymate/graph-core` 的 TypeScript 测试运行方式真正沉到仓库根约束里，而不是继续只停留在文档描述层。
+### 实际变更
+
+- 新增 `scripts/workspace-repro.test.mjs`，先用 RED 方式锁定四类缺口：根 `package.json` 缺少 `packageManager` / `engines` / `bootstrap` / `verify:runtimes` / `verify:deps`、`ci` 未前置运行时校验、`backend/go.mod` 与文档未收口、以及 `@studymate/graph-core` 仍隐式依赖 `node --test` 直接跑 `.ts`。
+- 新增 `scripts/verify-runtime-baseline.mjs`，统一校验根 workspace manifest、`backend/go.mod`、开发文档、当前 Node/npm/Go 版本与 `graph-core` 测试命令，作为 `npm run verify:runtimes` 的实现。
+- 新增 `scripts/run-dependency-audits.mjs`，把 `npm audit --registry=https://registry.npmjs.org/ --audit-level=high` 与 `go run golang.org/x/vuln/cmd/govulncheck@latest ./...` 收口成单一 `npm run verify:deps` 入口，绕开 `npmmirror` 缺失 audit API 的老问题。
+- 更新根 `package.json`：新增 `packageManager: npm@11.6.2`、`engines.node >=24 <25`、`engines.npm >=11 <12`，补上 `bootstrap`、`verify:runtimes`、`verify:deps`，并让 `ci` 在全链路前先跑运行时基线校验。
+- 更新 `packages/graph-core/package.json`，将测试命令改为显式 `node --experimental-strip-types --test test/*.test.ts` 与覆盖率命令 `node --experimental-strip-types --experimental-test-coverage --test test/*.test.ts`，避免不同 Node 版本对 `.ts` 测试执行能力的隐式差异。
+- 更新 `docs/DEVELOPMENT.md`、`README.md` 与 `.github/workflows/ci.yml`，把 bootstrap / runtime baseline / dependency audit 入口同步进开发文档、命令清单和 CI 流程。
+### 验证结果
+
+- RED：`node --test scripts/workspace-repro.test.mjs`
+- GREEN：`node --test scripts/workspace-repro.test.mjs`
+- `npm run verify:runtimes`
+- `npm --workspace @studymate/graph-core run test`
+- `npm --workspace @studymate/graph-core run test:coverage`
+- `npm run bootstrap`
+- `npm run verify:docs`
+- `npm run verify:deps`
+### 后续影响
+
+- 当前仓库已经有明确、可执行、可复核的运行时基线，不再依赖“README 里写了 Node 24 / Go 1.26”这种纯文档约束；后续新机器接手时可以先跑 `npm run bootstrap` 和 `npm run verify:runtimes`，而不是靠人工比对环境。
+- `npm run verify:deps` 现在已经能稳定给出真实审计结果，但它也暴露了下一批需要处理的安全债：npm 侧 `esbuild`、`glob`、`undici`、`vite` 高危告警，以及 Go 侧 `govulncheck` 命中的标准库、`golang.org/x/net` 和 `quic-go` 漏洞；这更适合作为后续单独的安全收口工作包，而不是继续混在工具链入口收口里。

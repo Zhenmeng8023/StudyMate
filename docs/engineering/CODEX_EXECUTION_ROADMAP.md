@@ -166,6 +166,13 @@
 - API-011：继续补自动 refresh、401 单次重放、刷新失败统一退出与会话失效原因记录，并预留 HttpOnly Refresh Token 迁移说明；当前已完成前后台第一段共享刷新骨架。
 - DEV-010：补工具链版本、bootstrap、依赖审计、graph-core TS 测试运行方式和可复现命令矩阵。
 
+### 2026-07-09 DEV-010 工程可复现性二次核验与工具链收口
+- 根 `package.json` 现已固定 `packageManager = npm@11.6.2` 与 `engines.node >=24 <25`、`engines.npm >=11 <12`，并新增 `bootstrap`、`verify:runtimes`、`verify:deps` 三个仓库级入口。
+- `scripts/verify-runtime-baseline.mjs` + `scripts/workspace-repro.test.mjs` 现会校验运行时版本、manifest 约束、CI 预检链路，以及 `@studymate/graph-core` 是否使用显式 TypeScript 测试命令。
+- `packages/graph-core/package.json` 不再直接依赖 `node --test test/*.test.ts`，而是改为显式 `--experimental-strip-types` 的测试与覆盖率命令，降低不同 Node 小版本对 `.ts` 测试执行差异带来的漂移。
+- `scripts/run-dependency-audits.mjs` 把 npm 与 Go 的依赖审计统一收口到单一入口，并强制让 `npm audit` 使用 `registry.npmjs.org`，绕过 `npmmirror` 缺失 audit API 的历史阻塞。
+- 本轮仍未清空依赖审计结果：`verify:deps` 当前会稳定暴露 npm 高危依赖与 `govulncheck` 命中的 Go 漏洞，后续更适合作为独立安全工作包继续收口。
+
 ## Iteration 5：后台治理与搜索索引升级（P1）
 
 ### 目标

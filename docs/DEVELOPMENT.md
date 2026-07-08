@@ -43,6 +43,36 @@
 npm install
 ```
 
+首次拉起整仓或切换到新的机器时，优先使用统一 bootstrap 入口：
+
+```powershell
+npm run bootstrap
+```
+
+它会执行：
+
+- `npm install`
+- `npm run verify:runtimes`
+- `cd backend && go mod download`
+
+如果只想先确认当前机器的 Node / npm / Go 版本与仓库约束一致，可以单独运行：
+
+```powershell
+npm run verify:runtimes
+```
+
+如果要执行依赖审计入口，可以运行：
+
+```powershell
+npm run verify:deps
+```
+
+说明：
+
+- `npm run bootstrap` 面向本地开发机，优先保证 Windows 下已有工具进程占用 `esbuild.exe` 时也能顺利补齐依赖；CI 仍继续使用更严格的 `npm ci`。
+- `npm audit` 会强制走 `https://registry.npmjs.org/`，避免当前 `npmmirror` 镜像缺失 audit API 时直接报 `[NOT_IMPLEMENTED]`。
+- `govulncheck` 会扫描 `backend` 当前依赖与调用路径；如果命中现有漏洞，会按预期返回非零状态，作为后续安全收口的输入，而不是被静默忽略。
+
 Go 依赖建议在 `backend` 目录执行：
 
 ```powershell
@@ -219,6 +249,9 @@ npm --workspace frontend-admin run dev -- --port 8004
 ## 推荐验证命令
 
 ```powershell
+npm run bootstrap
+npm run verify:runtimes
+npm run verify:deps
 npm run lint
 npm run verify:backend:format
 npm run verify:config-safety

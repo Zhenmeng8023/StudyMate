@@ -3,16 +3,24 @@
   "private": true,
   "version": "0.0.2",
   "description": "学伴图谱：以知识图谱画布为中心的学习平台 monorepo。",
+  "packageManager": "npm@11.6.2",
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=11 <12"
+  },
   "workspaces": [
     "frontend-user",
     "frontend-admin",
     "packages/*"
   ],
   "scripts": {
+    "bootstrap": "npm install && npm run verify:runtimes && cd backend && go mod download",
     "dev:user": "npm --workspace frontend-user run dev",
     "dev:admin": "npm --workspace frontend-admin run dev",
     "build:user": "npm --workspace frontend-user run build",
     "build:admin": "npm --workspace frontend-admin run build",
+    "verify:runtimes": "node scripts/verify-runtime-baseline.mjs",
+    "verify:deps": "node scripts/run-dependency-audits.mjs",
     "verify:backend:format": "node scripts/check-go-format.mjs",
     "verify:config-safety": "node scripts/check-config-safety.mjs",
     "typecheck": "npm --workspaces --if-present run typecheck",
@@ -30,7 +38,7 @@
     "test:coverage:graph": "npm --workspace @studymate/graph-core run test:coverage",
     "test:coverage:backend": "cd backend && go test ./... -cover",
     "verify:docs": "node scripts/verify-doc-sync.mjs",
-    "ci": "npm run lint && npm run build:user && npm run build:admin && npm run test:user && npm run test:admin && npm --workspace @studymate/graph-core run test && npm run test:e2e && cd backend && go test ./... && cd .. && npm run verify:docs"
+    "ci": "npm run verify:runtimes && npm run lint && npm run build:user && npm run build:admin && npm run test:user && npm run test:admin && npm --workspace @studymate/graph-core run test && npm run test:e2e && cd backend && go test ./... && cd .. && npm run verify:docs"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify runtime baseline
+        run: npm run verify:runtimes
+
       - name: Verify backend gofmt
         run: npm run verify:backend:format
 

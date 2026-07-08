@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import path from "node:path";
 
 import {
   collectRuntimeBaselineIssues,
@@ -57,17 +58,19 @@ test("runtime baseline flags missing bootstrap, audit, and explicit graph-core T
 });
 
 test("dependency audit commands use the public npm audit endpoint and govulncheck", () => {
+  const root = "E:/Code/1108026_rust_go/StudyMate";
+
   assert.deepEqual(buildDependencyAuditCommands("E:/Code/1108026_rust_go/StudyMate"), [
     {
       command: "npm",
       args: ["audit", "--registry=https://registry.npmjs.org/", "--audit-level=high"],
-      cwd: "E:/Code/1108026_rust_go/StudyMate",
+      cwd: root,
       label: "npm audit",
     },
     {
       command: "go",
       args: ["run", "golang.org/x/vuln/cmd/govulncheck@latest", "./..."],
-      cwd: "E:/Code/1108026_rust_go/StudyMate/backend",
+      cwd: path.join(root, "backend"),
       label: "govulncheck",
     },
   ]);

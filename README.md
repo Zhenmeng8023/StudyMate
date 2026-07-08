@@ -99,6 +99,9 @@ StudyMate
 ## 常用命令
 
 ```powershell
+npm run bootstrap
+npm run verify:runtimes
+npm run verify:deps
 npm install
 npm run lint
 npm run verify:backend:format
