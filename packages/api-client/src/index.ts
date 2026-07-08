@@ -188,8 +188,8 @@ export function createSessionRequest<TSession extends ApiSession>(options: Sessi
     return refreshPromise;
   }
 
-  return async function requestWithSession<T>(input: string, init?: ApiRequestInit): Promise<T> {
-    const activeSession = options.getSession();
+  return async function requestWithSession<T>(input: string, init?: ApiRequestInit, sessionOverride?: TSession | null): Promise<T> {
+    const activeSession = sessionOverride ?? options.getSession();
 
     try {
       return await performRequest<T>(input, init, activeSession?.accessToken ?? null);

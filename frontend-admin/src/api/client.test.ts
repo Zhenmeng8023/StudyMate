@@ -13,11 +13,24 @@ describe("frontend-admin shared api client", () => {
     vi.restoreAllMocks();
   });
 
+  const adminSession = {
+    accessToken: "admin-token",
+    refreshToken: "refresh-token",
+    accessTokenExpiresAt: "2026-07-09T05:30:00Z",
+    user: {
+      id: "admin-1",
+      username: "operator",
+      email: "operator@example.test",
+      displayName: "Operator",
+      role: "admin"
+    }
+  };
+
   it("adds bearer auth headers for admin get requests", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(apiPayload([{ id: "user-1" }]));
 
     await expect(
-      adminGet<{ id: string }[]>("/api/v1/admin/users", { accessToken: "admin-token" }, { limit: 20 })
+      adminGet<{ id: string }[]>("/api/v1/admin/users", adminSession, { limit: 20 })
     ).resolves.toEqual([{ id: "user-1" }]);
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -37,7 +50,7 @@ describe("frontend-admin shared api client", () => {
       adminPost<{ status: string }>(
         "/api/v1/admin/moderation/posts/post-1/approve",
         { reason: "" },
-        { accessToken: "admin-token" }
+        adminSession
       )
     ).resolves.toEqual({ status: "approved" });
 
@@ -57,7 +70,15 @@ describe("frontend-admin shared api client", () => {
   it("refreshes an expired admin session and retries the request with the new access token", async () => {
     const session = {
       accessToken: "stale-admin-token",
-      refreshToken: "refresh-token"
+      refreshToken: "refresh-token",
+      accessTokenExpiresAt: "2026-07-09T05:00:00Z",
+      user: {
+        id: "admin-1",
+        username: "operator",
+        email: "operator@example.test",
+        displayName: "Operator",
+        role: "admin"
+      }
     };
 
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {

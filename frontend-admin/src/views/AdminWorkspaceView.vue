@@ -2,22 +2,9 @@
 import "../components/admin/admin.css";
 import { adminGet, adminPost } from "../api/client";
 import type { ApiRequestInit } from "@studymate/api-client";
-import { computed, reactive, ref } from "vue";
-
-interface AuthUser {
-  id: string;
-  username: string;
-  email: string;
-  displayName: string;
-  role: string;
-}
-
-interface AuthPayload {
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiresAt: string;
-  user: AuthUser;
-}
+import { computed, onBeforeUnmount, reactive, ref } from "vue";
+import { persistSession, subscribeSession } from "../api/sessionStore";
+import type { AdminAuthUser, AdminSessionPayload } from "../api/sessionStore";
 
 interface ModerationItem {
   id: string;
@@ -52,8 +39,8 @@ type GovernanceRecord = Record<string, string | number | boolean | null | undefi
 
 const sessionKey = "studymate.admin.session";
 const form = reactive({ login: "", password: "" });
-const session = ref<AuthPayload | null>(readSession());
-const profile = ref<AuthUser | null>(session.value?.user ?? null);
+const session = ref<AdminSessionPayload | null>(readSession());
+const profile = ref<AdminAuthUser | null>(session.value?.user ?? null);
 const moderationItems = ref<ModerationItem[]>([]);
 const overview = ref<OverviewPayload | null>(null);
 const governanceRows = ref<GovernanceRecord[]>([]);
@@ -131,6 +118,27 @@ const governanceColumns = computed(() => {
 
 const selectedRecordTitle = computed(() => selectedRecord.value ? getRecordTitle(selectedRecord.value) : "选择一条记录");
 
+const unsubscribeSession = subscribeSession(() => {
+  const nextSession = readSession();
+  session.value = nextSession;
+  profile.value = nextSession?.user ?? null;
+
+  if (!nextSession) {
+    moderationItems.value = [];
+    overview.value = null;
+    governanceRows.value = [];
+    governanceSummary.value = null;
+    selectedRecord.value = null;
+    activeView.value = "dashboard";
+    errorMessage.value = "";
+    notice.value = "后台会话已失效，请重新登录。";
+  }
+});
+
+onBeforeUnmount(() => {
+  unsubscribeSession();
+});
+
 if (session.value) {
   void Promise.all([refreshProfile(), loadModeration(), loadOverview()]);
 }
@@ -139,10 +147,8 @@ async function login() {
   loading.value = true;
   errorMessage.value = "";
   try {
-    const data = await post<AuthPayload>("/api/v1/admin/login", form);
-    session.value = data;
-    profile.value = data.user;
-    window.localStorage.setItem(sessionKey, JSON.stringify(data));
+    const data = await post<AdminSessionPayload>("/api/v1/admin/login", form);
+    persistSession(data);
     notice.value = "已进入治理工作台，正在同步当前数据。";
     await Promise.all([refreshProfile(), loadModeration(), loadOverview()]);
   } catch (error) {
@@ -155,7 +161,7 @@ async function login() {
 async function refreshProfile() {
   if (!session.value) return;
   try {
-    profile.value = await get<AuthUser>("/api/v1/admin/me");
+    profile.value = await get<AdminAuthUser>("/api/v1/admin/me");
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "读取管理员资料失败";
   }
@@ -248,7 +254,7 @@ function logout() {
   governanceSummary.value = null;
   selectedRecord.value = null;
   activeView.value = "dashboard";
-  window.localStorage.removeItem(sessionKey);
+  persistSession(null);
   notice.value = "后台会话已清空。";
 }
 
@@ -260,10 +266,10 @@ async function post<T>(path: string, body: ApiRequestInit["body"]) {
   return adminPost<T>(path, body, session.value);
 }
 
-function readSession(): AuthPayload | null {
+function readSession(): AdminSessionPayload | null {
   const raw = window.localStorage.getItem(sessionKey);
   if (!raw) return null;
-  try { return JSON.parse(raw) as AuthPayload; } catch { return null; }
+  try { return JSON.parse(raw) as AdminSessionPayload; } catch { return null; }
 }
 
 function formatCell(value: string | number | boolean | null | undefined) {

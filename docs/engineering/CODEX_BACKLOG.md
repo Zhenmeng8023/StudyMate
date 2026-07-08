@@ -165,8 +165,32 @@
   - `npm --workspace frontend-user run typecheck`
   - `npm run build:user`
 - 后续建议：
-  - 继续沿 `API-011` 把同一套 refresh/replay/fail-logout 接到 `frontend-admin`，避免前后台继续各自维护会话生命周期。
+  - 继续沿 `API-011` 把同一套 refresh/replay/fail-logout 扩到更多后台模块请求边界，避免前后台继续各自维护会话生命周期。
   - 在共享层补齐会话失效原因记录与 HttpOnly Refresh Token 迁移说明，再考虑把 `API-011` 从“已起步”推进到更完整的收口状态。
+
+### 执行记录：API-011（管理端共享会话刷新起步）
+
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `packages/api-client/src/index.ts` 的 `createSessionRequest(...)` 已支持显式 `sessionOverride`，让管理端在继续传入当前页面 session 的同时，也能复用共享 refresh/replay/fail-logout 生命周期。
+  - 新增 `frontend-admin/src/api/sessionStore.ts`，把后台会话持久化收口为可订阅 store，统一负责 `studymate.admin.session` 的读取、写入与清理。
+  - `frontend-admin/src/api/client.ts` 已接入共享 `createSessionRequest(...)`，统一通过 `/api/v1/auth/refresh` 刷新后台 Access Token，并在刷新成功后持久化最新 session。
+  - `frontend-admin/src/views/AdminWorkspaceView.vue` 登录、启动自举与退出流程已接到共享 session store；refresh 失败时会清空后台本地会话、重置治理工作台状态并回退到登录视图。
+  - `frontend-admin/src/api/client.test.ts` 先以 RED 复现“后台令牌过期后不会自动 refresh/replay”的问题，再转 GREEN；`frontend-admin/src/views/AdminWorkspaceView.test.ts` 也锁定了“后台启动时 refresh 失败会回到登录页并清空会话”的回归。
+- 已执行验证：
+  - RED：`npm --workspace frontend-admin run test -- src/api/client.test.ts`
+  - RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - GREEN：`npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+  - `npx vitest run packages/api-client/src/index.test.ts`
+  - `npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/api/graphs.test.ts src/api/searchShare.test.ts`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm run build:user`
+- 后续待续：
+  - 继续沿 `API-011` 补齐会话失效原因记录与统一提示语义，避免当前只在各端以局部 notice/error message 体现失效结果。
+  - 为更多后台 API 模块接出独立请求文件与共享 session 生命周期，减少 `AdminWorkspaceView.vue` 内仍然保留的单页工作台耦合。
+  - 预留并补齐 HttpOnly Refresh Token 迁移说明，再考虑把 `API-011` 从“前后台均已起步”推进到更完整的收口状态。
 
 ### 执行记录：FE-010 / FE-020 / FE-030 / UI-04（验证收口）
 - 执行日期：2026-07-08

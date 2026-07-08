@@ -1,3 +1,37 @@
+## 2026-07-09 04:56:33 +08:00 | v1.1.0-alpha.119 | 推进 API-011 管理端共享会话刷新起步
+### 任务内容
+
+- 在 `API-011` 已完成用户端共享 refresh/replay/fail-logout 起步的基础上，继续选择一个覆盖面广但仍然安全可控的最小工作包，把同一套会话生命周期接到 `frontend-admin`。
+- 本轮目标不是扩新后台治理模块，而是先让管理端登录后自举、令牌过期重试与刷新失败退回登录页这条基础路径进入共享层，避免前后台继续各自散落本地会话逻辑。
+
+### 实际变更
+
+- 更新 `packages/api-client/src/index.ts`，让共享 `createSessionRequest(...)` 支持显式 `sessionOverride`，管理端在仍然传入当前页面 session 的场景下，也能参与共享 401 refresh/replay 生命周期。
+- 新增 `frontend-admin/src/api/sessionStore.ts`，把后台 `studymate.admin.session` 的读取、持久化、清理与订阅统一收口成可复用 store。
+- 更新 `frontend-admin/src/api/client.ts`，统一通过共享 `createSessionRequest(...)` 与 `/api/v1/auth/refresh` 刷新后台 Access Token，并在刷新成功后持久化最新 session。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，登录、自举与退出流程改为消费共享 session store；当启动阶段或请求阶段 refresh 失败时，会清空后台本地会话、重置治理工作台状态并回退到登录界面。
+- 更新 `frontend-admin/src/api/client.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，先用 RED 复现“后台令牌过期后不会自动刷新重放”和“后台启动时 refresh 失败不会退回登录”的问题，再转 GREEN 锁定回归。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把 `API-011` 推进到“前后台共享会话刷新骨架均已起步”的最新状态。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/api/client.test.ts`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npx vitest run packages/api-client/src/index.test.ts`
+- `npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/api/graphs.test.ts src/api/searchShare.test.ts`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `API-011` 现在不再只停留在用户端；前后台都已开始复用同一套 refresh/replay 基线，后续新后台请求边界不需要再从头散落会话刷新逻辑。
+- 这一轮仍然只是管理端第一段接线：会话失效原因记录、统一 fail-logout 提示语义、更多后台模块 API 拆分与 HttpOnly Refresh Token 迁移说明仍未完成，后续应继续沿 `API-011 / ADM-010` 收口，而不是回到单页工作台里叠加局部 helper。
+
 ## 2026-07-09 04:40:56 +08:00 | v1.1.0-alpha.118 | 推进 API-011 用户端共享会话刷新起步
 ### 任务内容
 

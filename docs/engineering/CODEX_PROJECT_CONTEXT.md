@@ -94,9 +94,9 @@ StudyMate/
 ### 3.6 2026-07-08 PDF 评审后新增核验结论
 
 - `frontend-user/src/styles.css` 与 `frontend-admin/src/main.ts` 现已都接入 `@studymate/ui/tokens.css`；用户端重复的根 token 定义已经移除，管理端基础背景 / 文本 / 描边 / accent 变量也已映射到共享 token，前后台至少完成了共享设计 token 的共同起步。
-- `packages/ui` 已同时承接共享 `DataStateKind` / `dataStateKinds` / `getDataStateLabel(...)` 与共享 `tokens.css`；但更多 primitives、管理端更深层的视觉契约与跨端共享层仍未收口。`packages/api-client/src/index.ts` 已开始承接共享 `requestApi(...)`、`readApiResponse(...)`、`createAuthHeaders(...)`、`buildApiPath(...)`、JSON 请求体归一化、`ApiRequestError` 与 `createSessionRequest(...)`；其中用户端 `frontend-user/src/api/core.ts` 与 `frontend-user/src/app/sessionStore.ts` 已接入共享 401 refresh/replay 起步能力，但管理端与更完整的 pagination、会话失效原因记录、fail-logout 生命周期仍未收口。`packages/editor-core/src/index.ts` 仍只有最小类型定义；这些包仍需要继续进入真实共享能力建设，而不是继续作为占位目录存在。
+- `packages/ui` 已同时承接共享 `DataStateKind` / `dataStateKinds` / `getDataStateLabel(...)` 与共享 `tokens.css`；但更多 primitives、管理端更深层的视觉契约与跨端共享层仍未收口。`packages/api-client/src/index.ts` 已开始承接共享 `requestApi(...)`、`readApiResponse(...)`、`createAuthHeaders(...)`、`buildApiPath(...)`、JSON 请求体归一化、`ApiRequestError` 与 `createSessionRequest(...)`；其中用户端 `frontend-user/src/api/core.ts` 与 `frontend-user/src/app/sessionStore.ts`、管理端 `frontend-admin/src/api/client.ts` 与 `frontend-admin/src/api/sessionStore.ts` 都已接入共享 401 refresh/replay 第一段骨架，但更完整的 pagination、会话失效原因记录与统一 fail-logout 提示语义仍未收口。`packages/editor-core/src/index.ts` 仍只有最小类型定义；这些包仍需要继续进入真实共享能力建设，而不是继续作为占位目录存在。
 - `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 约 79KB，仍包含大量 `useState` 与跨领域函数；`WB-032` 的冲突处理已经很深，下一步必须把状态边界、commands 与 features 从控制器中拆出，避免继续集中膨胀。
-- `frontend-admin/src/views/AdminWorkspaceView.vue` 约 22KB，后台仍主要是单工作台组件内切换模块；不过最基础的请求边界已开始抽到 `frontend-admin/src/api/client.ts`。`frontend-admin/src/router/index.ts` 目前只是 route key 列表，尚未形成可刷新、可分享、可回退的 Vue Router 模块 URL。
+- `frontend-admin/src/views/AdminWorkspaceView.vue` 约 22KB，后台仍主要是单工作台组件内切换模块；不过最基础的请求边界与后台 session store 已开始抽到 `frontend-admin/src/api/client.ts` 和 `frontend-admin/src/api/sessionStore.ts`，启动时 refresh 失败也会显式清空本地会话并回退登录页。`frontend-admin/src/router/index.ts` 目前只是 route key 列表，尚未形成可刷新、可分享、可回退的 Vue Router 模块 URL。
 - 根 `package.json`、`package-lock.json` 与 `.github/workflows/ci.yml` 在真实仓库中存在，因此 PDF 中“压缩包缺少根工程入口/CI”的判断不作为当前事实；但 `@studymate/graph-core` 仍直接使用 `node --test test/*.test.ts` 执行 TypeScript 测试，工程可复现性仍需二次收口。
 
 ## 4. 当前阶段判断
@@ -131,7 +131,7 @@ StudyMate/
 4. **搜索进入了“补强期”而非“从零建设期”**  
    后续重点应转向权限过滤、结果质量、测试矩阵、文档契约和可替换索引，而不是重新创建 search module。
 5. **设计系统与 API 契约仍未完全成为共享底座**
-   设计 token、基础 UI 组件与页面状态协议虽已起步，前后台 API 的 request/error/auth-header、query/pagination、JSON 请求体编码与用户端 401 refresh/replay 骨架也已开始沉到共享层，但 pagination 响应契约、管理端 auth-session、会话失效原因记录与更多后台模块请求边界仍分散在各端实现；任何新页面和后台模块继续扩展前，应先收口这些共享边界。
+   设计 token、基础 UI 组件与页面状态协议虽已起步，前后台 API 的 request/error/auth-header、query/pagination、JSON 请求体编码与前后台 401 refresh/replay 第一段骨架也已开始沉到共享层，但 pagination 响应契约、会话失效原因记录、统一 fail-logout 提示语义与更多后台模块请求边界仍分散在各端实现；任何新页面和后台模块继续扩展前，应先收口这些共享边界。
 6. **图谱控制器与后台工作台进入拆分临界点**
    图谱冲突能力已经深入到对象级取舍，后台治理也接入真实 API；下一步应优先拆 store/commands/features 与后台模块路由，而不是继续往单文件叠加业务。
 
