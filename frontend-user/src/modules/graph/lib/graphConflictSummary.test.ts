@@ -612,8 +612,7 @@ describe("graphConflictSummary", () => {
     ).toEqual([
       {
         choice: "keep-latest",
-        description:
-          "This node has incomplete source information. If you do not want to fix it now, keep the latest server version instead. source.type/source.id must exist together.",
+        description: "这个节点的来源信息不完整；如果暂时不修复来源，可先改为保留服务端版本。",
         detail: { action: "added", id: "node-local", kind: "node", label: "Broken local node" },
         scope: "localDraft"
       }
@@ -851,11 +850,92 @@ describe("graphConflictSummary", () => {
     ).toEqual([
       {
         choice: "keep-latest",
-        description: "This node size is outside the allowed range. If you do not want to fix it now, keep the latest server version instead.",
+        description: "这个节点尺寸超出允许范围；如果暂时不调整尺寸，可先改为保留服务端版本。",
         detail: { action: "added", id: "node-local", kind: "node", label: "Oversized local node" },
         scope: "localDraft"
       }
     ]);
+  });
+
+  it("returns localized blocking messages for node-level resolution validation issues", () => {
+    const latestHead = buildDetail({
+      currentVersion: 5,
+      document: buildDocument({
+        version: 5,
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "概念 A",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          }
+        ]
+      })
+    });
+    const current = buildDetail({
+      document: buildDocument({
+        nodes: [
+          ...latestHead.document.nodes,
+          {
+            id: "node-source",
+            type: "text",
+            title: "Broken source node",
+            x: 260,
+            y: 0,
+            width: 220,
+            height: 132,
+            source: { type: "note", id: "", label: "Broken note" },
+            metadata: {}
+          },
+          {
+            id: "node-size",
+            type: "text",
+            title: "Oversized local node",
+            x: 520,
+            y: 0,
+            width: 30,
+            height: 20,
+            metadata: {}
+          }
+        ]
+      })
+    });
+
+    const result = validateGraphConflictResolutionDrafts({
+      current,
+      latestHead,
+      drafts: [
+        {
+          decision: "keep-local",
+          detail: { action: "added", id: "node-source", kind: "node", label: "Broken source node" },
+          scope: "localDraft"
+        },
+        {
+          decision: "keep-local",
+          detail: { action: "added", id: "node-size", kind: "node", label: "Oversized local node" },
+          scope: "localDraft"
+        }
+      ]
+    });
+
+    expect(result.blockingIssues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: "节点“Broken source node”的来源信息不完整，请补齐 source.type/source.id 或改为保留服务端。",
+          ruleType: "invalid_source_target",
+          targetId: "node-source"
+        }),
+        expect.objectContaining({
+          message: "节点“Oversized local node”尺寸超出允许范围，请调整尺寸或改为保留服务端。",
+          ruleType: "invalid_node_size",
+          targetId: "node-size"
+        })
+      ])
+    );
   });
 
   it("returns an empty summary when there are no differences", () => {

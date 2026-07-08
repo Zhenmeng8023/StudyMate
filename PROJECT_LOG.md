@@ -1,3 +1,28 @@
+## 2026-07-09 03:19:49 +08:00 | v1.1.0-alpha.109 | 推进 WB-032 节点级阻断中文化子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“预检阻断可读线索”补齐到节点级阻断类型。
+- 本轮目标是让 `invalid_source_target` / `invalid_node_size` 这类节点级冲突的联动取舍建议和阻断 message 都使用中文说明，避免冲突卡片里同一组预检一半中文、一半英文。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，将节点来源不完整、节点尺寸非法两类阻断的 `keep-latest` 建议文案改为中文。
+- 同步将 `validateGraphConflictResolutionDrafts(...)` 产出的节点级阻断 message 改为中文，例如“节点“Broken source node”的来源信息不完整，请补齐 source.type/source.id 或改为保留服务端。”
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，先用 RED 锁定英文文案问题，再验证建议文案与阻断 message 均已中文化。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“节点级阻断也纳入中文预检语言”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+
+### 后续影响
+
+- 图谱冲突辅助的节点级阻断现在和边/分组依赖阻断使用同一套中文表达，批量建议、预检摘要和明细 message 更一致。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是把更多 error 级冲突纳入可执行建议，或开始梳理 `WB-034` 所需的图谱冲突回归矩阵。
+
 ## 2026-07-09 03:14:25 +08:00 | v1.1.0-alpha.108 | 推进 WB-032 预检阻断可读线索子步骤
 ### 任务内容
 

@@ -173,7 +173,7 @@
 - 这条“应用前预检”摘要现在还会进一步并入未标记对象的默认回退结果，直接说明还有哪些对象会沿用最新图谱版本，减少“点应用后才意识到未标记对象被回退”的落差。
 - 这条“应用前预检”摘要现在还会再补一层代表对象示例，例如“保留本地：本地节点 / 保留服务端：旧关系”，让用户在最终点击前不只知道数量，也知道这轮取舍主要覆盖了哪些对象。
 - 这些阻断摘要现在会优先展示校验器生成的对象级短原因；当 message 只是泛化短码时，才回退到 `targetId` 或 `ruleType`，避免预检只暴露内部 ID。
-- 冲突辅助现在还会为 `invalid_source_target` / `invalid_node_size` 这类节点级阻断生成可执行建议：如果本地节点来源信息不完整或尺寸非法，可直接改为保留服务端，而不是只停留在错误说明。
+- 冲突辅助现在还会为 `invalid_source_target` / `invalid_node_size` 这类节点级阻断生成可执行建议：如果本地节点来源信息不完整或尺寸非法，可直接改为保留服务端，而不是只停留在错误说明；对应阻断 message 与建议文案也已统一为中文。
 - 当用户应用已标记取舍后，工作区状态栏现在还会返回可解释的结果摘要，例如“保留本地 2 项 / 保留服务端 1 项 / 稍后处理 1 项（已沿用最新版本）”，降低多端合并后的不确定感。
 - 验证：
   - `go test ./internal/modules/graph/service`
@@ -192,7 +192,7 @@
   - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
   - `npm run verify:docs`
 - 后续待续：
-- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成；优先考虑更完整的对象联动策略、更多冲突类型的批量取舍辅助，以及把这类已能解释“已标记数量 + 代表对象 + 未标记默认回退 + 可读阻断原因”的应用前预检继续扩展成更完整的合并预检反馈。
+- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成；优先考虑更完整的对象联动策略、更多冲突类型的批量取舍辅助，以及把这类已能解释“已标记数量 + 代表对象 + 未标记默认回退 + 可读阻断原因 + 中文节点级建议”的应用前预检继续扩展成更完整的合并预检反馈。
 
 ### 执行记录：WB-031
 
