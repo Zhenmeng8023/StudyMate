@@ -43,9 +43,15 @@ test("graph conflict regression entrypoint is wired into scripts and docs", () =
   assert.match(regressionDoc, /v1-graph-workspace\.spec\.ts/);
   assert.match(graphWorkspaceE2E, /version conflict/i);
   assert.match(graphWorkspaceE2E, /setViewportSize/);
+  assert.match(graphWorkspaceE2E, /layouts\/preview/);
+  assert.match(graphWorkspaceE2E, /已导出 PNG 图谱/);
+  assert.match(graphWorkspaceE2E, /已导出 SVG 图谱/);
+  assert.match(graphWorkspaceE2E, /已导出 StudyMate 图谱 JSON/);
   assert.match(graphWorkspaceE2E, /图谱冲突辅助/);
   assert.match(graphWorkspaceE2E, /放弃本地并重载最新图谱/);
   assert.match(regressionDoc, /版本冲突处理/);
   assert.match(regressionDoc, /桌面/);
   assert.match(regressionDoc, /窄屏/);
+  assert.match(regressionDoc, /布局预览/);
+  assert.match(regressionDoc, /导出状态/);
 });
