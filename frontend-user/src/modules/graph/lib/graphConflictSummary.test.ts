@@ -538,6 +538,62 @@ describe("graphConflictSummary", () => {
     ]);
   });
 
+  it("builds scope-aware suggestions when latest-head removals cause dangling dependencies", () => {
+    const current = buildDetail({
+      document: buildDocument({
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "概念 A",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          }
+        ],
+        edges: [],
+        groups: []
+      })
+    });
+
+    expect(
+      buildGraphConflictResolutionSuggestions({
+        blockingIssues: [
+          {
+            message: "dangling-edge",
+            ruleType: "dangling_edge",
+            severity: "error",
+            targetId: "edge-server"
+          }
+        ],
+        changeDetails: [],
+        current,
+        latestHeadDetails: [
+          { action: "removed", id: "node-server", kind: "node", label: "服务端节点" },
+          { action: "removed", id: "edge-server", kind: "edge", label: "服务端连线" }
+        ],
+        resolutionSelections: {
+          "latestHead:node:node-server:removed": "keep-local"
+        }
+      })
+    ).toEqual([
+      {
+        choice: "keep-latest",
+        description: "补齐这条依赖需要同时保留相关节点。",
+        detail: { action: "removed", id: "node-server", kind: "node", label: "服务端节点" },
+        scope: "latestHead"
+      },
+      {
+        choice: "keep-local",
+        description: "如果不打算保留这个对象，可改为保留服务端版本。",
+        detail: { action: "removed", id: "edge-server", kind: "edge", label: "服务端连线" },
+        scope: "latestHead"
+      }
+    ]);
+  });
+
   it("builds a readable outcome message for applied conflict resolution drafts", () => {
     expect(
       buildGraphConflictResolutionOutcomeMessage([
