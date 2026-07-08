@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import "../components/admin/admin.css";
-import { createAuthHeaders, requestApi } from "@studymate/api-client";
+import { adminGet, adminPost } from "../api/client";
 import { computed, reactive, ref } from "vue";
 
 interface AuthUser {
@@ -252,17 +252,11 @@ function logout() {
 }
 
 async function get<T>(path: string) {
-  return requestApi<T>(path, {
-    headers: createAuthHeaders(session.value?.accessToken ?? null)
-  });
+  return adminGet<T>(path, session.value);
 }
 
 async function post<T>(path: string, body: unknown) {
-  return requestApi<T>(path, {
-    method: "POST",
-    headers: createAuthHeaders(session.value?.accessToken ?? null),
-    body: JSON.stringify(body)
-  });
+  return adminPost<T>(path, body, session.value);
 }
 
 function readSession(): AuthPayload | null {

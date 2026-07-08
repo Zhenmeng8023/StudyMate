@@ -1,3 +1,26 @@
+## 2026-07-09 04:11:00 +08:00 | v1.1.0-alpha.115 | 推进 API-010 管理端共享请求边界出壳
+### 任务内容
+
+- 在 `API-010` 已完成共享 request/error/auth-header 起步的基础上，继续按最小工作包收口管理端页面分层，避免 `AdminWorkspaceView.vue` 继续持有本地请求 helper。
+- 本轮目标不是扩展新后台模块，而是把已存在的后台 `get/post` 请求边界抽到独立 API 文件，并用测试把这层共享接线锁住。
+### 实际变更
+
+- 新增 `frontend-admin/src/api/client.ts`，导出 `adminGet(...)` 与 `adminPost(...)`，统一通过 `@studymate/api-client` 的 `requestApi(...)` / `createAuthHeaders(...)` 发起后台请求。
+- 新增 `frontend-admin/src/api/client.test.ts`，先以 RED 锁定“管理端共享 API 模块必须存在”，再在 GREEN 阶段锁定 Bearer header 与 JSON POST body 都由共享 client 负责。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，移除页面内本地 `get/post` 请求拼装逻辑，改为消费 `../api/client`，让视图层回到更纯粹的工作台组合角色。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把“管理端请求边界已开始抽离”写回执行基线。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/api/client.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+
+### 后续影响
+
+- 管理端后续继续拆 `ADM-010 / API-010` 时，已经有了可复用的共享请求入口，不需要再把最基础的 header、body 和 request helper 散落回页面。
+- 这一轮仍只完成了最小 request 边界出壳；后台更多模块 DTO、分页语义和会话生命周期还没有真正独立出来，后续仍应继续沿 `API-010 / API-011 / ADM-010` 收口。
+
 ## 2026-07-09 04:06:00 +08:00 | v1.1.0-alpha.114 | 推进 API-010 共享请求基础层起步
 ### 任务内容
 
