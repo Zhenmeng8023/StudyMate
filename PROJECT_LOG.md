@@ -1,3 +1,26 @@
+## 2026-07-08 18:45:24 +08:00 | v1.1.0-alpha.99 | 推进 WB-032 节点级冲突建议子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“联动取舍建议”基础上，把“只知道哪里错了”继续推进到“节点级错误也知道下一步怎么点”。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，当对象级取舍触发 `invalid_source_target` / `invalid_node_size` 阻断时，也直接给出可执行的“保留服务端”建议，避免用户停留在错误说明里自行猜测下一步。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，扩展 `buildGraphConflictResolutionSuggestions(...)`：当本地节点因来源信息不完整或尺寸非法而阻断对象级取舍时，直接生成 `keep-latest` 建议；同时补上更明确的阻断说明文案。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，补齐 `invalid_source_target` / `invalid_node_size` 两类节点级阻断的 helper 回归，锁定“会生成可执行建议”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“依赖类阻断之外，节点级结构错误也能给出可执行取舍建议”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+
+### 后续影响
+
+- 图谱冲突辅助现在不只会为 dangling edge / invalid group node 生成联动建议，也能在节点来源不完整或节点尺寸非法时直接建议“改为保留服务端”，把更多阻断类型转成可执行动作。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的对象联动策略、更清晰的多端合并结果反馈，以及覆盖更多冲突类型的批量取舍辅助。
+
 ## 2026-07-08 13:41:12 +08:00 | v1.1.0-alpha.98 | 收口 FE-010 FE-020 FE-030 UI-04 验证
 ### 任务内容
 

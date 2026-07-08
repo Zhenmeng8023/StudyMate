@@ -165,6 +165,7 @@
 - 在真正应用这些取舍前，前端现在还会执行最小跨对象依赖校验：若合并草稿会留下 dangling edge / invalid group node，会直接列出阻断问题并要求用户先补齐相关节点或改为保留服务端。
 - 当只标记了部分对象级取舍时，冲突辅助卡片现在还会显式统计剩余未标记对象，并说明“如果现在直接应用，这些对象会默认沿用最新图谱版本”；同样的默认行为也会写入人工合并清单，减少误操作。
 - 当依赖校验真的触发阻断时，冲突辅助卡片现在还会直接给出联动取舍建议，例如一键补齐本地依赖节点，或一键把问题对象改为保留服务端，避免用户回到对象列表逐项搜索。
+- 冲突辅助现在还会为 `invalid_source_target` / `invalid_node_size` 这类节点级阻断生成可执行建议：如果本地节点来源信息不完整或尺寸非法，可直接改为保留服务端，而不是只停留在错误说明。
 - 验证：
   - `go test ./internal/modules/graph/service`
   - `go test ./internal/modules/graph/...`
@@ -182,7 +183,7 @@
   - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
   - `npm run verify:docs`
 - 后续待续：
-- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成。
+- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成；优先考虑更完整的对象联动策略、更多冲突类型的批量取舍辅助，以及更清晰的多端合并结果反馈。
 
 ### 执行记录：WB-031
 

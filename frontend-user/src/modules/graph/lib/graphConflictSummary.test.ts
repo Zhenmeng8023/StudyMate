@@ -532,6 +532,120 @@ describe("graphConflictSummary", () => {
     ]);
   });
 
+  it("builds a keep-latest suggestion for invalid local node source references", () => {
+    const current = buildDetail({
+      document: buildDocument({
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "姒傚康 A",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          },
+          {
+            id: "node-local",
+            type: "text",
+            title: "Broken local node",
+            x: 260,
+            y: 0,
+            width: 220,
+            height: 132,
+            source: { type: "note", id: "", label: "Broken note" },
+            metadata: {}
+          }
+        ],
+        edges: [],
+        groups: []
+      })
+    });
+
+    expect(
+      buildGraphConflictResolutionSuggestions({
+        blockingIssues: [
+          {
+            message: "source-invalid",
+            ruleType: "invalid_source_target",
+            severity: "error",
+            targetId: "node-local"
+          }
+        ],
+        changeDetails: [{ action: "added", id: "node-local", kind: "node", label: "Broken local node" }],
+        current,
+        resolutionSelections: {
+          "localDraft:node:node-local:added": "keep-local"
+        }
+      })
+    ).toEqual([
+      {
+        choice: "keep-latest",
+        description:
+          "This node has incomplete source information. If you do not want to fix it now, keep the latest server version instead. source.type/source.id must exist together.",
+        detail: { action: "added", id: "node-local", kind: "node", label: "Broken local node" },
+        scope: "localDraft"
+      }
+    ]);
+  });
+
+  it("builds a keep-latest suggestion for invalid local node sizes", () => {
+    const current = buildDetail({
+      document: buildDocument({
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "姒傚康 A",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          },
+          {
+            id: "node-local",
+            type: "text",
+            title: "Oversized local node",
+            x: 260,
+            y: 0,
+            width: 30,
+            height: 20,
+            metadata: {}
+          }
+        ],
+        edges: [],
+        groups: []
+      })
+    });
+
+    expect(
+      buildGraphConflictResolutionSuggestions({
+        blockingIssues: [
+          {
+            message: "size-invalid",
+            ruleType: "invalid_node_size",
+            severity: "error",
+            targetId: "node-local"
+          }
+        ],
+        changeDetails: [{ action: "added", id: "node-local", kind: "node", label: "Oversized local node" }],
+        current,
+        resolutionSelections: {
+          "localDraft:node:node-local:added": "keep-local"
+        }
+      })
+    ).toEqual([
+      {
+        choice: "keep-latest",
+        description: "This node size is outside the allowed range. If you do not want to fix it now, keep the latest server version instead.",
+        detail: { action: "added", id: "node-local", kind: "node", label: "Oversized local node" },
+        scope: "localDraft"
+      }
+    ]);
+  });
+
   it("returns an empty summary when there are no differences", () => {
     const baseline = buildDetail();
     const current = buildDetail();

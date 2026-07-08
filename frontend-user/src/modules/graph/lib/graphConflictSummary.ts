@@ -285,6 +285,21 @@ export function buildGraphConflictResolutionSuggestions(input: {
         "如果不打算保留这个对象，可改为保留服务端版本。"
       );
     }
+    if (issue.ruleType === "invalid_source_target") {
+      pushSuggestion(
+        findSuggestionDetail("node", issue.targetId ?? ""),
+        "keep-latest",
+        "This node has incomplete source information. If you do not want to fix it now, keep the latest server version instead. source.type/source.id must exist together."
+      );
+    }
+
+    if (issue.ruleType === "invalid_node_size") {
+      pushSuggestion(
+        findSuggestionDetail("node", issue.targetId ?? ""),
+        "keep-latest",
+        "This node size is outside the allowed range. If you do not want to fix it now, keep the latest server version instead."
+      );
+    }
   }
 
   return [...suggestions.values()];
@@ -601,6 +616,16 @@ function buildResolutionBlockingIssueMessage(issue: GraphValidationIssue, docume
     const group = document.groups.find((item) => item.id === issue.targetId);
     const label = group?.title?.trim() || issue.targetId || "该分组";
     return `分组“${label}”仍引用未保留的节点，请先同步保留相关节点或改为保留服务端。`;
+  }
+  if (issue.ruleType === "invalid_source_target") {
+    const node = document.nodes.find((item) => item.id === issue.targetId);
+    const label = node?.title?.trim() || issue.targetId || "node";
+    return `Node "${label}" has incomplete source information. Fix source.type/source.id or keep the latest server version.`;
+  }
+  if (issue.ruleType === "invalid_node_size") {
+    const node = document.nodes.find((item) => item.id === issue.targetId);
+    const label = node?.title?.trim() || issue.targetId || "node";
+    return `Node "${label}" is outside the allowed size range. Resize it or keep the latest server version.`;
   }
   return issue.message;
 }
