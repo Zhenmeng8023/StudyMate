@@ -29,6 +29,7 @@
 | API-011 | IN_PROGRESS | Token refresh 与统一 401 会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；补 HttpOnly Refresh Token 迁移说明。 |
 | DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
 | SEC-010 | DONE | 依赖安全基线收口 | DEV-010 | `package-lock.json`、前台/后台 package manifest、`backend/go.mod`、CI、开发文档 | 锁定 `vite` / `esbuild` / `undici` / `glob` 与 Go toolchain / `golang.org/x/net` / `quic-go` 安全下限；`npm run verify:deps` 通过并纳入默认 CI。 |
+| SEC-011 | DONE | 默认 secret scan 门禁收口 | SEC-010 | 根 `package.json`、`.github/workflows/ci.yml`、`scripts/`、发布/开发文档 | 新增 `npm run verify:secrets`、仓库级扫描脚本与基线测试；默认 CI 执行 secret scan，并对 placeholder 示例值保持低误报。 |
 
 ## P1：在 P0 稳定后推进
 
@@ -61,6 +62,22 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：SEC-011（默认 secret scan 门禁收口）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - 新增 `scripts/secret-scan-baseline.test.mjs`，先用 RED 锁定 `verify:secrets` 缺失、默认 `ci` 未显式执行 secret scan、GitHub Actions 未接线，以及 README / 开发说明 / release checklist 仍把 secret scan 记成手工动作的缺口。
+  - 新增 `scripts/verify-secret-scan.mjs`，把仓库级 secret scan 收口为单一入口：默认递归检查文本文件，跳过 `node_modules`、`dist`、`coverage`、锁文件与二进制资源，并识别私钥块、常见 Token 格式、DSN 内联凭据，以及 `apiKey` / `secret` / `token` / `password` 一类硬编码赋值。
+  - 为 `change-me-in-local-env`、`<secret-manager-value>`、`<local-password>`、`user:pass` 等 placeholder 示例值补内置忽略规则，同时支持通过 `secret-scan: allow` 对个别测试样例做最小范围豁免，避免开发说明与 `.env.example` 误报。
+  - 更新根 `package.json`、`.github/workflows/ci.yml`、`README.md`、`docs/DEVELOPMENT.md`、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`docs/planning/versions/v1.0.0-release.md`、`docs/engineering/CODEX_PROJECT_CONTEXT.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把 secret scan 入口收口为 `npm run verify:secrets`。
+- 已执行验证：
+  - RED：`node --test scripts/secret-scan-baseline.test.mjs`
+  - GREEN：`node --test scripts/secret-scan-baseline.test.mjs`
+  - `npm run verify:secrets`
+  - `npm run verify:docs`
+- 风险与后续：
+  - 当前扫描器以“高置信度硬编码密钥”优先，已覆盖私钥、常见 Token 格式、DSN 凭据和 secret-like literal 赋值；如后续仓库引入新的供应商密钥格式，应继续在 `scripts/verify-secret-scan.mjs` 中补 detector，而不是回退到一次性 `rg` 命令。
+  - 默认 CI 现已补上依赖审计与 secret scan，剩余主要 P0 工程门禁收口项收敛为覆盖率硬门槛。
 
 ### 执行记录：DEV-010（工程可复现性二次核验与工具链收口）
 - 执行日期：2026-07-09
@@ -103,7 +120,7 @@
   - `npm run verify:docs`
 - 风险与后续：
   - Windows 下如果本地仍有 `esbuild.exe` 被占用，`npm install` 可能继续出现 `EBUSY` / `EPERM cleanup` 一类文件锁问题；当前已通过停止仓库内残留构建进程完成升级，但这仍是本地开发环境的已知噪音。
-  - 默认 CI 现已补上依赖审计，但覆盖率硬门槛与更完整的 secret scan 仍未纳入默认流水线，仍属于后续 P0 质量门禁收口项。
+  - 默认 CI 现已补上依赖审计与 secret scan；下一步主要工程级门禁缺口收敛为覆盖率硬门槛。
 
 ### 执行记录：FE-040（管理端接入共享 token 起步）
 - 执行日期：2026-07-09
@@ -635,7 +652,7 @@
 - 兼容性/迁移说明：
   - 本工作包仅修改文档与执行记录，不改后端逻辑、不改前端行为、不改 API 契约、不改数据库结构。
 - 已知风险：
-  - 默认 CI 仍未纳入依赖审计、覆盖率硬门槛和更完整的 secret scan，后续仍需继续补强。
+  - 默认 CI 现已纳入依赖审计与 secret scan，但覆盖率硬门槛仍未落到默认流水线。
 - 下一建议任务：
   - `WB-010` 核验并固定统一搜索契约
 

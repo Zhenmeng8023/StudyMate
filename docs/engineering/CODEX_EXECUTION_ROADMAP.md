@@ -166,6 +166,7 @@
 - API-011：继续补自动 refresh、401 单次重放、刷新失败统一退出与会话失效原因记录，并预留 HttpOnly Refresh Token 迁移说明；当前已完成前后台第一段共享刷新骨架。
 - DEV-010：补工具链版本、bootstrap、依赖审计、graph-core TS 测试运行方式和可复现命令矩阵。
 - SEC-010：在 `DEV-010` 的审计入口之上清空前端锁文件与 Go 依赖的高危命中，并把 `verify:deps` 纳入默认 CI。
+- SEC-011：补仓库级 `verify:secrets` 扫描器，把默认 secret scan 门禁从 release checklist 落到可执行脚本与 CI。
 
 ### 2026-07-09 DEV-010 工程可复现性二次核验与工具链收口
 - 根 `package.json` 现已固定 `packageManager = npm@11.6.2` 与 `engines.node >=24 <25`、`engines.npm >=11 <12`，并新增 `bootstrap`、`verify:runtimes`、`verify:deps` 三个仓库级入口。
@@ -178,6 +179,12 @@
 - `frontend-user/package.json` 与 `frontend-admin/package.json` 现已把 `vite` 依赖下限提升到 `^7.3.6`；根 `package.json` 也同步将 `vitest`、`@vitest/coverage-v8` 与 `@vue/test-utils` 提升到能拉起安全锁文件的版本下限。
 - `backend/go.mod` 现已显式锁定 `toolchain go1.26.5`，并将 `golang.org/x/net` 升级到 `v0.55.0`、`github.com/quic-go/quic-go` 升级到 `v0.59.1`，把 `govulncheck` 命中的标准库 patch 漏洞与 Go 侧依赖漏洞一起收口。
 - `.github/workflows/ci.yml` 现已显式使用 Go `1.26.5` 并执行 `npm run verify:deps`，因此默认流水线不再只“提供审计入口”，而是开始把依赖安全基线本身作为门禁。
+
+### 2026-07-09 SEC-011 默认 secret scan 门禁收口
+- 新增 `scripts/verify-secret-scan.mjs` 与 `scripts/secret-scan-baseline.test.mjs`，把仓库级密钥扫描从 release checklist 里的临时 `rg` 命令收口为可执行脚本与可回归基线测试。
+- 扫描器当前会递归检查仓库中的文本文件，默认跳过 `node_modules`、`dist`、`coverage`、锁文件与二进制资源，并识别私钥块、常见 API Token 格式、DSN 内联凭据，以及 `apiKey` / `secret` / `token` / `password` 一类硬编码赋值。
+- placeholder 示例值（如 `change-me-in-local-env`、`<secret-manager-value>`、`<local-password>`）会被显式忽略，同时支持通过 `secret-scan: allow` 为个别测试样例做最小范围豁免，避免把开发说明和示例 env 误判成生产泄漏。
+- 根 `package.json`、`.github/workflows/ci.yml`、README、开发说明与 release checklist 现已统一改为 `npm run verify:secrets`，默认 CI 也开始把 secret scan 本身作为门禁。
 
 ## Iteration 5：后台治理与搜索索引升级（P1）
 

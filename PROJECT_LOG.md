@@ -4148,3 +4148,27 @@
 
 - 当前仓库已经有明确、可执行、可复核的运行时基线，不再依赖“README 里写了 Node 24 / Go 1.26”这种纯文档约束；后续新机器接手时可以先跑 `npm run bootstrap` 和 `npm run verify:runtimes`，而不是靠人工比对环境。
 - `npm run verify:deps` 现在已经能稳定给出真实审计结果，但它也暴露了下一批需要处理的安全债：npm 侧 `esbuild`、`glob`、`undici`、`vite` 高危告警，以及 Go 侧 `govulncheck` 命中的标准库、`golang.org/x/net` 和 `quic-go` 漏洞；这更适合作为后续单独的安全收口工作包，而不是继续混在工具链入口收口里。
+## 2026-07-09 06:55:00 +08:00 | v1.1.0-alpha.123 | 收口 SEC-011 默认 secret scan 门禁
+### 任务内容
+
+- 在 `SEC-010` 已把依赖安全基线纳入默认 CI 之后，继续选择一个覆盖面广、但不深入单个产品模块的 P0 收口点，把 release checklist 里口头约定的 secret scan 变成仓库内可执行、可回归的默认门禁。
+- 本轮目标不是扩展业务能力，而是补齐默认 `verify:secrets` 脚本、误报可控的扫描规则、CI 接线，以及与之配套的工程文档同步。
+
+### 实际变更
+
+- 新增 `scripts/secret-scan-baseline.test.mjs`，先以 RED 锁定四类缺口：仓库缺少 `verify:secrets` 命令、`ci` 未显式执行 secret scan、GitHub Actions 没有 secret scan 步骤，以及 README / 开发说明 / release checklist 仍把 secret scan 记成手工动作。
+- 新增 `scripts/verify-secret-scan.mjs`，把仓库级 secret scan 收口为单一入口；当前会扫描文本文件并识别私钥块、常见 Token 格式、DSN 内联凭据，以及 `apiKey` / `secret` / `token` / `password` 一类硬编码赋值，同时跳过 `node_modules`、`dist`、`coverage`、锁文件和常见二进制资源。
+- 扫描器为 `.env.example`、开发文档和 release checklist 里的 placeholder 示例值建立了内置忽略规则，并支持通过 `secret-scan: allow` 对个别测试样例做最小范围豁免，避免把 `change-me-in-local-env`、`<secret-manager-value>`、`<local-password>` 等演示值误判成真实泄漏。
+- 更新根 `package.json`、`.github/workflows/ci.yml`、`README.md`、`docs/DEVELOPMENT.md`、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`docs/planning/versions/v1.0.0-release.md`、`docs/engineering/CODEX_PROJECT_CONTEXT.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把 release 说明中的 secret scan 收口为 `npm run verify:secrets`，并清理“CI 仍缺依赖审计”这类过期表述。
+
+### 验证结果
+
+- RED：`node --test scripts/secret-scan-baseline.test.mjs`
+- GREEN：`node --test scripts/secret-scan-baseline.test.mjs`
+- `npm run verify:secrets`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 默认 CI 现在不再只在 release checklist 里“提醒要做 secret scan”，而是会直接执行 `npm run verify:secrets`；后续若有人把私钥、已知 Token 格式或明显的硬编码密钥赋值提交进仓库，会先在本地和 CI 被拦下。
+- 当前剩余的工程级 P0 质量门禁主要收敛为覆盖率硬门槛与覆盖率汇总治理；secret scan 这条线已经从“手工约定”转成“默认可执行基线”。

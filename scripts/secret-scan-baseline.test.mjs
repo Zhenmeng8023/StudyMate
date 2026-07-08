@@ -36,9 +36,9 @@ test("secret scan flags committed secrets and private keys", () => {
     {
       path: "frontend-user/src/lib/leak.ts",
       content: [
-        "export const openAiApiKey = 'sk-proj-abcdefghijklmnopqrstuvwxyz123456';",
+        "export const openAiApiKey = 'sk-proj-abcdefghijklmnopqrstuvwxyz123456';", // secret-scan: allow
         "const sessionToken = \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.signature\";",
-        "-----BEGIN PRIVATE KEY-----",
+        "-----BEGIN PRIVATE KEY-----", // secret-scan: allow
       ].join("\n"),
     },
   ]);

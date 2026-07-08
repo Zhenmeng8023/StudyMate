@@ -9,13 +9,13 @@ const checks = [
     file: "backend/internal/config/config.go",
     banned: [
       "change-me-in-local-env",
-      "root:123456@tcp(127.0.0.1:3306)/studymate",
+      "root:123456@tcp(127.0.0.1:3306)/studymate", // secret-scan: allow
     ],
   },
   {
     file: ".env.example",
     banned: [
-      "MYSQL_DSN=root:123456@tcp(127.0.0.1:3306)/studymate",
+      "MYSQL_DSN=root:123456@tcp(127.0.0.1:3306)/studymate", // secret-scan: allow
       "ADMIN_BOOTSTRAP_PASSWORD=StudyMate123!",
       "ADMIN_BOOTSTRAP_USERNAME=admin",
       "ADMIN_BOOTSTRAP_EMAIL=admin@studymate.local",
@@ -24,8 +24,8 @@ const checks = [
   {
     file: "docs/DEVELOPMENT.md",
     banned: [
-      "$env:MYSQL_DSN='root:123456@tcp(127.0.0.1:3306)/studymate?charset=utf8mb4&parseTime=True&loc=Local'",
-      "$env:ADMIN_BOOTSTRAP_PASSWORD='StudyMate123!'",
+      "$env:MYSQL_DSN='root:123456@tcp(127.0.0.1:3306)/studymate?charset=utf8mb4&parseTime=True&loc=Local'", // secret-scan: allow
+      "$env:ADMIN_BOOTSTRAP_PASSWORD='StudyMate123!'", // secret-scan: allow
     ],
   },
 ];

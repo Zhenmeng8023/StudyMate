@@ -102,6 +102,7 @@ StudyMate
 npm run bootstrap
 npm run verify:runtimes
 npm run verify:deps
+npm run verify:secrets
 npm install
 npm run lint
 npm run verify:backend:format
@@ -147,5 +148,5 @@ go test ./...
 ## v1.0.0 发布与回滚
 
 - 发布清单位于 `docs/planning/versions/v1.0.0-release.md`，包含环境变量矩阵、MySQL/Mongo 迁移顺序、演示数据步骤、回滚步骤和已知非阻塞项。
-- 最终发布闸门：`npm run ci`、`npm run test:coverage`、secret scan、diff review、release smoke flow，以及本地 annotated tag `v1.0.0`。
+- 最终发布闸门：`npm run ci`、`npm run test:coverage`、`npm run verify:secrets`、diff review、release smoke flow，以及本地 annotated tag `v1.0.0`。
 - 本地可以创建 tag；除非明确授权，不推送 commit 或 tag 到远端。

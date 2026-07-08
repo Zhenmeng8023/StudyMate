@@ -35,6 +35,9 @@ jobs:
       - name: Verify dependency audits
         run: npm run verify:deps
 
+      - name: Verify secret scan
+        run: npm run verify:secrets
+
       - name: Verify backend gofmt
         run: npm run verify:backend:format
 

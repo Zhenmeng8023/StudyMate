@@ -67,6 +67,12 @@ npm run verify:runtimes
 npm run verify:deps
 ```
 
+- 如果要执行仓库级 secret scan，可以运行：
+
+```powershell
+npm run verify:secrets
+```
+
 - `backend/go.mod` 已锁定 `toolchain go1.26.5`；首次执行 `go test`、`go mod tidy` 或 `npm run verify:deps` 时，如果本机只有更低 patch 版本，Go 会自动下载并切换到该安全 toolchain。
 
 说明：
@@ -254,6 +260,7 @@ npm --workspace frontend-admin run dev -- --port 8004
 npm run bootstrap
 npm run verify:runtimes
 npm run verify:deps
+npm run verify:secrets
 npm run lint
 npm run verify:backend:format
 npm run verify:config-safety
@@ -277,7 +284,7 @@ go test ./...
 - `docs/planning/VERSION_PLAN.md` 记录当前真实状态、范围取舍、性能预算和里程碑流程。
 - 每个功能里程碑必须同步更新 `README.md`、本文件、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`CHANGELOG.md`、`PROJECT_LOG.md`。
 - 提交前运行 `npm run verify:docs`，避免关键文档入口漂移。
-- CI 基线使用 Node 24、Go 1.26.5、`npm run verify:deps`、Vitest、React Testing Library、Vue Test Utils、Playwright、`@studymate/graph-core` 测试和后端 `go test ./...`。
+- CI 基线使用 Node 24、Go 1.26.5、`npm run verify:deps`、`npm run verify:secrets`、Vitest、React Testing Library、Vue Test Utils、Playwright、`@studymate/graph-core` 测试和后端 `go test ./...`。
 - `npm run verify:backend:format` 会检查 `backend/` 下全部 Go 文件是否通过 `gofmt`。
 - `npm run verify:config-safety` 会检查 `backend/internal/config/config.go`、`.env.example` 和 `docs/DEVELOPMENT.md` 中是否回退到已禁用的危险默认值示例。
 
@@ -325,5 +332,5 @@ go test ./...
 ## v1.0.0 Release Gate
 
 - 发布操作说明位于 `docs/planning/versions/v1.0.0-release.md`。
-- 最终验证顺序：`npm run ci`、`npm run test:coverage`、secret scan、`git diff --check`、release smoke flow、本地 `git tag -a v1.0.0`。
+- 最终验证顺序：`npm run ci`、`npm run test:coverage`、`npm run verify:secrets`、`git diff --check`、release smoke flow、本地 `git tag -a v1.0.0`。
 - 回滚优先恢复上一版应用工件；`004_share_links.sql` 是 additive migration，只有确认需要清理分享链表时才执行 `.down.sql`。

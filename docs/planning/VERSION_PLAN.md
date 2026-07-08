@@ -277,4 +277,4 @@ npm run verify:docs
 
 - `docs/planning/versions/v1.0.0-release.md` 已补齐 release checklist、env var matrix、migration order、demo data steps、rollback steps 和 known non-blockers。
 - `CHANGELOG.md` 已新增 `v1.0.0 - 2026-06-01`。
-- 最终验证必须记录 `npm run ci`、覆盖率汇总、secret scan、diff review、release smoke flow 和本地 annotated tag。
+- 最终验证必须记录 `npm run ci`、覆盖率汇总、`npm run verify:secrets`、diff review、release smoke flow 和本地 annotated tag。

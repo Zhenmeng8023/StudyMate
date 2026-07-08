@@ -21,6 +21,7 @@
     "build:admin": "npm --workspace frontend-admin run build",
     "verify:runtimes": "node scripts/verify-runtime-baseline.mjs",
     "verify:deps": "node scripts/run-dependency-audits.mjs",
+    "verify:secrets": "node scripts/verify-secret-scan.mjs",
     "verify:backend:format": "node scripts/check-go-format.mjs",
     "verify:config-safety": "node scripts/check-config-safety.mjs",
     "typecheck": "npm --workspaces --if-present run typecheck",
@@ -38,7 +39,7 @@
     "test:coverage:graph": "npm --workspace @studymate/graph-core run test:coverage",
     "test:coverage:backend": "cd backend && go test ./... -cover",
     "verify:docs": "node scripts/verify-doc-sync.mjs",
-    "ci": "npm run verify:runtimes && npm run lint && npm run build:user && npm run build:admin && npm run test:user && npm run test:admin && npm --workspace @studymate/graph-core run test && npm run test:e2e && cd backend && go test ./... && cd .. && npm run verify:docs"
+    "ci": "npm run verify:runtimes && npm run verify:secrets && npm run lint && npm run build:user && npm run build:admin && npm run test:user && npm run test:admin && npm --workspace @studymate/graph-core run test && npm run test:e2e && cd backend && go test ./... && cd .. && npm run verify:docs"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
