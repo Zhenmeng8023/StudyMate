@@ -538,6 +538,92 @@ describe("graphConflictSummary", () => {
     ]);
   });
 
+  it("includes multi-target edge dependencies in linked resolution suggestions", () => {
+    const current = buildDetail({
+      document: buildDocument({
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "概念 A",
+            x: 0,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          },
+          {
+            id: "node-2",
+            type: "text",
+            title: "概念 B",
+            x: 260,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          },
+          {
+            id: "node-multi",
+            type: "text",
+            title: "多目标节点",
+            x: 520,
+            y: 0,
+            width: 220,
+            height: 132,
+            metadata: {}
+          }
+        ],
+        edges: [
+          {
+            id: "edge-local",
+            sourceNodeId: "node-1",
+            targetNodeId: "node-2",
+            kind: "curve",
+            label: "多目标连线",
+            metadata: {
+              targetNodeIds: ["node-2", "node-multi"]
+            }
+          }
+        ],
+        groups: []
+      })
+    });
+
+    expect(
+      buildGraphConflictResolutionSuggestions({
+        blockingIssues: [
+          {
+            message: "dangling-edge",
+            ruleType: "dangling_edge",
+            severity: "error",
+            targetId: "edge-local"
+          }
+        ],
+        changeDetails: [
+          { action: "added", id: "node-multi", kind: "node", label: "多目标节点" },
+          { action: "added", id: "edge-local", kind: "edge", label: "多目标连线" }
+        ],
+        current,
+        resolutionSelections: {
+          "localDraft:edge:edge-local:added": "keep-local"
+        }
+      })
+    ).toEqual([
+      {
+        choice: "keep-local",
+        description: "补齐这条依赖需要同时保留相关节点。",
+        detail: { action: "added", id: "node-multi", kind: "node", label: "多目标节点" },
+        scope: "localDraft"
+      },
+      {
+        choice: "keep-latest",
+        description: "如果不打算保留这个对象，可改为保留服务端版本。",
+        detail: { action: "added", id: "edge-local", kind: "edge", label: "多目标连线" },
+        scope: "localDraft"
+      }
+    ]);
+  });
+
   it("builds scope-aware suggestions when latest-head removals cause dangling dependencies", () => {
     const current = buildDetail({
       document: buildDocument({
