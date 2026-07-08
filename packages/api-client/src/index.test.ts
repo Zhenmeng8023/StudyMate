@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildApiPath, createAuthHeaders, requestApi } from "./index";
+import { buildApiPath, createAuthHeaders, createSessionRequest, requestApi } from "./index";
 
 function apiPayload<T>(data: T) {
   return new Response(JSON.stringify({ success: true, data }), {
@@ -88,5 +88,56 @@ describe("@studymate/api-client", () => {
     );
 
     await expect(requestApi("/api/v1/fail")).rejects.toThrow("璇锋眰澶辫触");
+  });
+  it("refreshes an expired session only once and retries concurrent requests with the new access token", async () => {
+    const refreshedSession = {
+      accessToken: "fresh-token",
+      refreshToken: "fresh-refresh-token"
+    };
+    let currentSession = {
+      accessToken: "stale-token",
+      refreshToken: "refresh-token"
+    };
+    const persistSession = vi.fn((nextSession: typeof currentSession | null) => {
+      currentSession = nextSession ?? currentSession;
+    });
+    const refreshSession = vi.fn(async () => refreshedSession);
+    const requestWithSession = createSessionRequest({
+      getSession: () => currentSession,
+      persistSession,
+      refreshSession
+    });
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      const authorization = new Headers(init?.headers as HeadersInit).get("Authorization");
+
+      if (path !== "/api/v1/protected") {
+        throw new Error(`Unexpected path: ${path}`);
+      }
+
+      if (authorization === "Bearer stale-token") {
+        return new Response(JSON.stringify({ success: false, error: { code: "token_expired", message: "会话已过期" } }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      if (authorization === "Bearer fresh-token") {
+        return apiPayload({ ok: true });
+      }
+
+      throw new Error(`Unexpected auth header: ${authorization}`);
+    });
+
+    await expect(
+      Promise.all([
+        requestWithSession<{ ok: boolean }>("/api/v1/protected"),
+        requestWithSession<{ ok: boolean }>("/api/v1/protected")
+      ])
+    ).resolves.toEqual([{ ok: true }, { ok: true }]);
+
+    expect(refreshSession).toHaveBeenCalledTimes(1);
+    expect(persistSession).toHaveBeenCalledWith(refreshedSession);
   });
 });
