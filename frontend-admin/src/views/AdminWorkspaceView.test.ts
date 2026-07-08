@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import AdminWorkspaceView from "./AdminWorkspaceView.vue";
 
 function apiPayload<T>(data: T) {
@@ -10,6 +10,11 @@ function apiPayload<T>(data: T) {
 }
 
 describe("AdminWorkspaceView governance modules", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    window.localStorage.clear();
+  });
+
   it("loads the real users governance API from an existing admin session", async () => {
     window.localStorage.setItem(
       "studymate.admin.session",
@@ -138,5 +143,6 @@ describe("AdminWorkspaceView governance modules", () => {
     );
     expect(window.localStorage.getItem("studymate.admin.session")).toBeNull();
     expect(wrapper.text()).toContain("进入管理后台");
+    expect(wrapper.text()).toContain("后台会话已失效，请重新登录后继续治理工作。");
   });
 });

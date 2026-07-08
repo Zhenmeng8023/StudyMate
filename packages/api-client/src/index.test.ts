@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildApiPath, createAuthHeaders, createSessionRequest, requestApi } from "./index";
+import { ApiRequestError, buildApiPath, createAuthHeaders, createSessionRequest, requestApi } from "./index";
 
 function apiPayload<T>(data: T) {
   return new Response(JSON.stringify({ success: true, data }), {
@@ -139,5 +139,53 @@ describe("@studymate/api-client", () => {
 
     expect(refreshSession).toHaveBeenCalledTimes(1);
     expect(persistSession).toHaveBeenCalledWith(refreshedSession);
+  });
+
+  it("records refresh failure details before clearing the persisted session", async () => {
+    const currentSession = {
+      accessToken: "stale-token",
+      refreshToken: "refresh-token"
+    };
+    const persistSession = vi.fn();
+    const onSessionInvalidated = vi.fn();
+    const refreshSession = vi.fn(async () => {
+      throw new ApiRequestError("刷新令牌已失效", 401, "refresh_expired");
+    });
+    const requestWithSession = createSessionRequest({
+      getSession: () => currentSession,
+      persistSession,
+      refreshSession,
+      onSessionInvalidated
+    });
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      const authorization = new Headers(init?.headers as HeadersInit).get("Authorization");
+
+      if (path !== "/api/v1/protected") {
+        throw new Error(`Unexpected path: ${path}`);
+      }
+
+      if (authorization === "Bearer stale-token") {
+        return new Response(JSON.stringify({ success: false, error: { code: "token_expired", message: "访问令牌已过期" } }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      throw new Error(`Unexpected auth header: ${authorization}`);
+    });
+
+    await expect(requestWithSession("/api/v1/protected")).rejects.toThrow("刷新令牌已失效");
+
+    expect(onSessionInvalidated).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "refresh_failed",
+        code: "refresh_expired",
+        message: "刷新令牌已失效",
+        status: 401
+      })
+    );
+    expect(persistSession).toHaveBeenCalledWith(null);
   });
 });

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { persistSession, readSession } from "../app/sessionStore";
+import { clearSessionInvalidation, persistSession, readSession, readSessionInvalidation } from "../app/sessionStore";
 import { listGraphs } from "./graphs";
 import type { AuthSession, GraphSummaryPayload } from "./types";
 
@@ -40,6 +40,7 @@ function apiError(status: number, code: string, message: string) {
 describe("frontend-user session refresh flow", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    clearSessionInvalidation();
     persistSession(null);
   });
 
@@ -93,5 +94,39 @@ describe("frontend-user session refresh flow", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(readSession()).toEqual(refreshedSession);
+  });
+
+  it("records a forced logout reason when refresh fails and clears the persisted session", async () => {
+    persistSession(staleSession);
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      const authorization = new Headers(init?.headers as HeadersInit).get("Authorization");
+
+      if (path === "/api/v1/graphs") {
+        if (authorization === "Bearer stale-access-token") {
+          return apiError(401, "token_expired", "访问令牌已过期");
+        }
+      }
+
+      if (path === "/api/v1/auth/refresh") {
+        expect(init?.method).toBe("POST");
+        return apiError(401, "refresh_expired", "刷新令牌已失效");
+      }
+
+      throw new Error(`Unexpected request: ${path} ${authorization}`);
+    });
+
+    await expect(listGraphs(staleSession)).rejects.toThrow("刷新令牌已失效");
+
+    expect(readSession()).toBeNull();
+    expect(readSessionInvalidation()).toEqual(
+      expect.objectContaining({
+        kind: "refresh_failed",
+        code: "refresh_expired",
+        message: "刷新令牌已失效",
+        status: 401
+      })
+    );
   });
 });
