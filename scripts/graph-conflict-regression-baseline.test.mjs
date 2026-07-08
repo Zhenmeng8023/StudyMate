@@ -24,10 +24,14 @@ test("graph conflict regression entrypoint is wired into scripts and docs", () =
 
   assert.equal(
     packageJson.scripts?.["verify:graph-conflicts"],
-    "npm run test:graph:conflicts:frontend && npm run test:graph:conflicts:backend && npm run verify:docs"
+    "npm run test:graph:conflicts:frontend && npm run test:graph:conflicts:backend && npm run test:graph:conflicts:e2e && npm run verify:docs"
   );
   assert.ok(packageJson.scripts?.["test:graph:conflicts:frontend"]);
   assert.equal(packageJson.scripts?.["test:graph:conflicts:backend"], "cd backend && go test ./internal/modules/graph/dto ./internal/modules/graph/handler ./internal/modules/graph/service");
+  assert.equal(
+    packageJson.scripts?.["test:graph:conflicts:e2e"],
+    "npm run build:user && npm run build:admin && playwright test e2e/v1-graph-workspace.spec.ts"
+  );
   assert.match(readme, /npm run verify:graph-conflicts/);
   assert.match(developmentDoc, /npm run verify:graph-conflicts/);
   assert.match(roadmap, /npm run verify:graph-conflicts/);
@@ -35,4 +39,5 @@ test("graph conflict regression entrypoint is wired into scripts and docs", () =
   assert.match(regressionDoc, /npm run verify:graph-conflicts/);
   assert.match(regressionDoc, /GraphWorkspaceConflictResolutionDependencies\.test\.tsx/);
   assert.match(regressionDoc, /graphConflictSummary\.test\.ts/);
+  assert.match(regressionDoc, /v1-graph-workspace\.spec\.ts/);
 });
