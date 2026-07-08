@@ -6,6 +6,7 @@
 
 ### Added
 
+- v1.1 完成 FE-010 / FE-020 / FE-030 / UI-04 的真实依赖环境验证收口：用户端与管理端 typecheck、相关 Vitest、前后台构建以及 4 条 Playwright smoke 已于 2026-07-08 全部通过，并补上管理端稳定导航语义与更稳的 E2E 选择器。
 - v1.1 图谱冲突辅助新增联动取舍建议：当已标记取舍会留下 dangling edge / invalid group node 时，冲突卡片会直接给出“联动保留本地依赖节点”或“改为保留服务端”的快捷动作，帮助用户当场解除阻断。
 - v1.1 图谱冲突辅助新增未标记对象提示：冲突卡片会统计尚未标记的对象数量，明确说明直接应用时这些对象会默认沿用最新图谱版本，并把同样的默认行为写入人工合并清单。
 - v1.1 图谱冲突辅助新增对象级取舍依赖校验：当已标记取舍会留下 dangling edge / invalid group node 时，冲突卡片会直接列出问题并阻断“应用已标记取舍到当前草稿”。
@@ -139,9 +140,4 @@
 ### UI-04 verification note
 
 - Added product-wide layout and information-density refresh for the user application and admin governance workspace; code-contract behavior remains unchanged.
-- Validated frontend source syntax, docs synchronization and archive integrity in the delivery environment. Full package typecheck/test/build remains pending a clean `npm ci` in local or CI.
-
-### UI-04 verification note
-
-- Added product-wide layout and information-density refresh for the user application and admin governance workspace; code-contract behavior remains unchanged.
-- Validated frontend source syntax, docs synchronization and archive integrity in the delivery environment. Full package typecheck/test/build remains pending a clean `npm ci` in local or CI.
+- On 2026-07-08, completed frontend-user / frontend-admin typecheck, related Vitest suites, `build:user`, `build:admin`, and Playwright smoke for user shell, graph workspace, review flow, and admin governance.

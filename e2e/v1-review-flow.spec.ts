@@ -120,13 +120,13 @@ test("review page completes a due-card writeback with an authenticated session",
 
   await page.goto("/review");
 
-  await expect(page.getByText("Graph concept?")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Release Deck" })).toBeVisible();
+  await expect(page.getByLabel("复习卡片")).toContainText("Graph concept?");
+  await expect(page.locator(".review-focus-card-meta")).toContainText("Release Deck");
 
-  await page.locator(".review-action-row .secondary-button").click();
+  await page.getByRole("button", { name: "显示答案" }).click();
   await expect(page.getByText("Nodes and relationships.").first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Good" }).click();
+  await page.getByRole("button", { name: "Good 记得" }).click();
 
   await expect.poll(() => reviewRequests.length).toBe(1);
   expect(reviewRequests[0]).toMatchObject({
@@ -135,5 +135,5 @@ test("review page completes a due-card writeback with an authenticated session",
       rating: "good"
     }
   });
-  await expect(page.locator(".review-stage-panel").getByText("Graph concept?")).toHaveCount(0);
+  await expect(page.getByLabel("复习卡片")).not.toContainText("Graph concept?");
 });

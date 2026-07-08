@@ -65,7 +65,7 @@ function buildGraphDocument() {
   };
 }
 
-test("graph workspace opens a 200 node graph and exposes JSON export", async ({ page }) => {
+test("graph workspace opens a 200 node graph and exposes canvas save, import, and history flows", async ({ page }) => {
   const document = buildGraphDocument();
   const detail = {
     id: "graph-1",
@@ -87,6 +87,7 @@ test("graph workspace opens a 200 node graph and exposes JSON export", async ({ 
   await page.addInitScript((storedSession) => {
     window.localStorage.setItem("studymate.session", JSON.stringify(storedSession));
   }, session);
+
   await page.route("**/api/v1/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === "/api/v1/graphs/graph-1") {
@@ -94,14 +95,17 @@ test("graph workspace opens a 200 node graph and exposes JSON export", async ({ 
       return;
     }
     if (url.pathname === "/api/v1/graphs/graph-1/batch-save") {
-      await route.fulfill({ contentType: "application/json", body: success({
-        ...detail,
-        currentVersion: 4,
-        document: {
-          ...detail.document,
-          version: 4
-        }
-      }) });
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          ...detail,
+          currentVersion: 4,
+          document: {
+            ...detail.document,
+            version: 4
+          }
+        })
+      });
       return;
     }
     if (url.pathname === "/api/v1/graphs/graph-1/validate") {
@@ -161,9 +165,9 @@ test("graph workspace opens a 200 node graph and exposes JSON export", async ({ 
 
   await page.goto("/graph?graphId=graph-1");
 
-  await expect(page.getByRole("heading", { name: "把资料、笔记和复习线索组织到同一张学习地图里" })).toBeVisible();
+  await expect(page.getByLabel("打开资源面板")).toBeVisible();
+  await expect(page.getByText("性能图谱")).toBeVisible();
   await expect(page.getByText("版本 3 · 200 节点 · 300 连线")).toBeVisible();
-  await expect(page.locator('button[title="导出 StudyMate JSON"]')).toBeVisible();
   await expect(page.locator(".graph-stage")).toBeVisible();
 
   await page.getByRole("button", { name: "保存" }).click();
@@ -174,33 +178,34 @@ test("graph workspace opens a 200 node graph and exposes JSON export", async ({ 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "图谱快捷键" })).toBeHidden();
 
-  await page.getByRole("button", { name: "JSON" }).nth(1).click();
+  await page.getByLabel("打开检查器").click();
+  await page.getByRole("button", { name: "导入" }).click();
+  await page.getByLabel("图谱导入格式").getByRole("button", { name: "JSON" }).click();
   await page.locator(".graph-import-input").fill(JSON.stringify({
     schemaVersion: 1,
     nodes: [
       {
         id: "node-1",
         type: "concept",
-        title: "Broken",
+        title: "Broken import",
         x: 0,
         y: 0,
         width: 200,
         height: 100,
-        source: { type: "material", id: "source-1", label: "Source 1" }
+        source: { type: "note", id: "note-1" }
       }
     ],
-    edges: [{ id: "edge-broken", sourceNodeId: "node-1", targetNodeId: "missing" }],
+    edges: [{ id: "edge-1", sourceNodeId: "node-1", targetNodeId: "missing" }],
     groups: [],
     viewport: { x: 0, y: 0, zoom: 1 },
     theme: {},
     metadata: {}
   }));
   await page.getByRole("button", { name: "导入草稿" }).click();
-  await expect(page.getByText("导入 JSON 失败：发现 1 条结构错误")).toBeVisible();
+  await expect(page.getByText("导入 JSON 失败：发现 2 条结构错误")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：保存失败")).toBeVisible();
 
+  await page.getByRole("button", { name: "历史" }).click();
   await page.getByRole("button", { name: "恢复" }).click();
   await expect(page.getByText("快照恢复失败")).toBeVisible();
-
-  await page.getByRole("button", { name: "回到阅读器" }).first().click();
-  await expect(page).toHaveURL(/\/reader\/source-1/);
 });

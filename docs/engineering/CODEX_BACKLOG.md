@@ -20,9 +20,9 @@
 | WB-022 | DONE | 图谱 import/export/validation 统一接口 | WB-020 | graph-core、graph module | Mermaid/Markdown/SVG 迁入统一接口并保留兼容性。 |
 | WB-023 | DONE | 图谱内核测试与迁移回归 | WB-021, WB-022 | graph-core tests | 序列化、撤销、导入错误、旧数据兼容有测试。 |
 | FE-000 | DONE | 前端现状审计与布局规格冻结 | WB-001 | `docs/engineering/`、`docs/design/` | 已固化前后端能力矩阵、页面状态矩阵、四类布局模式与图谱重构边界。 |
-| FE-010 | VERIFY | 多布局壳层与基础组件 | FE-000 | `frontend-user/src/app/`、`frontend-user/src/design-system/`、样式 | Standard / Studio / Canvas / Focus 路由布局可解析；Canvas 不挂全局 ContextPanel；基础组件与单测已添加，待完整依赖安装后跑类型检查与测试。 |
-| FE-020 | VERIFY | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；待完整依赖安装后跑类型检查、Vitest、构建和 Playwright。 |
-| FE-030 | VERIFY | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，待完整依赖安装后跑类型检查、Vitest、构建和 Playwright。 |
+| FE-010 | DONE | 多布局壳层与基础组件 | FE-000 | `frontend-user/src/app/`、`frontend-user/src/design-system/`、样式 | Standard / Studio / Canvas / Focus 路由布局可解析；Canvas 不挂全局 ContextPanel；基础组件与单测已添加，并已在 2026-07-08 跑通用户端 / 管理端类型检查、相关 Vitest、前后台构建与 Playwright 回归。 |
+| FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
+| FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
 | FE-040 | TODO | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。 |
 | FE-041 | TODO | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | Button、IconButton、Input、Select、Tag、DataState、Drawer、Inspector、ConfirmDialog、CommandBar、PageHeader 至少具备共享 token、变体、禁用/加载/错误状态与最小测试或文档示例。 |
 | API-010 | TODO | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/shared/api` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
@@ -73,6 +73,25 @@
   - 已抽取 PDF 全 16 页文本。
   - 已核验 `packages/ui`、`packages/api-client`、`packages/editor-core`、重复 CSS token、图谱控制器大小、管理端工作台大小、根 lockfile 与 CI 文件存在性。
 
+### 执行记录：FE-010 / FE-020 / FE-030 / UI-04（验证收口）
+- 执行日期：2026-07-08
+- 执行基线：`master@10243e6`
+- 本轮完成：
+  - 收口 FE-010、FE-020、FE-030 与 UI-04 的真实依赖环境验证，不再保留“待完整依赖安装后复核”的状态。
+  - 更新用户端 Playwright smoke，使壳层、图谱工作区和复习流断言与当前产品界面一致。
+  - 为管理端工作台导航补充稳定语义：`aria-label`、`aria-pressed` 与 `data-admin-view`，降低管理端 Vitest 与 Playwright 对脆弱文案/位置选择器的耦合。
+  - 重写 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，锁定 users 模块的真实加载、`Bearer admin-token` 传递以及 `alice` 渲染结果。
+- 已执行验证：
+  - `npm --workspace frontend-user run typecheck`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm --workspace frontend-user run test -- src/app/layouts/layoutPolicy.test.ts src/app/layouts/AppShell.test.tsx src/design-system/primitives/DataState.test.tsx src/design-system/primitives/Drawer.test.tsx src/design-system/primitives/Inspector.test.tsx src/modules/graph/components/GraphWorkspaceCanvasChrome.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+  - `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - `npm run build:user`
+  - `npm run build:admin`
+  - `npx playwright test e2e/user-shell.spec.ts e2e/v1-graph-workspace.spec.ts e2e/v1-review-flow.spec.ts e2e/v1-admin-governance.spec.ts`
+- 验证结论：
+  - 上述命令已在 2026-07-08 全部通过，FE-010 / FE-020 / FE-030 / UI-04 从“实现完成待验证”收口为“实现与回归均完成”。
+  - 仍未包含多分辨率截图采集与更大范围全量 E2E 扫描；这部分保留给后续更系统的视觉验收和 `WB-034` 图谱回归矩阵。
 ### 执行记录：FE-010（验证中）
 
 - 执行日期：2026-07-02

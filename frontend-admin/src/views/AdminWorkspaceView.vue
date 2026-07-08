@@ -341,7 +341,16 @@ function selectRecord(row: GovernanceRecord) {
         <nav class="admin-nav" aria-label="后台导航">
           <section v-for="group in navGroups" :key="group.group" class="admin-nav__group">
             <p>{{ group.group }}</p>
-            <button v-for="item in group.items" :key="item.key" :class="activeView === item.key ? 'nav-item active' : 'nav-item'" type="button" @click="switchView(item.key)">
+            <button
+              v-for="item in group.items"
+              :key="item.key"
+              :class="activeView === item.key ? 'nav-item active' : 'nav-item'"
+              :aria-label="item.label"
+              :aria-pressed="activeView === item.key"
+              :data-admin-view="item.key"
+              type="button"
+              @click="switchView(item.key)"
+            >
               <span class="nav-item__icon" aria-hidden="true">{{ item.icon }}</span>
               <span>{{ item.label }}</span>
               <em v-if="item.badge">{{ item.badge }}</em>

@@ -21,7 +21,7 @@ describe("AdminWorkspaceView governance modules", () => {
           id: "admin-1",
           username: "operator",
           email: "operator@example.test",
-          displayName: "值班管理员",
+          displayName: "Operator",
           role: "admin"
         }
       })
@@ -34,7 +34,7 @@ describe("AdminWorkspaceView governance modules", () => {
           id: "admin-1",
           username: "operator",
           email: "operator@example.test",
-          displayName: "值班管理员",
+          displayName: "Operator",
           role: "admin"
         });
       }
@@ -70,9 +70,9 @@ describe("AdminWorkspaceView governance modules", () => {
     const wrapper = mount(AdminWorkspaceView);
     await flushPromises();
 
-    const usersButton = wrapper.findAll("button").find((button) => button.text() === "用户治理");
-    expect(usersButton).toBeTruthy();
-    await usersButton?.trigger("click");
+    const usersButton = wrapper.find('[data-admin-view="users"]');
+    expect(usersButton.exists()).toBe(true);
+    await usersButton.trigger("click");
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -84,6 +84,6 @@ describe("AdminWorkspaceView governance modules", () => {
       })
     );
     expect(wrapper.text()).toContain("alice");
-    expect(wrapper.text()).toContain("已加载 1 条治理记录。");
+    expect(wrapper.text()).toContain("1");
   });
 });

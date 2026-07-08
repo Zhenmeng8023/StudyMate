@@ -69,9 +69,9 @@ test("admin governance page loads the users module with an admin session", async
   await page.goto(`${adminBaseUrl}/`);
 
   await expect(page.getByText("Operator")).toBeVisible();
-  await page.locator(".nav-stack button").nth(4).click();
+  await page.locator('[data-admin-view="users"]').click();
 
-  await expect(page.locator(".placeholder-card strong", { hasText: "alice" })).toBeVisible();
+  await expect(page.locator(".admin-table--records")).toContainText("alice");
   await expect.poll(() => usersRequests.length).toBe(1);
   expect(usersRequests[0]).toBe("Bearer admin-token");
 });

@@ -1,3 +1,30 @@
+## 2026-07-08 13:41:12 +08:00 | v1.1.0-alpha.98 | 收口 FE-010 FE-020 FE-030 UI-04 验证
+### 任务内容
+
+- 按 `CODEX_MASTER_PROMPT.md` 当前优先级，先不继续扩展新功能，而是把 FE-010、FE-020、FE-030 与 UI-04 从“实现完成待验证”收口到“已在真实依赖环境完成回归”。
+- 补齐这批前端验证里最后的脆弱点，确保用户端与管理端 smoke 不再依赖过时页面文案或易碎选择器。
+
+### 实际变更
+
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，为后台工作台导航按钮补 `aria-label`、`aria-pressed` 和 `data-admin-view`，让用户治理等模块具备稳定的可访问性与自动化定位语义。
+- 重写 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，改为通过 `[data-admin-view="users"]` 验证 users 模块加载、`/api/v1/admin/users?limit=20` 请求与 `Authorization: Bearer admin-token` 头部，以及 `alice` 渲染结果。
+- 重写 `e2e/user-shell.spec.ts`、`e2e/v1-review-flow.spec.ts`、`e2e/v1-admin-governance.spec.ts`、`e2e/v1-graph-workspace.spec.ts`，让断言与当前壳层、复习工作区、后台治理和图谱 CanvasLayout 交互保持一致，并显式覆盖图谱导入失败、保存状态、历史恢复失败等现状。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/FE-00_ACCEPTANCE_CHECKLIST.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md`、`docs/design/UI_04_PRODUCT_REDESIGN.md` 与 `CHANGELOG.md`，把 FE/UI 真实验证收口写回长期文档。
+
+### 验证结果
+
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-admin run typecheck` 通过。
+- `npm --workspace frontend-user run test -- src/app/layouts/layoutPolicy.test.ts src/app/layouts/AppShell.test.tsx src/design-system/primitives/DataState.test.tsx src/design-system/primitives/Drawer.test.tsx src/design-system/primitives/Inspector.test.tsx src/modules/graph/components/GraphWorkspaceCanvasChrome.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx` 通过，9 个文件共 28 条测试通过。
+- `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts` 先因旧选择器失效进入 RED，补稳定语义与测试后 GREEN 通过。
+- `npm run build:user` 通过。
+- `npm run build:admin` 通过。
+- `npx playwright test e2e/user-shell.spec.ts e2e/v1-graph-workspace.spec.ts e2e/v1-review-flow.spec.ts e2e/v1-admin-governance.spec.ts` 通过，4 条 smoke 全部通过。
+
+### 后续影响
+
+- FE-010、FE-020、FE-030 与 UI-04 现在不再依赖“之后有完整 npm 依赖时再验证”的口头前提，后续可以把注意力集中回 `WB-032` 的冲突处理深化与 `WB-034` 的图谱回归矩阵。
+- 这轮主要收口的是真实验证债务，不代表多分辨率截图、视觉对照归档或更大范围全量 E2E 已全部完成；这些仍适合作为后续独立质量工作包推进。
 ## 2026-07-08 12:54:17 +08:00 | v1.1.0-alpha.97 | 推进 WB-032 联动取舍建议子步骤
 
 ### 任务内容

@@ -16,7 +16,7 @@
 ## FE-01 开始前必须确认
 
 - [ ] 在本地检出同一 SHA，执行 `npm ci`。当前沙箱解析 npm 镜像时出现 `EAI_AGAIN`，需在正常开发机或 CI 复核。
-- [ ] 记录 `npm run typecheck`、`npm run test`、`npm run test:e2e` 的实际结果。当前待在可访问 npm registry 的环境中执行。
+- [x] 记录实际验证结果：2026-07-08 已执行 `npm --workspace frontend-user run typecheck`、`npm --workspace frontend-admin run typecheck`、前台相关 Vitest、`frontend-admin` 工作台 Vitest、`npm run build:user`、`npm run build:admin` 与 4 条 Playwright smoke。
 - [ ] 在 1920×1080、1440×900、1280×800、1024×768 采集当前页面截图。
 - [ ] 确认 React Router 的完整路由表与各页使用的壳层入口。
 - [ ] 确认 `GraphWorkspacePage`、`GraphWorkspaceShell`、节点 Inspector、历史 / 冲突组件的实际依赖边界。
@@ -34,4 +34,4 @@
 - [x] SourceRail 已按图谱 / 来源 / 模板拆为资源 Tab。
 - [x] 节点属性、来源、历史、导入与冲突已迁入 Inspector Tab。
 - [x] 低于 1600px 时，Dock 以覆盖式面板打开，不再永久压缩画布。
-- [ ] 在真实依赖环境运行类型检查、Vitest、Vite build 与 Playwright 断点回归。
+- [x] 已在真实依赖环境运行类型检查、Vitest、Vite build 与 Playwright 断点回归。
