@@ -4398,3 +4398,27 @@
 
 - 默认 CI 现在不再只在 release checklist 里“提醒要做 secret scan”，而是会直接执行 `npm run verify:secrets`；后续若有人把私钥、已知 Token 格式或明显的硬编码密钥赋值提交进仓库，会先在本地和 CI 被拦下。
 - 当前剩余的工程级 P0 质量门禁主要收敛为覆盖率硬门槛与覆盖率汇总治理；secret scan 这条线已经从“手工约定”转成“默认可执行基线”。
+## 2026-07-09 08:08:00 +08:00 | v1.1.0-alpha.135 | 收口工作区布局预览与导出状态 smoke
+### 任务内容
+
+- 继续沿 `verify:graph-conflicts` 这条固定入口推进 `WB-032/WB-034` 的最小增量收口，把图谱工作区 Playwright smoke 从“桌面/窄屏 + 真实版本冲突路径”再补到“布局预览 API + 导出状态”。
+- 本轮仍然不扩张图谱业务范围，只补真实工作区里已经存在的布局预览与导出反馈路径，让固定回归入口更接近用户实际操作闭环。
+
+### 实际变更
+
+- 更新 `scripts/graph-conflict-regression-baseline.test.mjs`，先用 RED 锁定新缺口：当前 `e2e/v1-graph-workspace.spec.ts` 尚未覆盖 `layouts/preview` 与三种导出状态文案，回归矩阵文档也还没有把“布局预览 / 导出状态”纳入 E2E 描述。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增图谱工作区布局预览与导出状态 smoke：在真实工作区里选择两个节点，调用 `/api/v1/graphs/graph-1/layouts/preview` 生成来源泳道，断言请求体、泳道分组渲染，以及 `导出 StudyMate JSON / SVG / PNG` 三种状态提示都能在页面上可见。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`、`README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，统一把图谱工作区固定 E2E 回归描述推进到“桌面/窄屏 smoke + 布局预览 + 导出状态 + 真实 `graph_version_conflict` 路径”。
+
+### 验证结果
+
+- RED：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- GREEN：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- `npm run test:graph:conflicts:e2e`
+- `npm run verify:graph-conflicts`
+- `npm run verify:docs`
+
+### 后续影响
+
+- `verify:graph-conflicts` 现在不只覆盖图谱工作区的加载/保存/导入/历史与版本冲突路径，也开始固定验证布局预览 API 和三种导出状态提示，后续继续补 `WB-034` 时有了更贴近真实操作的 smoke 基座。
+- 当前仍未覆盖更完整的桌面/窄屏组合矩阵和权限路径；后续应继续沿这条固定入口扩展，而不是重新分散成临时命令。

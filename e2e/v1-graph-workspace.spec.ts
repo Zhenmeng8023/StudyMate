@@ -93,6 +93,62 @@ function buildGraphDetail(input?: {
   };
 }
 
+function buildLayoutExportSmokeDocument() {
+  return {
+    graphId: "graph-1",
+    version: 4,
+    schemaVersion: 1,
+    viewport: { x: 140, y: 120, zoom: 1 },
+    nodes: [
+      {
+        id: "layout-node-1",
+        type: "material",
+        title: "布局节点 1",
+        x: 120,
+        y: 140,
+        width: 220,
+        height: 132,
+        source: { type: "material", id: "material-1", label: "资料 A" },
+        metadata: {}
+      },
+      {
+        id: "layout-node-2",
+        type: "rich-note",
+        title: "布局节点 2",
+        x: 420,
+        y: 180,
+        width: 220,
+        height: 132,
+        source: { type: "note", id: "note-1", label: "笔记 A" },
+        metadata: {}
+      },
+      {
+        id: "layout-node-3",
+        type: "text",
+        title: "布局节点 3",
+        x: 720,
+        y: 260,
+        width: 220,
+        height: 132,
+        source: { type: "ai", id: "draft-1", label: "AI 草稿" },
+        metadata: {}
+      }
+    ],
+    edges: [
+      {
+        id: "layout-edge-1",
+        kind: "straight",
+        sourceNodeId: "layout-node-1",
+        targetNodeId: "layout-node-2",
+        label: "关联"
+      }
+    ],
+    groups: [],
+    theme: {},
+    metadata: {}
+  };
+}
+
 test("graph workspace opens a 200 node graph and exposes canvas save, import, and history flows", async ({ page }) => {
   const document = buildGraphDocument();
   const detail = buildGraphDetail({ document });
@@ -221,6 +277,143 @@ test("graph workspace opens a 200 node graph and exposes canvas save, import, an
   await page.getByRole("button", { name: "历史" }).click();
   await page.getByRole("button", { name: "恢复" }).click();
   await expect(page.getByText("快照恢复失败")).toBeVisible();
+});
+
+test("graph workspace previews source swimlanes and reports export statuses", async ({ page }) => {
+  const document = buildLayoutExportSmokeDocument();
+  const detail = buildGraphDetail({
+    currentVersion: 4,
+    description: "布局预览与导出状态 smoke",
+    document,
+    edgeCount: 1,
+    nodeCount: 3,
+    title: "布局导出图谱",
+    updatedAt: "2026-07-09T08:08:00Z"
+  });
+  const previewDocument = {
+    ...document,
+    groups: [
+      {
+        id: "layout-group-1",
+        title: "资料来源泳道",
+        nodeIds: ["layout-node-1"],
+        x: 60,
+        y: 80,
+        width: 320,
+        height: 240,
+        collapsed: false,
+        metadata: { layoutKind: "source-swimlane", sourceType: "material" }
+      },
+      {
+        id: "layout-group-2",
+        title: "笔记来源泳道",
+        nodeIds: ["layout-node-2"],
+        x: 400,
+        y: 80,
+        width: 320,
+        height: 240,
+        collapsed: false,
+        metadata: { layoutKind: "source-swimlane", sourceType: "note" }
+      },
+      {
+        id: "layout-group-3",
+        title: "AI 来源泳道",
+        nodeIds: ["layout-node-3"],
+        x: 740,
+        y: 80,
+        width: 320,
+        height: 240,
+        collapsed: false,
+        metadata: { layoutKind: "source-swimlane", sourceType: "ai" }
+      }
+    ],
+    nodes: document.nodes.map((node) => {
+      if (node.id === "layout-node-1") {
+        return { ...node, x: 100, y: 140 };
+      }
+      if (node.id === "layout-node-2") {
+        return { ...node, x: 440, y: 140 };
+      }
+      if (node.id === "layout-node-3") {
+        return { ...node, x: 780, y: 140 };
+      }
+      return node;
+    })
+  };
+  let layoutPreviewRequest: Record<string, unknown> | null = null;
+
+  await page.addInitScript((storedSession) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(storedSession));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-1/layouts/preview") {
+      layoutPreviewRequest = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          mode: "source-swimlane",
+          statusMessage: "已生成 3 条来源泳道",
+          laneCount: 3,
+          selectedNodeIds: ["layout-node-1", "layout-node-2", "layout-node-3"],
+          document: previewDocument
+        })
+      });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([detail]) });
+      return;
+    }
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+
+  await expect(page.getByText("布局导出图谱")).toBeVisible();
+  await expect(page.getByText("版本 4 · 3 节点 · 1 连线")).toBeVisible();
+
+  await page.getByRole("region", { name: "图谱画布" }).click();
+  await page.keyboard.press("Control+A");
+  await page.getByRole("button", { name: "属性" }).click();
+  await expect(page.getByText("已选中 3 个节点")).toBeVisible();
+  await page.getByRole("button", { name: "生成来源泳道" }).click();
+
+  expect(layoutPreviewRequest).toEqual({
+    mode: "source-swimlane",
+    nodeIds: ["layout-node-1", "layout-node-2", "layout-node-3"],
+    document
+  });
+  await expect(page.getByText("已生成 3 条来源泳道")).toBeVisible();
+  await expect(page.locator(".graph-group")).toHaveCount(3);
+  await expect(page.getByText("资料来源泳道")).toBeVisible();
+  await expect(page.getByText("笔记来源泳道")).toBeVisible();
+  await expect(page.getByText("AI 来源泳道")).toBeVisible();
+
+  await page.getByTitle("导出 StudyMate JSON").click();
+  await expect(page.getByText("已导出 StudyMate 图谱 JSON")).toBeVisible();
+  await page.getByTitle("导出 SVG").click();
+  await expect(page.getByText("已导出 SVG 图谱")).toBeVisible();
+  await page.getByTitle("导出 PNG").click();
+  await expect(page.getByText("已导出 PNG 图谱")).toBeVisible();
 });
 
 test("graph workspace surfaces version conflict actions and reloads the latest head", async ({ page }) => {

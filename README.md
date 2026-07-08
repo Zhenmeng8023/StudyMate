@@ -140,7 +140,7 @@ go test ./...
 - 搜索入口为 `GET /api/v1/search?q=&types=&limit=`，返回 `type/id/title/summary/url/source` 分组结果；省略 `types` 时默认搜索 `material/post/note/graph/card` 五组，未知类型返回 `400 invalid_search_type`，`limit` 缺省为 `20` 且最大为 `50`。
 - 用户端搜索页会把 `types` 同步到 URL，并在每组当前批次最多 `12` 条结果中按每页 `4` 条切换；这层分页只覆盖当前批次结果，不代表后端已提供 offset/page 契约。
 - 搜索专项回归可直接执行 `npm run verify:search`；更完整的契约、权限矩阵和测试映射见 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`。
-- 图谱冲突专项回归可直接执行 `npm run verify:graph-conflicts`；当前冲突生命周期、工作区测试映射、图谱工作区桌面/窄屏 smoke、真实 `graph_version_conflict` 路径和固定入口见 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`。
+- 图谱冲突专项回归可直接执行 `npm run verify:graph-conflicts`；当前冲突生命周期、工作区测试映射、图谱工作区桌面/窄屏 smoke、布局预览/导出状态、真实 `graph_version_conflict` 路径和固定入口见 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`。
 - 未登录只搜公开资料和社区，登录后扩展到私有笔记、图谱和卡片；note / graph / card 在匿名请求下会直接短路为空结果，graph 仅返回 `active` 且“owner 或 public”的结果。`source` 字段当前表示来源域而不是底层存储引擎。fallback 组内结果按标题命中优先排序，长摘要会压缩为单行 160 字符内预览。后端 `search/service` 当前通过内部 `SearchIndexer` 抽象封装 MySQL fallback，为后续 Meilisearch adapter 预留边界但不改变 v1 路由契约。
 - 分享链路新增 `share_links` 迁移和 `/api/v1/share-links` 创建/列表/撤销接口，公开 `/api/v1/share/:token` 返回只读解析结果；用户端提供 `/share/:token` 只读页。
 - 管理后台 `/api/v1/admin/*` 已接真实治理模块：users、reports、tags、ai/tasks、ai/usage、audit-logs、files，前端后台按模块读取 API 数据。
