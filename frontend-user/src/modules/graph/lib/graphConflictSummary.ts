@@ -419,19 +419,17 @@ export function buildGraphConflictResolutionSuggestions(input: {
       if (!edge) {
         continue;
       }
-      const sourceNodeSuggestionTarget = findSuggestionDetail("node", edge.sourceNodeId);
-      const targetNodeSuggestionTarget = findSuggestionDetail("node", edge.targetNodeId);
+      const dependentTargetNodeIds = Array.isArray(edge.metadata?.targetNodeIds) ? edge.metadata.targetNodeIds : [];
+      const dependentNodeIds = [...new Set([edge.sourceNodeId, edge.targetNodeId, ...dependentTargetNodeIds])];
       const edgeSuggestionTarget = findSuggestionDetail("edge", edge.id);
-      pushSuggestion(
-        sourceNodeSuggestionTarget,
-        getGraphConflictResolutionChoiceToPreserveObject(sourceNodeSuggestionTarget?.detail),
-        "补齐这条依赖需要同时保留相关节点。"
-      );
-      pushSuggestion(
-        targetNodeSuggestionTarget,
-        getGraphConflictResolutionChoiceToPreserveObject(targetNodeSuggestionTarget?.detail),
-        "补齐这条依赖需要同时保留相关节点。"
-      );
+      for (const nodeId of dependentNodeIds) {
+        const nodeSuggestionTarget = findSuggestionDetail("node", nodeId);
+        pushSuggestion(
+          nodeSuggestionTarget,
+          getGraphConflictResolutionChoiceToPreserveObject(nodeSuggestionTarget?.detail),
+          "补齐这条依赖需要同时保留相关节点。"
+        );
+      }
       pushSuggestion(
         edgeSuggestionTarget,
         getGraphConflictResolutionChoiceToDiscardObject(edgeSuggestionTarget?.detail),

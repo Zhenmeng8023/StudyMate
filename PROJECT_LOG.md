@@ -1,3 +1,24 @@
+## 2026-07-09 06:53:00 +08:00 | v1.1.0-alpha.126 | 推进 WB-032 多目标连线联动取舍子步骤
+### 任务内容
+
+- 按 `CODEX_MASTER_PROMPT.md` 当前优先级继续沿 `WB-032` 做一个最小、可测试的冲突处理收口，不跳去新的共享层或控制器拆分。
+- 本轮目标是补齐一个真实但较隐蔽的依赖缺口：当 `dangling_edge` 来自多目标连线 `metadata.targetNodeIds` 中的缺失节点时，联动取舍建议不应只盯住主 `sourceNodeId / targetNodeId`，还应提示保留这些额外依赖节点。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，先用 RED 锁定“多目标连线引用的附加目标节点被遗漏”这一缺口：当前只会建议回退连线，不会联动补齐 `targetNodeIds` 里的依赖节点。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，让 `buildGraphConflictResolutionSuggestions(...)` 在处理 `dangling_edge` 时统一收集 `sourceNodeId`、`targetNodeId` 和 `metadata.targetNodeIds`，并对去重后的节点集合生成同一套“保留依赖节点 / 放弃问题连线”建议。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“多目标连线的附加依赖节点也能进入联动取舍建议”。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+### 后续影响
+
+- `WB-032` 的联动取舍建议现在不再只覆盖普通单目标连线；当冲突来自多目标连线附带的额外目标节点时，冲突卡片也能给出真正可执行的补齐建议。
+- 这一轮仍然没有完成更系统的 conflict handling；下一步更适合继续补更多组合型依赖场景，或开始整理 `WB-034` 所需的图谱冲突回归矩阵。
+
 ## 2026-07-09 06:46:00 +08:00 | v1.1.0-alpha.125 | 推进 WB-032 latest-head 删除语义联动建议修正
 ### 任务内容
 
