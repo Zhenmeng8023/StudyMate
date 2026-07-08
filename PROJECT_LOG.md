@@ -1,3 +1,35 @@
+## 2026-07-09 04:40:56 +08:00 | v1.1.0-alpha.118 | 推进 API-011 用户端共享会话刷新起步
+### 任务内容
+
+- 在 `API-010` 已完成共享 request/error/auth-header、query/pagination 参数拼接与 JSON 请求体归一化起步的基础上，继续沿 `API-011` 选择一个覆盖面广但风险可控的最小工作包。
+- 本轮目标是把 Access Token 过期后的 refresh/replay/fail-logout 骨架先沉到共享层，并至少接通用户端一条真实受保护请求路径，而不是继续在业务 API 文件里散落本地 401 处理。
+
+### 实际变更
+
+- 更新 `packages/api-client/src/index.ts`，新增 `ApiRequestError` 与 `createSessionRequest(...)`，让共享请求层开始承接 401 单次 refresh/replay、并发 refresh 去重，以及 refresh 失败时清理本地 session 的最小生命周期。
+- 更新 `packages/api-client/src/index.test.ts`，先以 RED 锁定“两个并发受保护请求在 Access Token 过期后只触发一次 refresh，并在新 token 下共同重放”的行为，再转 GREEN。
+- 新增 `frontend-user/src/app/sessionStore.ts`，把用户端 session 持久化收口为可订阅存储；`frontend-user/src/app/routes.tsx` 改为通过 `useSyncExternalStore(...)` 订阅 session，保证 refresh 成功或失败后，路由态能跟随最新持久化状态更新。
+- 更新 `frontend-user/src/api/core.ts`，统一通过共享 `createSessionRequest(...)` 与 `/api/v1/auth/refresh` 刷新 Access Token；`withAuth(...)` 也会优先消费最新持久化 session，避免旧页面 props 把 stale token 再次写回请求头。
+- 新增 `frontend-user/src/api/sessionRefresh.test.ts` 的 RED/GREEN 闭环，复现图谱列表在 401 后不会自动恢复的问题，并锁定 refresh 成功后更新本地 session、再重放原请求的用户端路径。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把 `API-011` 从纯待办推进到“用户端共享刷新骨架已起步”的最新状态。
+
+### 验证结果
+
+- RED：`npx vitest run packages/api-client/src/index.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts`
+- GREEN：`npx vitest run packages/api-client/src/index.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts`
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/api/sessionRefresh.test.ts src/api/searchShare.test.ts`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `packages/api-client` 现在不只统一 request/error/query/JSON body，也开始统一用户端的 401 refresh/replay 语义；后续新的受保护请求路径不需要再在业务 API 模块里重复补本地刷新逻辑。
+- 这一轮仍只完成了 API-011 的用户端第一段骨架，`frontend-admin` 还没有接入同一套 refresh/replay/fail-logout，会话失效原因记录与 HttpOnly Refresh Token 迁移说明也尚未补齐；后续仍应继续沿 `API-011` 收口，而不是回到各端局部拼装会话生命周期。
+
 ## 2026-07-09 04:24:00 +08:00 | v1.1.0-alpha.117 | 推进 API-010 共享 JSON 请求体编码起步
 ### 任务内容
 

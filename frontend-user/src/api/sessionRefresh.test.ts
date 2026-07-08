@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { persistSession, readSession } from "../app/appShared";
+import { persistSession, readSession } from "../app/sessionStore";
 import { listGraphs } from "./graphs";
 import type { AuthSession, GraphSummaryPayload } from "./types";
 

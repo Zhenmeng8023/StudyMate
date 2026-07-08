@@ -14,6 +14,14 @@
 - `FormData` 上传不强制写入 JSON `Content-Type`、API envelope 错误抛出与 Bearer header 拼装都已由 `packages/api-client/src/index.test.ts` 锁定。
 - Iteration 4 的下一步不应回到页面内继续散落 fetch helper；应继续沿 `API-010 / API-011` 把分页、401 refresh/replay、fail-logout 与更完整的会话生命周期沉到共享层。
 
+### 2026-07-09 API-011 用户端共享会话刷新起步
+
+- `packages/api-client` 已新增共享 `ApiRequestError` 与 `createSessionRequest(...)`，开始承接 401 单次 refresh/replay、并发 refresh 去重与 refresh 失败时的本地 session 清理。
+- 用户端新增 `frontend-user/src/app/sessionStore.ts` 并让 `routes.tsx` 改为通过 `useSyncExternalStore(...)` 订阅 session，refresh 成功或失败后，受保护路由能跟随同一份持久化状态更新，而不是停留在一次性的 `useState(...)` 快照。
+- `frontend-user/src/api/core.ts` 已统一通过 `/api/v1/auth/refresh` 刷新 Access Token，`withAuth(...)` 也会优先消费最新持久化 session，避免旧页面 props 把 stale token 覆盖回请求头。
+- `frontend-user/src/api/sessionRefresh.test.ts` 已锁定图谱列表在 401 后刷新并重放请求、同时更新本地 session 的闭环；共享层并发 refresh 行为也已由 `packages/api-client/src/index.test.ts` 锁定。
+- 这一步仍只覆盖用户端；管理端会话刷新、会话失效原因记录与 HttpOnly Refresh Token 迁移说明仍需继续沿 `API-011` 收口。
+
 ### 2026-07-09 FE-040 / FE-041 共享状态契约起步
 
 - `packages/ui` 已从纯占位包升级为最小共享状态契约层，先导出 `DataStateKind`、`dataStateKinds` 与 `getDataStateLabel(...)`。
@@ -140,7 +148,7 @@
 - FE-040：建立设计 token 单一来源与页面状态协议，先覆盖 Loading / Empty / Error / Unauthorized / Stale / Conflict。
 - FE-041：让 `@studymate/ui` 从占位包升级为基础组件契约包，前后台共享视觉 token 和交互状态，不强行共用 React/Vue 组件。
 - API-010：把前后台 request/error/pagination/upload 基础能力沉入 `packages/api-client`。
-- API-011：补自动 refresh、401 单次重放、刷新失败统一退出与会话失效原因记录，并预留 HttpOnly Refresh Token 迁移说明。
+- API-011：继续补自动 refresh、401 单次重放、刷新失败统一退出与会话失效原因记录，并预留 HttpOnly Refresh Token 迁移说明；当前已完成用户端第一段共享刷新骨架。
 - DEV-010：补工具链版本、bootstrap、依赖审计、graph-core TS 测试运行方式和可复现命令矩阵。
 
 ## Iteration 5：后台治理与搜索索引升级（P1）

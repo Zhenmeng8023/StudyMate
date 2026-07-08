@@ -1,8 +1,8 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useSyncExternalStore } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import type { AuthSession } from "../api/client";
 import { logoutUser } from "../api/client";
-import { persistSession, readSession } from "./appShared";
+import { persistSession, readSession, subscribeSession } from "./sessionStore";
 import { ShellFrame } from "./shell/ShellFrame";
 import { LoginPage, RegisterPage } from "../pages/AuthPages";
 import { DashboardPage } from "../pages/DashboardPage";
@@ -46,11 +46,10 @@ export function ProtectedShellRoute(props: { session: AuthSession | null; onLogo
 }
 
 export function App() {
-  const [session, setSession] = useState<AuthSession | null>(() => readSession());
+  const session = useSyncExternalStore(subscribeSession, readSession, readSession);
   const navigate = useNavigate();
 
   function handleSession(nextSession: AuthSession | null) {
-    setSession(nextSession);
     persistSession(nextSession);
   }
 
