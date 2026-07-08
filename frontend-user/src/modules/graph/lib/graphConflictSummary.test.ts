@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { GraphDetailPayload, GraphDocumentPayload } from "../../../api/client";
 import {
   applyGraphConflictResolutionDrafts,
+  applyGraphConflictResolutionSuggestions,
   buildGraphConflictBundleArtifact,
   buildGraphConflictObjectDetails,
   buildGraphConflictResolutionDrafts,
@@ -613,6 +614,34 @@ describe("graphConflictSummary", () => {
         scope: "localDraft"
       }
     ]);
+  });
+
+  it("applies linked resolution suggestions into the current object-level selections", () => {
+    expect(
+      applyGraphConflictResolutionSuggestions({
+        currentSelections: {
+          "localDraft:edge:edge-local:added": "keep-local"
+        },
+        suggestions: [
+          {
+            choice: "keep-local",
+            description: "补齐依赖节点",
+            detail: { action: "added", id: "node-local", kind: "node", label: "本地节点" },
+            scope: "localDraft"
+          },
+          {
+            choice: "keep-latest",
+            description: "回退到服务端版本",
+            detail: { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" },
+            scope: "latestHead"
+          }
+        ]
+      })
+    ).toEqual({
+      "localDraft:edge:edge-local:added": "keep-local",
+      "localDraft:node:node-local:added": "keep-local",
+      "latestHead:edge:edge-legacy:removed": "keep-latest"
+    });
   });
 
   it("builds a keep-latest suggestion for invalid local node sizes", () => {

@@ -150,6 +150,17 @@ export function buildGraphConflictResolutionDrafts(input: {
   ];
 }
 
+export function applyGraphConflictResolutionSuggestions(input: {
+  currentSelections: Record<string, GraphConflictResolutionChoice>;
+  suggestions: GraphConflictResolutionSuggestion[];
+}) {
+  const nextSelections = { ...input.currentSelections };
+  for (const suggestion of input.suggestions) {
+    nextSelections[buildGraphConflictObjectDecisionKey(suggestion.scope, suggestion.detail)] = suggestion.choice;
+  }
+  return nextSelections;
+}
+
 export function buildGraphConflictResolutionOutcomeMessage(drafts: GraphConflictResolutionDraft[]) {
   if (!drafts.length) {
     return "已基于最新图谱生成合并草稿，请确认后保存";

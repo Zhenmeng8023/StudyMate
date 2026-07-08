@@ -283,6 +283,7 @@ export function GraphConflictAssistCard(props: {
   resolutionDraftCount: number;
   resolutionSelections: Record<string, GraphConflictResolutionChoice>;
   onApplyResolutionDrafts: () => void;
+  onApplyResolutionSuggestions: () => void;
   onChooseResolution: (
     scope: GraphConflictObjectScope,
     detail: GraphConflictObjectDetail,
@@ -402,6 +403,11 @@ export function GraphConflictAssistCard(props: {
       {props.resolutionSuggestions?.length ? (
         <div className="graph-inline-copy" aria-label="联动取舍建议">
           <strong>可直接补齐以下联动取舍</strong>
+          <div className="graph-inline-actions">
+            <button className="secondary-button" onClick={props.onApplyResolutionSuggestions} type="button">
+              {`一键应用 ${props.resolutionSuggestions.length} 项联动取舍建议`}
+            </button>
+          </div>
           <ul className="graph-issue-list">
             {props.resolutionSuggestions.map((suggestion) => (
               <li

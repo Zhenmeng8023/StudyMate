@@ -118,6 +118,7 @@ import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
 import { buildGraphTemplateImportDraft } from "../lib/graphTemplateApplication";
 import {
   applyGraphConflictResolutionDrafts,
+  applyGraphConflictResolutionSuggestions,
   buildGraphConflictBundleArtifact,
   buildGraphConflictObjectDetails,
   buildGraphConflictObjectDecisionKey,
@@ -1033,6 +1034,23 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
     setWorkspaceStatusMessage(`已取消对象级取舍标记：${formatGraphConflictObjectDetail(detail)}`, {
+      suggestReload: true
+    });
+  }
+
+  function applyConflictResolutionSuggestions() {
+    if (!conflictResolutionSuggestions.length) {
+      return;
+    }
+
+    const nextSelections = applyGraphConflictResolutionSuggestions({
+      currentSelections: conflictResolutionSelections,
+      suggestions: conflictResolutionSuggestions
+    });
+
+    setConflictResolutionSelections(nextSelections);
+    setManualMergeDeferred(true);
+    setWorkspaceStatusMessage(`已批量标记 ${conflictResolutionSuggestions.length} 条联动取舍建议，请继续确认后再应用`, {
       suggestReload: true
     });
   }
@@ -2221,6 +2239,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                     resolutionSelections={conflictResolutionSelections}
                     resolutionSuggestions={conflictResolutionSuggestions}
                     onApplyResolutionDrafts={applyMarkedConflictResolutions}
+                    onApplyResolutionSuggestions={applyConflictResolutionSuggestions}
                     onChooseResolution={handleConflictResolutionChoice}
                     onDeferManualMerge={deferManualMergeUntilLater}
                     onExportConflictBundle={exportConflictBundle}

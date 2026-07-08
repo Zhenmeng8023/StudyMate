@@ -1,3 +1,28 @@
+## 2026-07-08 19:07:41 +08:00 | v1.1.0-alpha.101 | 推进 WB-032 联动取舍批量应用子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“合并结果反馈”和更早的“联动取舍建议”基础上，把冲突处理继续从“单条建议可点击”推进到“整组建议可批量落成取舍标记”。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，当同一轮依赖阻断生成多条联动建议时，用户不必逐条点击，而是可以先一键把这组建议批量写入当前对象级取舍，再决定是否继续应用到最新 head。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `applyGraphConflictResolutionSuggestions(...)`，把联动建议批量合并进当前 `resolutionSelections`，复用既有对象级 decision key，避免页面层重复拼装取舍键。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `applyConflictResolutionSuggestions()`：当存在联动建议时，统一批量写入对象级取舍标记、保持 dirty/人工合并态，并返回“已批量标记 N 条联动取舍建议，请继续确认后再应用”的状态反馈。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在“联动取舍建议”区块新增 `一键应用 N 项联动取舍建议` 按钮，让批量标记动作和逐条建议动作共存。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，补齐 helper、组件与页面级回归，锁定“批量标记建议后可清除依赖阻断并继续应用已标记取舍”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“联动建议既可逐条点选，也可整组批量标记”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+
+### 后续影响
+
+- 图谱冲突辅助现在不只会在阻断发生时给出“该怎么修”的联动建议，也支持先把整组建议批量落成对象级取舍标记，明显减少多条依赖建议场景下的重复点击。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的对象联动策略、覆盖更多冲突类型的批量取舍辅助，以及“批量标记之后再应用”的更清晰结果反馈与预检解释。
+
 ## 2026-07-08 18:50:34 +08:00 | v1.1.0-alpha.100 | 推进 WB-032 合并结果反馈子步骤
 ### 任务内容
 

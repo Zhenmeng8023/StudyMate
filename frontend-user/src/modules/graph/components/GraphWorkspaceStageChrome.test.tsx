@@ -173,6 +173,7 @@ describe("GraphWorkspaceStageChrome components", () => {
         }}
         resolutionDraftCount={2}
         onApplyResolutionDrafts={vi.fn()}
+        onApplyResolutionSuggestions={vi.fn()}
         onChooseResolution={onChooseResolution}
         onDeferManualMerge={vi.fn()}
         onExportConflictBundle={vi.fn()}
@@ -191,7 +192,9 @@ describe("GraphWorkspaceStageChrome components", () => {
     expect(screen.getByText("节点｜新增｜Local node")).toBeInTheDocument();
     expect(screen.getByText("连线｜删除｜Server edge")).toBeInTheDocument();
     expect(screen.getByLabelText("未标记对象提示")).toHaveTextContent("还有 1 个对象尚未标记取舍");
-    expect(screen.getByText("如果现在应用已标记取舍，未标记对象会默认沿用最新图谱版本。建议继续逐项确认后再应用。")).toBeInTheDocument();
+    expect(
+      screen.getByText("如果现在应用已标记取舍，未标记对象会默认沿用最新图谱版本。建议继续逐项确认后再应用。")
+    ).toBeInTheDocument();
     expect(screen.getByText("当前未保存修改：分组｜修改｜Local group")).toBeInTheDocument();
     expect(screen.getByLabelText("取舍依赖校验问题")).toBeInTheDocument();
     expect(screen.getByText("dangling-edge")).toBeInTheDocument();
@@ -203,6 +206,59 @@ describe("GraphWorkspaceStageChrome components", () => {
       "keep-local"
     );
     expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeDisabled();
+  });
+
+  it("offers a bulk action for linked resolution suggestions", () => {
+    const onApplyResolutionSuggestions = vi.fn();
+
+    render(
+      <GraphConflictAssistCard
+        changeDetails={[]}
+        changeSummary={[]}
+        latestHeadAvailable
+        latestHeadDetails={[]}
+        latestHeadSummary={[]}
+        resolutionBlockingIssues={[
+          {
+            ruleType: "dangling_edge",
+            severity: "error",
+            message: "dangling-edge",
+            targetId: "edge-legacy"
+          }
+        ]}
+        resolutionSuggestions={[
+          {
+            choice: "keep-local",
+            description: "补齐本地节点",
+            detail: { action: "added", id: "node-local", kind: "node", label: "Local node" },
+            scope: "localDraft"
+          },
+          {
+            choice: "keep-latest",
+            description: "回退服务端连线",
+            detail: { action: "removed", id: "edge-legacy", kind: "edge", label: "Server edge" },
+            scope: "latestHead"
+          }
+        ]}
+        resolutionSelections={{}}
+        resolutionDraftCount={0}
+        onApplyResolutionDrafts={vi.fn()}
+        onApplyResolutionSuggestions={onApplyResolutionSuggestions}
+        onChooseResolution={vi.fn()}
+        onDeferManualMerge={vi.fn()}
+        onExportConflictBundle={vi.fn()}
+        onReloadLatest={vi.fn()}
+        onCopyLatestJson={vi.fn()}
+        onCopySummaryReport={vi.fn()}
+        onCopyDraftJson={vi.fn()}
+        onExportLatestJson={vi.fn()}
+        onExportSummaryReport={vi.fn()}
+        onExportDraftJson={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "一键应用 2 项联动取舍建议" }));
+    expect(onApplyResolutionSuggestions).toHaveBeenCalled();
   });
 
   it("delegates canvas node, edge, and group interactions", () => {
