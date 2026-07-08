@@ -1,3 +1,25 @@
+## 2026-07-09 07:47:00 +08:00 | v1.1.0-alpha.134 | 收口图谱冲突 E2E 的窄屏 smoke
+### 任务内容
+
+- 延续 `verify:graph-conflicts` 的固定入口建设，继续沿 `WB-032/WB-034` 做一个最小但更完整的验证收口。
+- 本轮目标仍然不改图谱业务逻辑，只把图谱工作区 Playwright 回归从“桌面 smoke + 真实版本冲突路径”继续推进到“窄屏布局下也能走通冲突处理基本链路”，对应收口 backlog 中明确写着的“桌面与窄屏至少有 smoke 回归”。
+### 实际变更
+
+- 更新 `scripts/graph-conflict-regression-baseline.test.mjs`，先用 RED 锁定缺口：当前 `e2e/v1-graph-workspace.spec.ts` 还没有任何 `setViewportSize(...)` 级别的窄屏证据，图谱冲突回归文档里也还停留在“桌面 / 窄屏双布局冲突回归仍缺”。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增窄屏图谱工作区版本冲突 smoke：在 `390x844` 视口下构造 `409 graph_version_conflict`，断言资源/检查器入口可见、`图谱冲突辅助` 与 `放弃本地并重载最新图谱` 仍可达，并在确认后成功回到服务端最新 head。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`、`README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把图谱工作区 E2E 描述推进到“桌面/窄屏 smoke + 真实 `graph_version_conflict` 路径”。
+### 验证结果
+
+- RED：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- GREEN：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- `npm run test:graph:conflicts:e2e`
+- `npm run verify:graph-conflicts`
+- `npm run verify:docs`
+### 后续影响
+
+- `verify:graph-conflicts` 现在已经具备桌面与窄屏两条图谱工作区 smoke，并且两边都至少覆盖了一次真实版本冲突后的冲突处理入口，为后续 `WB-034` 继续补更完整的布局矩阵和组合路径提供了更可信的 E2E 基座。
+- 当前仍未覆盖更完整的桌面 / 窄屏冲突组合矩阵，以及 create/save/restore/export/layout/conflict/权限全链路；后续仍应继续沿这条固定入口扩展。
+
 ## 2026-07-09 07:33:00 +08:00 | v1.1.0-alpha.133 | 收口图谱冲突 E2E 的真实版本冲突路径
 ### 任务内容
 
