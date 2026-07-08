@@ -118,6 +118,7 @@ import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
 import { buildGraphTemplateImportDraft } from "../lib/graphTemplateApplication";
 import {
   applyGraphConflictResolutionDrafts,
+  buildGraphConflictResolutionBlockingIssueSummary,
   applyGraphConflictResolutionSuggestions,
   buildGraphConflictBundleArtifact,
   buildGraphConflictObjectDetails,
@@ -978,9 +979,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
     if (conflictResolutionBlockingIssues.length > 0) {
-      setWorkspaceStatusMessage("当前取舍会留下跨对象依赖问题，请先调整标记后再应用", {
-        suggestReload: true
-      });
+      setWorkspaceStatusMessage(
+        `当前取舍仍会留下 ${conflictResolutionBlockingIssues.length} 个依赖问题：${buildGraphConflictResolutionBlockingIssueSummary(conflictResolutionBlockingIssues)}，请先调整标记后再应用`,
+        {
+          suggestReload: true
+        }
+      );
       return;
     }
 

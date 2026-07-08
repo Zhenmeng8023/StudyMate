@@ -197,6 +197,7 @@ describe("GraphWorkspaceStageChrome components", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("当前未保存修改：分组｜修改｜Local group")).toBeInTheDocument();
     expect(screen.getByLabelText("取舍依赖校验问题")).toBeInTheDocument();
+    expect(screen.getByText("当前仍阻断：edge-legacy。请先调整标记后再应用。")).toBeInTheDocument();
     expect(screen.getByText("dangling-edge")).toBeInTheDocument();
     expect(screen.getByLabelText("联动取舍建议")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "联动保留本地：分组｜修改｜Local group" }));

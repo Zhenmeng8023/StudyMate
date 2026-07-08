@@ -8,6 +8,7 @@ import type {
   GraphNodePayload
 } from "../../../api/client";
 import {
+  buildGraphConflictResolutionBlockingIssueSummary,
   buildGraphConflictObjectDecisionKey,
   formatGraphConflictObjectDetail,
   getGraphConflictResolutionChoiceLabel,
@@ -390,6 +391,7 @@ export function GraphConflictAssistCard(props: {
       {props.resolutionBlockingIssues?.length ? (
         <div className="graph-inline-copy" aria-label="取舍依赖校验问题">
           <strong>应用前需要先处理以下跨对象依赖问题</strong>
+          <p>{`当前仍阻断：${buildGraphConflictResolutionBlockingIssueSummary(props.resolutionBlockingIssues)}。请先调整标记后再应用。`}</p>
           <ul className="graph-issue-list">
             {props.resolutionBlockingIssues.map((issue, index) => (
               <li className="graph-issue-item" key={`${issue.ruleType}-${issue.targetId ?? "unknown"}-${index}`}>

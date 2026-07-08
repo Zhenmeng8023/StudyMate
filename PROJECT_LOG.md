@@ -1,3 +1,30 @@
+## 2026-07-09 01:37:00 +08:00 | v1.1.0-alpha.104 | 推进 WB-032 最终预检阻断摘要子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“阻断差异解释”基础上，把这层摘要继续前移到真正应用取舍前的最终预检卡片里。
+- 本轮目标是在图谱 Inspector 的“取舍依赖校验问题”区块中，不只列出明细列表，还先给出一条精简的阻断摘要；同时让最终预检兜底文案也复用同一套摘要，保证冲突卡片和状态提示对用户说的是同一件事。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在“取舍依赖校验问题”区块顶部新增摘要文案：会先显示 `当前仍阻断：...。请先调整标记后再应用。`
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让 `applyMarkedConflictResolutions()` 在兜底阻断提示里也复用同一套 `buildGraphConflictResolutionBlockingIssueSummary(...)`，避免最终预检的提示继续停留在只有泛化文案的状态。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，补齐组件级和页面级回归，锁定“阻断摘要会直接显示在最终预检卡片里”的行为。
+- 复用并回归 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts` / `.test.ts` 里的阻断摘要 helper，确保摘要格式与上一轮保持一致。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“最终预检卡片与状态兜底共用阻断摘要”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在不只会在批量取舍反馈里给出剩余阻断对象摘要，也会在真正应用取舍前的最终预检卡片里先把阻断摘要讲清楚，减少用户在“列表很多但不知道先看哪项”时的判断成本。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是把这套摘要继续扩展到最终应用前更完整的合并预检反馈，以及覆盖更多冲突类型的对象联动策略。
+
 ## 2026-07-09 01:30:30 +08:00 | v1.1.0-alpha.103 | 推进 WB-032 阻断差异解释子步骤
 ### 任务内容
 

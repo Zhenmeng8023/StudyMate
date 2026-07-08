@@ -195,6 +195,7 @@ describe("GraphWorkspacePage conflict dependency guard", () => {
     await user.click(within(localEdgeRow as HTMLElement).getAllByRole("button")[0]);
 
     expect(screen.getByLabelText("取舍依赖校验问题")).toBeInTheDocument();
+    expect(screen.getByText("当前仍阻断：edge-local。请先调整标记后再应用。")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeDisabled();
     expect(screen.getByText("Local edge")).toBeInTheDocument();
     expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
