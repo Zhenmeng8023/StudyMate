@@ -35,7 +35,7 @@
 |---|---|---|---|---|---|
 | WB-030 | DONE | 图谱 API 契约与生命周期整理 | WB-020 | graph routers/handlers/services/docs | graph/document/node/edge/group/snapshot 关系和版本策略清晰。 |
 | WB-031 | DONE | 图谱导出、缩略图与布局能力 | WB-030 | graph backend + frontend | 至少 JSON/SVG 导出；缩略图和布局有明确 API/任务模型。 |
-| WB-032 | IN_PROGRESS | 自动保存/快照/冲突处理可靠性 | WB-030, WB-021 | graph persistence | 保存可追溯、冲突可见、恢复安全；无静默覆盖，冲突导出物可携带人工合并清单、对象级明细与取舍草稿，并支持把已标记取舍显式应用为可保存合并草稿。 |
+| WB-032 | IN_PROGRESS | 自动保存/快照/冲突处理可靠性 | WB-030, WB-021 | graph persistence | 保存可追溯、冲突可见、恢复安全；无静默覆盖，冲突导出物可携带人工合并清单、对象级明细与取舍草稿，并支持把已标记取舍显式应用为可保存合并草稿；预检阻断摘要优先展示可读对象原因。 |
 | WB-033 | TODO | 图谱-复习学习反馈闭环 | WB-030, FE-030 | graph/card/review | 复习结果可回写节点熟练度；卡片与来源节点可追溯；学习工作台能解释复习反馈如何影响图谱与后续学习。 |
 | WB-034 | TODO | 图谱 API 与工作区回归验证矩阵 | WB-032 | graph backend + frontend + e2e | 覆盖 create/save/restore/export/layout/conflict/权限路径；图谱工作区在桌面与窄屏至少有 smoke 回归，不再只依赖零散组件测试。 |
 | GPH-040 | TODO | 图谱工作区 store / commands / features 拆分 | WB-032, FE-020 | `frontend-user/src/modules/graph/`、`packages/graph-core` | `useGraphWorkspaceController` 不再继续承接新增业务；选中、相机、面板、保存、冲突等浏览器状态进入 store，新增节点/连线/分组/模板/恢复等用户意图进入 commands。 |
@@ -167,11 +167,12 @@
 - 当依赖校验真的触发阻断时，冲突辅助卡片现在还会直接给出联动取舍建议，例如一键补齐本地依赖节点，或一键把问题对象改为保留服务端，避免用户回到对象列表逐项搜索。
 - 当同一组阻断会生成多条联动取舍建议时，冲突辅助卡片现在还支持 `一键应用 N 项联动取舍建议`：先把当前建议整组落成对象级取舍标记，再由用户决定是否继续应用到最新 head，减少逐条点击的重复操作。
 - 在批量标记这些联动建议后，工作区状态栏现在还会同步返回带预检结论的反馈：既解释这次标记里有多少“保留本地 / 保留服务端 / 稍后处理”，也明确告知当前是否已经解除依赖阻断、能否继续应用已标记取舍。
-- 当阻断尚未完全解除时，这条批量反馈现在还会补一段精简的剩余阻断对象摘要，例如 `edge-local、group-local 等 3 项`，帮助用户更快判断下一步还需要继续调整哪些对象。
+- 当阻断尚未完全解除时，这条批量反馈现在还会补一段精简的剩余阻断对象摘要，例如“连线“Local edge”会引用未保留的节点”，帮助用户更快判断下一步还需要继续调整哪些对象。
 - 在真正应用已标记取舍前，冲突卡片里的“取舍依赖校验问题”区块现在也会直接显示同一套阻断摘要，让最终预检卡片与状态提示使用一致的阻断解释。
 - 冲突卡片现在还会额外展示“应用前预检”摘要：直接告诉用户如果现在应用，会保留哪些取舍，或会被哪些依赖问题阻断，把结果预览前移到最终点击之前。
 - 这条“应用前预检”摘要现在还会进一步并入未标记对象的默认回退结果，直接说明还有哪些对象会沿用最新图谱版本，减少“点应用后才意识到未标记对象被回退”的落差。
 - 这条“应用前预检”摘要现在还会再补一层代表对象示例，例如“保留本地：本地节点 / 保留服务端：旧关系”，让用户在最终点击前不只知道数量，也知道这轮取舍主要覆盖了哪些对象。
+- 这些阻断摘要现在会优先展示校验器生成的对象级短原因；当 message 只是泛化短码时，才回退到 `targetId` 或 `ruleType`，避免预检只暴露内部 ID。
 - 冲突辅助现在还会为 `invalid_source_target` / `invalid_node_size` 这类节点级阻断生成可执行建议：如果本地节点来源信息不完整或尺寸非法，可直接改为保留服务端，而不是只停留在错误说明。
 - 当用户应用已标记取舍后，工作区状态栏现在还会返回可解释的结果摘要，例如“保留本地 2 项 / 保留服务端 1 项 / 稍后处理 1 项（已沿用最新版本）”，降低多端合并后的不确定感。
 - 验证：
@@ -191,7 +192,7 @@
   - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
   - `npm run verify:docs`
 - 后续待续：
-- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成；优先考虑更完整的对象联动策略、更多冲突类型的批量取舍辅助，以及把这类已能解释“已标记数量 + 代表对象 + 未标记默认回退”的应用前预检继续扩展成更完整的合并预检反馈。
+- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成；优先考虑更完整的对象联动策略、更多冲突类型的批量取舍辅助，以及把这类已能解释“已标记数量 + 代表对象 + 未标记默认回退 + 可读阻断原因”的应用前预检继续扩展成更完整的合并预检反馈。
 
 ### 执行记录：WB-031
 

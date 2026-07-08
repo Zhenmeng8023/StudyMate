@@ -1,3 +1,28 @@
+## 2026-07-09 03:14:25 +08:00 | v1.1.0-alpha.108 | 推进 WB-032 预检阻断可读线索子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“预检代表对象示例”再补一层阻断可读性。
+- 本轮目标是在图谱 Inspector 的阻断摘要、应用前预检和批量联动取舍反馈里，不再只显示 `edge-local` 这类内部对象 ID，而是优先展示“哪个对象因什么原因阻断”的短线索。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，让 `buildGraphConflictResolutionBlockingIssueSummary(...)` 优先使用校验器生成的可读 message，并压缩成首个原因短句；当 message 只是泛化短码时仍回退到 `targetId` 或 `ruleType`。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，用 RED -> GREEN 锁定批量联动反馈、应用前预检和阻断摘要都会展示类似“连线“Local edge”会引用未保留的节点”的对象级短原因。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，锁定真实工作区里“取舍依赖校验问题”会展示可读阻断线索，而不是裸对象 ID。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“应用前预检和阻断摘要优先展示可读对象原因”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+
+### 后续影响
+
+- 图谱冲突辅助现在能在最终点击前直接指出阻断对象和阻断原因，用户不需要从内部 ID 再反推画布对象。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是把更多冲突类型纳入同一套对象级联动取舍策略，并继续准备 `WB-034` 的工作区回归矩阵。
+
 ## 2026-07-09 02:05:19 +08:00 | v1.1.0-alpha.107 | 推进 WB-032 预检代表对象示例子步骤
 ### 任务内容
 

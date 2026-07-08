@@ -697,7 +697,7 @@ describe("graphConflictSummary", () => {
         ]
       })
     ).toBe(
-      "已批量标记 1 条联动取舍建议（保留本地 1 项），但仍有 2 个依赖问题待处理：edge-local、group-local，请继续调整后再应用"
+      "已批量标记 1 条联动取舍建议（保留本地 1 项），但仍有 2 个依赖问题待处理：连线“Local edge”会引用未保留的节点、分组“Local group”仍引用未保留的节点，请继续调整后再应用"
     );
   });
 
@@ -706,7 +706,7 @@ describe("graphConflictSummary", () => {
       buildGraphConflictResolutionPreflightMessage({
         blockingIssues: [
           {
-            message: "edge-local",
+            message: "连线“Local edge”会引用未保留的节点，请先同步保留相关节点或改为保留服务端。",
             ruleType: "dangling_edge",
             severity: "error",
             targetId: "edge-local"
@@ -726,7 +726,7 @@ describe("graphConflictSummary", () => {
         ]
       })
     ).toBe(
-      "如果现在应用：已标记取舍会被 1 个依赖问题阻断（edge-local）；当前计划保留本地 1 项，保留服务端 1 项；例如保留本地：本地节点，保留服务端：旧关系。"
+      "如果现在应用：已标记取舍会被 1 个依赖问题阻断（连线“Local edge”会引用未保留的节点）；当前计划保留本地 1 项，保留服务端 1 项；例如保留本地：本地节点，保留服务端：旧关系。"
     );
 
     expect(
@@ -777,17 +777,17 @@ describe("graphConflictSummary", () => {
     );
   });
 
-  it("builds a concise blocking issue summary with a remainder count", () => {
+  it("builds a concise readable blocking issue summary with a remainder count", () => {
     expect(
       buildGraphConflictResolutionBlockingIssueSummary([
         {
-          message: "edge-local",
+          message: "连线“Local edge”会引用未保留的节点，请先同步保留相关节点或改为保留服务端。",
           ruleType: "dangling_edge",
           severity: "error",
           targetId: "edge-local"
         },
         {
-          message: "group-local",
+          message: "分组“Local group”仍引用未保留的节点，请先同步保留相关节点或改为保留服务端。",
           ruleType: "invalid_group_node",
           severity: "error",
           targetId: "group-local"
@@ -799,7 +799,7 @@ describe("graphConflictSummary", () => {
           targetId: "node-local"
         }
       ])
-    ).toBe("edge-local、group-local 等 3 项");
+    ).toBe("连线“Local edge”会引用未保留的节点、分组“Local group”仍引用未保留的节点 等 3 项");
   });
 
   it("builds a keep-latest suggestion for invalid local node sizes", () => {

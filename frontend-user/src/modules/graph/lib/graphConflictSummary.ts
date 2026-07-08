@@ -267,7 +267,7 @@ export function buildGraphConflictResolutionBlockingIssueSummary(
 
   const labels = issues
     .slice(0, limit)
-    .map((issue) => issue.targetId?.trim() || issue.ruleType)
+    .map(formatGraphConflictResolutionBlockingIssueLabel)
     .filter(Boolean);
 
   if (issues.length <= limit) {
@@ -275,6 +275,31 @@ export function buildGraphConflictResolutionBlockingIssueSummary(
   }
 
   return `${labels.join("、")} 等 ${issues.length} 项`;
+}
+
+function formatGraphConflictResolutionBlockingIssueLabel(issue: GraphConflictResolutionValidationIssue) {
+  const message = summarizeBlockingIssueMessage(issue.message);
+  const targetId = issue.targetId?.trim() || "";
+  if (isReadableBlockingIssueMessage(message, targetId, issue.ruleType)) {
+    return message;
+  }
+  return targetId || issue.ruleType;
+}
+
+function summarizeBlockingIssueMessage(value: string) {
+  const firstClause = value.trim().split(/[，。.!?；;]/u)[0]?.trim() ?? "";
+  return stripBlockingIssueEndingPunctuation(firstClause);
+}
+
+function stripBlockingIssueEndingPunctuation(value: string) {
+  return value.replace(/[。.!?；;，,]+$/u, "");
+}
+
+function isReadableBlockingIssueMessage(message: string, targetId: string, ruleType: string) {
+  if (!message || message === targetId || message === ruleType) {
+    return false;
+  }
+  return /[\u4e00-\u9fff“”"]/u.test(message);
 }
 
 export function applyGraphConflictResolutionDrafts(input: {
