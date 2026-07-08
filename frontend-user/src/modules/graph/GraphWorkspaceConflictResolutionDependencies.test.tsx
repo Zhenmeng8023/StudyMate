@@ -585,4 +585,101 @@ describe("GraphWorkspacePage conflict dependency guard", () => {
     expect(screen.queryByLabelText("取舍依赖校验问题")).toBeNull();
     expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeEnabled();
   });
+
+  it("can clear latest-head multi-target edge blockers with scope-aware linked suggestions", async () => {
+    const user = userEvent.setup();
+    window.sessionStorage.setItem(
+      buildGraphWorkspaceDraftStorageKey("graph-1"),
+      JSON.stringify({
+        currentVersion: 4,
+        description: "local draft",
+        document: {
+          ...graphDetail.document,
+          nodes: [...graphDetail.document.nodes],
+          edges: [],
+          groups: []
+        },
+        graphId: "graph-1",
+        savedAt: "2026-07-01T20:10:00Z",
+        title: "Recovered graph"
+      })
+    );
+    batchSaveGraphMock.mockRejectedValueOnce(new Error("graph_version_conflict"));
+    getGraphMock.mockReset();
+    getGraphMock
+      .mockResolvedValueOnce(graphDetail)
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        currentVersion: 5,
+        updatedAt: "2026-07-01T20:20:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 5,
+          nodes: [
+            ...graphDetail.document.nodes,
+            {
+              id: "node-server",
+              type: "concept",
+              title: "Server node",
+              x: 420,
+              y: 120,
+              width: 220,
+              height: 132,
+              source: null,
+              metadata: {}
+            },
+            {
+              id: "node-extra",
+              type: "concept",
+              title: "Extra server node",
+              x: 680,
+              y: 120,
+              width: 220,
+              height: 132,
+              source: null,
+              metadata: {}
+            }
+          ],
+          edges: [
+            {
+              id: "edge-server",
+              kind: "curve",
+              sourceNodeId: "node-1",
+              targetNodeId: "node-server",
+              label: "Server edge",
+              metadata: {
+                targetNodeIds: ["node-server", "node-extra"]
+              }
+            }
+          ]
+        }
+      });
+
+    renderWorkspace();
+
+    await expect(screen.findByRole("button", { name: "保存修改" })).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "保存修改" }));
+    await expect(screen.findByLabelText("图谱冲突辅助")).resolves.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "保留本地（与最新图谱相比）：节点｜删除｜Server node" }));
+    await user.click(screen.getByRole("button", { name: "保留本地（与最新图谱相比）：节点｜删除｜Extra server node" }));
+    await user.click(screen.getByRole("button", { name: "保留服务端（与最新图谱相比）：连线｜删除｜Server edge" }));
+
+    await expect(screen.findByLabelText("取舍依赖校验问题")).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("取舍依赖校验问题")).toHaveTextContent(
+      "连线“Server edge”会引用未保留的节点，请先同步保留相关节点或改为保留服务端。"
+    );
+    await expect(screen.findByLabelText("联动取舍建议")).resolves.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "联动保留服务端：节点｜删除｜Server node" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "联动保留服务端：节点｜删除｜Extra server node" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "联动保留本地：连线｜删除｜Server edge" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "一键应用 3 项联动取舍建议" }));
+
+    await expect(
+      screen.findByText("已批量标记 3 条联动取舍建议（保留本地 1 项，保留服务端 2 项），当前已解除依赖阻断，可继续应用已标记取舍")
+    ).resolves.toBeInTheDocument();
+    expect(screen.queryByLabelText("取舍依赖校验问题")).toBeNull();
+    expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeEnabled();
+  });
 });
