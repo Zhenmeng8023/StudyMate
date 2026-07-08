@@ -18,8 +18,34 @@ export interface ApiSuccessPayload<T> {
   data: T;
 }
 
+type ApiQueryPrimitive = string | number | boolean;
+type ApiQueryValue = ApiQueryPrimitive | ApiQueryPrimitive[] | null | undefined;
+
 export function createAuthHeaders(token?: string | null): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export function buildApiPath(path: string, query?: Record<string, ApiQueryValue>): string {
+  if (!query) return path;
+
+  const isAbsolute = /^https?:\/\//.test(path);
+  const url = new URL(path, isAbsolute ? undefined : "http://localhost");
+
+  Object.entries(query).forEach(([key, value]) => {
+    if (value === null || value === undefined) return;
+    if (Array.isArray(value)) {
+      if (!value.length) return;
+      url.searchParams.set(key, value.join(","));
+      return;
+    }
+    url.searchParams.set(key, String(value));
+  });
+
+  if (isAbsolute) {
+    return url.toString();
+  }
+
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 export async function readApiResponse<T>(response: Response): Promise<T> {

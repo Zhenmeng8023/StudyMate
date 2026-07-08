@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAuthHeaders, requestApi } from "./index";
+import { buildApiPath, createAuthHeaders, requestApi } from "./index";
 
 function apiPayload<T>(data: T) {
   return new Response(JSON.stringify({ success: true, data }), {
@@ -17,6 +17,25 @@ describe("@studymate/api-client", () => {
     expect(createAuthHeaders("access-token")).toEqual({ Authorization: "Bearer access-token" });
     expect(createAuthHeaders("")).toEqual({});
     expect(createAuthHeaders(null)).toEqual({});
+  });
+
+  it("builds query strings for shared api paths and skips empty values", () => {
+    expect(
+      buildApiPath("/api/v1/search", {
+        q: "knowledge graph",
+        types: ["note", "graph"],
+        limit: 10,
+        cursor: undefined,
+        archived: null
+      })
+    ).toBe("/api/v1/search?q=knowledge+graph&types=note%2Cgraph&limit=10");
+
+    expect(
+      buildApiPath("/api/v1/admin/users?sort=recent", {
+        limit: 20,
+        filters: []
+      })
+    ).toBe("/api/v1/admin/users?sort=recent&limit=20");
   });
 
   it("adds json content type and unwraps the API success envelope", async () => {

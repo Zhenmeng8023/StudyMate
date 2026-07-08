@@ -92,14 +92,14 @@ const overviewCards = computed(() => [
   { label: "知识图谱", value: String(overview.value?.graphCount ?? 0), helper: "用户持续维护的知识结构" }
 ]);
 
-const governanceConfig: Record<Exclude<AdminView, "dashboard" | "moderation">, { endpoint: string; empty: string; description: string }> = {
-  materials: { endpoint: "/api/v1/admin/files?limit=20", empty: "暂无文件治理记录。", description: "检查文件状态、归属与存储信息。" },
-  community: { endpoint: "/api/v1/admin/reports?limit=20", empty: "暂无举报记录。", description: "集中查看用户提交的举报与处理线索。" },
-  users: { endpoint: "/api/v1/admin/users?limit=20", empty: "暂无用户记录。", description: "按账号状态与角色查看用户资料。" },
-  graph: { endpoint: "/api/v1/admin/tags?limit=20", empty: "暂无标签记录。", description: "管理资料、笔记与图谱中的分类标签。" },
-  ai: { endpoint: "/api/v1/admin/ai/tasks?limit=20", empty: "暂无 AI 任务。", description: "追踪生成任务、状态与用量概览。" },
-  system: { endpoint: "/api/v1/admin/files?limit=20", empty: "暂无文件记录。", description: "查看上传文件与存储治理信息。" },
-  audit: { endpoint: "/api/v1/admin/audit-logs?limit=20", empty: "暂无审计日志。", description: "查看关键治理操作的可追溯记录。" }
+const governanceConfig: Record<Exclude<AdminView, "dashboard" | "moderation">, { endpoint: string; query: { limit: number }; empty: string; description: string }> = {
+  materials: { endpoint: "/api/v1/admin/files", query: { limit: 20 }, empty: "暂无文件治理记录。", description: "检查文件状态、归属与存储信息。" },
+  community: { endpoint: "/api/v1/admin/reports", query: { limit: 20 }, empty: "暂无举报记录。", description: "集中查看用户提交的举报与处理线索。" },
+  users: { endpoint: "/api/v1/admin/users", query: { limit: 20 }, empty: "暂无用户记录。", description: "按账号状态与角色查看用户资料。" },
+  graph: { endpoint: "/api/v1/admin/tags", query: { limit: 20 }, empty: "暂无标签记录。", description: "管理资料、笔记与图谱中的分类标签。" },
+  ai: { endpoint: "/api/v1/admin/ai/tasks", query: { limit: 20 }, empty: "暂无 AI 任务。", description: "追踪生成任务、状态与用量概览。" },
+  system: { endpoint: "/api/v1/admin/files", query: { limit: 20 }, empty: "暂无文件记录。", description: "查看上传文件与存储治理信息。" },
+  audit: { endpoint: "/api/v1/admin/audit-logs", query: { limit: 20 }, empty: "暂无审计日志。", description: "查看关键治理操作的可追溯记录。" }
 };
 
 const visibleModerationItems = computed(() => {
@@ -192,7 +192,7 @@ async function loadGovernance(view: AdminView) {
   selectedRecord.value = null;
   try {
     const config = governanceConfig[view];
-    governanceRows.value = await get<GovernanceRecord[]>(config.endpoint);
+    governanceRows.value = await get<GovernanceRecord[]>(config.endpoint, config.query);
     selectedRecord.value = governanceRows.value[0] ?? null;
     if (view === "ai") governanceSummary.value = await get<GovernanceRecord>("/api/v1/admin/ai/usage");
     notice.value = `已加载 ${governanceRows.value.length} 条治理记录。`;
@@ -251,8 +251,8 @@ function logout() {
   notice.value = "后台会话已清空。";
 }
 
-async function get<T>(path: string) {
-  return adminGet<T>(path, session.value);
+async function get<T>(path: string, query?: { limit?: number }) {
+  return adminGet<T>(path, session.value, query);
 }
 
 async function post<T>(path: string, body: unknown) {

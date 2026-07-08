@@ -17,7 +17,7 @@ describe("frontend-admin shared api client", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(apiPayload([{ id: "user-1" }]));
 
     await expect(
-      adminGet<{ id: string }[]>("/api/v1/admin/users?limit=20", { accessToken: "admin-token" })
+      adminGet<{ id: string }[]>("/api/v1/admin/users", { accessToken: "admin-token" }, { limit: 20 })
     ).resolves.toEqual([{ id: "user-1" }]);
 
     expect(fetchMock).toHaveBeenCalledWith(

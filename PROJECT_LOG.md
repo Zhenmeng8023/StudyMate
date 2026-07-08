@@ -1,3 +1,30 @@
+## 2026-07-09 04:15:00 +08:00 | v1.1.0-alpha.116 | 推进 API-010 共享 query 与分页参数拼接起步
+### 任务内容
+
+- 在 `API-010` 已完成共享 request/error/auth-header 起步和管理端请求边界抽离的基础上，继续选择最小但能扩大共享层覆盖面的下一步。
+- 本轮目标是把查询参数与分页参数拼接从页面和单个 API 文件中抽到 `packages/api-client`，让用户端搜索和管理端治理列表开始共享同一套 query 语义。
+### 实际变更
+
+- 更新 `packages/api-client/src/index.ts`，新增 `buildApiPath(...)`，统一处理已有 query、数组 filters、`limit` 等参数拼接，并跳过 `null` / `undefined` / 空数组。
+- 更新 `packages/api-client/src/index.test.ts`，补齐共享 query helper 的 RED/GREEN 覆盖，锁定“数组按逗号拼接、已有 query 被保留、空值被忽略”的行为。
+- 更新 `frontend-user/src/api/search.ts`，让搜索请求的 `q`、`types`、`limit` 改为通过 `buildApiPath(...)` 生成，不再本地维护 `URLSearchParams`。
+- 更新 `frontend-admin/src/api/client.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.vue`，让管理端治理列表的 `limit=20` 改为通过共享 helper 生成，而不是把 `?limit=20` 写死在页面配置里。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把“query/pagination 参数拼接已开始统一”写回执行基线。
+### 验证结果
+
+- `npx vitest run packages/api-client/src/index.test.ts`
+- `npm --workspace frontend-user run test -- src/api/searchShare.test.ts`
+- `npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-user run typecheck`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:user`
+- `npm run build:admin`
+
+### 后续影响
+
+- `API-010` 现在不只统一了 request/error/auth-header，也开始统一 query/pagination 的参数拼接；后续补真正的分页 DTO 或 cursor 语义时，不需要再回到各端从头手写 query 组装。
+- 这一轮仍然只是“参数拼接起步”，还没有形成完整的分页响应契约、分页元数据类型或 401 会话重放能力，后续仍应继续沿 `API-010 / API-011` 推进。
+
 ## 2026-07-09 04:11:00 +08:00 | v1.1.0-alpha.115 | 推进 API-010 管理端共享请求边界出壳
 ### 任务内容
 

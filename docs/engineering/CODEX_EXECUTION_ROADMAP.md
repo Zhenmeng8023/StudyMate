@@ -9,6 +9,7 @@
 - `packages/api-client` 已不再是只有健康检查的占位包；当前已开始承接共享 `requestApi(...)`、`readApiResponse(...)`、`createAuthHeaders(...)` 与 success/error envelope 类型。
 - 用户端 `frontend-user/src/api/core.ts` 已切到复用这层共享请求入口，管理端 `AdminWorkspaceView.vue` 也已改为通过共享 client 发起后台请求，前后台开始进入同一套 request / error / auth-header 语义。
 - 管理端当前已新增 `frontend-admin/src/api/client.ts`，把 `get/post` 请求边界从页面层抽离出来；后续继续模块化时可以沿这层边界扩展，而不是再把 fetch helper 放回视图组件。
+- `packages/api-client` 现已开始承接共享 `buildApiPath(...)`，用户端搜索与管理端治理列表的 `types` / `limit` 查询参数开始走同一套 query/pagination 拼接语义。
 - `FormData` 上传不强制写入 JSON `Content-Type`、API envelope 错误抛出与 Bearer header 拼装都已由 `packages/api-client/src/index.test.ts` 锁定。
 - Iteration 4 的下一步不应回到页面内继续散落 fetch helper；应继续沿 `API-010 / API-011` 把分页、401 refresh/replay、fail-logout 与更完整的会话生命周期沉到共享层。
 
@@ -39,7 +40,7 @@
 - **FE-040 / FE-041：设计系统收口**
   建立 `packages/design-tokens` 或等价共享 token 来源，消除 `app.css` 与 `ui-redesign.css` 的同名 token 漂移；让 `@studymate/ui` 至少沉淀 Button、IconButton、Input、Select、Tag、DataState、Drawer、Inspector、ConfirmDialog、CommandBar、PageHeader 的跨端视觉契约。
 - **API-010 / API-011：共享 API 与会话层**
-  把 request、error、pagination、upload、auth-session、401 refresh/replay/fail-logout 从前后台页面中抽到 `packages/api-client`，前后台不再各自手写 fetch/错误处理；当前已完成最小 request/error/auth-header 起步，后续继续补齐分页与会话生命周期。
+  把 request、error、pagination、upload、auth-session、401 refresh/replay/fail-logout 从前后台页面中抽到 `packages/api-client`，前后台不再各自手写 fetch/错误处理；当前已完成最小 request/error/auth-header 起步，并开始统一 query/pagination 参数拼接，后续继续补齐更完整的分页与会话生命周期。
 - **DEV-010：工程可复现性二次核验**
   在真实仓库基础上补 Node/Go 版本约束、bootstrap 入口、依赖审计和 graph-core TypeScript 测试运行器，避免依赖不同 Node 版本对 `.ts` 测试的隐式支持。
 - **GPH-040：图谱控制器拆分**
