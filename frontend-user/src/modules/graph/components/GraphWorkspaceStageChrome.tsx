@@ -282,6 +282,7 @@ export function GraphConflictAssistCard(props: {
   resolutionBlockingIssues?: GraphConflictResolutionValidationIssue[];
   resolutionSuggestions?: GraphConflictResolutionSuggestion[];
   resolutionDraftCount: number;
+  resolutionPreflightMessage?: string;
   resolutionSelections: Record<string, GraphConflictResolutionChoice>;
   onApplyResolutionDrafts: () => void;
   onApplyResolutionSuggestions: () => void;
@@ -447,6 +448,12 @@ export function GraphConflictAssistCard(props: {
               </li>
             ) : null}
           </ul>
+        </div>
+      ) : null}
+      {props.resolutionPreflightMessage ? (
+        <div className="graph-inline-copy" aria-label="取舍应用预检">
+          <strong>应用前预检</strong>
+          <p>{props.resolutionPreflightMessage}</p>
         </div>
       ) : null}
       {props.materialsCaptured ? <p>已留存冲突材料，可安全重载最新图谱。</p> : null}

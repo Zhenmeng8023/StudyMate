@@ -166,20 +166,33 @@ export function buildGraphConflictResolutionOutcomeMessage(drafts: GraphConflict
     return "已基于最新图谱生成合并草稿，请确认后保存";
   }
 
-  const keepLocalCount = drafts.filter((draft) => draft.decision === "keep-local").length;
-  const keepLatestCount = drafts.filter((draft) => draft.decision === "keep-latest").length;
-  const reviewLaterCount = drafts.filter((draft) => draft.decision === "review-later").length;
-  const parts = [
-    keepLocalCount > 0 ? `保留本地 ${keepLocalCount} 项` : "",
-    keepLatestCount > 0 ? `保留服务端 ${keepLatestCount} 项` : "",
-    reviewLaterCount > 0 ? `稍后处理 ${reviewLaterCount} 项（已沿用最新版本）` : ""
-  ].filter(Boolean);
+  const parts = buildGraphConflictResolutionDecisionSummary(drafts, { includeReviewLaterResolution: true });
 
   if (!parts.length) {
     return "已基于最新图谱生成合并草稿，请确认后保存";
   }
 
   return `已基于最新图谱生成合并草稿：${parts.join("，")}，请确认后保存`;
+}
+
+export function buildGraphConflictResolutionPreflightMessage(input: {
+  blockingIssues: GraphConflictResolutionValidationIssue[];
+  drafts: GraphConflictResolutionDraft[];
+}) {
+  if (!input.drafts.length) {
+    return "";
+  }
+
+  const summary = buildGraphConflictResolutionDecisionSummary(input.drafts, { includeReviewLaterResolution: true });
+  if (!summary.length) {
+    return "";
+  }
+
+  if (input.blockingIssues.length > 0) {
+    return `如果现在应用：已标记取舍会被 ${input.blockingIssues.length} 个依赖问题阻断（${buildGraphConflictResolutionBlockingIssueSummary(input.blockingIssues)}）；当前计划${summary.join("，")}。`;
+  }
+
+  return `如果现在应用：${summary.join("，")}。`;
 }
 
 export function buildGraphConflictResolutionSuggestionOutcomeMessage(input: {
@@ -726,6 +739,25 @@ function buildResolutionDraftsForScope(
     const decision = selections[buildGraphConflictObjectDecisionKey(scope, detail)];
     return decision ? [{ scope, detail, decision }] : [];
   });
+}
+
+function buildGraphConflictResolutionDecisionSummary(
+  drafts: GraphConflictResolutionDraft[],
+  options?: { includeReviewLaterResolution?: boolean }
+) {
+  const keepLocalCount = drafts.filter((draft) => draft.decision === "keep-local").length;
+  const keepLatestCount = drafts.filter((draft) => draft.decision === "keep-latest").length;
+  const reviewLaterCount = drafts.filter((draft) => draft.decision === "review-later").length;
+
+  return [
+    keepLocalCount > 0 ? `保留本地 ${keepLocalCount} 项` : "",
+    keepLatestCount > 0 ? `保留服务端 ${keepLatestCount} 项` : "",
+    reviewLaterCount > 0
+      ? options?.includeReviewLaterResolution
+        ? `稍后处理 ${reviewLaterCount} 项（已沿用最新版本）`
+        : `稍后处理 ${reviewLaterCount} 项`
+      : ""
+  ].filter(Boolean);
 }
 
 function applyKeepLocalDecision(

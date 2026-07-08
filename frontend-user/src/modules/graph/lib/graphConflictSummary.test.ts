@@ -8,6 +8,7 @@ import {
   buildGraphConflictResolutionBlockingIssueSummary,
   buildGraphConflictResolutionDrafts,
   buildGraphConflictResolutionOutcomeMessage,
+  buildGraphConflictResolutionPreflightMessage,
   buildGraphConflictResolutionSuggestionOutcomeMessage,
   buildGraphConflictResolutionSuggestions,
   buildGraphConflictReportArtifact,
@@ -697,6 +698,51 @@ describe("graphConflictSummary", () => {
     ).toBe(
       "已批量标记 1 条联动取舍建议（保留本地 1 项），但仍有 2 个依赖问题待处理：edge-local、group-local，请继续调整后再应用"
     );
+  });
+
+  it("builds a readable preflight message before applying marked resolutions", () => {
+    expect(
+      buildGraphConflictResolutionPreflightMessage({
+        blockingIssues: [
+          {
+            message: "edge-local",
+            ruleType: "dangling_edge",
+            severity: "error",
+            targetId: "edge-local"
+          }
+        ],
+        drafts: [
+          {
+            decision: "keep-local",
+            detail: { action: "added", id: "node-local", kind: "node", label: "本地节点" },
+            scope: "localDraft"
+          },
+          {
+            decision: "keep-latest",
+            detail: { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" },
+            scope: "latestHead"
+          }
+        ]
+      })
+    ).toBe("如果现在应用：已标记取舍会被 1 个依赖问题阻断（edge-local）；当前计划保留本地 1 项，保留服务端 1 项。");
+
+    expect(
+      buildGraphConflictResolutionPreflightMessage({
+        blockingIssues: [],
+        drafts: [
+          {
+            decision: "keep-local",
+            detail: { action: "added", id: "node-local", kind: "node", label: "本地节点" },
+            scope: "localDraft"
+          },
+          {
+            decision: "review-later",
+            detail: { action: "updated", id: "group-1", kind: "group", label: "本地分组" },
+            scope: "localDraft"
+          }
+        ]
+      })
+    ).toBe("如果现在应用：保留本地 1 项，稍后处理 1 项（已沿用最新版本）。");
   });
 
   it("builds a concise blocking issue summary with a remainder count", () => {

@@ -125,6 +125,7 @@ import {
   buildGraphConflictObjectDecisionKey,
   buildGraphConflictResolutionDrafts,
   buildGraphConflictResolutionOutcomeMessage,
+  buildGraphConflictResolutionPreflightMessage,
   buildGraphConflictResolutionSuggestionOutcomeMessage,
   buildGraphConflictResolutionSuggestions,
   buildGraphConflictReportArtifact,
@@ -369,6 +370,14 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       resolutionSelections: conflictResolutionSelections
     });
   }, [conflictResolutionBlockingIssues, conflictResolutionSelections, graphDetail, latestHeadConflictDetails, unsavedChangeDetails]);
+  const conflictResolutionPreflightMessage = useMemo(
+    () =>
+      buildGraphConflictResolutionPreflightMessage({
+        blockingIssues: conflictResolutionBlockingIssues,
+        drafts: conflictResolutionDrafts
+      }),
+    [conflictResolutionBlockingIssues, conflictResolutionDrafts]
+  );
 
   useEffect(() => {
     if (!selectedNode && !selectedEdge) {
@@ -2260,6 +2269,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                     materialsCaptured={conflictArtifactsCaptured}
                     resolutionBlockingIssues={conflictResolutionBlockingIssues}
                     resolutionDraftCount={conflictResolutionDrafts.length}
+                    resolutionPreflightMessage={conflictResolutionPreflightMessage}
                     resolutionSelections={conflictResolutionSelections}
                     resolutionSuggestions={conflictResolutionSuggestions}
                     onApplyResolutionDrafts={applyMarkedConflictResolutions}

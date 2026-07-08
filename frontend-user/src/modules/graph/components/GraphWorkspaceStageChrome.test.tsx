@@ -167,6 +167,7 @@ describe("GraphWorkspaceStageChrome components", () => {
             scope: "localDraft"
           }
         ]}
+        resolutionPreflightMessage="如果现在应用：已标记取舍会被 1 个依赖问题阻断（edge-legacy）；当前计划保留本地 1 项，保留服务端 1 项。"
         resolutionSelections={{
           "localDraft:node:node-2:added": "keep-local",
           "latestHead:edge:edge-legacy:removed": "keep-latest"
@@ -195,6 +196,9 @@ describe("GraphWorkspaceStageChrome components", () => {
     expect(
       screen.getByText("如果现在应用已标记取舍，未标记对象会默认沿用最新图谱版本。建议继续逐项确认后再应用。")
     ).toBeInTheDocument();
+    expect(screen.getByLabelText("取舍应用预检")).toHaveTextContent(
+      "如果现在应用：已标记取舍会被 1 个依赖问题阻断（edge-legacy）；当前计划保留本地 1 项，保留服务端 1 项。"
+    );
     expect(screen.getByText("当前未保存修改：分组｜修改｜Local group")).toBeInTheDocument();
     expect(screen.getByLabelText("取舍依赖校验问题")).toBeInTheDocument();
     expect(screen.getByText("当前仍阻断：edge-legacy。请先调整标记后再应用。")).toBeInTheDocument();
@@ -241,6 +245,7 @@ describe("GraphWorkspaceStageChrome components", () => {
             scope: "latestHead"
           }
         ]}
+        resolutionPreflightMessage=""
         resolutionSelections={{}}
         resolutionDraftCount={0}
         onApplyResolutionDrafts={vi.fn()}

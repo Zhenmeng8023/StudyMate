@@ -1,3 +1,31 @@
+## 2026-07-09 01:41:18 +08:00 | v1.1.0-alpha.105 | 推进 WB-032 应用前预检摘要子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“最终预检阻断摘要”再往前补成更完整的“如果现在应用会发生什么”预检提示。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，让用户在真正点击“应用已标记取舍到当前草稿”前，就能直接看到一条合并前预检摘要：既说明当前计划保留哪些取舍，也说明是否会被依赖问题阻断。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionPreflightMessage(...)`，统一生成合并前预检摘要：当存在阻断时，会说明“已标记取舍会被 N 个依赖问题阻断（摘要）”；当无阻断时，会说明“如果现在应用：保留本地 X 项 / 保留服务端 Y 项 / 稍后处理 Z 项”。
+- 顺手把取舍数量汇总逻辑抽成内部复用的 decision summary，避免结果反馈与预检摘要各自维护一套计数规则。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，基于当前 `conflictResolutionDrafts` 与 `conflictResolutionBlockingIssues` 计算 `resolutionPreflightMessage`，并传给冲突卡片。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，新增“应用前预检”区块，在冲突卡片中直接展示这条预检摘要。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 与 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`，补齐 helper 与组件级回归，锁定“应用前预检”会在卡片中显示的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“冲突卡片会直接展示合并前预检摘要”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在不只会给出阻断摘要和批量取舍反馈，还会在真正应用前直接把“如果现在应用会发生什么”提前讲清楚，用户不需要点到最后一步才理解当前取舍的合并结果。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是把这层预检继续扩展成更完整的合并预检反馈，并覆盖更多冲突类型的对象联动策略。
+
 ## 2026-07-09 01:37:00 +08:00 | v1.1.0-alpha.104 | 推进 WB-032 最终预检阻断摘要子步骤
 ### 任务内容
 
