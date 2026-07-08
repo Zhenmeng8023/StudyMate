@@ -1,3 +1,27 @@
+## 2026-07-09 07:14:00 +08:00 | v1.1.0-alpha.131 | 收口 WB-032 图谱冲突固定验证入口
+### 任务内容
+
+- 在连续补了多轮 `WB-032` 页面级冲突回归后，继续做一个更偏全局的收口，不再只新增单条回归，而是给当前图谱冲突矩阵建立固定执行入口。
+- 本轮目标是像 `verify:search` 那样，把现有图谱冲突相关的前端页面/组件/helper 回归、后端生命周期测试和文档同步收口成可重复执行的统一命令，并把测试映射沉到单一文档里，为后续 `WB-034` 的固定验证清单打底。
+### 实际变更
+
+- 新增 `scripts/graph-conflict-regression-baseline.test.mjs`，先以 RED 锁定三类缺口：仓库缺少 `verify:graph-conflicts` 入口、缺少图谱冲突回归矩阵文档、主文档里也没有这条固定入口。
+- 更新 `package.json`，新增：
+  - `test:graph:conflicts:frontend`
+  - `test:graph:conflicts:backend`
+  - `verify:graph-conflicts`
+- 新增 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，集中记录当前图谱冲突生命周期边界、页面级重点组合路径、前后端测试映射与推荐执行入口。
+- 更新 `README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把 `npm run verify:graph-conflicts` 接入主文档和执行路线。
+### 验证结果
+
+- RED：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- GREEN：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- `npm run verify:graph-conflicts`
+### 后续影响
+
+- 当前图谱冲突矩阵已经不再只存在于零散测试命令和 `PROJECT_LOG.md` 叙述里，而是有了固定执行入口和单一回归文档；后续继续补 `WB-032` 组合场景时，可以直接接到这条入口上，而不是重复整理命令。
+- 这还不代表 `WB-034` 已完成；更完整的 Playwright 冲突 smoke、窄屏/桌面布局矩阵和 create/save/restore/export/layout/conflict/权限全路径，仍然需要在这条入口基础上继续扩展。
+
 ## 2026-07-09 07:10:00 +08:00 | v1.1.0-alpha.130 | 收口 WB-032 latest-head 多目标连未标记回退页面级回归
 ### 任务内容
 
