@@ -570,6 +570,44 @@ describe("graphConflictSummary", () => {
         ],
         changeDetails: [],
         current,
+        latestHead: buildDetail({
+          currentVersion: 5,
+          document: buildDocument({
+            version: 5,
+            nodes: [
+              {
+                id: "node-1",
+                type: "text",
+                title: "概念 A",
+                x: 0,
+                y: 0,
+                width: 220,
+                height: 132,
+                metadata: {}
+              },
+              {
+                id: "node-server",
+                type: "text",
+                title: "服务端节点",
+                x: 260,
+                y: 0,
+                width: 220,
+                height: 132,
+                metadata: {}
+              }
+            ],
+            edges: [
+              {
+                id: "edge-server",
+                sourceNodeId: "node-1",
+                targetNodeId: "node-server",
+                kind: "curve",
+                label: "服务端连线"
+              }
+            ],
+            groups: []
+          })
+        }),
         latestHeadDetails: [
           { action: "removed", id: "node-server", kind: "node", label: "服务端节点" },
           { action: "removed", id: "edge-server", kind: "edge", label: "服务端连线" }
@@ -587,7 +625,7 @@ describe("graphConflictSummary", () => {
       },
       {
         choice: "keep-local",
-        description: "如果不打算保留这个对象，可改为保留服务端版本。",
+        description: "如果不打算保留这个对象，可按本地删除结果处理。",
         detail: { action: "removed", id: "edge-server", kind: "edge", label: "服务端连线" },
         scope: "latestHead"
       }

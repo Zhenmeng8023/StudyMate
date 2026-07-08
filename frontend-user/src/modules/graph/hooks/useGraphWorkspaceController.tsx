@@ -367,6 +367,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       blockingIssues: conflictResolutionBlockingIssues,
       changeDetails: unsavedChangeDetails,
       current: graphDetail,
+      latestHead: latestConflictDetail,
       latestHeadDetails: latestHeadConflictDetails,
       resolutionSelections: conflictResolutionSelections
     });

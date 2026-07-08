@@ -370,6 +370,7 @@ export function buildGraphConflictResolutionSuggestions(input: {
   blockingIssues: GraphConflictResolutionValidationIssue[];
   changeDetails: GraphConflictObjectDetail[];
   current: GraphDetailPayload;
+  latestHead?: GraphDetailPayload | null;
   latestHeadDetails?: GraphConflictObjectDetail[];
   resolutionSelections: Record<string, GraphConflictResolutionChoice>;
 }): GraphConflictResolutionSuggestion[] {
@@ -412,64 +413,96 @@ export function buildGraphConflictResolutionSuggestions(input: {
 
   for (const issue of input.blockingIssues) {
     if (issue.ruleType === "dangling_edge") {
-      const edge = input.current.document.edges.find((item) => item.id === issue.targetId);
+      const edge =
+        input.current.document.edges.find((item) => item.id === issue.targetId) ??
+        input.latestHead?.document.edges.find((item) => item.id === issue.targetId);
       if (!edge) {
         continue;
       }
+      const sourceNodeSuggestionTarget = findSuggestionDetail("node", edge.sourceNodeId);
+      const targetNodeSuggestionTarget = findSuggestionDetail("node", edge.targetNodeId);
+      const edgeSuggestionTarget = findSuggestionDetail("edge", edge.id);
       pushSuggestion(
-        findSuggestionDetail("node", edge.sourceNodeId),
-        "keep-local",
+        sourceNodeSuggestionTarget,
+        getGraphConflictResolutionChoiceToPreserveObject(sourceNodeSuggestionTarget?.detail),
         "补齐这条依赖需要同时保留相关节点。"
       );
       pushSuggestion(
-        findSuggestionDetail("node", edge.targetNodeId),
-        "keep-local",
+        targetNodeSuggestionTarget,
+        getGraphConflictResolutionChoiceToPreserveObject(targetNodeSuggestionTarget?.detail),
         "补齐这条依赖需要同时保留相关节点。"
       );
       pushSuggestion(
-        findSuggestionDetail("edge", edge.id),
-        "keep-latest",
-        "如果不打算保留这个对象，可改为保留服务端版本。"
+        edgeSuggestionTarget,
+        getGraphConflictResolutionChoiceToDiscardObject(edgeSuggestionTarget?.detail),
+        buildGraphConflictDiscardSuggestionDescription(edgeSuggestionTarget?.detail)
       );
       continue;
     }
 
     if (issue.ruleType === "invalid_group_node") {
-      const group = input.current.document.groups.find((item) => item.id === issue.targetId);
+      const group =
+        input.current.document.groups.find((item) => item.id === issue.targetId) ??
+        input.latestHead?.document.groups.find((item) => item.id === issue.targetId);
       if (!group) {
         continue;
       }
       for (const nodeId of group.nodeIds) {
+        const nodeSuggestionTarget = findSuggestionDetail("node", nodeId);
         pushSuggestion(
-          findSuggestionDetail("node", nodeId),
-          "keep-local",
+          nodeSuggestionTarget,
+          getGraphConflictResolutionChoiceToPreserveObject(nodeSuggestionTarget?.detail),
           "补齐这条依赖需要同时保留相关节点。"
         );
       }
+      const groupSuggestionTarget = findSuggestionDetail("group", group.id);
       pushSuggestion(
-        findSuggestionDetail("group", group.id),
-        "keep-latest",
-        "如果不打算保留这个对象，可改为保留服务端版本。"
+        groupSuggestionTarget,
+        getGraphConflictResolutionChoiceToDiscardObject(groupSuggestionTarget?.detail),
+        buildGraphConflictDiscardSuggestionDescription(groupSuggestionTarget?.detail)
       );
     }
     if (issue.ruleType === "invalid_source_target") {
+      const nodeSuggestionTarget = findSuggestionDetail("node", issue.targetId ?? "");
       pushSuggestion(
-        findSuggestionDetail("node", issue.targetId ?? ""),
-        "keep-latest",
+        nodeSuggestionTarget,
+        getGraphConflictResolutionChoiceToDiscardObject(nodeSuggestionTarget?.detail),
         "这个节点的来源信息不完整；如果暂时不修复来源，可先改为保留服务端版本。"
       );
     }
 
     if (issue.ruleType === "invalid_node_size") {
+      const nodeSuggestionTarget = findSuggestionDetail("node", issue.targetId ?? "");
       pushSuggestion(
-        findSuggestionDetail("node", issue.targetId ?? ""),
-        "keep-latest",
+        nodeSuggestionTarget,
+        getGraphConflictResolutionChoiceToDiscardObject(nodeSuggestionTarget?.detail),
         "这个节点尺寸超出允许范围；如果暂时不调整尺寸，可先改为保留服务端版本。"
       );
     }
   }
 
   return [...suggestions.values()];
+}
+
+function getGraphConflictResolutionChoiceToPreserveObject(detail: GraphConflictObjectDetail | undefined) {
+  if (!detail) {
+    return "keep-local" as const;
+  }
+  return detail.action === "removed" ? "keep-latest" : "keep-local";
+}
+
+function getGraphConflictResolutionChoiceToDiscardObject(detail: GraphConflictObjectDetail | undefined) {
+  if (!detail) {
+    return "keep-latest" as const;
+  }
+  return detail.action === "removed" ? "keep-local" : "keep-latest";
+}
+
+function buildGraphConflictDiscardSuggestionDescription(detail: GraphConflictObjectDetail | undefined) {
+  if (detail?.action === "removed") {
+    return "如果不打算保留这个对象，可按本地删除结果处理。";
+  }
+  return "如果不打算保留这个对象，可改为保留服务端版本。";
 }
 
 export function buildGraphConflictReportArtifact(

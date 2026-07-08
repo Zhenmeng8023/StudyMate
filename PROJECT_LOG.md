@@ -1,3 +1,24 @@
+## 2026-07-09 06:46:00 +08:00 | v1.1.0-alpha.125 | 推进 WB-032 latest-head 删除语义联动建议修正
+### 任务内容
+
+- 按当前优先级继续沿 `WB-032` 做一个最小、可测试的冲突处理收口，而不是跳去新的共享层或更大的重构。
+- 本轮目标是修正一个真实的 latest-head 语义缺口：当阻断来自“当前取舍想沿用本地删除结果，导致服务端边/分组失去依赖对象”时，联动取舍建议不应继续机械地推荐 `keep-local` / `keep-latest`，而应给出真正能解除阻断的方向。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，先用 RED 锁定一个 latest-head 删除场景：当前草稿缺少服务端节点与连线，若用户继续沿用本地删除结果，冲突建议必须能正确提示“保留服务端节点”或“按本地删除结果处理该服务端连线”。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，让 `buildGraphConflictResolutionSuggestions(...)` 不再把“保留对象”固定写死成 `keep-local`、把“放弃对象”固定写死成 `keep-latest`，而是按对象差异的 `action` 判断真正的建议方向；同时在生成 `dangling_edge` / `invalid_group_node` 建议时补上对 `latestHead` 文档边和分组的读取，避免服务端对象只存在于最新版本时直接失去联动建议。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把 `latestConflictDetail` 继续下传到建议生成逻辑，确保页面级冲突卡片也能消费这次 latest-head 删除语义修正。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“latest-head removed 对象的联动建议方向已纠正”的最新状态。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+### 后续影响
+
+- `WB-032` 的联动取舍建议现在不再只对“本地新增/修改对象”方向正确；当问题对象只存在于最新服务端版本时，冲突卡片也能给出真正可执行的解除阻断建议。
+- 这一轮仍然没有完成更系统的 conflict handling；下一步更适合继续补更多 latest-head / 跨对象组合场景的页面级回归，或开始梳理 `WB-034` 所需的图谱冲突矩阵。
+
 ## 2026-07-09 07:18:00 +08:00 | v1.1.0-alpha.124 | 收口 QA-010 默认覆盖率基线门禁
 ### 任务内容
 
