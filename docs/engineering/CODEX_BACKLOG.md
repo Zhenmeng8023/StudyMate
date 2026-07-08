@@ -23,8 +23,8 @@
 | FE-010 | DONE | 多布局壳层与基础组件 | FE-000 | `frontend-user/src/app/`、`frontend-user/src/design-system/`、样式 | Standard / Studio / Canvas / Focus 路由布局可解析；Canvas 不挂全局 ContextPanel；基础组件与单测已添加，并已在 2026-07-08 跑通用户端 / 管理端类型检查、相关 Vitest、前后台构建与 Playwright 回归。 |
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
-| FE-040 | TODO | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。 |
-| FE-041 | TODO | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | Button、IconButton、Input、Select、Tag、DataState、Drawer、Inspector、ConfirmDialog、CommandBar、PageHeader 至少具备共享 token、变体、禁用/加载/错误状态与最小测试或文档示例。 |
+| FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。 |
+| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | Button、IconButton、Input、Select、Tag、DataState、Drawer、Inspector、ConfirmDialog、CommandBar、PageHeader 至少具备共享 token、变体、禁用/加载/错误状态与最小测试或文档示例。 |
 | API-010 | TODO | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/shared/api` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | TODO | Token refresh 与统一 401 会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；补 HttpOnly Refresh Token 迁移说明。 |
 | DEV-010 | TODO | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 不再依赖 `node --test` 对 `.ts` 的隐式执行差异。 |
@@ -60,6 +60,19 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：FE-040 / FE-041（共享页面状态契约起步）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `packages/ui` 新增共享 `dataStateKinds`、`DataStateKind` 与 `getDataStateLabel(...)`，先收口 Loading / Empty / Error / Unauthorized / Stale / Conflict 六类页面状态语义。
+  - `frontend-user/src/design-system/primitives/DataState.tsx` 改为直接消费 `@studymate/ui` 的共享状态文案，避免阅读、笔记、复习页面继续各自维护一套页面状态标签。
+  - `frontend-user/package.json` 显式声明 `@studymate/ui` workspace 依赖，补齐共享 UI 契约的工程边界。
+- 已执行验证：
+  - `npx vitest run packages/ui/src/index.test.ts`
+  - `npm --workspace frontend-user run test -- src/design-system/primitives/DataState.test.tsx`
+- 后续建议：
+  - 继续沿 `FE-040` 收口设计 token 单一来源，优先处理 `app.css` 与 `ui-redesign.css` 的重复 token。
+  - 继续沿 `FE-041` 把 `Drawer`、`Inspector` 等已有 primitives 逐步迁入 `@studymate/ui`，而不是继续散落在各端页面里各自演化。
 
 ### 执行记录：PLAN-2026-07-08（PDF 评审导入）
 

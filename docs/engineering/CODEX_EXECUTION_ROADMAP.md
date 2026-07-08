@@ -4,6 +4,12 @@
 
 ## 2026-07-08 PDF 计划评审导入
 
+### 2026-07-09 FE-040 / FE-041 共享状态契约起步
+
+- `packages/ui` 已从纯占位包升级为最小共享状态契约层，先导出 `DataStateKind`、`dataStateKinds` 与 `getDataStateLabel(...)`。
+- 用户端 `DataState` 已改为直接消费这层共享契约，并补齐 `conflict` 页面状态语义，作为阅读、笔记、复习等工作台后续统一状态协议的第一步。
+- Iteration 4 的下一步应继续收口设计 token 单一来源，并把更多现有 primitives 迁入 `@studymate/ui`，而不是继续散落在各端页面里维护。
+
 ### 2026-07-08 FE / UI 验证收口更新
 
 - FE-010、FE-020、FE-030 与 UI-04 已在真实依赖环境完成类型检查、相关 Vitest、前后台构建与 4 条 Playwright smoke。

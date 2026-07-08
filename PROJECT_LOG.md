@@ -1,3 +1,27 @@
+## 2026-07-09 03:34:30 +08:00 | v1.1.0-alpha.111 | 推进 FE-040 FE-041 共享页面状态契约起步
+### 任务内容
+
+- 按新的快速原型方向，从继续深挖 `WB-032` 切到更偏全局骨架补齐的工作包，优先启动 `FE-040 / FE-041`。
+- 本轮目标是在不重写现有页面的前提下，先让 `@studymate/ui` 真正承接一层最小可复用的页面状态语义契约，并让用户端现有 `DataState` 直接消费它。
+### 实际变更
+
+- 新增 `packages/ui/src/dataState.ts`，导出共享 `dataStateKinds`、`DataStateKind` 与 `getDataStateLabel(...)`，先统一 Loading / Empty / Error / Unauthorized / Stale / Conflict 六类页面状态语义。
+- 更新 `packages/ui/src/index.ts` 与 `packages/ui/src/index.test.ts`，让 `@studymate/ui` 从“只导出包名”的占位包升级为带最小测试的共享契约入口。
+- 更新 `frontend-user/src/design-system/primitives/DataState.tsx`，移除本地状态文案分支，改为直接调用 `@studymate/ui` 的共享 label helper。
+- 更新 `frontend-user/src/design-system/primitives/index.ts` 与 `frontend-user/package.json`，显式透出共享 `DataStateKind` 并声明 `@studymate/ui` workspace 依赖。
+- 更新 `frontend-user/src/design-system/primitives/DataState.test.tsx`，补齐 `conflict` 状态回归，确认用户端组件已经消费共享语义而不是继续本地分叉。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-040 / FE-041` 从规划态推进到已启动的共享状态契约骨架。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/index.test.ts frontend-user/src/design-system/primitives/DataState.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/index.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/DataState.test.tsx`
+
+### 后续影响
+
+- `@studymate/ui` 现在至少已经承接了一层真实共享契约，后续可以沿着同一路径继续吸收 token、`Drawer`、`Inspector` 等基础 primitives，而不必再从页面里零散复制状态语义。
+- 这一轮还没有处理 `app.css` 与 `ui-redesign.css` 的 token 漂移，也没有让管理端开始消费这层共享契约；这些仍然是 `FE-040 / FE-041` 后续更有价值的下一步。
+
 ## 2026-07-09 03:25:42 +08:00 | v1.1.0-alpha.110 | 推进 WB-032 阻断明细标题可读化子步骤
 ### 任务内容
 

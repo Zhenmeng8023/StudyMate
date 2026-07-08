@@ -16,4 +16,11 @@ describe("DataState", () => {
     expect(screen.getByText("需要刷新")).toBeInTheDocument();
   });
 
+  it("renders the shared conflict state copy", () => {
+    render(<DataState description="当前页面需要先处理版本冲突。" kind="conflict" title="发现冲突" />);
+
+    expect(screen.getByText("存在冲突")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "发现冲突" })).toBeInTheDocument();
+  });
+
 });
