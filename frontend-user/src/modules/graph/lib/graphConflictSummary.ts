@@ -302,7 +302,7 @@ function buildGraphManualMergeChecklist(input: GraphConflictChecklistInput): str
     checklist.push("优先核对上方列出的关键对象明细，逐项确认哪些节点、连线或分组需要保留。");
   }
   if (input.resolutionDrafts.length) {
-    checklist.push("优先按照“当前人工取舍草稿”里已标记的对象级取舍执行，未标记项再继续逐项人工确认。");
+    checklist.push("优先按照“当前人工取舍草稿”里已标记的对象级取舍执行；未标记项如果直接应用，会默认沿用最新图谱版本，建议继续逐项人工确认。");
   }
 
   if (input.latestHeadLoading) {

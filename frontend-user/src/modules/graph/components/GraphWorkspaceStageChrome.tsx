@@ -300,6 +300,11 @@ export function GraphConflictAssistCard(props: {
     !props.latestHeadAvailable ||
     props.resolutionDraftCount === 0 ||
     Boolean(props.resolutionBlockingIssues?.length);
+  const unmarkedResolutionItems = buildUnmarkedConflictObjectItems({
+    changeDetails: props.changeDetails,
+    latestHeadDetails: props.latestHeadDetails,
+    resolutionSelections: props.resolutionSelections
+  });
 
   return (
     <article className="graph-meta-card warning" aria-label="图谱冲突辅助">
@@ -389,6 +394,24 @@ export function GraphConflictAssistCard(props: {
                 <p>{issue.message}</p>
               </li>
             ))}
+          </ul>
+        </div>
+      ) : null}
+      {unmarkedResolutionItems.length ? (
+        <div className="graph-inline-copy" aria-label="未标记对象提示">
+          <strong>还有 {unmarkedResolutionItems.length} 个对象尚未标记取舍</strong>
+          <p>如果现在应用已标记取舍，未标记对象会默认沿用最新图谱版本。建议继续逐项确认后再应用。</p>
+          <ul className="graph-issue-list">
+            {unmarkedResolutionItems.slice(0, 3).map((item) => (
+              <li className="graph-issue-item" key={item}>
+                <p>{item}</p>
+              </li>
+            ))}
+            {unmarkedResolutionItems.length > 3 ? (
+              <li className="graph-issue-item">
+                <p>还有 {unmarkedResolutionItems.length - 3} 个未标记对象，建议继续逐项确认。</p>
+              </li>
+            ) : null}
           </ul>
         </div>
       ) : null}
@@ -543,6 +566,28 @@ function buildLatestHeadConflictObjectItems(props: {
 
 function hasConflictObjectDetail(item: ConflictObjectCardItem): item is Extract<ConflictObjectCardItem, { detail: GraphConflictObjectDetail }> {
   return "detail" in item && "scope" in item;
+}
+
+function buildUnmarkedConflictObjectItems(input: {
+  changeDetails: GraphConflictObjectDetail[];
+  latestHeadDetails: GraphConflictObjectDetail[];
+  resolutionSelections: Record<string, GraphConflictResolutionChoice>;
+}) {
+  return [
+    ...buildUnmarkedConflictObjectItemsForScope("当前未保存修改", "localDraft", input.changeDetails, input.resolutionSelections),
+    ...buildUnmarkedConflictObjectItemsForScope("与最新图谱相比", "latestHead", input.latestHeadDetails, input.resolutionSelections)
+  ];
+}
+
+function buildUnmarkedConflictObjectItemsForScope(
+  label: string,
+  scope: GraphConflictObjectScope,
+  details: GraphConflictObjectDetail[],
+  resolutionSelections: Record<string, GraphConflictResolutionChoice>
+) {
+  return details
+    .filter((detail) => resolutionSelections[buildGraphConflictObjectDecisionKey(scope, detail)] === undefined)
+    .map((detail) => `${label}：${formatGraphConflictObjectDetail(detail)}`);
 }
 
 function renderConflictResolutionButtons(input: {

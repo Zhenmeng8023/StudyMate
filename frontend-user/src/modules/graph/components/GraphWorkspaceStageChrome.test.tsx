@@ -180,6 +180,9 @@ describe("GraphWorkspaceStageChrome components", () => {
     expect(screen.getByText("server change")).toBeInTheDocument();
     expect(screen.getByText("节点｜新增｜Local node")).toBeInTheDocument();
     expect(screen.getByText("连线｜删除｜Server edge")).toBeInTheDocument();
+    expect(screen.getByLabelText("未标记对象提示")).toHaveTextContent("还有 1 个对象尚未标记取舍");
+    expect(screen.getByText("如果现在应用已标记取舍，未标记对象会默认沿用最新图谱版本。建议继续逐项确认后再应用。")).toBeInTheDocument();
+    expect(screen.getByText("当前未保存修改：分组｜修改｜Local group")).toBeInTheDocument();
     expect(screen.getByLabelText("取舍依赖校验问题")).toBeInTheDocument();
     expect(screen.getByText("dangling-edge")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeDisabled();

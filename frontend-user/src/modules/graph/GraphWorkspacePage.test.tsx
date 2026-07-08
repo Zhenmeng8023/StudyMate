@@ -226,10 +226,12 @@ describe("GraphWorkspacePage persistence states", () => {
     expect(screen.getAllByText("节点：新增 1 个（新概念）")).toHaveLength(2);
     expect(screen.getByText("建议优先核对的对象")).toBeInTheDocument();
     expect(screen.getAllByText("节点｜新增｜新概念")).toHaveLength(2);
+    expect(screen.getByLabelText("未标记对象提示")).toHaveTextContent("还有 2 个对象尚未标记取舍");
     await expect(screen.findByText("标题已修改（当前：Graph；基线：Graph on server）")).resolves.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "保留本地（当前未保存修改）：节点｜新增｜新概念" }));
     await expect(screen.findByText("已标记对象级取舍：保留本地（节点｜新增｜新概念）")).resolves.toBeInTheDocument();
     expect(screen.getByText("已标记：保留本地")).toBeInTheDocument();
+    expect(screen.getByLabelText("未标记对象提示")).toHaveTextContent("还有 1 个对象尚未标记取舍");
     expect(screen.getByRole("button", { name: "复制冲突摘要" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "导出冲突摘要" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "复制最新图谱 JSON" })).toBeInTheDocument();

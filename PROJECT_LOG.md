@@ -1,3 +1,29 @@
+## 2026-07-08 12:33:39 +08:00 | v1.1.0-alpha.96 | 推进 WB-032 未标记对象提示子步骤
+
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“对象级取舍依赖校验”基础上，把“部分对象已标记、部分对象尚未标记”这一真实高频场景解释清楚。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，明确提示还有多少对象尚未标记取舍，并告诉用户如果现在直接应用，这些对象会默认沿用最新图谱版本，而不是静默保留本地草稿。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，新增未标记对象统计与提示区块：冲突卡片会汇总当前仍未标记的本地/最新 head 对象，展示数量、列出代表项，并明确说明直接应用时的默认行为。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，把人工合并清单中的对象级取舍说明改为显式声明“未标记项如果直接应用，会默认沿用最新图谱版本”，让页面提示、Markdown 摘要和冲突处理包保持一致。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`、`frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 与 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，补齐组件级、页面级与导出物级回归，锁定未标记对象数量提示和默认行为文案。
+- 同步更新 `CHANGELOG.md`、`docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“对象级取舍默认行为可见”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在不仅能阻断明显错误的对象级合并，还能把“未标记对象会怎么处理”提前讲清楚，减少用户误以为未标记项会保留本地的风险。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的跨对象联动取舍辅助，以及更系统的多端 conflict handling。
+
 ## 2026-07-08 02:50:42 +08:00 | v1.1.0-alpha.95 | 推进 WB-032 对象级取舍依赖校验子步骤
 
 ### 任务内容
