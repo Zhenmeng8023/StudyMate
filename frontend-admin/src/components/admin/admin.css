@@ -1,22 +1,21 @@
-:root { color-scheme: light; }
 * { box-sizing: border-box; }
-body { margin: 0; background: #f7f8fb; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+body { margin: 0; color: var(--text-0); background: var(--bg-0); }
 button, input { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .58; }
 
 .admin-shell {
-  --admin-bg: #f7f8fb;
-  --admin-surface: #fff;
-  --admin-surface-soft: #f8fafc;
-  --admin-line: #e3e8f1;
-  --admin-text: #172033;
-  --admin-text-soft: #667085;
-  --admin-text-muted: #98a2b3;
-  --admin-accent: #2563eb;
-  --admin-accent-strong: #1d4ed8;
-  --admin-accent-soft: #eff5ff;
-  --admin-danger: #d14343;
+  --admin-bg: var(--bg-0);
+  --admin-surface: var(--surface-strong);
+  --admin-surface-soft: var(--surface-soft);
+  --admin-line: var(--line);
+  --admin-text: var(--text-0);
+  --admin-text-soft: var(--text-1);
+  --admin-text-muted: var(--text-2);
+  --admin-accent: var(--accent);
+  --admin-accent-strong: var(--accent-strong);
+  --admin-accent-soft: var(--accent-soft);
+  --admin-danger: var(--danger);
   --admin-sidebar: #141a2a;
   --admin-sidebar-soft: #1d2638;
   display: grid;

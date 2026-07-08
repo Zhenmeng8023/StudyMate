@@ -61,6 +61,22 @@
 
 ## 执行记录
 
+### 执行记录：FE-040（管理端接入共享 token 起步）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `frontend-admin/src/main.ts` 新增 `@studymate/ui/tokens.css` 导入，管理端主入口开始与用户端共用同一份根 token 来源。
+  - `frontend-admin/src/components/admin/admin.css` 移除本地 `:root` bootstrapping，并把 `--admin-bg`、`--admin-surface`、`--admin-line`、`--admin-text`、`--admin-accent` 等基础变量映射到共享 token，先统一前后台的背景、文本、描边与 accent 骨架。
+  - 新增 `frontend-admin/src/tokenSource.test.ts`，锁定管理端主入口接线存在、基础 admin token 已引用共享变量，以及本地根 token 引导块已移除。
+- 已执行验证：
+  - RED：`npx vitest run frontend-admin/src/tokenSource.test.ts`
+  - GREEN：`npx vitest run frontend-admin/src/tokenSource.test.ts`
+  - `npm --workspace frontend-admin run test`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+- 后续建议：
+  - 继续沿 `FE-040` 把管理端更多局部硬编码颜色、圆角与输入/按钮态映射到共享 token，而不是只停留在基础壳层变量。
+  - 继续沿 `FE-041` 把 `Drawer`、`Inspector`、`DataState` 之外的更多视觉契约沉到 `@studymate/ui`，让共享层开始承接“组件级”而不只是“变量级”一致性。
+
 ### 执行记录：FE-040（共享设计 token 单一来源起步）
 - 执行日期：2026-07-09
 - 本轮完成：
@@ -73,7 +89,7 @@
   - `npm --workspace frontend-user run typecheck`
   - `npm run build:user`
 - 后续建议：
-  - 继续沿 `FE-040` 让 `frontend-admin` 消费 `@studymate/ui/tokens.css`，避免前后台视觉 token 再次分叉。
+  - 继续沿 `FE-040` 让前后台更多局部样式细节消费共享 token，避免只在入口层统一、在组件层继续分叉。
   - 继续沿 `FE-041` 把更多 primitives 的视觉变量与状态契约收敛到 `@studymate/ui`，而不是继续在页面层维护局部副本。
 
 ### 执行记录：FE-040 / FE-041（共享页面状态契约起步）

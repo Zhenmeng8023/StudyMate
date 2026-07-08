@@ -1,3 +1,28 @@
+## 2026-07-09 03:53:30 +08:00 | v1.1.0-alpha.113 | 推进 FE-040 管理端接入共享设计 token 起步
+### 任务内容
+
+- 延续快速原型阶段“先把全局骨架收起来”的方向，继续沿 `FE-040` 收口前后台的共享视觉源头，而不是回到单点功能深挖。
+- 本轮目标是在不重写后台工作台结构的前提下，让 `frontend-admin` 也接入 `@studymate/ui/tokens.css`，把管理端最基础的背景、文本、描边和 accent 语义先对齐到共享 token。
+### 实际变更
+
+- 更新 `frontend-admin/src/main.ts`，新增 `@studymate/ui/tokens.css` 导入，让管理端主入口与用户端共用同一份根 token 样式来源。
+- 更新 `frontend-admin/src/components/admin/admin.css`，移除本地 `:root` token bootstrapping，并把 `--admin-bg`、`--admin-surface`、`--admin-surface-soft`、`--admin-line`、`--admin-text`、`--admin-text-soft`、`--admin-text-muted`、`--admin-accent`、`--admin-accent-strong`、`--admin-accent-soft`、`--admin-danger` 映射到共享 token。
+- 更新 `frontend-admin/package.json` 与 `package-lock.json`，显式声明 `@studymate/ui` workspace 依赖和 `@types/node` 测试类型依赖，避免这条接线只依赖根环境偶然可用。
+- 新增 `frontend-admin/src/tokenSource.test.ts`，先以 RED 锁定“管理端主入口必须导入共享 token、admin 基础变量必须引用共享 token、本地根 token 引导块必须移除”，再转 GREEN。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 FE-040 从“只有用户端接线”推进到“前后台入口都已接入共享 token”。
+### 验证结果
+
+- RED：`npx vitest run frontend-admin/src/tokenSource.test.ts`
+- GREEN：`npx vitest run frontend-admin/src/tokenSource.test.ts`
+- `npm --workspace frontend-admin run test`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+
+### 后续影响
+
+- 前后台现在至少已经开始共享同一份设计 token 源头，后续继续统一按钮、输入框、状态卡片和抽屉/检查器的视觉契约时，不需要再各自从头定义背景、边线和文字层级。
+- 这一轮仍只完成了管理端基础壳层变量的共享接入，后台局部硬编码颜色、更多 primitives 以及共享 API/client 契约都还没有进一步收口；这些仍然是 `FE-040 / FE-041 / API-010` 接下来最值得继续推进的方向。
+
 ## 2026-07-09 03:46:30 +08:00 | v1.1.0-alpha.112 | 推进 FE-040 共享设计 token 单一来源起步
 ### 任务内容
 
