@@ -1,3 +1,34 @@
+## 2026-07-09 05:26:00 +08:00 | v1.1.0-alpha.120 | 收口 API-011 会话失效原因与统一提示语义
+### 任务内容
+
+- 在 `API-011` 已完成前后台共享 refresh/replay 第一段骨架的基础上，继续选择一个覆盖面广但仍然安全可控的最小工作包，把“refresh 失败后为什么被登出”从局部副作用提升为共享生命周期的一部分。
+- 本轮目标不是继续扩后台新模块，而是先收口两个明确缺口：会话失效原因记录，以及前后台登录页一致可读的 fail-logout 提示语义。
+### 实际变更
+
+- 更新 `packages/api-client/src/index.ts`，新增 `SessionInvalidationState` 与 `onSessionInvalidated(...)` 回调；共享 `createSessionRequest(...)` 在 refresh 失败时不再只会清 session，也会把结构化失效原因回写到前后台会话入口。
+- 更新 `frontend-user/src/app/sessionStore.ts` 与 `frontend-admin/src/api/sessionStore.ts`，把 session 与 invalidation 元数据分开持久化并开放读写/订阅入口；refresh 成功会清掉旧 invalidation，refresh 失败会保留原因，供登录页和路由层消费。
+- 更新 `frontend-user/src/api/core.ts` 与 `frontend-admin/src/api/client.ts`，把新的 invalidation 回调接到共享 refresh 生命周期；`frontend-user/src/pages/AuthPages.tsx`、`frontend-user/src/app/routes.tsx` 与 `frontend-admin/src/views/AdminWorkspaceView.vue` 则补齐统一 fail-logout 提示，并在手动退出时主动清理旧提示。
+- 更新 `packages/api-client/src/index.test.ts`、`frontend-user/src/api/sessionRefresh.test.ts`、新增 `frontend-user/src/pages/AuthPages.test.tsx`，并更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`；先用 RED 复现“refresh 失败只清 session、不记录原因”和“登录页没有统一提示”的缺口，再转 GREEN 锁定回归。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把 `API-011` 推进到“前后台共享刷新骨架 + 失效原因提示语义已收口”的最新状态。
+### 验证结果
+
+- RED：`npx vitest run packages/api-client/src/index.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npx vitest run packages/api-client/src/index.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx src/api/graphs.test.ts src/api/searchShare.test.ts`
+- `npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-user run typecheck`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:user`
+- `npm run build:admin`
+### 后续影响
+
+- `API-011` 现在不再只会在 refresh 失败时“把人踢回登录页”，而是会显式保留失效原因并在前后台登录页给出统一提示；后续新请求边界不需要再各自补一套局部 fail-logout 文案。
+- 这一轮仍然没有解决 HttpOnly Refresh Token 迁移说明、更多后台模块 API 接线与后台 Router 模块化；后续应继续沿 `API-011 / ADM-010` 收口，而不是回到页面里散落新的会话 helper。
+
 ## 2026-07-09 04:56:33 +08:00 | v1.1.0-alpha.119 | 推进 API-011 管理端共享会话刷新起步
 ### 任务内容
 

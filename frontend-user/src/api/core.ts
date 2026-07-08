@@ -1,6 +1,6 @@
 import { createAuthHeaders, createSessionRequest, requestApi } from "@studymate/api-client";
 import type { ApiRequestInit } from "@studymate/api-client";
-import { persistSession, readSession } from "../app/sessionStore";
+import { persistSession, readSession, recordSessionInvalidation } from "../app/sessionStore";
 import type { AuthSession } from "./types";
 
 export function withAuth(session: AuthSession | null) {
@@ -10,6 +10,7 @@ export function withAuth(session: AuthSession | null) {
 const requestWithSession = createSessionRequest<AuthSession>({
   getSession: readSession,
   persistSession,
+  onSessionInvalidated: recordSessionInvalidation,
   refreshSession: async (session) =>
     requestApi<AuthSession>("/api/v1/auth/refresh", {
       method: "POST",

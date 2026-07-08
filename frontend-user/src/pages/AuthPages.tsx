@@ -1,7 +1,12 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { AuthSession } from "../api/client";
 import { loginUser, registerUser } from "../api/client";
+import { clearSessionInvalidation, readSessionInvalidation, subscribeSessionInvalidation } from "../app/sessionStore";
+
+function getLoginPrompt() {
+  return "当前登录状态已失效，请重新登录后继续学习。";
+}
 
 export function AuthLead() {
   return (
@@ -44,11 +49,17 @@ export function LoginPage(props: { onLogin: (session: AuthSession) => void }) {
   const [error, setError] = useState("");
   const location = useLocation();
   const navigate = useNavigate();
+  const sessionInvalidation = useSyncExternalStore(
+    subscribeSessionInvalidation,
+    readSessionInvalidation,
+    readSessionInvalidation
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError("");
+    clearSessionInvalidation();
 
     try {
       const session = await loginUser(form);
@@ -86,6 +97,7 @@ export function LoginPage(props: { onLogin: (session: AuthSession) => void }) {
                 value={form.password}
               />
             </label>
+            {sessionInvalidation ? <p className="error-text">{getLoginPrompt()}</p> : null}
             {error ? <p className="error-text">{error}</p> : null}
             <button className="primary-button" disabled={loading} type="submit">
               {loading ? "登录中..." : "登录"}

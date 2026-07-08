@@ -168,6 +168,30 @@
   - 继续沿 `API-011` 把同一套 refresh/replay/fail-logout 扩到更多后台模块请求边界，避免前后台继续各自维护会话生命周期。
   - 在共享层补齐会话失效原因记录与 HttpOnly Refresh Token 迁移说明，再考虑把 `API-011` 从“已起步”推进到更完整的收口状态。
 
+### 执行记录：API-011（会话失效原因与统一提示语义）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `packages/api-client/src/index.ts` 为共享 `createSessionRequest(...)` 补上 `SessionInvalidationState` 与 `onSessionInvalidated(...)` 回调，让 refresh 失败不再只会清 session，也会把失效原因结构化写回前后台会话入口。
+  - `frontend-user/src/app/sessionStore.ts` 与 `frontend-admin/src/api/sessionStore.ts` 现在都会分开持久化 session 和 invalidation 元数据；refresh 成功会清理旧失效记录，refresh 失败则保留原因，供 UI 在被动登出后读取。
+  - `frontend-user/src/api/core.ts` 与 `frontend-admin/src/api/client.ts` 已接上新的 invalidation 回调；`frontend-user/src/pages/AuthPages.tsx`、`frontend-user/src/app/routes.tsx` 与 `frontend-admin/src/views/AdminWorkspaceView.vue` 则补齐了统一 fail-logout 提示语义，并在手动退出时显式清空旧失效提示。
+  - 新增/更新 `packages/api-client/src/index.test.ts`、`frontend-user/src/api/sessionRefresh.test.ts`、`frontend-user/src/pages/AuthPages.test.tsx`、`frontend-admin/src/views/AdminWorkspaceView.test.ts`，先用 RED 复现“只清 session、不记录原因”和“登录页拿不到统一提示”的缺口，再转 GREEN。
+- 已执行验证：
+  - RED：`npx vitest run packages/api-client/src/index.test.ts`
+  - RED：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
+  - RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - GREEN：`npx vitest run packages/api-client/src/index.test.ts`
+  - GREEN：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
+  - GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx src/api/graphs.test.ts src/api/searchShare.test.ts`
+  - `npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:user`
+  - `npm run build:admin`
+- 后续待续：
+  - `API-011` 现在已不再缺“会话失效原因记录 / 统一 fail-logout 提示语义”，后续重点转向 HttpOnly Refresh Token 迁移说明与更多后台模块请求边界接线。
+  - `ADM-010` 仍应继续把后台工作台从单页组件拆到可刷新 URL 和模块路由，而不是继续把更多会话衍生逻辑堆回视图层。
+
 ### 执行记录：API-011（管理端共享会话刷新起步）
 
 - 执行日期：2026-07-09

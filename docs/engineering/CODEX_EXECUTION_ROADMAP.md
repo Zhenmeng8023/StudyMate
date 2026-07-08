@@ -30,6 +30,13 @@
 - `frontend-admin/src/api/client.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts` 已锁定“后台令牌过期后自动刷新并重放请求”以及“后台启动 refresh 失败后返回登录页”的回归。
 - `API-011` 现在已完成前后台第一段共享刷新骨架；后续重点转向会话失效原因记录、更多后台模块接线与 HttpOnly Refresh Token 迁移说明。
 
+### 2026-07-09 API-011 会话失效原因与统一提示语义
+
+- `packages/api-client` 的 `createSessionRequest(...)` 现在会在 refresh 失败时产出结构化 `SessionInvalidationState`，而不是只清空 session；前后台都能读取统一的失效原因。
+- `frontend-user/src/app/sessionStore.ts` 与 `frontend-admin/src/api/sessionStore.ts` 已分别为 session 和 invalidation 元数据提供读写/订阅入口；refresh 成功会清掉旧 invalidation，refresh 失败则保留原因给登录页消费。
+- 用户端登录页与管理端登录页现在都会在被动登出后显示统一的重新登录提示；手动退出会主动清掉旧 invalidation，避免下次进入时误报“会话已失效”。
+- `API-011` 当前仍未结束，但“会话失效原因记录 / 统一 fail-logout 提示语义”这段骨架已收口，下一步更适合转向 HttpOnly Refresh Token 迁移说明与后台更多模块 API 接线。
+
 ### 2026-07-09 FE-040 / FE-041 共享状态契约起步
 
 - `packages/ui` 已从纯占位包升级为最小共享状态契约层，先导出 `DataStateKind`、`dataStateKinds` 与 `getDataStateLabel(...)`。

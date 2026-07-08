@@ -3,7 +3,13 @@ import "../components/admin/admin.css";
 import { adminGet, adminPost } from "../api/client";
 import type { ApiRequestInit } from "@studymate/api-client";
 import { computed, onBeforeUnmount, reactive, ref } from "vue";
-import { persistSession, subscribeSession } from "../api/sessionStore";
+import {
+  clearSessionInvalidation,
+  persistSession,
+  readSession as readStoredAdminSession,
+  readSessionInvalidation as readStoredSessionInvalidation,
+  subscribeSession
+} from "../api/sessionStore";
 import type { AdminAuthUser, AdminSessionPayload } from "../api/sessionStore";
 
 interface ModerationItem {
@@ -37,9 +43,9 @@ type AdminNavItem = {
 
 type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
 
-const sessionKey = "studymate.admin.session";
 const form = reactive({ login: "", password: "" });
-const session = ref<AdminSessionPayload | null>(readSession());
+const session = ref<AdminSessionPayload | null>(readStoredAdminSession());
+const sessionInvalidation = ref(readStoredSessionInvalidation());
 const profile = ref<AdminAuthUser | null>(session.value?.user ?? null);
 const moderationItems = ref<ModerationItem[]>([]);
 const overview = ref<OverviewPayload | null>(null);
@@ -72,6 +78,7 @@ const navItems = computed<AdminNavItem[]>(() => [
 
 const navGroups = computed(() => ["总览", "治理", "系统"].map((group) => ({ group, items: navItems.value.filter((item) => item.group === group) })));
 const activeMeta = computed(() => navItems.value.find((item) => item.key === activeView.value) ?? navItems.value[0]);
+const loginPrompt = computed(() => sessionInvalidation.value ? "后台会话已失效，请重新登录后继续治理工作。" : "");
 
 const overviewCards = computed(() => [
   { label: "待处理", value: String(overview.value?.pendingModerationCount ?? moderationItems.value.length), helper: "需要审核或复核的公开内容" },
@@ -119,8 +126,9 @@ const governanceColumns = computed(() => {
 const selectedRecordTitle = computed(() => selectedRecord.value ? getRecordTitle(selectedRecord.value) : "选择一条记录");
 
 const unsubscribeSession = subscribeSession(() => {
-  const nextSession = readSession();
+  const nextSession = readStoredAdminSession();
   session.value = nextSession;
+  sessionInvalidation.value = readStoredSessionInvalidation();
   profile.value = nextSession?.user ?? null;
 
   if (!nextSession) {
@@ -146,6 +154,7 @@ if (session.value) {
 async function login() {
   loading.value = true;
   errorMessage.value = "";
+  clearSessionInvalidation();
   try {
     const data = await post<AdminSessionPayload>("/api/v1/admin/login", form);
     persistSession(data);
@@ -254,6 +263,8 @@ function logout() {
   governanceSummary.value = null;
   selectedRecord.value = null;
   activeView.value = "dashboard";
+  sessionInvalidation.value = null;
+  clearSessionInvalidation();
   persistSession(null);
   notice.value = "后台会话已清空。";
 }
@@ -264,12 +275,6 @@ async function get<T>(path: string, query?: { limit?: number }) {
 
 async function post<T>(path: string, body: ApiRequestInit["body"]) {
   return adminPost<T>(path, body, session.value);
-}
-
-function readSession(): AdminSessionPayload | null {
-  const raw = window.localStorage.getItem(sessionKey);
-  if (!raw) return null;
-  try { return JSON.parse(raw) as AdminSessionPayload; } catch { return null; }
 }
 
 function formatCell(value: string | number | boolean | null | undefined) {
@@ -312,6 +317,8 @@ function selectRecord(row: GovernanceRecord) {
         <form class="form-stack" @submit.prevent="login">
           <label><span>账号</span><input v-model="form.login" placeholder="用户名或邮箱" /></label>
           <label><span>密码</span><input v-model="form.password" placeholder="密码" type="password" /></label>
+          <p v-if="loginPrompt" class="error-text">{{ loginPrompt }}</p>
+          <p v-if="loginPrompt" class="error-text">{{ loginPrompt }}</p>
           <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
           <button class="primary-button" :disabled="loading" type="submit">{{ loading ? "登录中…" : "登录工作台" }}</button>
         </form>

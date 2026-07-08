@@ -23,10 +23,19 @@ export interface ApiSession {
   refreshToken: string;
 }
 
+export interface SessionInvalidationState {
+  kind: "refresh_failed";
+  code: string;
+  message: string;
+  status: number;
+  occurredAt: string;
+}
+
 export interface SessionRequestOptions<TSession extends ApiSession> {
   getSession: () => TSession | null;
   persistSession: (session: TSession | null) => void;
   refreshSession: (session: TSession) => Promise<TSession>;
+  onSessionInvalidated?: (reason: SessionInvalidationState) => void;
 }
 
 type ApiQueryPrimitive = string | number | boolean;
@@ -53,6 +62,26 @@ export class ApiRequestError extends Error {
     this.status = status;
     this.code = code;
   }
+}
+
+function createSessionInvalidationState(error: unknown): SessionInvalidationState {
+  if (error instanceof ApiRequestError) {
+    return {
+      kind: "refresh_failed",
+      code: error.code,
+      message: error.message,
+      status: error.status,
+      occurredAt: new Date().toISOString()
+    };
+  }
+
+  return {
+    kind: "refresh_failed",
+    code: "session_refresh_failed",
+    message: error instanceof Error ? error.message : "Session refresh failed",
+    status: 401,
+    occurredAt: new Date().toISOString()
+  };
 }
 
 export function createAuthHeaders(token?: string | null): Record<string, string> {
@@ -177,6 +206,7 @@ export function createSessionRequest<TSession extends ApiSession>(options: Sessi
           return nextSession;
         })
         .catch((error) => {
+          options.onSessionInvalidated?.(createSessionInvalidationState(error));
           options.persistSession(null);
           throw error;
         })

@@ -2,7 +2,7 @@ import { ReactNode, useSyncExternalStore } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import type { AuthSession } from "../api/client";
 import { logoutUser } from "../api/client";
-import { persistSession, readSession, subscribeSession } from "./sessionStore";
+import { clearSessionInvalidation, persistSession, readSession, subscribeSession } from "./sessionStore";
 import { ShellFrame } from "./shell/ShellFrame";
 import { LoginPage, RegisterPage } from "../pages/AuthPages";
 import { DashboardPage } from "../pages/DashboardPage";
@@ -61,6 +61,7 @@ export function App() {
     } catch {
       // Ignore network logout errors and clear local session anyway.
     } finally {
+      clearSessionInvalidation();
       handleSession(null);
       navigate("/", { replace: true });
     }

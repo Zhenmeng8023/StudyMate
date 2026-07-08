@@ -1,6 +1,6 @@
 import { buildApiPath, createAuthHeaders, createSessionRequest, requestApi } from "@studymate/api-client";
 import type { ApiRequestInit } from "@studymate/api-client";
-import { persistSession, readSession } from "./sessionStore";
+import { persistSession, readSession, recordSessionInvalidation } from "./sessionStore";
 import type { AdminSessionPayload } from "./sessionStore";
 
 type AdminQueryValue = string | number | boolean | Array<string | number | boolean> | null | undefined;
@@ -8,6 +8,7 @@ type AdminQueryValue = string | number | boolean | Array<string | number | boole
 const requestWithSession = createSessionRequest<AdminSessionPayload>({
   getSession: readSession,
   persistSession,
+  onSessionInvalidated: recordSessionInvalidation,
   refreshSession: async (session) =>
     requestApi<AdminSessionPayload>("/api/v1/auth/refresh", {
       method: "POST",
