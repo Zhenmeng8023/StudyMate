@@ -185,12 +185,12 @@ export function AiPage(props: { session: AuthSession }) {
   return (
     <>
       <WorkspaceHeader
-        description="AI 学伴现在会把草稿生成任务、状态和用量记下来。它依旧先生成待确认内容，但不再是看不见来路的黑盒。"
-        eyebrow="AI 学伴"
-        title="让 AI 草稿、任务历史和用量轨迹都能被回看"
+        description="AI 只生成待确认草稿；在这里集中检查来源、选择目标卡组或图谱，并决定哪些内容进入正式学习资产。"
+        eyebrow="AI 草稿中心"
+        title="确认草稿，再写入学习资产"
       />
 
-      <div className="ai-workspace">
+      <div className="ai-workspace ai-draft-workspace">
         <div className="metrics-grid">
           <MetricTile
             helper="当前账号累计记录的 AI 草稿任务数。"

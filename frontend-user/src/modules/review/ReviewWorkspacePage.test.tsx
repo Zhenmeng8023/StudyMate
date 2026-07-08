@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -128,12 +128,13 @@ describe("ReviewWorkspacePage", () => {
     render(<ReviewWorkspacePage session={session} />);
 
     await expect(screen.findByText("什么是图谱？")).resolves.toBeInTheDocument();
-    expect(screen.getByText("1 张待复习")).toBeInTheDocument();
+    expect(screen.getByText("1 张仍待完成")).toBeInTheDocument();
+    expect(within(screen.getByLabelText("复习进度")).getByText(/到期/)).toHaveTextContent("1 到期");
 
     await user.click(screen.getByRole("button", { name: /显示答案/ }));
     expect(screen.getAllByText("节点和关系。").length).toBeGreaterThanOrEqual(1);
 
-    await user.click(screen.getByRole("button", { name: "Good" }));
+    await user.click(screen.getByRole("button", { name: "Good 记得" }));
 
     await waitFor(() => {
       expect(reviewCardMock).toHaveBeenCalledWith(

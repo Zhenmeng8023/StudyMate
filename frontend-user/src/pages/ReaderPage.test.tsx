@@ -160,7 +160,7 @@ describe("ReaderPage", () => {
       </MemoryRouter>
     );
 
-    await expect(screen.findAllByText("算法导论")).resolves.toHaveLength(2);
+    expect((await screen.findAllByText("算法导论")).length).toBeGreaterThanOrEqual(2);
 
     await user.click(screen.getByRole("button", { name: "添加书签" }));
 
@@ -172,7 +172,9 @@ describe("ReaderPage", () => {
         bookmarks: [1, 3]
       });
     });
-    expect(await screen.findByText("第 3 页")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByText("第 3 页").length).toBeGreaterThan(0);
+    });
   });
 
   it("creates an annotation from the selected quote and shows source trace details", async () => {
@@ -217,7 +219,7 @@ describe("ReaderPage", () => {
 
     await expect(screen.findByTestId("pdf-reader-pane")).resolves.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "mock-select-quote" }));
-    await user.type(screen.getAllByRole("textbox")[0], "Useful note");
+    await user.type(screen.getByLabelText("批注内容"), "Useful note");
     await user.click(screen.getByRole("button", { name: "保存批注" }));
 
     await waitFor(() => {

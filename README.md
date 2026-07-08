@@ -22,6 +22,7 @@
 - 阅读器/笔记收口继续按 TDD 推进：已补用户端 Reader API 合约测试、`ReaderPage` 书签与批注来源回归测试，以及后端 `reader/handler`、`reader/service` 的鉴权、请求体和来源选择边界测试。
 - `WB-002` 已完成第一轮配置安全收口：`JWT_SECRET` 与 `MYSQL_DSN` 不再回退到危险默认值，启动阶段会显式校验缺失项。
 - `WB-003` 已完成最小 CI 质量门禁补强：`gofmt` 检查、配置安全回归检查、Vitest、Playwright、Go test 与文档同步都已进入默认 `npm run ci`。
+- 前端布局重构已完成 FE-00 审计、FE-01 多布局壳层、FE-02 图谱 CanvasLayout 与 FE-03 学习工作台对齐：阅读和笔记现采用可收起的资源区 / 主内容区 / 检查器结构，复习改为单任务 FocusLayout；后续将在图谱新 Inspector 内继续 WB-032 的节点级人工冲突合并。
 - `v1.x` 范围仍只包含 Web 主站、Web 后台和后端 API；课程/LMS、Tauri 桌面端、多人实时协作、PWA 离线和向量搜索不作为当前阻塞项。
 
 ## 技术栈
@@ -47,6 +48,8 @@
 - 图谱文档契约：[docs/architecture/GRAPH_DOCUMENT_CONTRACT.md](docs/architecture/GRAPH_DOCUMENT_CONTRACT.md)
 - 图谱 API 生命周期契约：[docs/architecture/GRAPH_API_LIFECYCLE.md](docs/architecture/GRAPH_API_LIFECYCLE.md)
 - 图谱导出/缩略图/布局契约：[docs/architecture/GRAPH_EXPORT_LAYOUT_CONTRACT.md](docs/architecture/GRAPH_EXPORT_LAYOUT_CONTRACT.md)
+- 前端能力矩阵：[docs/engineering/FRONTEND_CAPABILITY_MATRIX.md](docs/engineering/FRONTEND_CAPABILITY_MATRIX.md)
+- 前端布局重构规格：[docs/design/FRONTEND_LAYOUT_REFACTOR_SPEC.md](docs/design/FRONTEND_LAYOUT_REFACTOR_SPEC.md)
 - 数据库设计：[docs/architecture/DATABASE_DESIGN.md](docs/architecture/DATABASE_DESIGN.md)
 - 变更记录：[CHANGELOG.md](CHANGELOG.md)
 - 项目推进日志：[PROJECT_LOG.md](PROJECT_LOG.md)

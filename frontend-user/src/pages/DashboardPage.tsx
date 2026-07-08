@@ -43,16 +43,38 @@ export function DashboardPage(props: { session: AuthSession | null }) {
             </Link>
           </div>
         }
-        description="这里不是营销首页，而是你的学习工作台。资料、阅读、笔记和图谱入口都在同一层级里，方便快速回到上次工作现场。"
-        eyebrow="工作台"
-        title="把今天的学习任务收拢到一个界面里"
+        description="从最近资料、笔记和图谱中选择一项继续，学习过程会自动回到你上一次停下的位置。"
+        eyebrow="学习控制台"
+        title={props.session ? `你好，${props.session.user.displayName}` : "从一项学习任务开始"}
       />
+
+      <section className="dashboard-continue-card" aria-label="继续学习">
+        <div className="dashboard-continue-card__copy">
+          <p className="eyebrow">下一步</p>
+          <h2>把注意力放在一件正在推进的事上</h2>
+          <p>阅读、笔记、图谱和复习都保留在同一个学习空间里；从最近一份资料继续即可。</p>
+        </div>
+        <div className="dashboard-continue-card__actions">
+          <Link className="primary-button" to={props.session ? "/reader" : "/login"}>
+            <BookOpen size={16} />
+            继续阅读
+          </Link>
+          <Link className="secondary-button" to={props.session ? "/graph" : "/login"}>
+            查看图谱
+          </Link>
+        </div>
+        <div className="dashboard-continue-card__facts" aria-label="学习资产概览">
+          <span><strong>{materials.length}</strong> 份资料</span>
+          <span><strong>{notes.length}</strong> 条笔记</span>
+          <span><strong>{posts.length}</strong> 条分享</span>
+        </div>
+      </section>
 
       <div className="metrics-grid">
         <MetricTile helper="公开资料和已整理附件总数" label="资料数" value={String(materials.length)} />
         <MetricTile helper="已经沉淀下来的个人笔记" label="笔记数" value={String(notes.length)} />
         <MetricTile helper="社区里可浏览的公开内容" label="社区分享" value={String(posts.length)} />
-        <MetricTile helper="图谱与复习能力下一步会从这里接入" label="下一阶段" value="图谱 + 复习" />
+        <MetricTile helper="集中查看图谱与复习入口" label="学习空间" value="已就绪" />
       </div>
 
       <div className="dashboard-grid">

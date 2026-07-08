@@ -1,6 +1,6 @@
 # StudyMate 项目上下文与技术基线
 
-**基线日期：2026-07-01**  
+**基线日期：2026-07-01；PDF 评审补充日期：2026-07-08**
 **核验分支：`master`**  
 **用途：供 Codex 进入仓库时快速判断“哪些能力已经真实存在、哪些判断已经过期、下一步该收口什么”。**
 
@@ -56,7 +56,7 @@ StudyMate/
 后端技术线：Go、Gin、GORM、MySQL、MongoDB Driver、Redis、JWT。  
 用户端技术线：React 19、Vite 7、TypeScript、Zustand、react-pdf、Tiptap。  
 管理端技术线：Vue 3、Vite 7、Element Plus。  
-共享包：`@studymate/graph-core` 已存在并有独立测试命令。
+共享包：`@studymate/graph-core` 已存在并有独立测试命令；`@studymate/ui`、`@studymate/api-client`、`@studymate/editor-core` 已建包但仍接近占位状态，尚未成为跨前后台的稳定契约层。
 
 ## 3. 真实已实现能力
 
@@ -91,6 +91,14 @@ StudyMate/
 - `frontend-admin/src/App.vue` 目前仅挂载 `AdminWorkspaceView`，主逻辑已不堆在根组件。
 - 因此“继续拆分 App 根文件”已不再是最高优先级，后续应转向模块内聚与测试补强。
 
+### 3.6 2026-07-08 PDF 评审后新增核验结论
+
+- `frontend-user/src/styles/app.css` 与 `frontend-user/src/styles/ui-redesign.css` 仍重复定义 `--bg-0`、`--surface`、`--accent`、`--radius-*`、`--sidebar-width` 等 token，当前视觉体系仍依赖后加载 CSS 覆盖，而不是单一设计 token 来源。
+- `packages/ui/src/index.ts` 仍仅导出包名常量，`packages/api-client/src/index.ts` 仍以健康检查为主，`packages/editor-core/src/index.ts` 仍只有最小类型定义；这些包需要进入真实共享能力建设，而不是继续作为占位目录存在。
+- `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 约 79KB，仍包含大量 `useState` 与跨领域函数；`WB-032` 的冲突处理已经很深，下一步必须把状态边界、commands 与 features 从控制器中拆出，避免继续集中膨胀。
+- `frontend-admin/src/views/AdminWorkspaceView.vue` 约 22KB，后台仍主要是单工作台组件内切换模块；`frontend-admin/src/router/index.ts` 目前只是 route key 列表，尚未形成可刷新、可分享、可回退的 Vue Router 模块 URL。
+- 根 `package.json`、`package-lock.json` 与 `.github/workflows/ci.yml` 在真实仓库中存在，因此 PDF 中“压缩包缺少根工程入口/CI”的判断不作为当前事实；但 `@studymate/graph-core` 仍直接使用 `node --test test/*.test.ts` 执行 TypeScript 测试，工程可复现性仍需二次收口。
+
 ## 4. 当前阶段判断
 
 | 阶段 | 结论 | 说明 |
@@ -108,6 +116,7 @@ StudyMate/
 2. “CI 尚未建立”不成立：`.github/workflows/ci.yml` 已覆盖 typecheck、build、Vitest、graph-core test、Playwright、Go test 与文档校验。
 3. “管理端大量占位”只部分成立：后台治理入口已接入多组真实 API，但仍需更强的测试、审计与可操作性。
 4. “前端根文件过大”不成立：根文件已基本瘦身，后续问题更多在模块内部边界和回归测试。
+5. “工程压缩包不可复现”不能直接套用于当前 Git 工作区：真实仓库已有根 workspace、lockfile 与 CI；后续只保留工具链版本、graph-core TS 测试运行方式、bootstrap 与依赖审计等仍成立的复现性缺口。
 
 ## 6. 当前真正需要优先收口的问题
 
@@ -121,13 +130,17 @@ StudyMate/
    `docs/engineering/*` 仍把“搜索缺失、CI 缺失、App 根文件过大”写成现状，容易误导后续代理。
 4. **搜索进入了“补强期”而非“从零建设期”**  
    后续重点应转向权限过滤、结果质量、测试矩阵、文档契约和可替换索引，而不是重新创建 search module。
+5. **设计系统与 API 契约仍未成为共享底座**
+   设计 token、基础 UI 组件、页面状态协议、前后台 API request/error/pagination/auth-session 仍分散在各端实现；任何新页面和后台模块继续扩展前，应先收口这些共享边界。
+6. **图谱控制器与后台工作台进入拆分临界点**
+   图谱冲突能力已经深入到对象级取舍，后台治理也接入真实 API；下一步应优先拆 store/commands/features 与后台模块路由，而不是继续往单文件叠加业务。
 
 ### P1
 
-1. 图谱内核继续下沉到 `packages/graph-core`，减少工作区容器逻辑。
-2. 图谱 API 生命周期仍需补齐 export / thumbnail / layout / optimistic locking。
-3. 图谱-复习反馈仍需从“局部连接”升级为“稳定回写闭环”。
-4. 后台治理仍需更强的审计模型、审批动作和测试回归。
+1. 图谱内核继续下沉到 `packages/graph-core`，并把浏览器状态进入 store、用户意图进入 commands，减少工作区控制器逻辑。
+2. 图谱-复习反馈仍需从“局部连接”升级为“稳定回写闭环”，并服务于“资料上传 -> 阅读批注 -> 笔记 -> 图谱草稿 -> 卡片 -> 今日复习”的主演示路径。
+3. 后台治理仍需更强的真实路由、审计模型、审批动作和测试回归。
+4. 搜索需要在现有 MySQL fallback 上补服务端分页、真实 count/total、耗时、空结果建议和排序语义，再评估 Meilisearch。
 
 ## 7. 执行约束提醒
 

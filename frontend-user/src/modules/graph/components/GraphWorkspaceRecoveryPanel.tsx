@@ -22,8 +22,8 @@ export function GraphWorkspaceRecoveryPanel(props: {
     <div className="graph-rail-section" aria-label="图谱快照与卡片草稿">
       <div className="section-frame-head compact">
         <div>
-          <p className="eyebrow">快照与草稿</p>
-          <h2>Phase 5 / 6</h2>
+          <p className="eyebrow">学习反馈</p>
+          <h2>快照与卡片草稿</h2>
         </div>
       </div>
 

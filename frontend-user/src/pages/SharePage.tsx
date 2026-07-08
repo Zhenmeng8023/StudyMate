@@ -34,9 +34,9 @@ export function SharePage() {
   }, [token]);
 
   return (
-    <div className="search-workspace">
-      <section className="section-frame">
-        <p className="eyebrow">Share</p>
+    <div className="search-workspace share-workspace">
+      <section className="section-frame share-preview-card">
+        <p className="eyebrow">只读分享</p>
         <h1>{payload?.title ?? "StudyMate 分享"}</h1>
         <p className="panel-copy">{message}</p>
         {payload ? (

@@ -1,0 +1,963 @@
+/* FE-03: reader, notes and review workspaces share the studio primitives below. */
+.studio-commandbar,
+.review-focus-commandbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 62px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-xs);
+}
+
+.studio-commandbar__leading,
+.studio-commandbar__actions,
+.studio-commandbar__metrics,
+.review-focus-commandbar__leading,
+.review-focus-commandbar__stats,
+.review-focus-actions,
+.review-focus-ratings,
+.notes-review-empty-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.studio-commandbar__leading,
+.review-focus-commandbar__leading {
+  min-width: 0;
+}
+
+.studio-commandbar__actions,
+.review-focus-commandbar__stats,
+.review-focus-actions,
+.review-focus-ratings,
+.notes-review-empty-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.studio-commandbar__title,
+.review-focus-commandbar__leading > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.studio-commandbar__title span,
+.review-focus-commandbar__leading > div span,
+.studio-commandbar__metrics span,
+.studio-commandbar__version,
+.reader-stage-card__meta span,
+.notes-editor-card__head span,
+.notes-editor-card__footer > span,
+.review-focus-commandbar__eyebrow,
+.review-focus-commandbar__stats > span,
+.review-focus-card-meta,
+.review-focus-schedule,
+.review-focus-footer,
+.studio-dock-heading span,
+.notes-list-item span,
+.reader-material-item span,
+.notes-version-item small,
+.notes-source-card small,
+.notes-source-meta span,
+.review-deck-row span,
+.review-management-deck-summary span,
+.review-managed-card small {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.studio-commandbar__title strong,
+.review-focus-commandbar__leading > div strong {
+  overflow: hidden;
+  color: var(--text-0);
+  font-size: 16px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-commandbar__metrics span,
+.studio-commandbar__version,
+.notes-material-pill,
+.review-focus-commandbar__stats > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-1);
+  white-space: nowrap;
+  background: var(--surface-soft);
+}
+
+.studio-inline-message,
+.review-focus-message {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(41, 88, 70, 0.18);
+  border-radius: 10px;
+  color: var(--accent-strong);
+  font-size: 13px;
+  background: var(--accent-soft);
+}
+
+.reader-studio,
+.notes-studio,
+.review-focus {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.reader-studio__body,
+.notes-studio__body {
+  position: relative;
+  display: grid;
+  min-height: calc(100vh - 190px);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.reader-studio--sources-open.reader-studio--inspector-open .reader-studio__body,
+.notes-studio--list-open.notes-studio--inspector-open .notes-studio__body {
+  grid-template-columns: 260px minmax(0, 1fr) 344px;
+}
+
+.reader-studio--sources-open:not(.reader-studio--inspector-open) .reader-studio__body,
+.notes-studio--list-open:not(.notes-studio--inspector-open) .notes-studio__body {
+  grid-template-columns: 260px minmax(0, 1fr);
+}
+
+.reader-studio:not(.reader-studio--sources-open).reader-studio--inspector-open .reader-studio__body,
+.notes-studio:not(.notes-studio--list-open).notes-studio--inspector-open .notes-studio__body {
+  grid-template-columns: minmax(0, 1fr) 344px;
+}
+
+.reader-studio:not(.reader-studio--sources-open):not(.reader-studio--inspector-open) .reader-studio__body,
+.notes-studio:not(.notes-studio--list-open):not(.notes-studio--inspector-open) .notes-studio__body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.studio-resource-dock,
+.studio-inspector,
+.reader-stage-card,
+.notes-editor-card,
+.review-focus-stage,
+.review-management-dock {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-xs);
+}
+
+.studio-resource-dock,
+.studio-inspector {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.studio-resource-dock,
+.reader-inspector,
+.notes-inspector {
+  max-height: calc(100vh - 190px);
+}
+
+.reader-studio:not(.reader-studio--sources-open) .reader-resource-dock,
+.reader-studio:not(.reader-studio--inspector-open) .reader-inspector,
+.notes-studio:not(.notes-studio--list-open) .notes-resource-dock,
+.notes-studio:not(.notes-studio--inspector-open) .notes-inspector {
+  display: none;
+}
+
+.studio-dock-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.studio-dock-heading .eyebrow {
+  margin: 0 0 4px;
+}
+
+.studio-dock-heading h2 {
+  margin: 0;
+  color: var(--text-0);
+  font-size: 17px;
+}
+
+.studio-dock-heading span {
+  display: block;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.reader-material-list,
+.notes-list,
+.studio-inspector__body,
+.review-management-body {
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
+}
+
+.reader-material-list,
+.notes-list,
+.studio-panel-stack,
+.reader-annotation-list,
+.reader-bookmark-list,
+.studio-draft-list,
+.notes-version-list,
+.review-management-stack,
+.review-card-list,
+.review-management-form {
+  display: grid;
+  gap: 10px;
+}
+
+.reader-material-item,
+.notes-list-item,
+.review-deck-row {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text-0);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.78);
+  transition: 160ms ease;
+}
+
+.reader-material-item:hover,
+.notes-list-item:hover,
+.review-deck-row:hover,
+.reader-material-item.active,
+.notes-list-item.active,
+.review-deck-row.active {
+  border-color: rgba(41, 88, 70, 0.28);
+  background: rgba(41, 88, 70, 0.08);
+}
+
+.reader-material-item strong,
+.notes-list-item strong,
+.review-deck-row strong {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.reader-material-item p,
+.notes-list-item p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-1);
+  font-size: 12px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.reader-stage-shell,
+.notes-editor-shell {
+  min-width: 0;
+  min-height: 0;
+}
+
+.reader-stage-card,
+.notes-editor-card {
+  display: grid;
+  min-height: 100%;
+  padding: 14px;
+}
+
+.reader-stage-card {
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.reader-stage-card__meta,
+.notes-editor-card__head,
+.notes-editor-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.reader-stage-card__meta > div:first-child,
+.notes-editor-card__head > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.reader-stage-card__meta strong,
+.notes-editor-card__head strong {
+  overflow: hidden;
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reader-stage-card__chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.reader-stage-card__chips span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+}
+
+.reader-stage--studio {
+  min-height: clamp(560px, calc(100vh - 294px), 840px);
+  padding: 14px;
+  border-style: solid;
+  background: var(--surface-soft);
+}
+
+.reader-stage--studio .pdf-reader-shell,
+.reader-stage--studio .pdf-stage {
+  min-height: 100%;
+}
+
+.reader-stage--studio .pdf-stage {
+  max-height: calc(100vh - 390px);
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.reader-stage--studio .reader-embed {
+  min-height: calc(100vh - 400px);
+}
+
+.studio-inspector-tabs,
+.review-management-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.studio-inspector-tab,
+.review-management-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 9px;
+  border-radius: 8px;
+  color: var(--text-1);
+  font-size: 13px;
+  white-space: nowrap;
+  background: transparent;
+}
+
+.studio-inspector-tab.active,
+.review-management-tabs button.active {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.studio-inspector-tab em {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  color: #f7faf7;
+  font-style: normal;
+  font-size: 11px;
+  background: var(--accent);
+}
+
+.reader-annotation-composer,
+.reader-selection-preview,
+.reader-inspector-summary,
+.notes-source-card,
+.notes-source-meta,
+.notes-version-item,
+.reader-annotation-item,
+.studio-draft-card,
+.notes-review-actions,
+.reader-draft-actions,
+.review-management-deck-summary,
+.review-managed-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.reader-annotation-composer,
+.reader-draft-actions,
+.notes-review-actions {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.reader-selection-preview,
+.reader-inspector-summary,
+.notes-source-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  color: var(--accent-strong);
+  background: rgba(41, 88, 70, 0.06);
+}
+
+.reader-selection-preview > div,
+.reader-inspector-summary > div,
+.notes-source-card > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reader-selection-preview p,
+.reader-inspector-summary p,
+.notes-source-card p,
+.notes-source-meta p,
+.reader-annotation-item p,
+.review-managed-card p {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.reader-annotation-item,
+.studio-draft-card,
+.notes-source-meta,
+.notes-version-item,
+.review-management-deck-summary,
+.review-managed-card {
+  display: grid;
+  gap: 8px;
+  padding: 13px;
+}
+
+.reader-annotation-item__head,
+.notes-version-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reader-annotation-item small,
+.studio-draft-card small {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.reader-bookmark-list {
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+}
+
+.reader-bookmark-list .bookmark-chip {
+  min-height: 38px;
+  justify-content: center;
+}
+
+.studio-draft-card label,
+.review-management-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.studio-draft-card label span,
+.review-management-form label span,
+.notes-editor-fields label span {
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.notes-create-rail-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  margin: 12px 12px 0;
+  border: 1px dashed rgba(41, 88, 70, 0.34);
+  border-radius: 10px;
+  color: var(--accent-strong);
+  background: rgba(41, 88, 70, 0.04);
+}
+
+.notes-editor-card {
+  grid-template-rows: auto auto minmax(320px, 1fr) auto;
+  gap: 14px;
+}
+
+.notes-editor-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(160px, 0.6fr) minmax(130px, 0.45fr) minmax(160px, 0.65fr);
+  gap: 10px;
+}
+
+.notes-editor-fields label,
+.notes-editor-summary-field {
+  display: grid;
+  gap: 6px;
+}
+
+.notes-editor-title-field,
+.notes-editor-summary-field {
+  grid-column: span 2;
+}
+
+.notes-editor-card .rich-editor-shell {
+  min-height: 0;
+}
+
+.notes-editor-card .tiptap-editor {
+  min-height: clamp(360px, calc(100vh - 420px), 720px);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.notes-editor-card__footer {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.notes-source-card .secondary-button {
+  justify-self: start;
+  margin-top: 6px;
+}
+
+.notes-source-meta {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.notes-source-meta strong {
+  font-size: 22px;
+}
+
+.notes-source-meta p {
+  grid-column: 2;
+}
+
+.notes-version-item > div {
+  display: grid;
+  gap: 3px;
+}
+
+.notes-review-empty-actions {
+  justify-content: flex-start;
+}
+
+/* The review surface is intentionally single-task; management appears only on demand. */
+.review-focus {
+  min-height: calc(100vh - 160px);
+}
+
+.review-focus-commandbar {
+  min-height: 64px;
+}
+
+.review-focus-commandbar__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.review-focus-commandbar__stats > span {
+  gap: 5px;
+}
+
+.review-focus-commandbar__stats > span strong {
+  color: var(--text-0);
+  font-size: 15px;
+}
+
+.review-focus__body {
+  position: relative;
+  display: grid;
+  min-height: clamp(600px, calc(100vh - 280px), 860px);
+}
+
+.review-focus:not(.review-focus--management-open) .review-focus__body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.review-focus--management-open .review-focus__body {
+  grid-template-columns: minmax(0, 1fr) 356px;
+  gap: 14px;
+}
+
+.review-focus-stage {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: clamp(18px, 4vw, 46px);
+  background:
+    radial-gradient(circle at 30% 10%, rgba(41, 88, 70, 0.07), transparent 28%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(247, 248, 244, 0.94));
+}
+
+.review-focus-card-shell {
+  display: grid;
+  width: min(100%, 760px);
+  gap: 18px;
+}
+
+.review-focus-card-meta,
+.review-focus-schedule {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.review-focus-card-meta {
+  padding: 0 4px;
+}
+
+.review-focus-card {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  min-height: clamp(310px, 44vh, 480px);
+  padding: clamp(28px, 6vw, 64px);
+  border: 1px solid rgba(41, 88, 70, 0.15);
+  border-radius: 22px;
+  color: var(--text-0);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 36px rgba(32, 38, 34, 0.08);
+}
+
+.review-focus-card.is-revealed {
+  border-color: rgba(184, 130, 50, 0.28);
+  background: linear-gradient(145deg, rgba(255, 252, 245, 0.96), rgba(255, 248, 233, 0.96));
+}
+
+.review-focus-card > span {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.review-focus-card strong {
+  font-size: clamp(28px, 4vw, 46px);
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
+.review-focus-card p {
+  margin: 0;
+  color: var(--text-1);
+  line-height: 1.7;
+}
+
+.review-focus-actions {
+  justify-content: space-between;
+}
+
+.review-focus-ratings {
+  justify-content: flex-end;
+}
+
+.review-rating-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.review-rating-button span {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 11px;
+  background: var(--surface-muted);
+}
+
+.review-rating-button:hover:not(:disabled) {
+  border-color: rgba(41, 88, 70, 0.3);
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.review-rating-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.review-management-dock {
+  display: none;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.review-focus--management-open .review-management-dock {
+  display: grid;
+}
+
+.review-management-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.review-management-heading .eyebrow {
+  margin: 0 0 4px;
+}
+
+.review-management-heading h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.review-management-heading span {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.review-management-tabs {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.review-management-form {
+  padding: 2px;
+}
+
+.review-management-form--compact {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.review-management-deck-summary {
+  background: var(--accent-soft);
+}
+
+.review-managed-card {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.review-focus-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 4px;
+}
+
+@media (max-width: 1540px) {
+  .reader-studio__body,
+  .notes-studio__body {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .studio-resource-dock,
+  .studio-inspector {
+    position: absolute;
+    z-index: 25;
+    top: 0;
+    bottom: 0;
+    width: min(360px, calc(100vw - 150px));
+    max-height: none;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .studio-resource-dock {
+    left: 0;
+  }
+
+  .studio-inspector {
+    right: 0;
+  }
+
+  .reader-studio--sources-open .reader-resource-dock,
+  .reader-studio--inspector-open .reader-inspector,
+  .notes-studio--list-open .notes-resource-dock,
+  .notes-studio--inspector-open .notes-inspector {
+    display: grid;
+  }
+}
+
+@media (max-width: 1260px) {
+  .notes-editor-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .notes-editor-title-field,
+  .notes-editor-summary-field {
+    grid-column: span 2;
+  }
+
+  .review-focus--management-open .review-focus__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .review-management-dock {
+    position: absolute;
+    z-index: 28;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(380px, calc(100vw - 130px));
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+@media (max-width: 840px) {
+  .studio-commandbar,
+  .review-focus-commandbar,
+  .reader-stage-card__meta,
+  .notes-editor-card__head,
+  .notes-editor-card__footer,
+  .review-focus-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .studio-commandbar__actions,
+  .review-focus-commandbar__stats,
+  .notes-editor-card__footer .detail-actions,
+  .review-focus-actions,
+  .review-focus-ratings {
+    justify-content: flex-start;
+  }
+
+  .reader-stage-card__chips {
+    justify-content: flex-start;
+  }
+
+  .studio-resource-dock,
+  .studio-inspector,
+  .review-management-dock {
+    width: calc(100vw - 56px);
+  }
+
+  .reader-stage--studio {
+    min-height: 520px;
+  }
+
+  .reader-stage--studio .pdf-stage {
+    max-height: 540px;
+  }
+
+  .notes-editor-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .notes-editor-title-field,
+  .notes-editor-summary-field {
+    grid-column: auto;
+  }
+
+  .review-focus-stage {
+    padding: 18px;
+  }
+
+  .review-focus-card {
+    min-height: 320px;
+    padding: 30px;
+  }
+}
+
+@media (max-width: 620px) {
+  .studio-commandbar__title strong,
+  .review-focus-commandbar__leading > div strong {
+    max-width: 180px;
+  }
+
+  .studio-commandbar__metrics,
+  .studio-commandbar__version,
+  .review-focus-commandbar__stats > span {
+    display: none;
+  }
+
+  .studio-resource-dock,
+  .studio-inspector,
+  .review-management-dock {
+    left: 0;
+    right: auto;
+    width: 100%;
+  }
+
+  .reader-stage--studio {
+    min-height: 440px;
+    padding: 8px;
+  }
+
+  .reader-stage--studio .pdf-stage {
+    max-height: 480px;
+  }
+
+  .reader-stage--studio .reader-embed {
+    min-height: 440px;
+  }
+
+  .review-focus-card {
+    min-height: 300px;
+    padding: 24px;
+  }
+
+  .review-focus-card strong {
+    font-size: 26px;
+  }
+
+  .review-focus-ratings {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-rating-button {
+    justify-content: center;
+  }
+}

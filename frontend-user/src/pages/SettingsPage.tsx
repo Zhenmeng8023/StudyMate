@@ -36,9 +36,9 @@ export function SettingsPage(props: { session: AuthSession }) {
   return (
     <>
       <WorkspaceHeader
-        description="这一页先保留最需要的个人资料入口，后面再扩展通知、偏好设置、同步与导出。"
-        eyebrow="设置"
-        title="让个人资料和工作区偏好有一个稳定入口"
+        description="管理显示名称、邮箱和账户基础信息；这些设置不会改变已经沉淀的资料、笔记、图谱和复习记录。"
+        eyebrow="个人空间"
+        title="账户与学习空间"
       />
       <div className="settings-grid">
         <SectionFrame subtitle="个人资料" title={profile?.displayName || "账户信息"}>
@@ -58,10 +58,13 @@ export function SettingsPage(props: { session: AuthSession }) {
           {message ? <p className="muted-copy">{message}</p> : null}
         </SectionFrame>
 
-        <SectionFrame subtitle="后续" title="下一步会补什么">
-          <article className="placeholder-card">
-            <strong>通知、同步和导出</strong>
-            <p>这里会继续扩展阅读提醒、AI 结果通知、资料导出、偏好设置和账户安全相关配置。</p>
+        <SectionFrame subtitle="账户状态" title="学习空间说明">
+          <article className="placeholder-card settings-space-card">
+            <span className="settings-space-card__mark">学</span>
+            <div>
+              <strong>资料与学习资产</strong>
+              <p>资料、笔记、图谱和复习记录按账户边界组织。修改显示名称和邮箱不会影响已有学习内容。</p>
+            </div>
           </article>
         </SectionFrame>
       </div>

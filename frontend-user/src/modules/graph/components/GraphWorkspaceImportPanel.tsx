@@ -25,8 +25,8 @@ export function GraphWorkspaceImportPanel(props: {
     <div className="graph-rail-section">
       <div className="section-frame-head compact">
         <div>
-          <p className="eyebrow">导入与校验</p>
-          <h2>Phase 5 / 8</h2>
+          <p className="eyebrow">图谱工具</p>
+          <h2>导入与校验</h2>
         </div>
       </div>
 

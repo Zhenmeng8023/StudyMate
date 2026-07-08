@@ -1,51 +1,107 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { BookOpen, History, Layers3, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Sparkles } from "lucide-react";
 import type { AuthSession, CardDraftPayload, DeckPayload, MaterialPayload, NotePayload, NoteVersionPayload } from "../api/client";
-import { bulkCreateDeckCards, createNote, deleteNote, generateNoteCardDrafts, generateNoteGraphDrafts, listDecks, listMaterials, listNotes, listNoteVersions, restoreNoteVersion, updateNote } from "../api/client";
+import {
+  bulkCreateDeckCards,
+  createNote,
+  deleteNote,
+  generateNoteCardDrafts,
+  generateNoteGraphDrafts,
+  listDecks,
+  listMaterials,
+  listNotes,
+  listNoteVersions,
+  restoreNoteVersion,
+  updateNote
+} from "../api/client";
+import { DataState } from "../design-system/primitives";
 import { RichTextEditor } from "../modules/notes/RichTextEditor";
-import { buildCardInputsFromDrafts, createNoteDraft, displayMaterialCategory, displayMaterialDescription, displayMaterialTitle, displayNoteSummary, displayNoteTitle, formatDate, SectionFrame, stripHtml, WorkspaceHeader } from "../app/appShared";
+import {
+  buildCardInputsFromDrafts,
+  createNoteDraft,
+  displayMaterialCategory,
+  displayMaterialDescription,
+  displayMaterialTitle,
+  displayNoteSummary,
+  displayNoteTitle,
+  formatDate,
+  stripHtml
+} from "../app/appShared";
+
+type NoteInspectorTab = "source" | "history" | "review";
+
+const noteInspectorTabs: Array<{ id: NoteInspectorTab; label: string }> = [
+  { id: "source", label: "来源" },
+  { id: "history", label: "历史" },
+  { id: "review", label: "复习" }
+];
 
 export function NotesPage(props: { session: AuthSession }) {
+  const location = useLocation();
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const materialFromQuery = searchParams.get("material") || "";
   const [notes, setNotes] = useState<NotePayload[]>([]);
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
   const [decks, setDecks] = useState<DeckPayload[]>([]);
   const [versions, setVersions] = useState<NoteVersionPayload[]>([]);
   const [noteId, setNoteId] = useState("");
-  const [draft, setDraft] = useState(createNoteDraft());
+  const [draft, setDraft] = useState(() => createNoteDraft(materialFromQuery));
   const [cardDrafts, setCardDrafts] = useState<CardDraftPayload[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState("");
-  const searchParams = new URLSearchParams(useLocation().search);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [notesOpen, setNotesOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [activeInspectorTab, setActiveInspectorTab] = useState<NoteInspectorTab>("source");
 
   async function loadAll(selected?: string) {
-    const [noteItems, materialItems, deckItems] = await Promise.all([
-      listNotes(props.session),
-      listMaterials(),
-      listDecks(props.session)
-    ]);
-    setNotes(noteItems);
-    setMaterials(materialItems);
-    setDecks(deckItems);
-    setSelectedDeckId((current) => current || deckItems[0]?.id || "");
-    const nextId = selected || searchParams.get("selected") || noteItems[0]?.id || "";
-    setNoteId(nextId);
-  }
-
-  useEffect(() => {
-    void loadAll().catch(() => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const [noteItems, materialItems, deckItems] = await Promise.all([
+        listNotes(props.session),
+        listMaterials(),
+        listDecks(props.session)
+      ]);
+      setNotes(noteItems);
+      setMaterials(materialItems);
+      setDecks(deckItems);
+      setSelectedDeckId((current) => current || deckItems[0]?.id || "");
+      const nextId = selected || searchParams.get("selected") || (materialFromQuery ? "" : noteItems[0]?.id || "");
+      setNoteId(nextId);
+      if (!nextId && materialFromQuery) {
+        setDraft(createNoteDraft(materialFromQuery));
+      }
+    } catch (error) {
       setNotes([]);
       setMaterials([]);
       setDecks([]);
-    });
-  }, [props.session]);
+      setLoadError(error instanceof Error ? error.message : "加载笔记工作台失败。");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  const selectedNote = notes.find((note) => note.id === noteId) ?? notes[0] ?? null;
-  const relatedMaterial = materials.find((material) => material.id === (draft.materialId || selectedNote?.materialId || ""));
+  useEffect(() => {
+    void loadAll();
+    // Query parameters intentionally choose the initial note / source for this workspace.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.session, materialFromQuery, searchParams]);
+
+  const selectedNote = useMemo(
+    () => (noteId ? notes.find((note) => note.id === noteId) ?? null : null),
+    [notes, noteId]
+  );
+  const relatedMaterial = useMemo(
+    () => materials.find((material) => material.id === (draft.materialId || selectedNote?.materialId || "")) ?? null,
+    [draft.materialId, materials, selectedNote?.materialId]
+  );
 
   useEffect(() => {
     if (!selectedNote) {
-      setDraft(createNoteDraft());
       setVersions([]);
       setCardDrafts([]);
       return;
@@ -64,6 +120,22 @@ export function NotesPage(props: { session: AuthSession }) {
     setCardDrafts([]);
   }, [props.session, selectedNote]);
 
+  function handleStartNewNote() {
+    setNoteId("");
+    setDraft(createNoteDraft(materialFromQuery || relatedMaterial?.id || ""));
+    setVersions([]);
+    setCardDrafts([]);
+    setActiveInspectorTab("source");
+    setInspectorOpen(true);
+    setMessage("");
+  }
+
+  function handleSelectNote(nextNoteId: string) {
+    setNoteId(nextNoteId);
+    setActiveInspectorTab("source");
+    setInspectorOpen(true);
+  }
+
   async function handleCreate() {
     setBusy("create");
     setMessage("");
@@ -79,9 +151,7 @@ export function NotesPage(props: { session: AuthSession }) {
   }
 
   async function handleUpdate() {
-    if (!selectedNote) {
-      return;
-    }
+    if (!selectedNote) return;
 
     setBusy("update");
     setMessage("");
@@ -103,9 +173,7 @@ export function NotesPage(props: { session: AuthSession }) {
   }
 
   async function handleDelete() {
-    if (!selectedNote || !window.confirm("确定删除这条笔记吗？")) {
-      return;
-    }
+    if (!selectedNote || !window.confirm("确定删除这条笔记吗？")) return;
 
     setBusy("delete");
     setMessage("");
@@ -121,9 +189,7 @@ export function NotesPage(props: { session: AuthSession }) {
   }
 
   async function handleRestore(versionId: string) {
-    if (!selectedNote) {
-      return;
-    }
+    if (!selectedNote) return;
 
     setBusy(`restore-${versionId}`);
     try {
@@ -138,15 +204,15 @@ export function NotesPage(props: { session: AuthSession }) {
   }
 
   async function handleGenerateCardDrafts() {
-    if (!selectedNote) {
-      return;
-    }
+    if (!selectedNote) return;
 
     setBusy("note-drafts");
     setMessage("");
     try {
       const payload = await generateNoteCardDrafts(props.session, selectedNote.id);
       setCardDrafts(payload);
+      setActiveInspectorTab("review");
+      setInspectorOpen(true);
       setMessage(payload.length ? "已生成笔记复习草稿。" : "这条笔记暂时没有可生成的草稿。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "生成笔记草稿失败。");
@@ -156,9 +222,7 @@ export function NotesPage(props: { session: AuthSession }) {
   }
 
   async function handleGenerateGraphDrafts() {
-    if (!selectedNote) {
-      return;
-    }
+    if (!selectedNote) return;
 
     setBusy("note-graph-drafts");
     setMessage("");
@@ -173,9 +237,7 @@ export function NotesPage(props: { session: AuthSession }) {
   }
 
   async function handleCommitCardDrafts() {
-    if (!selectedDeckId || cardDrafts.length === 0) {
-      return;
-    }
+    if (!selectedDeckId || cardDrafts.length === 0) return;
 
     setBusy("note-commit");
     setMessage("");
@@ -198,195 +260,280 @@ export function NotesPage(props: { session: AuthSession }) {
   }
 
   function handleDraftChange(draftId: string, field: "front" | "back", value: string) {
-    setCardDrafts((current) =>
-      current.map((item) => (item.id === draftId ? { ...item, [field]: value } : item))
-    );
+    setCardDrafts((current) => current.map((item) => (item.id === draftId ? { ...item, [field]: value } : item)));
   }
 
+  const editorTitle = selectedNote ? displayNoteTitle(selectedNote) : "新建笔记";
+
   return (
-    <>
-      <WorkspaceHeader
-        actions={
-          <div className="header-actions">
-            <button className="secondary-button" onClick={() => setDraft(createNoteDraft(relatedMaterial?.id ?? ""))} type="button">
-              清空草稿
-            </button>
-            <button className="primary-button" disabled={busy === "create"} onClick={handleCreate} type="button">
-              新建笔记
-            </button>
-          </div>
-        }
-        description="笔记页现在不只是一个文本框了。左侧是笔记清单，中间是富文本编辑器，右侧挂版本、来源资料和后续图谱入口。"
-        eyebrow="笔记"
-        title="把阅读后的内容沉淀成可复用的笔记"
-      />
-
-      <div className="notes-workspace">
-        <SectionFrame slim subtitle="笔记列表" title="最近编辑">
-          <div className="list-stack">
-            {notes.map((note) => (
-              <button
-                className={selectedNote?.id === note.id ? "list-row active" : "list-row"}
-                key={note.id}
-                onClick={() => setNoteId(note.id)}
-                type="button"
-              >
-                <div>
-                  <strong>{displayNoteTitle(note)}</strong>
-                  <p>{displayNoteSummary(note)}</p>
-                </div>
-                <span>v{note.versionNumber}</span>
-              </button>
-            ))}
-          </div>
-        </SectionFrame>
-
-        <div className="page-stack">
-          <SectionFrame
-            action={
-              <div className="detail-actions">
-                {selectedNote ? (
-                  <button className="secondary-button" disabled={busy === "delete"} onClick={handleDelete} type="button">
-                    删除
-                  </button>
-                ) : null}
-                <button
-                  className="secondary-button"
-                  disabled={!selectedNote || busy === "note-drafts"}
-                  onClick={() => void handleGenerateCardDrafts()}
-                  type="button"
-                >
-                  生成复习草稿
-                </button>
-                <button
-                  className="secondary-button"
-                  disabled={!selectedNote || busy === "note-graph-drafts"}
-                  onClick={() => void handleGenerateGraphDrafts()}
-                  type="button"
-                >
-                  生成图谱变更
-                </button>
-                <button className="primary-button" disabled={busy === "update"} onClick={handleUpdate} type="button">
-                  保存当前版本
-                </button>
-              </div>
-            }
-            subtitle="编辑区"
-            title={selectedNote ? displayNoteTitle(selectedNote) : "新建笔记"}
+    <section
+      className={[
+        "notes-studio",
+        notesOpen ? "notes-studio--list-open" : "",
+        inspectorOpen ? "notes-studio--inspector-open" : ""
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <header className="studio-commandbar notes-commandbar">
+        <div className="studio-commandbar__leading">
+          <button
+            aria-expanded={notesOpen}
+            aria-label={notesOpen ? "关闭笔记列表" : "打开笔记列表"}
+            className="icon-button"
+            onClick={() => setNotesOpen((current) => !current)}
+            type="button"
           >
-            <div className="form-stack">
-              <label>
+            {notesOpen ? <PanelLeftClose size={17} /> : <PanelLeftOpen size={17} />}
+          </button>
+          <div className="studio-commandbar__title">
+            <span>笔记工作台</span>
+            <strong title={editorTitle}>{editorTitle}</strong>
+          </div>
+          {selectedNote ? <span className="studio-commandbar__version">v{selectedNote.versionNumber}</span> : <span className="studio-commandbar__version">草稿</span>}
+        </div>
+        <div className="studio-commandbar__actions">
+          <button className="secondary-button" onClick={handleStartNewNote} type="button">
+            <Plus size={16} />
+            <span>新建</span>
+          </button>
+          {selectedNote ? (
+            <button className="primary-button" disabled={busy === "update"} onClick={() => void handleUpdate()} type="button">
+              保存版本
+            </button>
+          ) : (
+            <button className="primary-button" disabled={busy === "create"} onClick={() => void handleCreate()} type="button">
+              创建笔记
+            </button>
+          )}
+          <button
+            aria-expanded={inspectorOpen}
+            aria-label={inspectorOpen ? "关闭笔记检查器" : "打开笔记检查器"}
+            className="icon-button"
+            onClick={() => setInspectorOpen((current) => !current)}
+            type="button"
+          >
+            {inspectorOpen ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
+          </button>
+        </div>
+      </header>
+
+      {message ? <p className="studio-inline-message" role="status">{message}</p> : null}
+
+      <div className="notes-studio__body">
+        <aside className="studio-resource-dock notes-resource-dock" aria-label="笔记列表">
+          <header className="studio-dock-heading">
+            <div>
+              <p className="eyebrow">笔记库</p>
+              <h2>最近编辑</h2>
+              <span>{notes.length} 条笔记</span>
+            </div>
+            <button aria-label="关闭笔记列表" className="icon-button" onClick={() => setNotesOpen(false)} type="button">
+              <PanelLeftClose size={16} />
+            </button>
+          </header>
+          <button className="notes-create-rail-action" onClick={handleStartNewNote} type="button">
+            <Plus size={16} /> 新建空白笔记
+          </button>
+          <div className="notes-list">
+            {loading ? (
+              <DataState description="正在读取你的笔记、资料和复习卡组。" kind="loading" title="加载笔记中" />
+            ) : loadError ? (
+              <DataState
+                action={<button className="secondary-button" onClick={() => void loadAll()} type="button">重新加载</button>}
+                description={loadError}
+                kind="error"
+                title="笔记暂时不可用"
+              />
+            ) : notes.length ? (
+              notes.map((note) => {
+                const selected = selectedNote?.id === note.id;
+                return (
+                  <button
+                    aria-current={selected ? "page" : undefined}
+                    className={selected ? "notes-list-item active" : "notes-list-item"}
+                    key={note.id}
+                    onClick={() => handleSelectNote(note.id)}
+                    type="button"
+                  >
+                    <strong>{displayNoteTitle(note)}</strong>
+                    <p>{displayNoteSummary(note)}</p>
+                    <span>v{note.versionNumber} · {formatDate(note.updatedAt)}</span>
+                  </button>
+                );
+              })
+            ) : (
+              <DataState description="新建第一条笔记，把阅读与想法沉淀成可继续组织的内容。" kind="empty" title="还没有笔记" />
+            )}
+          </div>
+        </aside>
+
+        <main className="notes-editor-shell" aria-label="笔记编辑器">
+          <section className="notes-editor-card">
+            <div className="notes-editor-card__head">
+              <div>
+                <span>{selectedNote ? "正在编辑" : "新建草稿"}</span>
+                <strong>{editorTitle}</strong>
+              </div>
+              {relatedMaterial ? <span className="notes-material-pill">来源：{displayMaterialTitle(relatedMaterial)}</span> : null}
+            </div>
+
+            <div className="notes-editor-fields">
+              <label className="notes-editor-title-field">
                 <span>标题</span>
-                <input onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} value={draft.title} />
+                <input aria-label="笔记标题" onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} placeholder="为这条笔记起一个标题" value={draft.title} />
               </label>
               <label>
-                <span>摘要</span>
-                <input onChange={(event) => setDraft((current) => ({ ...current, summary: event.target.value }))} value={draft.summary} />
-              </label>
-              <label>
-                <span>文件夹</span>
-                <input onChange={(event) => setDraft((current) => ({ ...current, folderName: event.target.value }))} value={draft.folderName} />
-              </label>
-              <label>
-                <span>关联资料</span>
-                <select
-                  className="select-field"
-                  onChange={(event) => setDraft((current) => ({ ...current, materialId: event.target.value }))}
-                  value={draft.materialId}
-                >
-                  <option value="">暂不关联</option>
+                <span>资料来源</span>
+                <select aria-label="资料来源" onChange={(event) => setDraft((current) => ({ ...current, materialId: event.target.value }))} value={draft.materialId}>
+                  <option value="">暂不关联资料</option>
                   {materials.map((material) => (
-                    <option key={material.id} value={material.id}>
-                      {displayMaterialTitle(material)}
-                    </option>
+                    <option key={material.id} value={material.id}>{displayMaterialTitle(material)}</option>
                   ))}
                 </select>
               </label>
               <label>
+                <span>文件夹</span>
+                <input aria-label="文件夹" onChange={(event) => setDraft((current) => ({ ...current, folderName: event.target.value }))} value={draft.folderName} />
+              </label>
+              <label>
                 <span>标签</span>
                 <input
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      tags: event.target.value.split(",").map((item) => item.trim()).filter(Boolean)
-                    }))
-                  }
+                  aria-label="标签"
+                  onChange={(event) => setDraft((current) => ({ ...current, tags: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) }))}
+                  placeholder="用逗号分隔"
                   value={draft.tags.join(", ")}
                 />
               </label>
+              <label className="notes-editor-summary-field">
+                <span>摘要</span>
+                <input aria-label="摘要" onChange={(event) => setDraft((current) => ({ ...current, summary: event.target.value }))} placeholder="用一句话说明这条笔记的核心内容" value={draft.summary} />
+              </label>
             </div>
+
             <RichTextEditor
               onChange={(value) => setDraft((current) => ({ ...current, content: value }))}
               placeholder="开始写下你的阅读理解、问题和待整理线索..."
               value={draft.content}
             />
-            {message ? <p className="muted-copy">{message}</p> : null}
-          </SectionFrame>
 
-          <div className="main-grid">
-            <SectionFrame slim subtitle="来源资料" title="当前关联">
-              {relatedMaterial ? (
-                <article className="profile-summary">
-                  <strong>{displayMaterialTitle(relatedMaterial)}</strong>
-                  <span>{displayMaterialDescription(relatedMaterial)}</span>
-                  <span>{displayMaterialCategory(relatedMaterial)}</span>
-                  <Link className="secondary-button" to={`/reader/${relatedMaterial.id}`}>
-                    回到阅读器
-                  </Link>
-                </article>
-              ) : (
-                <article className="placeholder-card">
-                  <strong>暂未关联资料</strong>
-                  <p>你可以在上方选择一份资料，让笔记和阅读状态形成回路。</p>
-                </article>
-              )}
-            </SectionFrame>
+            <footer className="notes-editor-card__footer">
+              <span>{selectedNote ? `最近更新：${formatDate(selectedNote.updatedAt)}` : "草稿尚未保存"}</span>
+              <div className="detail-actions">
+                {selectedNote ? (
+                  <button className="secondary-button danger" disabled={busy === "delete"} onClick={() => void handleDelete()} type="button">删除</button>
+                ) : null}
+                {selectedNote ? (
+                  <button className="primary-button" disabled={busy === "update"} onClick={() => void handleUpdate()} type="button">保存当前版本</button>
+                ) : (
+                  <button className="primary-button" disabled={busy === "create"} onClick={() => void handleCreate()} type="button">创建笔记</button>
+                )}
+              </div>
+            </footer>
+          </section>
+        </main>
 
-            <div className="page-stack">
-              <SectionFrame slim subtitle="版本" title="历史记录">
-                <div className="list-stack dense">
-                  {versions.map((version) => (
-                    <div className="list-row compact" key={version.id}>
-                      <div>
-                        <strong>v{version.versionNumber}</strong>
-                        <p>{version.title}</p>
-                      </div>
-                      <button className="secondary-button" disabled={busy === `restore-${version.id}`} onClick={() => handleRestore(version.id)} type="button">
-                        恢复
-                      </button>
+        <aside className="studio-inspector notes-inspector" aria-label="笔记检查器">
+          <header className="studio-dock-heading">
+            <div>
+              <p className="eyebrow">笔记检查器</p>
+              <h2>{noteInspectorTabs.find((tab) => tab.id === activeInspectorTab)?.label}</h2>
+              <span>保留来源、版本与复习草稿，不打断编辑节奏。</span>
+            </div>
+            <button aria-label="关闭笔记检查器" className="icon-button" onClick={() => setInspectorOpen(false)} type="button">
+              <PanelRightClose size={16} />
+            </button>
+          </header>
+          <nav className="studio-inspector-tabs" aria-label="笔记检查器分类">
+            {noteInspectorTabs.map((tab) => (
+              <button
+                aria-current={activeInspectorTab === tab.id ? "page" : undefined}
+                className={activeInspectorTab === tab.id ? "studio-inspector-tab active" : "studio-inspector-tab"}
+                key={tab.id}
+                onClick={() => setActiveInspectorTab(tab.id)}
+                type="button"
+              >
+                {tab.label}
+                {tab.id === "history" && versions.length ? <em>{versions.length}</em> : null}
+                {tab.id === "review" && cardDrafts.length ? <em>{cardDrafts.length}</em> : null}
+              </button>
+            ))}
+          </nav>
+
+          <div className="studio-inspector__body notes-inspector__body">
+            {activeInspectorTab === "source" ? (
+              <div className="studio-panel-stack">
+                {relatedMaterial ? (
+                  <article className="notes-source-card">
+                    <BookOpen size={19} />
+                    <div>
+                      <span>当前关联资料</span>
+                      <strong>{displayMaterialTitle(relatedMaterial)}</strong>
+                      <p>{displayMaterialDescription(relatedMaterial)}</p>
+                      <small>{displayMaterialCategory(relatedMaterial)}</small>
+                      <Link className="secondary-button" to={`/reader/${relatedMaterial.id}`}>回到阅读器</Link>
                     </div>
-                  ))}
-                </div>
-              </SectionFrame>
-
-              <SectionFrame slim subtitle="Phase 6 / 7" title="复习草稿">
-                {cardDrafts.length ? (
-                  <div className="page-stack">
-                    <div className="graph-form-stack">
-                      <label>
+                  </article>
+                ) : (
+                  <DataState
+                    description="在编辑器中选择一份资料，笔记就能回到原始阅读上下文。"
+                    kind="empty"
+                    title="暂未关联资料"
+                  />
+                )}
+                {selectedNote ? (
+                  <article className="notes-source-meta">
+                    <span>笔记版本</span>
+                    <strong>v{selectedNote.versionNumber}</strong>
+                    <span>标签</span>
+                    <p>{draft.tags.length ? draft.tags.join(" · ") : "尚未设置标签"}</p>
+                  </article>
+                ) : null}
+              </div>
+            ) : activeInspectorTab === "history" ? (
+              <div className="studio-panel-stack">
+                {selectedNote && versions.length ? (
+                  <div className="notes-version-list">
+                    {versions.map((version) => (
+                      <article className="notes-version-item" key={version.id}>
+                        <div>
+                          <strong>v{version.versionNumber}</strong>
+                          <span>{version.title || "未命名笔记"}</span>
+                          <small>{formatDate(version.createdAt)}</small>
+                        </div>
+                        <button className="secondary-button" disabled={busy === `restore-${version.id}`} onClick={() => void handleRestore(version.id)} type="button">
+                          <History size={15} /> 恢复
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <DataState
+                    description={selectedNote ? "保存笔记后，历史版本会在这里保留。" : "先创建或选择一条笔记，才能查看版本历史。"}
+                    kind="empty"
+                    title="还没有历史记录"
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="studio-panel-stack">
+                {!selectedNote ? (
+                  <DataState description="先创建并保存笔记，才能生成可确认的复习和图谱草稿。" kind="empty" title="保存笔记后继续" />
+                ) : cardDrafts.length ? (
+                  <>
+                    <section className="notes-review-actions">
+                      <label className="form-stack">
                         <span>写入 Deck</span>
-                        <select onChange={(event) => setSelectedDeckId(event.target.value)} value={selectedDeckId}>
+                        <select aria-label="写入 Deck" onChange={(event) => setSelectedDeckId(event.target.value)} value={selectedDeckId}>
                           <option value="">请选择一个 deck</option>
-                          {decks.map((deck) => (
-                            <option key={deck.id} value={deck.id}>
-                              {deck.title}
-                            </option>
-                          ))}
+                          {decks.map((deck) => <option key={deck.id} value={deck.id}>{deck.title}</option>)}
                         </select>
                       </label>
-                      <button
-                        className="secondary-button"
-                        disabled={!selectedDeckId || busy === "note-commit"}
-                        onClick={() => void handleCommitCardDrafts()}
-                        type="button"
-                      >
-                        写入复习系统
-                      </button>
-                    </div>
-
-                    <div className="graph-card-draft-list">
+                      <button className="primary-button" disabled={!selectedDeckId || busy === "note-commit"} onClick={() => void handleCommitCardDrafts()} type="button">写入复习系统</button>
+                    </section>
+                    <div className="studio-draft-list">
                       {cardDrafts.map((item) => (
-                        <article className="graph-card-draft" key={item.id}>
+                        <article className="studio-draft-card" key={item.id}>
                           <strong>{item.sourceLabel || "笔记草稿"}</strong>
                           <label>
                             <span>问题</span>
@@ -400,23 +547,34 @@ export function NotesPage(props: { session: AuthSession }) {
                         </article>
                       ))}
                     </div>
-                  </div>
+                  </>
                 ) : decks.length ? (
-                  <article className="graph-meta-card muted">
-                    <strong>先生成草稿</strong>
-                    <p>这块会承接从当前笔记提取出的问答卡片。你可以先保存笔记，再生成并确认写入 deck。</p>
-                  </article>
+                  <DataState
+                    action={
+                      <div className="notes-review-empty-actions">
+                        <button className="primary-button" disabled={busy === "note-drafts"} onClick={() => void handleGenerateCardDrafts()} type="button">生成复习草稿</button>
+                        <button className="secondary-button" disabled={busy === "note-graph-drafts"} onClick={() => void handleGenerateGraphDrafts()} type="button">
+                          <Sparkles size={16} /> 生成图谱变更
+                        </button>
+                      </div>
+                    }
+                    description="草稿会先留在这里供你确认，再写入复习系统或 AI 工作台。"
+                    kind="empty"
+                    title="还没有待确认草稿"
+                  />
                 ) : (
-                  <article className="graph-meta-card muted">
-                    <strong>Deck 尚未准备好</strong>
-                    <p>先去复习页创建一个 deck，这里就能把笔记草稿直接写进去。</p>
-                  </article>
+                  <DataState
+                    action={<Link className="primary-button" to="/review"><Layers3 size={16} /> 创建卡组</Link>}
+                    description="先建立一个 deck，再将笔记中的关键内容转成复习卡片。"
+                    kind="empty"
+                    title="Deck 尚未准备好"
+                  />
                 )}
-              </SectionFrame>
-            </div>
+              </div>
+            )}
           </div>
-        </div>
+        </aside>
       </div>
-    </>
+    </section>
   );
 }

@@ -206,12 +206,12 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
             </button>
           </div>
         }
-        description="这一版先把资料库做成真正可工作的三栏结构：左侧筛选，中间列表，右侧详情和编辑动作。未实现的高级能力先留位。"
+        description="集中管理资料、附件和阅读入口；选择一份资料后，在右侧完成阅读、收藏、评分和基础信息维护。"
         eyebrow="资料库"
-        title="把资料管理、阅读入口和编辑动作放到一张桌面上"
+        title="你的学习资料库"
       />
 
-      <div className="library-workspace">
+      <div className="library-workspace materials-library-workspace">
         <SectionFrame slim subtitle="筛选" title="定位资料">
           <div className="filter-stack">
             <label className="search-field inset">
@@ -224,7 +224,7 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
             </label>
             <div className="chip-row">
               <span className="chip">公开资料 {materials.length}</span>
-              <span className="chip muted">审批仍走管理端</span>
+              <span className="chip muted">可公开浏览</span>
             </div>
             <div className="sidebar-action-list">
               {quickActions.map((item) => (

@@ -26,6 +26,8 @@ import type {
 import type { GraphWorkspaceSaveState } from "../state/types";
 import type { GraphNodeCreationType, GraphNodeTypeOption } from "../lib/graphNodeTypes";
 
+export type GraphWorkspaceResourceTab = "graphs" | "sources" | "templates";
+
 export function GraphWorkspaceHeader(props: {
   graphDetail: GraphDetailPayload | null;
   onCreateGraph: () => void;
@@ -40,7 +42,7 @@ export function GraphWorkspaceHeader(props: {
         <p className="eyebrow">图谱画布</p>
         <h1>把资料、笔记和复习线索组织到同一张学习地图里</h1>
         <p className="header-copy">
-          当前工作台已经跨到图谱产品化阶段：支持分组、搜索定位、快照恢复、Markdown/Mermaid/JSON 导入、SVG/PNG/JSON 导出和卡片草稿生成。
+          把资料、笔记和复习线索放进同一张可追溯的知识画布。
         </p>
       </div>
       <div className="header-actions">
@@ -61,6 +63,7 @@ export function GraphWorkspaceHeader(props: {
 }
 
 export function GraphWorkspaceSourceRail(props: {
+  activeTab?: GraphWorkspaceResourceTab;
   diagramTemplates: DiagramTemplatePayload[];
   graphDetail: GraphDetailPayload | null;
   graphs: GraphSummaryPayload[];
@@ -71,9 +74,11 @@ export function GraphWorkspaceSourceRail(props: {
   onApplyTemplate: (template: DiagramTemplatePayload) => void;
   onOpenGraph: (graphId: string) => void;
 }) {
+  const activeTab = props.activeTab ?? "all";
+
   return (
-    <section className="graph-rail">
-      <div className="graph-rail-section">
+    <section className="graph-rail" data-resource-tab={activeTab}>
+      {(activeTab === "all" || activeTab === "graphs") ? <div className="graph-rail-section">
         <div className="section-frame-head compact">
           <div>
             <p className="eyebrow">图谱列表</p>
@@ -93,9 +98,9 @@ export function GraphWorkspaceSourceRail(props: {
             </button>
           ))}
         </div>
-      </div>
+      </div> : null}
 
-      <div className="graph-rail-section">
+      {(activeTab === "all" || activeTab === "sources") ? <div className="graph-rail-section">
         <div className="section-frame-head compact">
           <div>
             <p className="eyebrow">来源节点</p>
@@ -127,9 +132,9 @@ export function GraphWorkspaceSourceRail(props: {
             </button>
           ))}
         </div>
-      </div>
+      </div> : null}
 
-      <div className="graph-rail-section">
+      {(activeTab === "all" || activeTab === "templates") ? <div className="graph-rail-section">
         <div className="section-frame-head compact">
           <div>
             <p className="eyebrow">学习模板</p>
@@ -151,7 +156,7 @@ export function GraphWorkspaceSourceRail(props: {
             </button>
           ))}
         </div>
-      </div>
+      </div> : null}
     </section>
   );
 }

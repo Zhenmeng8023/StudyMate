@@ -169,7 +169,7 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
           <p className="eyebrow">全站搜索</p>
           <h1>{keyword ? `"${keyword}"` : "输入关键词开始搜索"}</h1>
           <p className="header-copy">
-            v1 搜索通过后端 MySQL fallback 返回分组结果；登录后会附带你的私有笔记、图谱和卡片。
+            按类型汇总资料、社区、笔记、图谱和卡片；登录后会包含你有权限访问的个人学习资产。
           </p>
         </div>
       </header>
@@ -206,7 +206,7 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
               ))}
             </div>
             <p className="panel-copy">
-              当前筛选：{filterSummary}。每组当前批次最多拉取 {searchFetchLimit} 条，并按每页 {groupPageSize} 条切换。
+              当前筛选：{filterSummary}。结果按内容类型分组，方便快速切换回对应学习场景。
             </p>
           </div>
         </section>

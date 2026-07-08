@@ -17,8 +17,7 @@ export function AuthLead() {
         <p className="eyebrow">学习闭环</p>
         <h1>让阅读、整理、组织和复习发生在同一张工作台里。</h1>
         <p>
-          现在已经接通资料库、阅读器和笔记系统的主链路。图谱、复习和 AI
-          学伴先用高质量占位承接，后面会沿这套壳层继续补齐。
+          从资料阅读、批注和笔记开始，再把线索组织到图谱并进入复习；每一步都围绕同一份个人学习资产展开。
         </p>
       </div>
       <div className="auth-feature-list">
@@ -28,11 +27,11 @@ export function AuthLead() {
         </article>
         <article>
           <strong>统一工作区</strong>
-          <span>不再把阅读、笔记、图谱和社区拆成几张零散页面，而是统一在一个壳层里工作。</span>
+          <span>阅读、笔记、图谱和复习采用相互衔接的工作区，而不是零散的功能入口。</span>
         </article>
         <article>
-          <strong>为后续图谱留位</strong>
-          <span>图谱页已经按核心工作区去布局，等下一阶段直接接真实画布能力。</span>
+          <strong>让知识连接起来</strong>
+          <span>把资料、笔记和复习卡片放到同一张图谱中，关系与来源都可以继续追溯。</span>
         </article>
       </div>
     </section>

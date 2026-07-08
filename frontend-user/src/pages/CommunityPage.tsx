@@ -13,11 +13,11 @@ export function CommunityPage() {
   return (
     <>
       <WorkspaceHeader
-        description="社区先继续承接真实的公开内容列表，后面再接回发帖、评论、点赞和收藏的重设计界面。"
-        eyebrow="社区"
-        title="把学习内容的公开分享留在统一风格里"
+        description="浏览来自学习者的资料、观点和知识整理成果；从有价值的分享继续展开自己的学习路径。"
+        eyebrow="学习社区"
+        title="发现值得继续讨论的学习内容"
       />
-      <div className="community-layout">
+      <div className="community-layout community-workspace">
         <SectionFrame slim subtitle="视图" title="当前入口">
           <div className="list-stack dense">
             <div className="quiet-action">
@@ -26,15 +26,19 @@ export function CommunityPage() {
             </div>
             <div className="quiet-action">
               <strong>问答区</strong>
-              <small>后面会把问题、回答和参考资料挂到同一条讨论链路上。</small>
+              <small>按主题浏览分享内容，并保留清晰的作者、时间与互动线索。</small>
             </div>
           </div>
         </SectionFrame>
 
         <SectionFrame subtitle="动态" title="最新分享">
+          <div className="community-feed-toolbar">
+            <span>公开分享</span>
+            <span>{posts.length} 条内容</span>
+          </div>
           <div className="list-stack">
-            {posts.map((post) => (
-              <article className="story-card" key={post.id}>
+            {posts.length ? posts.map((post) => (
+              <article className="story-card community-post-card" key={post.id}>
                 <div className="story-card-head">
                   <strong>{displayPostTitle(post)}</strong>
                   <span>{formatDate(post.createdAt)}</span>
@@ -46,14 +50,19 @@ export function CommunityPage() {
                   <span>评论 {post.commentsCount}</span>
                 </div>
               </article>
-            ))}
+            )) : (
+              <article className="placeholder-card community-empty-card">
+                <strong>社区还没有公开分享</strong>
+                <p>新的资料推荐、知识整理和学习讨论会出现在这里。</p>
+              </article>
+            )}
           </div>
         </SectionFrame>
 
-        <SectionFrame slim subtitle="后续规划" title="下一步">
+        <SectionFrame slim subtitle="社区指南" title="内容说明">
           <article className="placeholder-card">
-            <strong>后面会接回更完整的发帖体验</strong>
-            <p>包括分类、封面、资料引用卡片、评论层级和运营推荐位，风格与资料库保持统一。</p>
+            <strong>让分享回到学习目标</strong>
+            <p>资料引用、讨论和收藏会围绕可追溯的学习来源呈现，便于后续复盘与延伸阅读。</p>
           </article>
         </SectionFrame>
       </div>

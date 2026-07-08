@@ -4,3 +4,9 @@
 @import "./styles/reader-notes.css";
 @import "./styles/search-review.css";
 @import "./styles/responsive.css";
+@import "./styles/layouts.css";
+@import "./styles/graph-canvas.css";
+
+@import "./styles/studio-workspaces.css";
+
+@import "./styles/ui-redesign.css";
