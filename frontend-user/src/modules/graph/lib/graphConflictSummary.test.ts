@@ -5,6 +5,7 @@ import {
   applyGraphConflictResolutionSuggestions,
   buildGraphConflictBundleArtifact,
   buildGraphConflictObjectDetails,
+  buildGraphConflictResolutionBlockingIssueSummary,
   buildGraphConflictResolutionDrafts,
   buildGraphConflictResolutionOutcomeMessage,
   buildGraphConflictResolutionSuggestionOutcomeMessage,
@@ -648,7 +649,7 @@ describe("graphConflictSummary", () => {
   it("builds a readable batch suggestion outcome message when blockers are cleared", () => {
     expect(
       buildGraphConflictResolutionSuggestionOutcomeMessage({
-        blockingIssueCount: 0,
+        blockingIssues: [],
         suggestions: [
           {
             choice: "keep-local",
@@ -670,7 +671,20 @@ describe("graphConflictSummary", () => {
   it("builds a readable batch suggestion outcome message when blockers remain", () => {
     expect(
       buildGraphConflictResolutionSuggestionOutcomeMessage({
-        blockingIssueCount: 2,
+        blockingIssues: [
+          {
+            message: "连线“Local edge”会引用未保留的节点，请先同步保留相关节点或改为保留服务端。",
+            ruleType: "dangling_edge",
+            severity: "error",
+            targetId: "edge-local"
+          },
+          {
+            message: "分组“Local group”仍引用未保留的节点，请先同步保留相关节点或改为保留服务端。",
+            ruleType: "invalid_group_node",
+            severity: "error",
+            targetId: "group-local"
+          }
+        ],
         suggestions: [
           {
             choice: "keep-local",
@@ -680,7 +694,34 @@ describe("graphConflictSummary", () => {
           }
         ]
       })
-    ).toBe("已批量标记 1 条联动取舍建议（保留本地 1 项），但仍有 2 个依赖问题待处理，请继续调整后再应用");
+    ).toBe(
+      "已批量标记 1 条联动取舍建议（保留本地 1 项），但仍有 2 个依赖问题待处理：edge-local、group-local，请继续调整后再应用"
+    );
+  });
+
+  it("builds a concise blocking issue summary with a remainder count", () => {
+    expect(
+      buildGraphConflictResolutionBlockingIssueSummary([
+        {
+          message: "edge-local",
+          ruleType: "dangling_edge",
+          severity: "error",
+          targetId: "edge-local"
+        },
+        {
+          message: "group-local",
+          ruleType: "invalid_group_node",
+          severity: "error",
+          targetId: "group-local"
+        },
+        {
+          message: "node-local",
+          ruleType: "invalid_node_size",
+          severity: "error",
+          targetId: "node-local"
+        }
+      ])
+    ).toBe("edge-local、group-local 等 3 项");
   });
 
   it("builds a keep-latest suggestion for invalid local node sizes", () => {

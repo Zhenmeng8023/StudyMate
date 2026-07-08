@@ -1,3 +1,30 @@
+## 2026-07-09 01:30:30 +08:00 | v1.1.0-alpha.103 | 推进 WB-032 阻断差异解释子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“批量取舍反馈解释”基础上，把“仍有阻断”这件事继续从只有数量提示推进到“知道还卡在哪些对象上”的更细粒度解释。
+- 本轮目标是在图谱 Inspector 的批量联动取舍反馈中，当阻断尚未完全解除时，不只告诉用户“还剩几个依赖问题”，还要给出一段精简的剩余阻断对象摘要，帮助用户快速判断下一步该继续调哪些对象。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionBlockingIssueSummary(...)`，把剩余阻断对象压缩成可复用的短摘要，默认展示前 2 个 target，并在超出时附带总数。
+- 更新 `buildGraphConflictResolutionSuggestionOutcomeMessage(...)`，从只接收阻断数量改为接收完整阻断列表；当阻断仍存在时，反馈文案现在会显式附带类似 `edge-local、group-local 等 3 项` 的对象摘要。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让批量取舍反馈改为传入“批量标记后的真实剩余阻断列表”，而不是只传数字。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，补齐 helper 级回归，锁定“阻断未解除时会返回对象摘要”的行为；并回归 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx` 与 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`，确保已解除阻断路径不回退。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“批量取舍反馈会指出剩余阻断对象摘要”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在不只会告诉用户“还剩几个阻断”，也会在批量联动取舍后给出精简的剩余阻断对象摘要，让下一步调整目标更明确。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的对象联动策略、覆盖更多冲突类型的批量取舍辅助，以及把这种阻断摘要进一步扩展到真正应用取舍前的最终预检反馈。
+
 ## 2026-07-09 01:26:28 +08:00 | v1.1.0-alpha.102 | 推进 WB-032 批量取舍反馈解释子步骤
 ### 任务内容
 

@@ -1053,20 +1053,20 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       latestHeadDetails: latestHeadConflictDetails,
       selections: nextSelections
     });
-    const nextBlockingIssueCount =
+    const nextBlockingIssues =
       graphDetail && latestConflictDetail && nextDrafts.length > 0
         ? validateGraphConflictResolutionDrafts({
             current: graphDetail,
             drafts: nextDrafts,
             latestHead: latestConflictDetail
-          }).blockingIssues.length
-        : conflictResolutionBlockingIssues.length;
+          }).blockingIssues
+        : conflictResolutionBlockingIssues;
 
     setConflictResolutionSelections(nextSelections);
     setManualMergeDeferred(true);
     setWorkspaceStatusMessage(
       buildGraphConflictResolutionSuggestionOutcomeMessage({
-        blockingIssueCount: nextBlockingIssueCount,
+        blockingIssues: nextBlockingIssues,
         suggestions: conflictResolutionSuggestions
       }),
       {

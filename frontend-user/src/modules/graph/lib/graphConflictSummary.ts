@@ -183,7 +183,7 @@ export function buildGraphConflictResolutionOutcomeMessage(drafts: GraphConflict
 }
 
 export function buildGraphConflictResolutionSuggestionOutcomeMessage(input: {
-  blockingIssueCount: number;
+  blockingIssues: GraphConflictResolutionValidationIssue[];
   suggestions: GraphConflictResolutionSuggestion[];
 }) {
   if (!input.suggestions.length) {
@@ -202,11 +202,31 @@ export function buildGraphConflictResolutionSuggestionOutcomeMessage(input: {
     ? `已批量标记 ${input.suggestions.length} 条联动取舍建议（${parts.join("，")}）`
     : `已批量标记 ${input.suggestions.length} 条联动取舍建议`;
 
-  if (input.blockingIssueCount > 0) {
-    return `${summary}，但仍有 ${input.blockingIssueCount} 个依赖问题待处理，请继续调整后再应用`;
+  if (input.blockingIssues.length > 0) {
+    return `${summary}，但仍有 ${input.blockingIssues.length} 个依赖问题待处理：${buildGraphConflictResolutionBlockingIssueSummary(input.blockingIssues)}，请继续调整后再应用`;
   }
 
   return `${summary}，当前已解除依赖阻断，可继续应用已标记取舍`;
+}
+
+export function buildGraphConflictResolutionBlockingIssueSummary(
+  issues: GraphConflictResolutionValidationIssue[],
+  limit = 2
+) {
+  if (!issues.length) {
+    return "无阻断问题";
+  }
+
+  const labels = issues
+    .slice(0, limit)
+    .map((issue) => issue.targetId?.trim() || issue.ruleType)
+    .filter(Boolean);
+
+  if (issues.length <= limit) {
+    return labels.join("、");
+  }
+
+  return `${labels.join("、")} 等 ${issues.length} 项`;
 }
 
 export function applyGraphConflictResolutionDrafts(input: {
