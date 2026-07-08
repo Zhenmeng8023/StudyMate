@@ -417,7 +417,7 @@
   - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
   - `npm run verify:docs`
 - 后续待续：
-- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成；优先考虑更完整的对象联动策略、更多冲突类型的批量取舍辅助，以及把这类已能解释“已标记数量 + 代表对象 + 未标记默认回退 + 可读阻断原因 + 可读明细标题 + 中文节点级建议 + 多目标连线附加依赖节点”的应用前预检继续扩展成更完整的合并预检反馈。
+- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成；优先考虑更完整的对象联动策略、更多冲突类型的批量取舍辅助，以及把这类已能解释“已标记数量 + 代表对象 + 未标记默认回退 + 可读阻断原因 + 可读明细标题 + 中文节点级建议 + 多目标连线附加依赖节点”，且已被页面级冲突回归锁定的应用前预检继续扩展成更完整的合并预检反馈。
 
 ### 执行记录：WB-031
 

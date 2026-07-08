@@ -1,3 +1,20 @@
+## 2026-07-09 06:58:00 +08:00 | v1.1.0-alpha.127 | 收口 WB-032 多目标连线页面级回归
+### 任务内容
+
+- 在上一轮已经补齐多目标连线附加依赖节点联动建议的基础上，继续沿 `WB-032` 做一个小而稳的验证收口。
+- 本轮目标不是继续扩冲突逻辑，而是把这条行为真正锁进工作区页面级回归，避免功能只在 `graphConflictSummary` 单元层通过、但在冲突卡片交互上悄悄退回。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，新增“多目标连线附加目标节点”场景：当本地草稿保留一条带 `metadata.targetNodeIds` 的连线时，冲突辅助卡片必须同时给出主目标节点和附加目标节点的联动保留建议，并显示 `一键应用 3 项联动取舍建议`。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“多目标连线附加依赖节点已被页面级冲突回归锁定”。
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+### 后续影响
+
+- `WB-032` 现在不只在纯逻辑层覆盖多目标连线附加依赖节点，页面级冲突卡片交互也被锁住，为后续 `WB-034` 的图谱冲突回归矩阵打了一块更接近真实用户路径的地基。
+- 下一步更适合继续补更多 latest-head / group / multi-target 组合场景的页面级回归，或逐步开始整理 `WB-034` 所需的冲突验证矩阵。
+
 ## 2026-07-09 06:53:00 +08:00 | v1.1.0-alpha.126 | 推进 WB-032 多目标连线联动取舍子步骤
 ### 任务内容
 
