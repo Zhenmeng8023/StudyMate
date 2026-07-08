@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage --config vitest.config.ts"
   },
   "dependencies": {
+    "@studymate/api-client": "^0.0.2",
     "@studymate/ui": "0.0.2",
     "@vitejs/plugin-vue": "^6.0.0",
     "element-plus": "^2.9.0",

@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage --config vitest.config.ts"
   },
   "dependencies": {
+    "@studymate/api-client": "^0.0.2",
     "@studymate/graph-core": "0.0.2",
     "@studymate/ui": "0.0.2",
     "@tiptap/extension-link": "^3.23.6",

@@ -56,7 +56,7 @@ StudyMate/
 后端技术线：Go、Gin、GORM、MySQL、MongoDB Driver、Redis、JWT。  
 用户端技术线：React 19、Vite 7、TypeScript、Zustand、react-pdf、Tiptap。  
 管理端技术线：Vue 3、Vite 7、Element Plus。  
-共享包：`@studymate/graph-core` 已存在并有独立测试命令；`@studymate/ui` 已开始承接共享页面状态契约（`DataStateKind` / `getDataStateLabel`），但整体仍处于起步阶段；`@studymate/api-client`、`@studymate/editor-core` 依旧接近占位状态，尚未成为跨前后台的稳定契约层。
+共享包：`@studymate/graph-core` 已存在并有独立测试命令；`@studymate/ui` 已开始承接共享页面状态契约（`DataStateKind` / `getDataStateLabel`），但整体仍处于起步阶段；`@studymate/api-client` 已开始承接共享 request/error/auth-header 基础层，`@studymate/editor-core` 仍接近占位状态，跨前后台的稳定契约层仍需继续收口。
 
 ## 3. 真实已实现能力
 
@@ -94,7 +94,7 @@ StudyMate/
 ### 3.6 2026-07-08 PDF 评审后新增核验结论
 
 - `frontend-user/src/styles.css` 与 `frontend-admin/src/main.ts` 现已都接入 `@studymate/ui/tokens.css`；用户端重复的根 token 定义已经移除，管理端基础背景 / 文本 / 描边 / accent 变量也已映射到共享 token，前后台至少完成了共享设计 token 的共同起步。
-- `packages/ui` 已同时承接共享 `DataStateKind` / `dataStateKinds` / `getDataStateLabel(...)` 与共享 `tokens.css`；但更多 primitives、管理端更深层的视觉契约与跨端共享层仍未收口。`packages/api-client/src/index.ts` 仍以健康检查为主，`packages/editor-core/src/index.ts` 仍只有最小类型定义；这些包仍需要继续进入真实共享能力建设，而不是继续作为占位目录存在。
+- `packages/ui` 已同时承接共享 `DataStateKind` / `dataStateKinds` / `getDataStateLabel(...)` 与共享 `tokens.css`；但更多 primitives、管理端更深层的视觉契约与跨端共享层仍未收口。`packages/api-client/src/index.ts` 已开始承接共享 `requestApi(...)`、`readApiResponse(...)` 与 `createAuthHeaders(...)`，并已接入用户端 API core 与管理端工作台；但 pagination、401 refresh/replay/fail-logout 与更完整的会话层仍未收口。`packages/editor-core/src/index.ts` 仍只有最小类型定义；这些包仍需要继续进入真实共享能力建设，而不是继续作为占位目录存在。
 - `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 约 79KB，仍包含大量 `useState` 与跨领域函数；`WB-032` 的冲突处理已经很深，下一步必须把状态边界、commands 与 features 从控制器中拆出，避免继续集中膨胀。
 - `frontend-admin/src/views/AdminWorkspaceView.vue` 约 22KB，后台仍主要是单工作台组件内切换模块；`frontend-admin/src/router/index.ts` 目前只是 route key 列表，尚未形成可刷新、可分享、可回退的 Vue Router 模块 URL。
 - 根 `package.json`、`package-lock.json` 与 `.github/workflows/ci.yml` 在真实仓库中存在，因此 PDF 中“压缩包缺少根工程入口/CI”的判断不作为当前事实；但 `@studymate/graph-core` 仍直接使用 `node --test test/*.test.ts` 执行 TypeScript 测试，工程可复现性仍需二次收口。
@@ -130,8 +130,8 @@ StudyMate/
    `docs/engineering/*` 仍把“搜索缺失、CI 缺失、App 根文件过大”写成现状，容易误导后续代理。
 4. **搜索进入了“补强期”而非“从零建设期”**  
    后续重点应转向权限过滤、结果质量、测试矩阵、文档契约和可替换索引，而不是重新创建 search module。
-5. **设计系统与 API 契约仍未成为共享底座**
-   设计 token、基础 UI 组件、页面状态协议、前后台 API request/error/pagination/auth-session 仍分散在各端实现；任何新页面和后台模块继续扩展前，应先收口这些共享边界。
+5. **设计系统与 API 契约仍未完全成为共享底座**
+   设计 token、基础 UI 组件与页面状态协议虽已起步，前后台 API 的 request/error/auth-header 也已开始沉到共享层，但 pagination、auth-session、401 生命周期与更多后台模块请求边界仍分散在各端实现；任何新页面和后台模块继续扩展前，应先收口这些共享边界。
 6. **图谱控制器与后台工作台进入拆分临界点**
    图谱冲突能力已经深入到对象级取舍，后台治理也接入真实 API；下一步应优先拆 store/commands/features 与后台模块路由，而不是继续往单文件叠加业务。
 

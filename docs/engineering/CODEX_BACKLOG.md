@@ -25,7 +25,7 @@
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
 | FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。 |
 | FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | Button、IconButton、Input、Select、Tag、DataState、Drawer、Inspector、ConfirmDialog、CommandBar、PageHeader 至少具备共享 token、变体、禁用/加载/错误状态与最小测试或文档示例。 |
-| API-010 | TODO | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/shared/api` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
+| API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | TODO | Token refresh 与统一 401 会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；补 HttpOnly Refresh Token 迁移说明。 |
 | DEV-010 | TODO | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 不再依赖 `node --test` 对 `.ts` 的隐式执行差异。 |
 
@@ -116,6 +116,27 @@
 - 验证：
   - 已抽取 PDF 全 16 页文本。
   - 已核验 `packages/ui`、`packages/api-client`、`packages/editor-core`、重复 CSS token、图谱控制器大小、管理端工作台大小、根 lockfile 与 CI 文件存在性。
+
+### 执行记录：API-010（共享请求基础层起步）
+
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `packages/api-client/src/index.ts` 不再只暴露健康检查；新增共享 `ApiSuccessPayload` / `ApiErrorPayload`、`readApiResponse(...)`、`requestApi(...)` 与 `createAuthHeaders(...)`，并让 `getHealth(...)` 复用这层共享请求入口。
+  - `packages/api-client/src/index.test.ts` 先以 RED 锁定鉴权 header、JSON envelope 解析、`FormData` 上传不强塞 `Content-Type` 与 API 错误抛出，再转 GREEN。
+  - `frontend-user/src/api/core.ts` 已改为复用 `@studymate/api-client` 的共享 request/auth-header 层；`frontend-user/src/api/types.ts` 不再重复维护本地 success/error envelope 类型。
+  - `frontend-admin/src/views/AdminWorkspaceView.vue` 已改为通过 `requestApi(...)` 与 `createAuthHeaders(...)` 访问后台 API，并移除不再使用的本地响应解析分支。
+  - `frontend-user/package.json`、`frontend-admin/package.json` 与 `package-lock.json` 已显式接入 `@studymate/api-client` workspace 依赖。
+- 已执行验证：
+  - RED：`npx vitest run packages/api-client/src/index.test.ts`
+  - GREEN：`npx vitest run packages/api-client/src/index.test.ts`
+  - `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:user`
+  - `npm run build:admin`
+- 后续建议：
+  - 继续沿 `API-010` 补齐分页、更多上传路径与更稳定的 header 合并边界，而不是让新页面继续回到本地手写 fetch。
+  - 下一步进入 `API-011` 前，先把 `frontend-admin` 其余模块也从页面内散落的请求辅助逻辑收敛到共享 client 边界。
 
 ### 执行记录：FE-010 / FE-020 / FE-030 / UI-04（验证收口）
 - 执行日期：2026-07-08

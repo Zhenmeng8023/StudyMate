@@ -1,16 +1,3 @@
-export interface ApiErrorPayload {
-  success: false;
-  error: {
-    code: string;
-    message: string;
-  };
-}
-
-export interface ApiSuccessPayload<T> {
-  success: true;
-  data: T;
-}
-
 export interface AuthUser {
   id: string;
   username: string;

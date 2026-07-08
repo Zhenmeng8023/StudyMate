@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import "../components/admin/admin.css";
+import { createAuthHeaders, requestApi } from "@studymate/api-client";
 import { computed, reactive, ref } from "vue";
 
 interface AuthUser {
@@ -34,15 +35,6 @@ interface OverviewPayload {
   materialCount: number;
   graphCount: number;
   pendingModerationCount: number;
-}
-
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  error?: {
-    code: string;
-    message: string;
-  };
 }
 
 type AdminView = "dashboard" | "moderation" | "materials" | "community" | "users" | "graph" | "ai" | "system" | "audit";
@@ -260,23 +252,17 @@ function logout() {
 }
 
 async function get<T>(path: string) {
-  const payload = await fetch(path, { headers: { Authorization: `Bearer ${session.value?.accessToken ?? ""}` } });
-  return readResponse<T>(payload);
+  return requestApi<T>(path, {
+    headers: createAuthHeaders(session.value?.accessToken ?? null)
+  });
 }
 
 async function post<T>(path: string, body: unknown) {
-  const payload = await fetch(path, {
+  return requestApi<T>(path, {
     method: "POST",
-    headers: { Authorization: session.value ? `Bearer ${session.value.accessToken}` : "", "Content-Type": "application/json" },
+    headers: createAuthHeaders(session.value?.accessToken ?? null),
     body: JSON.stringify(body)
   });
-  return readResponse<T>(payload);
-}
-
-async function readResponse<T>(payload: Response) {
-  const data = (await payload.json()) as ApiResponse<T>;
-  if (!payload.ok || !data.success) throw new Error(data.error?.message ?? "请求失败");
-  return data.data;
 }
 
 function readSession(): AuthPayload | null {

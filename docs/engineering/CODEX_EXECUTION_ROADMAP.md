@@ -4,6 +4,13 @@
 
 ## 2026-07-08 PDF 计划评审导入
 
+### 2026-07-09 API-010 共享请求基础层起步
+
+- `packages/api-client` 已不再是只有健康检查的占位包；当前已开始承接共享 `requestApi(...)`、`readApiResponse(...)`、`createAuthHeaders(...)` 与 success/error envelope 类型。
+- 用户端 `frontend-user/src/api/core.ts` 已切到复用这层共享请求入口，管理端 `AdminWorkspaceView.vue` 也已改为通过共享 client 发起后台请求，前后台开始进入同一套 request / error / auth-header 语义。
+- `FormData` 上传不强制写入 JSON `Content-Type`、API envelope 错误抛出与 Bearer header 拼装都已由 `packages/api-client/src/index.test.ts` 锁定。
+- Iteration 4 的下一步不应回到页面内继续散落 fetch helper；应继续沿 `API-010 / API-011` 把分页、401 refresh/replay、fail-logout 与更完整的会话生命周期沉到共享层。
+
 ### 2026-07-09 FE-040 / FE-041 共享状态契约起步
 
 - `packages/ui` 已从纯占位包升级为最小共享状态契约层，先导出 `DataStateKind`、`dataStateKinds` 与 `getDataStateLabel(...)`。
@@ -22,7 +29,7 @@
 
 本次读取《StudyMate 代码审查与后续开发建议》后，与当前真实仓库进度对齐：
 
-- 仍成立：共享设计 token 虽已覆盖前后台入口，但更多基础组件与管理端细节视觉契约仍未接入；`packages/ui` / `packages/api-client` / `packages/editor-core` 仍整体偏薄、页面状态协议未全站统一、图谱工作区控制器过大、管理端仍是单工作台组件、共享 API/会话层不足、搜索仍缺服务端真分页与真实命中统计。
+- 仍成立：共享设计 token 虽已覆盖前后台入口，但更多基础组件与管理端细节视觉契约仍未接入；`packages/ui` 与 `packages/api-client` 都已开始脱离占位态，但页面状态协议未全站统一、共享 API 会话生命周期仍不足、`packages/editor-core` 仍偏薄、图谱工作区控制器过大、管理端仍是单工作台组件、搜索仍缺服务端真分页与真实命中统计。
 - 需修正：真实仓库已有根 `package.json`、`package-lock.json`、`.github/workflows/ci.yml` 与默认 CI；因此不再把“缺少根工程入口/CI”作为事实，只保留 graph-core TypeScript 测试运行方式、工具链版本与 bootstrap 可复现性的二次收口任务。
 - 执行策略：不新开课程、协作、桌面端或向量搜索；先把现有 Web 主站、后台、图谱和学习闭环收成统一的产品工作台。
 
@@ -31,7 +38,7 @@
 - **FE-040 / FE-041：设计系统收口**
   建立 `packages/design-tokens` 或等价共享 token 来源，消除 `app.css` 与 `ui-redesign.css` 的同名 token 漂移；让 `@studymate/ui` 至少沉淀 Button、IconButton、Input、Select、Tag、DataState、Drawer、Inspector、ConfirmDialog、CommandBar、PageHeader 的跨端视觉契约。
 - **API-010 / API-011：共享 API 与会话层**
-  把 request、error、pagination、upload、auth-session、401 refresh/replay/fail-logout 从前后台页面中抽到 `packages/api-client`，前后台不再各自手写 fetch/错误处理。
+  把 request、error、pagination、upload、auth-session、401 refresh/replay/fail-logout 从前后台页面中抽到 `packages/api-client`，前后台不再各自手写 fetch/错误处理；当前已完成最小 request/error/auth-header 起步，后续继续补齐分页与会话生命周期。
 - **DEV-010：工程可复现性二次核验**
   在真实仓库基础上补 Node/Go 版本约束、bootstrap 入口、依赖审计和 graph-core TypeScript 测试运行器，避免依赖不同 Node 版本对 `.ts` 测试的隐式支持。
 - **GPH-040：图谱控制器拆分**

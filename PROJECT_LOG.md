@@ -1,3 +1,31 @@
+## 2026-07-09 04:06:00 +08:00 | v1.1.0-alpha.114 | 推进 API-010 共享请求基础层起步
+### 任务内容
+
+- 按 `CODEX_MASTER_PROMPT.md` 与当前 `CODEX_BACKLOG.md` 的优先级，继续选择依赖已满足且范围最小的 `API-010` 工作包，而不是切去新增业务域。
+- 本轮目标是在不重写前后台会话逻辑的前提下，让 `packages/api-client` 先承接最小共享请求层：统一 success/error envelope 解析、Bearer header 拼装与基础 request helper，并接线到用户端和管理端。
+### 实际变更
+
+- 更新 `packages/api-client/src/index.ts`，新增 `ApiSuccessPayload` / `ApiErrorPayload`、`readApiResponse(...)`、`requestApi(...)` 与 `createAuthHeaders(...)`，并让 `getHealth(...)` 复用同一套共享请求入口。
+- 新增 `packages/api-client/src/index.test.ts`，先以 RED 锁定“鉴权 header 只在有 token 时注入、JSON envelope 会被正确解包、`FormData` 上传不会被强塞 `Content-Type`、API 错误会抛出 message”，再转 GREEN。
+- 更新 `frontend-user/src/api/core.ts`，把用户端基础 request 与 auth header 拼装切到 `@studymate/api-client`；更新 `frontend-user/src/api/types.ts`，移除本地重复的 success/error envelope 类型。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让后台工作台的 `get(...)` / `post(...)` 改为通过共享 `requestApi(...)` 与 `createAuthHeaders(...)` 请求后台，并移除不再使用的本地响应解析 helper。
+- 更新 `frontend-user/package.json`、`frontend-admin/package.json` 与 `package-lock.json`，显式声明 `@studymate/api-client` workspace 依赖，避免共享接线只依赖根环境偶然解析成功。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `API-010` 从纯待办推进到“共享请求基础层已起步”。
+### 验证结果
+
+- RED：`npx vitest run packages/api-client/src/index.test.ts`
+- GREEN：`npx vitest run packages/api-client/src/index.test.ts`
+- `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-user run typecheck`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:user`
+- `npm run build:admin`
+
+### 后续影响
+
+- `@studymate/api-client` 不再只是健康检查占位包，后续新页面至少可以沿着共享 request/error/auth-header 层继续扩展，而不用再从页面里重写最基础的 fetch 分支。
+- 这一轮仍只完成了共享请求基础层起步；分页、更多上传路径、401 refresh/replay/fail-logout 与统一会话失效处理仍未收口，下一步应继续沿 `API-010 / API-011` 推进，而不是重新在各端散落新的本地 helper。
+
 ## 2026-07-09 03:53:30 +08:00 | v1.1.0-alpha.113 | 推进 FE-040 管理端接入共享设计 token 起步
 ### 任务内容
 
