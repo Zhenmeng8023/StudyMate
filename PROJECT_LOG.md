@@ -1,3 +1,22 @@
+## 2026-07-09 07:02:00 +08:00 | v1.1.0-alpha.128 | 收口 WB-032 latest-head 分组依赖页面级回归
+### 任务内容
+
+- 继续沿 `WB-032` 做一个最小但更接近真实用户路径的验证收口，不扩新逻辑，而是把上一轮已经落地的 latest-head 删除语义补到页面级冲突矩阵里。
+- 本轮目标是锁定一个组合场景：当当前草稿沿用本地删除结果、但又尝试保留服务端分组时，冲突卡片必须能识别 `invalid_group_node` 阻断，并给出真正 scope-aware 的联动取舍建议。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，新增 latest-head `group/node` 删除语义的页面级回归：先构造“保留本地删除的服务端节点 + 保留服务端分组”的冲突状态，再断言卡片会出现 `分组“Server group”仍引用未保留的节点` 阻断说明、`联动保留服务端：节点｜删除｜Server node` 与 `联动保留本地：分组｜删除｜Server group` 两类建议，以及 `一键应用 2 项联动取舍建议` 后阻断解除。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“latest-head 删除语义下的分组依赖场景也已被页面级回归锁定”。
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+### 后续影响
+
+- `WB-032` 现在不仅覆盖本地新增对象依赖、多目标连线附加依赖，也开始覆盖 latest-head 删除语义下的分组依赖组合路径，页面级冲突矩阵更接近真实多端冲突。
+- 下一步更适合继续补 `dangling_edge` / `invalid_group_node` 与 latest-head、多目标依赖、未标记默认回退之间的更完整组合矩阵，并逐步为 `WB-034` 整理固定验证清单。
+
 ## 2026-07-09 06:58:00 +08:00 | v1.1.0-alpha.127 | 收口 WB-032 多目标连线页面级回归
 ### 任务内容
 
