@@ -8,6 +8,7 @@ import type {
   GraphNodePayload
 } from "../../../api/client";
 import {
+  buildGraphConflictResolutionBlockingIssueTitle,
   buildGraphConflictResolutionBlockingIssueSummary,
   buildGraphConflictObjectDecisionKey,
   formatGraphConflictObjectDetail,
@@ -396,7 +397,7 @@ export function GraphConflictAssistCard(props: {
           <ul className="graph-issue-list">
             {props.resolutionBlockingIssues.map((issue, index) => (
               <li className="graph-issue-item" key={`${issue.ruleType}-${issue.targetId ?? "unknown"}-${index}`}>
-                <strong>{issue.targetId ?? "未命名对象"}</strong>
+                <strong>{buildGraphConflictResolutionBlockingIssueTitle(issue)}</strong>
                 <p>{issue.message}</p>
               </li>
             ))}

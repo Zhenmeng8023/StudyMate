@@ -277,6 +277,21 @@ export function buildGraphConflictResolutionBlockingIssueSummary(
   return `${labels.join("、")} 等 ${issues.length} 项`;
 }
 
+export function buildGraphConflictResolutionBlockingIssueTitle(issue: GraphConflictResolutionValidationIssue) {
+  const message = issue.message.trim();
+  const localizedMatch = message.match(/^(节点|连线|分组)“[^”]+”/u);
+  if (localizedMatch) {
+    return localizedMatch[0];
+  }
+
+  const englishNodeMatch = message.match(/^Node "([^"]+)"/);
+  if (englishNodeMatch) {
+    return `节点“${englishNodeMatch[1]}”`;
+  }
+
+  return issue.targetId?.trim() || issue.ruleType || "未命名对象";
+}
+
 function formatGraphConflictResolutionBlockingIssueLabel(issue: GraphConflictResolutionValidationIssue) {
   const message = summarizeBlockingIssueMessage(issue.message);
   const targetId = issue.targetId?.trim() || "";

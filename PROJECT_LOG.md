@@ -1,3 +1,29 @@
+## 2026-07-09 03:25:42 +08:00 | v1.1.0-alpha.110 | 推进 WB-032 阻断明细标题可读化子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“阻断摘要可读化”再补齐到阻断明细列表层。
+- 本轮目标是在图谱 Inspector 的“取舍依赖校验问题”区块里，不再让每条问题标题停留在 `edge-local` 这类内部 ID，而是直接显示类似“连线“Local edge””的可读对象名。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionBlockingIssueTitle(...)`，优先从阻断 message 中提取 `节点 / 连线 / 分组` 的可读对象名；提取不到时才回退到 `targetId` 或 `ruleType`。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，让“取舍依赖校验问题”明细列表复用这层标题 helper，而不是直接渲染 `targetId`。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，先用 RED 锁定“明细标题应展示可读对象名”，再验证组件级与页面级路径均已转绿。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“阻断摘要与阻断明细标题都展示可读对象名”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+
+### 后续影响
+
+- 冲突卡片现在从摘要到明细标题都尽量避免暴露内部对象 ID，用户在预检和逐条处理之间切换时更容易对上同一个对象。
+- 按新的快速原型方向，后续更适合把精力转向全局骨架补齐，而不是继续在单一冲突子场景里深挖。
+
 ## 2026-07-09 03:19:49 +08:00 | v1.1.0-alpha.109 | 推进 WB-032 节点级阻断中文化子步骤
 ### 任务内容
 

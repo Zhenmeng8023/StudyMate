@@ -201,7 +201,8 @@ describe("GraphWorkspacePage conflict dependency guard", () => {
       )
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeDisabled();
-    expect(screen.getByText("Local edge")).toBeInTheDocument();
+    expect(screen.getByText("连线“Local edge”")).toBeInTheDocument();
+    expect(screen.getByText("连线“Local edge”会引用未保留的节点，请先同步保留相关节点或改为保留服务端。")).toBeInTheDocument();
     expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
   });
 

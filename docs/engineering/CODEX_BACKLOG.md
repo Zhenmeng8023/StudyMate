@@ -169,6 +169,7 @@
 - 在批量标记这些联动建议后，工作区状态栏现在还会同步返回带预检结论的反馈：既解释这次标记里有多少“保留本地 / 保留服务端 / 稍后处理”，也明确告知当前是否已经解除依赖阻断、能否继续应用已标记取舍。
 - 当阻断尚未完全解除时，这条批量反馈现在还会补一段精简的剩余阻断对象摘要，例如“连线“Local edge”会引用未保留的节点”，帮助用户更快判断下一步还需要继续调整哪些对象。
 - 在真正应用已标记取舍前，冲突卡片里的“取舍依赖校验问题”区块现在也会直接显示同一套阻断摘要，让最终预检卡片与状态提示使用一致的阻断解释。
+- 同一组“取舍依赖校验问题”的逐条明细标题现在也会优先显示可读对象名，而不是裸 `targetId`，减少用户在摘要与明细之间来回对照时的认知跳转。
 - 冲突卡片现在还会额外展示“应用前预检”摘要：直接告诉用户如果现在应用，会保留哪些取舍，或会被哪些依赖问题阻断，把结果预览前移到最终点击之前。
 - 这条“应用前预检”摘要现在还会进一步并入未标记对象的默认回退结果，直接说明还有哪些对象会沿用最新图谱版本，减少“点应用后才意识到未标记对象被回退”的落差。
 - 这条“应用前预检”摘要现在还会再补一层代表对象示例，例如“保留本地：本地节点 / 保留服务端：旧关系”，让用户在最终点击前不只知道数量，也知道这轮取舍主要覆盖了哪些对象。
@@ -192,7 +193,7 @@
   - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
   - `npm run verify:docs`
 - 后续待续：
-- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成；优先考虑更完整的对象联动策略、更多冲突类型的批量取舍辅助，以及把这类已能解释“已标记数量 + 代表对象 + 未标记默认回退 + 可读阻断原因 + 中文节点级建议”的应用前预检继续扩展成更完整的合并预检反馈。
+- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成；优先考虑更完整的对象联动策略、更多冲突类型的批量取舍辅助，以及把这类已能解释“已标记数量 + 代表对象 + 未标记默认回退 + 可读阻断原因 + 可读明细标题 + 中文节点级建议”的应用前预检继续扩展成更完整的合并预检反馈。
 
 ### 执行记录：WB-031
 

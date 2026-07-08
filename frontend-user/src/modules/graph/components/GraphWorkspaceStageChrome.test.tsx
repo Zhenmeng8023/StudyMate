@@ -155,7 +155,7 @@ describe("GraphWorkspaceStageChrome components", () => {
           {
             ruleType: "dangling_edge",
             severity: "error",
-            message: "dangling-edge",
+            message: "连线“Local edge”会引用未保留的节点，请先同步保留相关节点或改为保留服务端。",
             targetId: "edge-legacy"
           }
         ]}
@@ -167,7 +167,7 @@ describe("GraphWorkspaceStageChrome components", () => {
             scope: "localDraft"
           }
         ]}
-        resolutionPreflightMessage="如果现在应用：已标记取舍会被 1 个依赖问题阻断（edge-legacy）；当前计划保留本地 1 项，保留服务端 1 项。"
+        resolutionPreflightMessage="如果现在应用：已标记取舍会被 1 个依赖问题阻断（连线“Local edge”会引用未保留的节点）；当前计划保留本地 1 项，保留服务端 1 项。"
         resolutionSelections={{
           "localDraft:node:node-2:added": "keep-local",
           "latestHead:edge:edge-legacy:removed": "keep-latest"
@@ -197,12 +197,13 @@ describe("GraphWorkspaceStageChrome components", () => {
       screen.getByText("如果现在应用已标记取舍，未标记对象会默认沿用最新图谱版本。建议继续逐项确认后再应用。")
     ).toBeInTheDocument();
     expect(screen.getByLabelText("取舍应用预检")).toHaveTextContent(
-      "如果现在应用：已标记取舍会被 1 个依赖问题阻断（edge-legacy）；当前计划保留本地 1 项，保留服务端 1 项。"
+      "如果现在应用：已标记取舍会被 1 个依赖问题阻断（连线“Local edge”会引用未保留的节点）；当前计划保留本地 1 项，保留服务端 1 项。"
     );
     expect(screen.getByText("当前未保存修改：分组｜修改｜Local group")).toBeInTheDocument();
     expect(screen.getByLabelText("取舍依赖校验问题")).toBeInTheDocument();
-    expect(screen.getByText("当前仍阻断：edge-legacy。请先调整标记后再应用。")).toBeInTheDocument();
-    expect(screen.getByText("dangling-edge")).toBeInTheDocument();
+    expect(screen.getByText("当前仍阻断：连线“Local edge”会引用未保留的节点。请先调整标记后再应用。")).toBeInTheDocument();
+    expect(screen.getByText("连线“Local edge”")).toBeInTheDocument();
+    expect(screen.getByText("连线“Local edge”会引用未保留的节点，请先同步保留相关节点或改为保留服务端。")).toBeInTheDocument();
     expect(screen.getByLabelText("联动取舍建议")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "联动保留本地：分组｜修改｜Local group" }));
     expect(onChooseResolution).toHaveBeenCalledWith(
