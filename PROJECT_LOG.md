@@ -1,3 +1,27 @@
+## 2026-07-09 02:05:19 +08:00 | v1.1.0-alpha.107 | 推进 WB-032 预检代表对象示例子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“预检并入未标记默认回退结果”再补充成更完整的合并前预检反馈。
+- 本轮目标是在图谱 Inspector 的“应用前预检”里，让用户不只看到取舍数量和未标记对象的默认回退结果，还能直接看到这轮已标记取舍的代表对象示例。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，为 `buildGraphConflictResolutionPreflightMessage(...)` 增加代表对象示例摘要：会按 `保留本地 / 保留服务端 / 稍后处理` 各自抽取代表对象，生成类似“例如保留本地：本地节点，保留服务端：旧关系”的补充说明。
+- 保持这层示例摘要继续停留在 helper 内部组装，不把预检格式规则散落到控制器或冲突卡片组件中。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，补齐 helper 级与页面级回归，锁定“应用前预检会带代表对象示例”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“应用前预检同时解释数量、代表对象与未标记默认回退结果”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+
+### 后续影响
+
+- 图谱冲突辅助现在能在最终点击前，把“数量级结果”和“这轮取舍主要覆盖哪些对象”一起说清楚，进一步降低对象级人工取舍时的预检不确定感。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是把这层摘要继续扩展成更完整的对象级合并预检反馈，并覆盖更多冲突类型的联动取舍策略。
+
 ## 2026-07-09 02:00:43 +08:00 | v1.1.0-alpha.106 | 推进 WB-032 预检并入未标记默认回退子步骤
 ### 任务内容
 

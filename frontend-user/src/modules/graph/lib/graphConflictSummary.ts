@@ -188,6 +188,8 @@ export function buildGraphConflictResolutionPreflightMessage(input: {
   if (!summary.length) {
     return "";
   }
+  const exampleSummary = buildGraphConflictResolutionDecisionExampleSummary(input.drafts);
+  const exampleClause = exampleSummary ? `；${exampleSummary}` : "";
   const unmarkedClause = input.unmarkedSummary ? `；${input.unmarkedSummary}` : "";
 
   const withUnmarkedSummary = (message: string) => {
@@ -199,11 +201,11 @@ export function buildGraphConflictResolutionPreflightMessage(input: {
 
   if (input.blockingIssues.length > 0) {
     return withUnmarkedSummary(
-      `如果现在应用：已标记取舍会被 ${input.blockingIssues.length} 个依赖问题阻断（${buildGraphConflictResolutionBlockingIssueSummary(input.blockingIssues)}）；当前计划${summary.join("，")}。`
+      `如果现在应用：已标记取舍会被 ${input.blockingIssues.length} 个依赖问题阻断（${buildGraphConflictResolutionBlockingIssueSummary(input.blockingIssues)}）；当前计划${summary.join("，")}${exampleClause}。`
     );
   }
 
-  return withUnmarkedSummary(`如果现在应用：${summary.join("，")}。`);
+  return withUnmarkedSummary(`如果现在应用：${summary.join("，")}${exampleClause}。`);
 }
 
 export function buildGraphConflictResolutionUnmarkedSummary(input: {
@@ -791,6 +793,32 @@ function buildGraphConflictResolutionDecisionSummary(
         : `稍后处理 ${reviewLaterCount} 项`
       : ""
   ].filter(Boolean);
+}
+
+function buildGraphConflictResolutionDecisionExampleSummary(drafts: GraphConflictResolutionDraft[]) {
+  const examples = [
+    buildGraphConflictResolutionDecisionExample(drafts, "keep-local", "保留本地"),
+    buildGraphConflictResolutionDecisionExample(drafts, "keep-latest", "保留服务端"),
+    buildGraphConflictResolutionDecisionExample(drafts, "review-later", "稍后处理")
+  ].filter(Boolean);
+
+  if (!examples.length) {
+    return "";
+  }
+
+  return `例如${examples.join("，")}`;
+}
+
+function buildGraphConflictResolutionDecisionExample(
+  drafts: GraphConflictResolutionDraft[],
+  decision: GraphConflictResolutionChoice,
+  label: string
+) {
+  const match = drafts.find((draft) => draft.decision === decision);
+  if (!match) {
+    return "";
+  }
+  return `${label}：${match.detail.label}`;
 }
 
 function buildGraphConflictResolutionUnmarkedExamples(

@@ -725,7 +725,9 @@ describe("graphConflictSummary", () => {
           }
         ]
       })
-    ).toBe("如果现在应用：已标记取舍会被 1 个依赖问题阻断（edge-local）；当前计划保留本地 1 项，保留服务端 1 项。");
+    ).toBe(
+      "如果现在应用：已标记取舍会被 1 个依赖问题阻断（edge-local）；当前计划保留本地 1 项，保留服务端 1 项；例如保留本地：本地节点，保留服务端：旧关系。"
+    );
 
     expect(
       buildGraphConflictResolutionPreflightMessage({
@@ -743,7 +745,7 @@ describe("graphConflictSummary", () => {
           }
         ]
       })
-    ).toBe("如果现在应用：保留本地 1 项，稍后处理 1 项（已沿用最新版本）。");
+    ).toBe("如果现在应用：保留本地 1 项，稍后处理 1 项（已沿用最新版本）；例如保留本地：本地节点，稍后处理：本地分组。");
   });
 
   it("extends the preflight summary with unmarked objects that would fall back to the latest head", () => {
@@ -771,7 +773,7 @@ describe("graphConflictSummary", () => {
           "另外 2 个未标记对象会默认沿用最新图谱版本（当前未保存修改：节点｜新增｜本地节点、与最新图谱相比：连线｜删除｜服务端连线）"
       })
     ).toBe(
-      "如果现在应用：保留本地 1 项；另外 2 个未标记对象会默认沿用最新图谱版本（当前未保存修改：节点｜新增｜本地节点、与最新图谱相比：连线｜删除｜服务端连线）。"
+      "如果现在应用：保留本地 1 项；例如保留本地：本地节点；另外 2 个未标记对象会默认沿用最新图谱版本（当前未保存修改：节点｜新增｜本地节点、与最新图谱相比：连线｜删除｜服务端连线）。"
     );
   });
 

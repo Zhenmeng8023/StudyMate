@@ -335,6 +335,9 @@ describe("GraphWorkspacePage conflict dependency guard", () => {
     await user.click(screen.getByRole("button", { name: /保留本地.*Local edge/ }));
 
     await expect(screen.findByLabelText("取舍应用预检")).resolves.toHaveTextContent(
+      "例如保留本地：Local edge"
+    );
+    await expect(screen.findByLabelText("取舍应用预检")).resolves.toHaveTextContent(
       "另外 1 个未标记对象会默认沿用最新图谱版本"
     );
   });
