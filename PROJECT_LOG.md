@@ -1,3 +1,22 @@
+## 2026-07-09 07:10:00 +08:00 | v1.1.0-alpha.130 | 收口 WB-032 latest-head 多目标连未标记回退页面级回归
+### 任务内容
+
+- 继续沿 `WB-032` 扩展页面级冲突矩阵，但保持最小验证步幅，不在这轮引入新的冲突逻辑。
+- 本轮目标是把 `latest-head` 删除语义下的多目标连线路径继续补到更贴近真实操作的页面回归里：当前草稿先沿用本地删除结果，再单独尝试保留服务端多目标连线，由冲突卡片给出联动建议并解除阻断。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，新增 latest-head 多目标连线页面级组合场景：先标记 `Server node` 与 `Extra server node` 为保留本地删除结果，再标记 `Server edge` 为保留服务端，随后断言卡片会出现 `连线“Server edge”会引用未保留的节点` 阻断说明、`联动保留服务端：节点｜删除｜Server node`、`联动保留服务端：节点｜删除｜Extra server node` 与 `联动保留本地：连线｜删除｜Server edge` 三类建议，并在 `一键应用 3 项联动取舍建议` 后解除阻断。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“latest-head 删除语义下的多目标连线路径已被页面级冲突回归锁定”。
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+### 后续影响
+
+- `WB-032` 的页面级冲突矩阵现在同时覆盖了 latest-head 删除语义下的分组依赖和多目标连线，不再只停留在纯 helper 或单一对象场景。
+- 下一步更适合继续补“未标记默认回退 + 分组依赖 + 多目标连线”这类更复杂的组合路径，或者开始把这些页面级回归整理成 `WB-034` 的固定验证清单。
+
 ## 2026-07-09 07:06:00 +08:00 | v1.1.0-alpha.129 | 收口 WB-032 latest-head 多目标连页面级回归
 ### 任务内容
 
