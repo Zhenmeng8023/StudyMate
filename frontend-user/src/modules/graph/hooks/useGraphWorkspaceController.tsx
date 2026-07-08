@@ -124,6 +124,7 @@ import {
   buildGraphConflictObjectDecisionKey,
   buildGraphConflictResolutionDrafts,
   buildGraphConflictResolutionOutcomeMessage,
+  buildGraphConflictResolutionSuggestionOutcomeMessage,
   buildGraphConflictResolutionSuggestions,
   buildGraphConflictReportArtifact,
   buildGraphUnsavedChangeSummary,
@@ -1047,12 +1048,31 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       currentSelections: conflictResolutionSelections,
       suggestions: conflictResolutionSuggestions
     });
+    const nextDrafts = buildGraphConflictResolutionDrafts({
+      changeDetails: unsavedChangeDetails,
+      latestHeadDetails: latestHeadConflictDetails,
+      selections: nextSelections
+    });
+    const nextBlockingIssueCount =
+      graphDetail && latestConflictDetail && nextDrafts.length > 0
+        ? validateGraphConflictResolutionDrafts({
+            current: graphDetail,
+            drafts: nextDrafts,
+            latestHead: latestConflictDetail
+          }).blockingIssues.length
+        : conflictResolutionBlockingIssues.length;
 
     setConflictResolutionSelections(nextSelections);
     setManualMergeDeferred(true);
-    setWorkspaceStatusMessage(`已批量标记 ${conflictResolutionSuggestions.length} 条联动取舍建议，请继续确认后再应用`, {
-      suggestReload: true
-    });
+    setWorkspaceStatusMessage(
+      buildGraphConflictResolutionSuggestionOutcomeMessage({
+        blockingIssueCount: nextBlockingIssueCount,
+        suggestions: conflictResolutionSuggestions
+      }),
+      {
+        suggestReload: true
+      }
+    );
   }
 
   async function copyConflictDraftJson() {

@@ -7,6 +7,7 @@ import {
   buildGraphConflictObjectDetails,
   buildGraphConflictResolutionDrafts,
   buildGraphConflictResolutionOutcomeMessage,
+  buildGraphConflictResolutionSuggestionOutcomeMessage,
   buildGraphConflictResolutionSuggestions,
   buildGraphConflictReportArtifact,
   buildGraphUnsavedChangeSummary,
@@ -642,6 +643,44 @@ describe("graphConflictSummary", () => {
       "localDraft:node:node-local:added": "keep-local",
       "latestHead:edge:edge-legacy:removed": "keep-latest"
     });
+  });
+
+  it("builds a readable batch suggestion outcome message when blockers are cleared", () => {
+    expect(
+      buildGraphConflictResolutionSuggestionOutcomeMessage({
+        blockingIssueCount: 0,
+        suggestions: [
+          {
+            choice: "keep-local",
+            description: "补齐依赖节点",
+            detail: { action: "added", id: "node-local", kind: "node", label: "本地节点" },
+            scope: "localDraft"
+          },
+          {
+            choice: "keep-latest",
+            description: "回退到服务端版本",
+            detail: { action: "removed", id: "edge-legacy", kind: "edge", label: "旧关系" },
+            scope: "latestHead"
+          }
+        ]
+      })
+    ).toBe("已批量标记 2 条联动取舍建议（保留本地 1 项，保留服务端 1 项），当前已解除依赖阻断，可继续应用已标记取舍");
+  });
+
+  it("builds a readable batch suggestion outcome message when blockers remain", () => {
+    expect(
+      buildGraphConflictResolutionSuggestionOutcomeMessage({
+        blockingIssueCount: 2,
+        suggestions: [
+          {
+            choice: "keep-local",
+            description: "补齐依赖节点",
+            detail: { action: "added", id: "node-local", kind: "node", label: "本地节点" },
+            scope: "localDraft"
+          }
+        ]
+      })
+    ).toBe("已批量标记 1 条联动取舍建议（保留本地 1 项），但仍有 2 个依赖问题待处理，请继续调整后再应用");
   });
 
   it("builds a keep-latest suggestion for invalid local node sizes", () => {

@@ -338,6 +338,9 @@ describe("GraphWorkspacePage conflict dependency guard", () => {
     await expect(screen.findByLabelText("联动取舍建议")).resolves.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "一键应用 2 项联动取舍建议" }));
 
+    await expect(
+      screen.findByText("已批量标记 2 条联动取舍建议（保留本地 1 项，保留服务端 1 项），当前已解除依赖阻断，可继续应用已标记取舍")
+    ).resolves.toBeInTheDocument();
     expect(screen.queryByLabelText("取舍依赖校验问题")).toBeNull();
     expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeEnabled();
   });

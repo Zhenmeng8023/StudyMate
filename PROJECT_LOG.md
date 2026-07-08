@@ -1,3 +1,29 @@
+## 2026-07-09 01:26:28 +08:00 | v1.1.0-alpha.102 | 推进 WB-032 批量取舍反馈解释子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“联动取舍批量应用”基础上，把批量标记后的用户反馈从固定提示继续推进到“带结果摘要和预检结论”的可解释状态。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，用户点击 `一键应用 N 项联动取舍建议` 后，不只知道“已经批量标记”，还要立刻知道本次标记包含多少本地/服务端取舍，以及当前是否已经解除依赖阻断、能否继续应用到最新 `head`。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionSuggestionOutcomeMessage(...)`，统一生成批量联动取舍后的反馈文案：会汇总本次标记中的 `keep-local / keep-latest / review-later` 数量，并根据剩余阻断数量返回“已解除依赖阻断，可继续应用”或“仍有 N 个依赖问题待处理”的预检解释。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，在 `applyConflictResolutionSuggestions()` 中改为基于“批量标记后的下一组 selections”重新计算对象级取舍草稿与依赖校验结果，再使用新 helper 生成反馈，而不是继续使用固定文案。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，补齐 helper 与页面级回归，锁定“批量标记后会返回带计数摘要的反馈，并在阻断解除时直接提示可以继续应用”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“批量标记联动建议后会返回带预检结论的结果解释”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在不只支持“整组建议批量标记”，还会在批量标记后立即告诉用户这次到底标记了哪些取舍方向，以及当前是否已经解除阻断、可以继续应用，减少用户在冲突态里反复试点按钮的试探成本。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的对象联动策略、覆盖更多冲突类型的批量取舍辅助，以及更细粒度的阻断差异解释。
+
 ## 2026-07-08 19:07:41 +08:00 | v1.1.0-alpha.101 | 推进 WB-032 联动取舍批量应用子步骤
 ### 任务内容
 

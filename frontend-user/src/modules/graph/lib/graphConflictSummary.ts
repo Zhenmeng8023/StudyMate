@@ -182,6 +182,33 @@ export function buildGraphConflictResolutionOutcomeMessage(drafts: GraphConflict
   return `已基于最新图谱生成合并草稿：${parts.join("，")}，请确认后保存`;
 }
 
+export function buildGraphConflictResolutionSuggestionOutcomeMessage(input: {
+  blockingIssueCount: number;
+  suggestions: GraphConflictResolutionSuggestion[];
+}) {
+  if (!input.suggestions.length) {
+    return "当前没有可批量应用的联动取舍建议";
+  }
+
+  const keepLocalCount = input.suggestions.filter((suggestion) => suggestion.choice === "keep-local").length;
+  const keepLatestCount = input.suggestions.filter((suggestion) => suggestion.choice === "keep-latest").length;
+  const reviewLaterCount = input.suggestions.filter((suggestion) => suggestion.choice === "review-later").length;
+  const parts = [
+    keepLocalCount > 0 ? `保留本地 ${keepLocalCount} 项` : "",
+    keepLatestCount > 0 ? `保留服务端 ${keepLatestCount} 项` : "",
+    reviewLaterCount > 0 ? `稍后处理 ${reviewLaterCount} 项` : ""
+  ].filter(Boolean);
+  const summary = parts.length
+    ? `已批量标记 ${input.suggestions.length} 条联动取舍建议（${parts.join("，")}）`
+    : `已批量标记 ${input.suggestions.length} 条联动取舍建议`;
+
+  if (input.blockingIssueCount > 0) {
+    return `${summary}，但仍有 ${input.blockingIssueCount} 个依赖问题待处理，请继续调整后再应用`;
+  }
+
+  return `${summary}，当前已解除依赖阻断，可继续应用已标记取舍`;
+}
+
 export function applyGraphConflictResolutionDrafts(input: {
   current: GraphDetailPayload;
   drafts: GraphConflictResolutionDraft[];
