@@ -4960,3 +4960,31 @@
 
 - 后台“图谱模板治理”现在已经从标签占位页推进到最小可执行模块，并且发布状态开始真实影响用户端模板列表；后续继续补模板备注、版本、用户自定义模板和 preview 资产治理时，会比现在更顺。
 - 当前模板治理动作仍集中在 `AdminWorkspaceView.vue` 协调；后续若继续推进 `ADM-010 / ADM-011`，更适合把模板、资料、用户、AI、审计等动作继续往 page / feature 层下沉。
+## 2026-07-09 12:45:00 +08:00 | v1.1.0-alpha.151 | 推进 ADM-011 用户会话即时失效与权限边界补强
+### 任务内容
+
+- 在 `ADM-011` 已完成用户 `disable / activate` 最小治理切片的基础上，继续补真正会影响运行中会话的安全边界，不让“已禁用账号拿旧 token 继续访问”成为默认行为。
+- 本轮目标是收口两条最小但高价值的链路：禁用用户时撤销仍有效的 refresh token；受保护请求不再只信任 JWT claim，而是按数据库中的当前用户状态和角色做校验。
+
+### 实际变更
+
+- 更新 `backend/internal/modules/admin/service/user_actions_test.go`，新增 RED/GREEN 回归，锁定禁用用户后必须撤销其仍有效的 `refresh_tokens`，避免后台治理只改用户状态、不影响后续 refresh。
+- 新增 `backend/internal/middleware/auth_test.go`，先用 RED 复现两个真实缺口：被禁用用户仍可拿旧 access token 访问受保护接口，以及数据库角色已降级时旧 JWT claim 仍可能保留管理员权限。
+- 更新 `backend/internal/modules/admin/service/service.go`，让 `HandleUser(..., "disable")` 在同一事务里同步撤销该用户所有尚未撤销的 refresh token，确保禁用动作会立刻影响后续 refresh。
+- 更新 `backend/internal/middleware/auth.go`，让认证中间件在每次受保护请求里按 `claims.UserID` 回查当前用户，并以数据库中的 `status / role / username` 为准写入上下文；被禁用账号会在中间件层直接返回 `user_disabled`，角色变更后的旧 token 也不再保留旧权限。
+- 更新 `backend/internal/app/server.go` 与 `backend/internal/modules/admin/router/router.go`，把新的 `authGuard` 统一接到普通受保护路由与后台治理路由，避免后台和前台出现不同步的权限边界。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把 `ADM-011` 的用户治理状态从“login/refresh 拒绝”推进到“禁用即撤销 refresh + 请求时即时按真实用户状态/角色校验”。
+
+### 验证结果
+
+- RED：`go test ./internal/modules/admin/service -run 'TestHandleUserDisableRevokesActiveRefreshTokens|TestHandleUserDisablesActiveUserAndWritesAuditLog|TestHandleUserActivatesDisabledUser|TestHandleUserRejectsProtectedAdminAccount'`
+- RED：`go test ./internal/middleware -run 'TestAuthenticateRejectsDisabledUser|TestAuthenticateUsesCurrentRoleFromDatabase'`
+- GREEN：`go test ./internal/modules/admin/service -run 'TestHandleUserDisableRevokesActiveRefreshTokens|TestHandleUserDisablesActiveUserAndWritesAuditLog|TestHandleUserActivatesDisabledUser|TestHandleUserRejectsProtectedAdminAccount'`
+- GREEN：`go test ./internal/middleware -run 'TestAuthenticateRejectsDisabledUser|TestAuthenticateUsesCurrentRoleFromDatabase'`
+- `go test ./internal/modules/auth/service -run 'TestLoginRejectsDisabledUser|TestRefreshRejectsDisabledUser'`
+- `go test ./...`
+
+### 后续影响
+
+- 后台用户治理现在不再只影响“下次登录 / 下次 refresh”；禁用用户后，现有 refresh token 会被撤销，运行中的受保护请求也会在中间件层按真实用户状态与角色重新校验。
+- 当前前后台共享会话层仍主要围绕 `401 refresh/replay/fail-logout`；对于请求阶段直接收到的 `403 user_disabled`，前端还没有统一清 session 并提示“账号已被禁用”的被动登出语义，后续更适合沿 `API-011 / ADM-011` 联动收口。

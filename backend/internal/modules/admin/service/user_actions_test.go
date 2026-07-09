@@ -41,6 +41,15 @@ func newUserActionTestService(t *testing.T) (*Service, *gorm.DB) {
 			metadata TEXT NULL,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE TABLE refresh_tokens (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL,
+			token_hash TEXT NOT NULL,
+			expires_at DATETIME NOT NULL,
+			revoked_at DATETIME NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);`,
 	}
 
 	for _, statement := range statements {
@@ -141,6 +150,43 @@ func TestHandleUserActivatesDisabledUser(t *testing.T) {
 	}
 	if user.Status != "active" {
 		t.Fatalf("expected active status, got %#v", user)
+	}
+}
+
+func TestHandleUserDisableRevokesActiveRefreshTokens(t *testing.T) {
+	service, db := newUserActionTestService(t)
+
+	now := time.Date(2026, 7, 9, 12, 37, 0, 0, time.UTC)
+	if err := db.Exec(`
+		INSERT INTO users (id, username, email, display_name, role, status, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, "user-3", "carol", "carol@example.test", "Carol", "user", "active", now, now).Error; err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+
+	if err := db.Exec(`
+		INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, revoked_at, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?),
+		       (?, ?, ?, ?, ?, ?, ?)
+	`,
+		"token-1", "user-3", "hash-1", now.Add(24*time.Hour), nil, now, now,
+		"token-2", "user-3", "hash-2", now.Add(24*time.Hour), nil, now, now,
+	).Error; err != nil {
+		t.Fatalf("seed refresh tokens: %v", err)
+	}
+
+	if err := service.HandleUser("admin-1", "user-3", "disable"); err != nil {
+		t.Fatalf("handle user disable: %v", err)
+	}
+
+	var remaining int64
+	if err := db.Table("refresh_tokens").
+		Where("user_id = ? AND revoked_at IS NULL", "user-3").
+		Count(&remaining).Error; err != nil {
+		t.Fatalf("count active refresh tokens: %v", err)
+	}
+	if remaining != 0 {
+		t.Fatalf("expected all refresh tokens to be revoked, remaining=%d", remaining)
 	}
 }
 

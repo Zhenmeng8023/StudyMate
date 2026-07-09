@@ -47,7 +47,7 @@
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
 | ADM-010 | IN_PROGRESS | 管理端 Vue Router 模块化与 URL 状态 | WB-040, FE-040 | `frontend-admin/src/app/`、`frontend-admin/src/features/`、`frontend-admin/src/pages/` | 当前已具备 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/graph`、`/admin/ai`、`/admin/system`、`/admin/audit` 等可刷新、可回退、可直达 URL，并已拆出登录视图、已登录壳层以及 dashboard / moderation / governance 首批模块视图；后续继续推进真正 page / feature 边界与更完整的治理路由。 |
-| ADM-011 | IN_PROGRESS | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 当前已落地五段真实治理切片：举报支持 `resolve / dismiss`、写回 `handled_by / handled_at` 并进入审计链路；资料治理已切到真实 `/admin/materials` 列表，并可对资料执行 `approve / reject / hide`，其中已隐藏资料可直接恢复；AI 任务已支持 `retry / cancel` 状态动作与审计留痕；用户治理已支持 `disable / activate`，并让被禁用账号在 login / refresh 阶段被拒绝；图谱模板治理已切到真实 `/admin/diagram-templates` 列表，并可对模板执行 `publish / unpublish`，且会同步影响用户端 `/api/v1/diagram/templates` 可见性。后续继续补举报处理备注、会话失效与更完整的权限边界。 |
+| ADM-011 | IN_PROGRESS | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 当前已落地五段真实治理切片并开始补强会话边界：举报支持 `resolve / dismiss`、写回 `handled_by / handled_at` 并进入审计链路；资料治理已切到真实 `/admin/materials` 列表，并可对资料执行 `approve / reject / hide`，其中已隐藏资料可直接恢复；AI 任务已支持 `retry / cancel` 状态动作与审计留痕；用户治理已支持 `disable / activate`，禁用时会撤销该用户仍有效的 refresh token，且认证中间件会在请求时按数据库中的当前用户状态与角色做校验；图谱模板治理已切到真实 `/admin/diagram-templates` 列表，并可对模板执行 `publish / unpublish`，且会同步影响用户端 `/api/v1/diagram/templates` 可见性。后续继续补举报处理备注、更细粒度的资源权限边界与前端失效提示联动。 |
 | SE-020 | TODO | MySQL fallback 搜索服务端分页与真实统计 | WB-014 | search service/handler/frontend search | `GET /search` 支持 cursor/limit/sort 或等价分页；每类结果有真实命中数、搜索耗时、排序语义、空结果建议和来源跳转契约。 |
 | WB-043 | TODO | SearchIndexer 升级与 Meilisearch 评估 | SE-020 | search module/config/deploy | 前端 API 不变；索引实现可替换，具备配置开关；明确是否进入 Meilisearch 的采用/不采用结论。 |
 | WB-044 | TODO | 搜索同步与失败恢复任务 | WB-043 | jobs/queue/search | 具备重建索引、失败重试、幂等与可观测字段。 |
@@ -63,6 +63,25 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：ADM-011（用户会话即时失效与权限边界补强）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `backend/internal/modules/admin/service/user_actions_test.go` 新增 RED/GREEN 服务层回归，锁定禁用用户时必须撤销仍有效的 `refresh_tokens`，避免后台治理只改用户状态、不影响既有会话。
+  - 新增 `backend/internal/middleware/auth_test.go`，先以 RED 复现两个缺口：被禁用用户仍可拿旧 access token 继续访问受保护接口，以及数据库角色已降级时旧 JWT claim 仍可能携带过期管理员权限。
+  - `backend/internal/modules/admin/service/service.go` 现已在 `disable` 动作事务内一并撤销该用户所有未撤销的 refresh token，让后台禁用动作对后续 refresh 立即生效。
+  - `backend/internal/middleware/auth.go` 改为在每次受保护请求中按 `claims.UserID` 回查当前用户，并以数据库中的 `status / role / username` 为准写入上下文；被禁用用户会在中间件层收到 `user_disabled`，角色变更后的旧 token 也不再保留旧权限。
+  - `backend/internal/app/server.go` 与 `backend/internal/modules/admin/router/router.go` 统一复用新的 `authGuard`，让普通受保护路由与后台治理路由都共享同一层即时状态校验。
+- 已执行验证：
+  - RED：`go test ./internal/modules/admin/service -run 'TestHandleUserDisableRevokesActiveRefreshTokens|TestHandleUserDisablesActiveUserAndWritesAuditLog|TestHandleUserActivatesDisabledUser|TestHandleUserRejectsProtectedAdminAccount'`
+  - RED：`go test ./internal/middleware -run 'TestAuthenticateRejectsDisabledUser|TestAuthenticateUsesCurrentRoleFromDatabase'`
+  - GREEN：`go test ./internal/modules/admin/service -run 'TestHandleUserDisableRevokesActiveRefreshTokens|TestHandleUserDisablesActiveUserAndWritesAuditLog|TestHandleUserActivatesDisabledUser|TestHandleUserRejectsProtectedAdminAccount'`
+  - GREEN：`go test ./internal/middleware -run 'TestAuthenticateRejectsDisabledUser|TestAuthenticateUsesCurrentRoleFromDatabase'`
+  - `go test ./internal/modules/auth/service -run 'TestLoginRejectsDisabledUser|TestRefreshRejectsDisabledUser'`
+  - `go test ./...`
+- 风险与后续：
+  - 当前前后台共享会话层仍主要围绕 `401 refresh/replay/fail-logout`；对于请求阶段直接返回的 `403 user_disabled`，前端还没有统一把这类被动失效转成清 session 与统一提示。
+  - 这一步先补的是“用户状态/角色即时生效”这条最小权限边界；更细粒度的资源归属校验、举报处理备注和后台模块 page / feature 下沉仍需沿 `ADM-010 / ADM-011` 继续收口。
 
 ### 执行记录：ADM-011（图谱模板治理起步）
 - 执行日期：2026-07-09
@@ -97,7 +116,7 @@
   - GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
   - `npm --workspace frontend-admin run typecheck`
 - 风险与后续：
-  - 当前用户治理先收口在“账号禁用 / 恢复 + login/refresh 拒绝”这一层，还没有做已签发 access token 的即时失效或全局中间件级拦截。
+  - 当前用户治理首切片已从“账号禁用 / 恢复 + login/refresh 拒绝”推进到“禁用时撤销 refresh token + 请求时即时拦截 disabled / 过期角色”；但前端仍未把运行中收到的 `403 user_disabled` 统一转成被动登出提示。
   - 用户治理确认状态仍在 `AdminWorkspaceView.vue` 协调；后续更适合沿 `ADM-010 / ADM-011` 继续把资料、用户、AI、审计的动作状态下沉到 page / feature 边界。
 
 ### 执行记录：ADM-011（AI 任务治理动作起步）

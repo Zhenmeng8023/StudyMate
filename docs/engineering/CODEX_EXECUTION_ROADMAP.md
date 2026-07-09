@@ -157,6 +157,12 @@
 - `backend/internal/modules/auth/service/service.go` 也已开始真实消费用户 `status` 字段：被禁用账号在 login / refresh 阶段会收到 `user_disabled` 拒绝，不再只是后台列表里的展示状态。
 - 这一步继续遵循“先补治理主路径”的节奏：先把用户治理做成最小可执行模块，后续再继续补更完整的会话失效、权限边界与 page / feature 下沉。
 
+### 2026-07-09 ADM-011 用户会话即时失效与权限边界补强
+
+- `backend/internal/modules/admin/service/service.go` 已在用户 `disable` 动作事务内同步撤销该用户所有未撤销的 `refresh_tokens`，让后台禁用动作不再只影响下一次登录，而是立即阻断后续 refresh。
+- `backend/internal/middleware/auth.go` 已改为在每次受保护请求中按 `claims.UserID` 回查数据库中的当前用户，并以真实 `status / role / username` 写入上下文；被禁用账号会在中间件层收到 `user_disabled`，角色变更后的旧 JWT claim 也不再继续保留旧权限。
+- 这一步把 `ADM-011` 从“后台治理可操作”继续推进到“治理动作会真实影响运行中会话边界”；后续更值得补的是举报处理备注、前端对 `403 user_disabled` 的统一被动登出提示，以及更细粒度的资源权限矩阵。
+
 ### 2026-07-09 ADM-011 图谱模板治理起步
 
 - 后端已补齐 `/api/v1/admin/diagram-templates`、`/api/v1/admin/diagram-templates/:id/publish` 与 `/api/v1/admin/diagram-templates/:id/unpublish`，服务层会把系统模板 catalog 与 `diagram_templates` 表里的状态覆盖合并成真实治理列表，并写入 `admin.handle.diagram_template` 审计事件。
@@ -324,7 +330,7 @@
 - WB-041：补审批动作、角色校验、分页筛选和状态流转。
 - WB-042：完善审计事件模型。
 - ADM-010：将管理端拆为 Vue Router 模块页面，提供 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/materials`、`/admin/reports`、`/admin/ai`、`/admin/files`、`/admin/audit-logs` 等可刷新 URL。
-- ADM-011：继续从已落地的“举报处理 + 资料治理 + AI 任务 + 用户治理 + 图谱模板”五段首切片往外扩，补举报处理备注、会话失效与更完整的权限边界，并继续收口资料、模板、用户与 AI 的运营语义。
+- ADM-011：继续从已落地的“举报处理 + 资料治理 + AI 任务 + 用户治理 + 图谱模板”五段首切片与会话即时失效补强往外扩，补举报处理备注、前端失效提示联动、更细粒度的资源权限边界，并继续收口资料、模板、用户与 AI 的运营语义。
 - SE-020：在现有 MySQL fallback 上补搜索服务端分页、真实命中数、排序语义、耗时和空结果建议。
 - WB-043：在现有 `SearchIndexer` 边界上评估 / 接入 Meilisearch。
 - WB-044：补搜索同步任务、失败重试、重建索引能力。

@@ -83,7 +83,7 @@ StudyMate/
 
 - `backend/internal/modules/search` 已存在，且包含 `SearchIndexer` 抽象与 MySQL fallback 实现。
 - `backend/internal/modules/share` 已存在，含 `/share-links` 相关路由。
-- 管理后台真实数据路由已存在，包含 `users`、`reports`、`materials`、`tags`、`diagram-templates`、`ai/tasks`、`ai/usage`、`audit-logs`、`files`；其中举报治理已起步支持 `resolve / dismiss` 动作，并会写回 `handled_by / handled_at` 与审计日志，资料治理也已切到真实材料列表与可执行动作，AI 任务治理已支持 `retry / cancel` 状态动作与审计留痕，用户治理已支持 `disable / activate` 并让被禁用账号在 login / refresh 阶段被拒绝，图谱模板治理则已支持 `publish / unpublish`，并会同步影响用户端 `/api/v1/diagram/templates` 可见性。
+- 管理后台真实数据路由已存在，包含 `users`、`reports`、`materials`、`tags`、`diagram-templates`、`ai/tasks`、`ai/usage`、`audit-logs`、`files`；其中举报治理已起步支持 `resolve / dismiss` 动作，并会写回 `handled_by / handled_at` 与审计日志，资料治理也已切到真实材料列表与可执行动作，AI 任务治理已支持 `retry / cancel` 状态动作与审计留痕，用户治理已支持 `disable / activate`，禁用时会撤销仍有效的 refresh token，且认证中间件会在请求时按数据库中的当前用户状态与角色做校验，图谱模板治理则已支持 `publish / unpublish`，并会同步影响用户端 `/api/v1/diagram/templates` 可见性。
 
 ### 3.5 前端壳层拆分状态
 

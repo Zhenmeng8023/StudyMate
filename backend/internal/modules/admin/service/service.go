@@ -227,6 +227,18 @@ func (s *Service) HandleUser(actorID string, userID string, action string) error
 			return apperrors.Internal("handle admin user failed")
 		}
 
+		if action == "disable" {
+			revokedAt := time.Now().UTC()
+			if err := tx.Table("refresh_tokens").
+				Where("user_id = ? AND revoked_at IS NULL", userID).
+				Updates(map[string]any{
+					"revoked_at": revokedAt,
+					"updated_at": revokedAt,
+				}).Error; err != nil {
+				return apperrors.Internal("revoke disabled user sessions failed")
+			}
+		}
+
 		metadata, err := json.Marshal(map[string]any{
 			"userId":         userID,
 			"action":         action,

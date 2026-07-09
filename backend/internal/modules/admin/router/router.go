@@ -4,19 +4,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"studymate/backend/internal/middleware"
 	"studymate/backend/internal/modules/admin/handler"
-	"studymate/backend/internal/pkg/security"
 )
 
 func RegisterRoutes(
 	group *gin.RouterGroup,
 	adminHandler *handler.Handler,
 	moderationHandler *handler.ModerationHandler,
-	tokenManager *security.TokenManager,
+	authMiddleware gin.HandlerFunc,
 ) {
 	group.POST("/admin/login", adminHandler.Login)
 
 	protected := group.Group("/admin")
-	protected.Use(middleware.Authenticate(tokenManager), middleware.RequireRole("admin"))
+	protected.Use(authMiddleware, middleware.RequireRole("admin"))
 	protected.GET("/me", adminHandler.Me)
 	protected.GET("/overview", adminHandler.Overview)
 	protected.GET("/users", adminHandler.Users)

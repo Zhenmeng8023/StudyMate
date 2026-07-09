@@ -170,9 +170,10 @@ func NewServer(cfg config.Config) (*Server, error) {
 	cardHandler := cardhandler.NewHandler(cardService)
 	searchHandler := searchhandler.NewHandler(searchService, tokenManager)
 	shareHandler := sharehandler.NewHandler(shareService)
+	authGuard := middleware.Authenticate(tokenManager, userRepository)
 
 	server.registerRoutes(
-		tokenManager,
+		authGuard,
 		authHandler,
 		userHandler,
 		aiHandler,
@@ -197,7 +198,7 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) registerRoutes(
-	tokenManager *security.TokenManager,
+	authGuard gin.HandlerFunc,
 	authHandler *authhandler.Handler,
 	userHandler *userhandler.Handler,
 	aiHandler *aihandler.Handler,
@@ -239,7 +240,7 @@ func (s *Server) registerRoutes(
 	sharerouter.RegisterPublicRoutes(authGroup, shareHandler)
 
 	protected := api.Group("")
-	protected.Use(middleware.Authenticate(tokenManager))
+	protected.Use(authGuard)
 	authrouter.RegisterProtectedRoutes(protected, authHandler)
 	userrouter.RegisterRoutes(protected, userHandler)
 	airouter.RegisterRoutes(protected, aiHandler)
@@ -252,5 +253,5 @@ func (s *Server) registerRoutes(
 	cardrouter.RegisterRoutes(protected, cardHandler)
 	sharerouter.RegisterProtectedRoutes(protected, shareHandler)
 
-	adminrouter.RegisterRoutes(api, adminHandler, moderationHandler, tokenManager)
+	adminrouter.RegisterRoutes(api, adminHandler, moderationHandler, authGuard)
 }
