@@ -465,6 +465,35 @@ func (s *Service) CommitGraphChangeDrafts(ownerUserID string, graphID string, re
 }
 
 func (s *Service) ListDiagramTemplates() []graphdto.DiagramTemplatePayload {
+	catalog := graphdto.DefaultDiagramTemplateCatalog()
+	states := map[string]graphrepo.DiagramTemplateState{}
+
+	if repository, ok := s.repository.(interface {
+		ListDiagramTemplateStates([]string) (map[string]graphrepo.DiagramTemplateState, error)
+	}); ok {
+		templateIDs := make([]string, 0, len(catalog))
+		for _, entry := range catalog {
+			templateIDs = append(templateIDs, entry.ID)
+		}
+
+		if loadedStates, err := repository.ListDiagramTemplateStates(templateIDs); err == nil {
+			states = loadedStates
+		} else {
+			log.Printf("graph template state sync failed: err=%v", err)
+		}
+	}
+
+	templates := make([]graphdto.DiagramTemplatePayload, 0, len(catalog))
+	for _, entry := range catalog {
+		if state, ok := states[entry.ID]; ok && graphdto.NormalizeDiagramTemplateStatus(state.Status) == "unpublished" {
+			continue
+		}
+
+		templates = append(templates, entry.DiagramTemplatePayload)
+	}
+
+	return templates
+
 	return []graphdto.DiagramTemplatePayload{
 		{
 			ID:          "learning-material-map",

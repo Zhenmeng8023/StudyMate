@@ -44,6 +44,7 @@ type ModerationAction = "approve" | "reject" | "hide";
 type ReportAction = "resolve" | "dismiss";
 type UserAction = "disable" | "activate";
 type AITaskAction = "retry" | "cancel";
+type TemplateAction = "publish" | "unpublish";
 type AdminNavItem = {
   key: AdminView;
   label: string;
@@ -76,6 +77,8 @@ const pendingUserAction = ref<{ action: UserAction; record: GovernanceRecord } |
 const userConfirmError = ref("");
 const pendingAITaskAction = ref<{ action: AITaskAction; record: GovernanceRecord } | null>(null);
 const aiTaskConfirmError = ref("");
+const pendingTemplateAction = ref<{ action: TemplateAction; record: GovernanceRecord } | null>(null);
+const templateConfirmError = ref("");
 
 const loggedIn = computed(() => Boolean(session.value));
 const pendingPosts = computed(() => moderationItems.value.filter((item) => item.type === "post"));
@@ -172,6 +175,19 @@ const governanceActions = computed(() => {
     }
   }
 
+  if (activeView.value === "graph") {
+    if (status === "published") {
+      return [
+        { key: "unpublish", label: "下架模板", tone: "danger" as const }
+      ];
+    }
+    if (status === "unpublished") {
+      return [
+        { key: "publish", label: "发布模板" }
+      ];
+    }
+  }
+
   return [];
 });
 const reportConfirmTitle = computed(() => {
@@ -221,6 +237,22 @@ const aiTaskConfirmDescription = computed(() => {
 const aiTaskConfirmLabel = computed(() => (pendingAITaskAction.value?.action === "cancel" ? "确认取消" : "确认重试"));
 const aiTaskConfirmingLabel = computed(() => (pendingAITaskAction.value?.action === "cancel" ? "取消中..." : "重试中..."));
 const aiTaskConfirmTone = computed(() => (pendingAITaskAction.value?.action === "cancel" ? "danger" : "default"));
+const templateConfirmTitle = computed(() => {
+  const pending = pendingTemplateAction.value;
+  if (!pending) return "";
+  return pending.action === "publish" ? "确认发布这个图谱模板" : "确认下架这个图谱模板";
+});
+const templateConfirmDescription = computed(() => {
+  const pending = pendingTemplateAction.value;
+  if (!pending) return "";
+  const name = String(pending.record.name ?? pending.record.title ?? pending.record.id ?? "");
+  return pending.action === "publish"
+    ? `${name} 发布后会重新出现在用户端图谱模板列表中。`
+    : `${name} 下架后会从用户端图谱模板列表中隐藏，但保留后台治理记录。`;
+});
+const templateConfirmLabel = computed(() => (pendingTemplateAction.value?.action === "publish" ? "确认发布" : "确认下架"));
+const templateConfirmingLabel = computed(() => (pendingTemplateAction.value?.action === "publish" ? "发布中..." : "下架中..."));
+const templateConfirmTone = computed(() => (pendingTemplateAction.value?.action === "publish" ? "default" : "danger"));
 
 const navItems = computed<AdminNavItem[]>(() => [
   { key: "dashboard", label: "概览", icon: "▦", group: "总览" },
@@ -272,6 +304,13 @@ const governanceConfig: Record<Exclude<AdminView, "dashboard" | "moderation">, {
   system: { endpoint: "/api/v1/admin/files", query: { limit: 20 }, empty: "暂无文件记录。", description: "查看上传文件与存储治理信息。" },
   audit: { endpoint: "/api/v1/admin/audit-logs", query: { limit: 20 }, empty: "暂无审计日志。", description: "查看关键治理操作的可追溯记录。" }
 };
+governanceConfig.graph = {
+  endpoint: "/api/v1/admin/diagram-templates",
+  query: { limit: 20 },
+  empty: "暂无图谱模板记录。",
+  description: "管理图谱模板的发布状态与基础元数据。"
+};
+
 const visibleModerationItems = computed(() => {
   const query = moderationQuery.value.trim().toLowerCase();
   if (!query) return moderationItems.value;
@@ -558,6 +597,32 @@ async function applyAITaskAction(record: GovernanceRecord, action: AITaskAction)
   }
 }
 
+async function applyTemplateAction(record: GovernanceRecord, action: TemplateAction) {
+  if (!session.value) return;
+
+  const templateID = String(record.id ?? "");
+  if (!templateID) {
+    templateConfirmError.value = "图谱模板标识缺失，无法提交治理动作。";
+    return;
+  }
+
+  loading.value = true;
+  errorMessage.value = "";
+  templateConfirmError.value = "";
+  try {
+    const data = await post<{ status: string }>(`/api/v1/admin/diagram-templates/${templateID}/${action}`, {});
+    pendingTemplateAction.value = null;
+    notice.value = `图谱模板 ${templateID} 已更新为 ${data.status}。`;
+    await loadGovernance("graph");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "更新图谱模板状态失败";
+    errorMessage.value = message;
+    templateConfirmError.value = message;
+  } finally {
+    loading.value = false;
+  }
+}
+
 function requestModerationAction(item: ModerationItem, action: ModerationAction) {
   moderationConfirmError.value = "";
   pendingModerationAction.value = { action, item };
@@ -606,6 +671,17 @@ function requestGovernanceAction(payload: { action: string; record: GovernanceRe
       action: payload.action,
       record: payload.record
     };
+    return;
+  }
+
+  if (activeView.value === "graph") {
+    if (payload.action !== "publish" && payload.action !== "unpublish") return;
+
+    templateConfirmError.value = "";
+    pendingTemplateAction.value = {
+      action: payload.action,
+      record: payload.record
+    };
   }
 }
 
@@ -651,6 +727,12 @@ function closeAITaskConfirm() {
   aiTaskConfirmError.value = "";
 }
 
+function closeTemplateConfirm() {
+  if (loading.value) return;
+  pendingTemplateAction.value = null;
+  templateConfirmError.value = "";
+}
+
 async function confirmModerationAction() {
   const pending = pendingModerationAction.value;
   if (!pending) return;
@@ -675,6 +757,12 @@ async function confirmAITaskAction() {
   await applyAITaskAction(pending.record, pending.action);
 }
 
+async function confirmTemplateAction() {
+  const pending = pendingTemplateAction.value;
+  if (!pending) return;
+  await applyTemplateAction(pending.record, pending.action);
+}
+
 function switchView(view: AdminView) {
   activeView.value = view;
   recordQuery.value = "";
@@ -687,6 +775,8 @@ function switchView(view: AdminView) {
   userConfirmError.value = "";
   pendingAITaskAction.value = null;
   aiTaskConfirmError.value = "";
+  pendingTemplateAction.value = null;
+  templateConfirmError.value = "";
   syncAdminLocation(view);
   loadActiveView(view);
 }
@@ -711,6 +801,8 @@ function logout() {
   userConfirmError.value = "";
   pendingAITaskAction.value = null;
   aiTaskConfirmError.value = "";
+  pendingTemplateAction.value = null;
+  templateConfirmError.value = "";
   activeView.value = defaultAdminRouteKey;
   syncAdminLocation(defaultAdminRouteKey, "replace");
   sessionInvalidation.value = null;
@@ -778,6 +870,19 @@ function selectRecord(row: GovernanceRecord) {
       :title="aiTaskConfirmTitle"
       @cancel="closeAITaskConfirm"
       @confirm="confirmAITaskAction"
+    />
+    <AdminConfirmDialog
+      cancel-label="取消"
+      :confirm-label="templateConfirmLabel"
+      :confirm-tone="templateConfirmTone"
+      :confirming="loading"
+      :confirming-label="templateConfirmingLabel"
+      :description="templateConfirmDescription"
+      :error-message="templateConfirmError"
+      :is-open="Boolean(pendingTemplateAction)"
+      :title="templateConfirmTitle"
+      @cancel="closeTemplateConfirm"
+      @confirm="confirmTemplateAction"
     />
 
     <AdminConfirmDialog

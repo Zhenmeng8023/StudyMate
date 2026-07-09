@@ -157,6 +157,13 @@
 - `backend/internal/modules/auth/service/service.go` 也已开始真实消费用户 `status` 字段：被禁用账号在 login / refresh 阶段会收到 `user_disabled` 拒绝，不再只是后台列表里的展示状态。
 - 这一步继续遵循“先补治理主路径”的节奏：先把用户治理做成最小可执行模块，后续再继续补更完整的会话失效、权限边界与 page / feature 下沉。
 
+### 2026-07-09 ADM-011 图谱模板治理起步
+
+- 后端已补齐 `/api/v1/admin/diagram-templates`、`/api/v1/admin/diagram-templates/:id/publish` 与 `/api/v1/admin/diagram-templates/:id/unpublish`，服务层会把系统模板 catalog 与 `diagram_templates` 表里的状态覆盖合并成真实治理列表，并写入 `admin.handle.diagram_template` 审计事件。
+- `backend/internal/modules/graph/service/service.go` 已开始真实消费模板发布状态：用户端 `/api/v1/diagram/templates` 只返回已发布模板，被后台下架的模板会直接从图谱模板列表隐藏。
+- `frontend-admin/src/views/AdminWorkspaceView.vue` 现在已把后台 `graph` 模块从 `/api/v1/admin/tags` 切到真实 `/api/v1/admin/diagram-templates`，并加入模板 `publish / unpublish` 的确认流。
+- 这一步继续遵循“先补治理主路径”的节奏：先把模板治理做成最小可执行模块，后续再继续补模板备注、版本、用户自定义模板与更独立的 page / feature 边界。
+
 ### 2026-07-08 FE / UI 验证收口更新
 
 - FE-010、FE-020、FE-030 与 UI-04 已在真实依赖环境完成类型检查、相关 Vitest、前后台构建与 4 条 Playwright smoke。
@@ -317,7 +324,7 @@
 - WB-041：补审批动作、角色校验、分页筛选和状态流转。
 - WB-042：完善审计事件模型。
 - ADM-010：将管理端拆为 Vue Router 模块页面，提供 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/materials`、`/admin/reports`、`/admin/ai`、`/admin/files`、`/admin/audit-logs` 等可刷新 URL。
-- ADM-011：继续从已落地的“举报处理 + 资料治理 + AI 任务 + 用户治理”四段首切片往外扩，补举报处理备注、模板审核/发布/下架、会话失效与更完整的权限边界，并继续收口资料、用户与 AI 的运营语义。
+- ADM-011：继续从已落地的“举报处理 + 资料治理 + AI 任务 + 用户治理 + 图谱模板”五段首切片往外扩，补举报处理备注、会话失效与更完整的权限边界，并继续收口资料、模板、用户与 AI 的运营语义。
 - SE-020：在现有 MySQL fallback 上补搜索服务端分页、真实命中数、排序语义、耗时和空结果建议。
 - WB-043：在现有 `SearchIndexer` 边界上评估 / 接入 Meilisearch。
 - WB-044：补搜索同步任务、失败重试、重建索引能力。

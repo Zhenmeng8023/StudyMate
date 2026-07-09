@@ -683,4 +683,86 @@ describe("AdminWorkspaceView governance modules", () => {
       })
     );
   });
+
+  it("loads diagram template governance rows and confirms unpublish actions", async () => {
+    window.history.replaceState({}, "", "/admin/graph");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const templateRow = {
+      id: "uml-class-diagram",
+      name: "UML 绫诲浘",
+      category: "uml",
+      mode: "diagram",
+      sourceType: "system",
+      status: "published"
+    };
+    const unpublishPath = "/api/v1/admin/diagram-templates/uml-class-diagram/unpublish";
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/diagram-templates?limit=20") {
+        expect(init?.headers).toMatchObject({
+          Authorization: "Bearer admin-token"
+        });
+        return apiPayload([templateRow]);
+      }
+      if (path === unpublishPath) {
+        expect(init?.method).toBe("POST");
+        return apiPayload({ status: "unpublished" });
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("UML 绫诲浘");
+
+    await wrapper.get('[data-governance-action="unpublish"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("确认下架这个图谱模板");
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      unpublishPath,
+      expect.objectContaining({
+        method: "POST"
+      })
+    );
+
+    await wrapper.get('[data-confirm-submit="true"]').trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      unpublishPath,
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer admin-token"
+        })
+      })
+    );
+  });
 });

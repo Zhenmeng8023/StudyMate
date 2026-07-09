@@ -4934,3 +4934,29 @@
 
 - 后台“用户治理”现在已经从只读记录推进到最小可执行动作，且禁用状态开始进入认证链路，不再只是运营视图里的展示字段；后续继续补会话即时失效、更多权限边界和审计查询时，会比现在更顺。
 - 当前用户治理仍先收口在“禁用 / 恢复 + login/refresh 拒绝”这一层，尚未对已签发 access token 做即时拦截；后续若继续推进 `ADM-010 / ADM-011`，更适合把资料、用户、AI、审计动作继续往 page / feature 层下沉，并再决定是否补中间件级状态校验。
+## 2026-07-09 12:45:00 +08:00 | v1.1.0-alpha.151 | 推进 ADM-011 图谱模板治理起步
+### 任务内容
+
+- 继续沿 `ADM-011` 做“先把后台治理主路径补齐”的小步推进，这一轮从用户治理继续扩到图谱模板治理，不回头深挖已有举报 / 资料 / AI / 用户子域。
+- 本轮目标是把后台 `graph` 模块从标签占位列表推进到真实模板治理：读取系统模板目录、接入 `diagram_templates` 状态覆盖，并让后台 `publish / unpublish` 直接影响用户端模板可见性。
+### 实际变更
+
+- 新增 `backend/internal/modules/admin/service/diagram_templates_test.go` 与 `backend/internal/modules/graph/service/diagram_templates_test.go`，先用 RED 锁定三个缺口：后台还没有模板治理服务、后台 `graph` 模块仍在读取 `/api/v1/admin/tags`、用户端 `/api/v1/diagram/templates` 还不会按后台发布状态过滤。
+- 新增 `backend/internal/modules/graph/dto/template_catalog.go` 与 `backend/internal/modules/graph/repository/diagram_templates.go`，把系统图谱模板目录收口成共享 catalog，并给 `diagram_templates` 表补上读写状态覆盖的 repository 能力。
+- 更新 `backend/internal/modules/admin/service/service.go`、`handler/handler.go` 与 `router/router.go`，补齐 `/api/v1/admin/diagram-templates`、`/api/v1/admin/diagram-templates/:id/publish` 与 `/api/v1/admin/diagram-templates/:id/unpublish`；后台现在会把系统模板目录与持久化状态合并成真实治理列表，并为 `publish / unpublish` 写入 `admin.handle.diagram_template` 审计事件。
+- 更新 `backend/internal/modules/graph/service/service.go`，让用户端 `/api/v1/diagram/templates` 只返回已发布模板；被后台下架的模板会直接从用户端模板列表隐藏。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，把后台 `graph` 模块从 `/api/v1/admin/tags` 切到真实 `/api/v1/admin/diagram-templates`，并加入模板 `publish / unpublish` 的确认流。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-011` 从“举报 + 资料 + AI + 用户”四段切片推进到“举报 + 资料 + AI + 用户 + 图谱模板”五段真实治理切片。
+### 验证结果
+
+- RED：`go test ./internal/modules/admin/service ./internal/modules/graph/service`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`go test ./internal/modules/admin/service ./internal/modules/graph/service`
+- `go test ./internal/modules/admin/... ./internal/modules/graph/...`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+
+### 后续影响
+
+- 后台“图谱模板治理”现在已经从标签占位页推进到最小可执行模块，并且发布状态开始真实影响用户端模板列表；后续继续补模板备注、版本、用户自定义模板和 preview 资产治理时，会比现在更顺。
+- 当前模板治理动作仍集中在 `AdminWorkspaceView.vue` 协调；后续若继续推进 `ADM-010 / ADM-011`，更适合把模板、资料、用户、AI、审计等动作继续往 page / feature 层下沉。

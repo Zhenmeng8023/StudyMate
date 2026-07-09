@@ -47,7 +47,7 @@
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
 | ADM-010 | IN_PROGRESS | 管理端 Vue Router 模块化与 URL 状态 | WB-040, FE-040 | `frontend-admin/src/app/`、`frontend-admin/src/features/`、`frontend-admin/src/pages/` | 当前已具备 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/graph`、`/admin/ai`、`/admin/system`、`/admin/audit` 等可刷新、可回退、可直达 URL，并已拆出登录视图、已登录壳层以及 dashboard / moderation / governance 首批模块视图；后续继续推进真正 page / feature 边界与更完整的治理路由。 |
-| ADM-011 | IN_PROGRESS | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 当前已落地四段真实治理切片：举报支持 `resolve / dismiss`、写回 `handled_by / handled_at` 并进入审计链路；资料治理已切到真实 `/admin/materials` 列表，并可对资料执行 `approve / reject / hide`，其中已隐藏资料可直接恢复；AI 任务已支持 `retry / cancel` 状态动作与审计留痕；用户治理已支持 `disable / activate`，并让被禁用账号在 login / refresh 阶段被拒绝。后续继续补图谱模板审核/发布/下架，并深化资料、用户与 AI 的运营语义。 |
+| ADM-011 | IN_PROGRESS | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 当前已落地五段真实治理切片：举报支持 `resolve / dismiss`、写回 `handled_by / handled_at` 并进入审计链路；资料治理已切到真实 `/admin/materials` 列表，并可对资料执行 `approve / reject / hide`，其中已隐藏资料可直接恢复；AI 任务已支持 `retry / cancel` 状态动作与审计留痕；用户治理已支持 `disable / activate`，并让被禁用账号在 login / refresh 阶段被拒绝；图谱模板治理已切到真实 `/admin/diagram-templates` 列表，并可对模板执行 `publish / unpublish`，且会同步影响用户端 `/api/v1/diagram/templates` 可见性。后续继续补举报处理备注、会话失效与更完整的权限边界。 |
 | SE-020 | TODO | MySQL fallback 搜索服务端分页与真实统计 | WB-014 | search service/handler/frontend search | `GET /search` 支持 cursor/limit/sort 或等价分页；每类结果有真实命中数、搜索耗时、排序语义、空结果建议和来源跳转契约。 |
 | WB-043 | TODO | SearchIndexer 升级与 Meilisearch 评估 | SE-020 | search module/config/deploy | 前端 API 不变；索引实现可替换，具备配置开关；明确是否进入 Meilisearch 的采用/不采用结论。 |
 | WB-044 | TODO | 搜索同步与失败恢复任务 | WB-043 | jobs/queue/search | 具备重建索引、失败重试、幂等与可观测字段。 |
@@ -63,6 +63,24 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：ADM-011（图谱模板治理起步）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `backend/internal/modules/admin/service/diagram_templates_test.go` 与 `backend/internal/modules/graph/service/diagram_templates_test.go` 新增 RED/GREEN 回归，先锁定后台缺少模板治理服务、用户端模板列表未按发布状态过滤这两处缺口。
+  - `backend/internal/modules/admin/service/service.go`、`handler/handler.go` 与 `router/router.go` 已补齐 `/api/v1/admin/diagram-templates`、`/api/v1/admin/diagram-templates/:id/publish`、`/api/v1/admin/diagram-templates/:id/unpublish`；后台现在会把系统模板目录与 `diagram_templates` 表里的状态覆盖合并成真实治理列表，并为 `publish / unpublish` 写入 `admin.handle.diagram_template` 审计事件。
+  - `backend/internal/modules/graph/dto/template_catalog.go`、`backend/internal/modules/graph/repository/diagram_templates.go` 与 `backend/internal/modules/graph/service/service.go` 已把图谱模板目录收口成共享 catalog，并让用户端 `/api/v1/diagram/templates` 只返回已发布模板；被后台下架的模板会直接从用户端模板列表隐藏。
+  - `frontend-admin/src/views/AdminWorkspaceView.vue` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts` 已把后台 `graph` 模块从 `/api/v1/admin/tags` 切到真实 `/api/v1/admin/diagram-templates`，并加入模板 `publish / unpublish` 的确认流。
+- 已执行验证：
+  - RED：`go test ./internal/modules/admin/service ./internal/modules/graph/service`
+  - RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - GREEN：`go test ./internal/modules/admin/service ./internal/modules/graph/service`
+  - `go test ./internal/modules/admin/... ./internal/modules/graph/...`
+  - GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+- 风险与后续：
+  - 当前模板治理先收口在系统模板目录的 `publish / unpublish` 与用户端可见性同步，还没有把用户自定义模板、模板版本、模板审核备注和 preview 文件治理一起纳入。
+  - 后台图谱模板动作状态仍在 `AdminWorkspaceView.vue` 协调；后续更适合沿 `ADM-010 / ADM-011` 继续把模板、资料、用户、AI 的动作状态一起沉到 page / feature 边界。
 
 ### 执行记录：ADM-011（用户治理动作起步）
 - 执行日期：2026-07-09

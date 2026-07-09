@@ -43,6 +43,19 @@ type AdminTagPayload struct {
 	Source     string `json:"source"`
 }
 
+type AdminDiagramTemplatePayload struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Category    string `json:"category"`
+	Description string `json:"description"`
+	Mode        string `json:"mode"`
+	SourceType  string `json:"sourceType"`
+	Status      string `json:"status"`
+	CreatedBy   string `json:"createdBy"`
+	CreatedAt   string `json:"createdAt"`
+	UpdatedAt   string `json:"updatedAt"`
+}
+
 type AdminAITaskPayload struct {
 	ID           string  `json:"id"`
 	UserID       string  `json:"userId"`

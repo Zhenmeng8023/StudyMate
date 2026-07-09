@@ -10,6 +10,7 @@ import (
 	adminmodel "studymate/backend/internal/modules/admin/model"
 	adminrepo "studymate/backend/internal/modules/admin/repository"
 	communityrepo "studymate/backend/internal/modules/community/repository"
+	graphdto "studymate/backend/internal/modules/graph/dto"
 	graphrepo "studymate/backend/internal/modules/graph/repository"
 	materialrepo "studymate/backend/internal/modules/material/repository"
 	userrepo "studymate/backend/internal/modules/user/repository"
@@ -431,6 +432,143 @@ func (s *Service) ListTags(limit int) ([]admindto.AdminTagPayload, error) {
 		return nil, apperrors.Internal("list admin tags failed")
 	}
 	return rows, nil
+}
+
+func (s *Service) ListDiagramTemplates(limit int) ([]admindto.AdminDiagramTemplatePayload, error) {
+	catalog := graphdto.DefaultDiagramTemplateCatalog()
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	if len(catalog) > limit {
+		catalog = catalog[:limit]
+	}
+
+	rows := make([]admindto.AdminDiagramTemplatePayload, 0, len(catalog))
+	if s.graphs == nil {
+		for _, entry := range catalog {
+			rows = append(rows, admindto.AdminDiagramTemplatePayload{
+				ID:          entry.ID,
+				Name:        entry.Name,
+				Category:    entry.Category,
+				Description: entry.Description,
+				Mode:        entry.Mode,
+				SourceType:  entry.SourceType,
+				Status:      "published",
+			})
+		}
+		return rows, nil
+	}
+
+	templateIDs := make([]string, 0, len(catalog))
+	for _, entry := range catalog {
+		templateIDs = append(templateIDs, entry.ID)
+	}
+
+	states, err := s.graphs.ListDiagramTemplateStates(templateIDs)
+	if err != nil {
+		return nil, apperrors.Internal("list admin diagram templates failed")
+	}
+
+	for _, entry := range catalog {
+		row := admindto.AdminDiagramTemplatePayload{
+			ID:          entry.ID,
+			Name:        entry.Name,
+			Category:    entry.Category,
+			Description: entry.Description,
+			Mode:        entry.Mode,
+			SourceType:  entry.SourceType,
+			Status:      "published",
+		}
+
+		if state, ok := states[entry.ID]; ok {
+			row.Status = graphdto.NormalizeDiagramTemplateStatus(state.Status)
+			if state.SourceType != "" {
+				row.SourceType = state.SourceType
+			}
+			row.CreatedBy = state.CreatedBy
+			if !state.CreatedAt.IsZero() {
+				row.CreatedAt = state.CreatedAt.UTC().Format(time.RFC3339)
+			}
+			if !state.UpdatedAt.IsZero() {
+				row.UpdatedAt = state.UpdatedAt.UTC().Format(time.RFC3339)
+			}
+		}
+
+		rows = append(rows, row)
+	}
+
+	return rows, nil
+}
+
+func (s *Service) HandleDiagramTemplate(actorID string, templateID string, action string) error {
+	if action != "publish" && action != "unpublish" {
+		return apperrors.New(400, "invalid_diagram_template_action", "unsupported diagram template action")
+	}
+
+	entry, ok := graphdto.FindDiagramTemplateCatalogEntry(templateID)
+	if !ok {
+		return apperrors.New(404, "diagram_template_not_found", "diagram template not found")
+	}
+	if s.graphs == nil {
+		return apperrors.Internal("handle admin diagram template failed")
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		repository := graphrepo.NewRepository(tx)
+		existing, err := repository.FindDiagramTemplateState(templateID)
+		if err != nil {
+			return apperrors.Internal("handle admin diagram template failed")
+		}
+
+		previousStatus := "published"
+		createdBy := actorID
+		createdAt := time.Now().UTC()
+		if existing != nil {
+			previousStatus = graphdto.NormalizeDiagramTemplateStatus(existing.Status)
+			if existing.CreatedBy != "" {
+				createdBy = existing.CreatedBy
+			}
+			if !existing.CreatedAt.IsZero() {
+				createdAt = existing.CreatedAt.UTC()
+			}
+		}
+
+		nextStatus := "published"
+		if action == "unpublish" {
+			nextStatus = "unpublished"
+		}
+		if previousStatus == nextStatus {
+			return apperrors.New(409, "invalid_diagram_template_transition", "diagram template already in target status")
+		}
+
+		now := time.Now().UTC()
+		if err := repository.SaveDiagramTemplateState(graphrepo.DiagramTemplateState{
+			ID:          entry.ID,
+			Name:        entry.Name,
+			Category:    entry.Category,
+			Description: entry.Description,
+			SourceType:  entry.SourceType,
+			Status:      nextStatus,
+			CreatedBy:   createdBy,
+			CreatedAt:   createdAt,
+			UpdatedAt:   now,
+		}); err != nil {
+			return apperrors.Internal("handle admin diagram template failed")
+		}
+
+		if err := adminrepo.NewAuditLogRepository(tx).Create(actorID, "admin.handle.diagram_template", "diagram_template", map[string]any{
+			"templateId":       entry.ID,
+			"action":           action,
+			"previousStatus":   previousStatus,
+			"status":           nextStatus,
+			"templateMode":     entry.Mode,
+			"templateCategory": entry.Category,
+		}); err != nil {
+			return apperrors.Internal("create admin diagram template audit log failed")
+		}
+
+		return nil
+	})
 }
 
 func (s *Service) ListAITasks(limit int) ([]admindto.AdminAITaskPayload, error) {

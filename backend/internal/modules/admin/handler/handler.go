@@ -116,6 +116,23 @@ func (h *Handler) Tags(ctx *gin.Context) {
 	response.Success(ctx, http.StatusOK, result)
 }
 
+func (h *Handler) DiagramTemplates(ctx *gin.Context) {
+	result, err := h.adminService.ListDiagramTemplates(adminLimit(ctx))
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+	response.Success(ctx, http.StatusOK, result)
+}
+
+func (h *Handler) PublishDiagramTemplate(ctx *gin.Context) {
+	h.handleDiagramTemplate(ctx, "publish")
+}
+
+func (h *Handler) UnpublishDiagramTemplate(ctx *gin.Context) {
+	h.handleDiagramTemplate(ctx, "unpublish")
+}
+
 func (h *Handler) AITasks(ctx *gin.Context) {
 	result, err := h.adminService.ListAITasks(adminLimit(ctx))
 	if err != nil {
@@ -196,6 +213,19 @@ func (h *Handler) handleAITask(ctx *gin.Context, action string) {
 	status := "pending"
 	if action == "cancel" {
 		status = "cancelled"
+	}
+	response.Success(ctx, http.StatusOK, gin.H{"status": status})
+}
+
+func (h *Handler) handleDiagramTemplate(ctx *gin.Context, action string) {
+	if err := h.adminService.HandleDiagramTemplate(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), action); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	status := "published"
+	if action == "unpublish" {
+		status = "unpublished"
 	}
 	response.Success(ctx, http.StatusOK, gin.H{"status": status})
 }
