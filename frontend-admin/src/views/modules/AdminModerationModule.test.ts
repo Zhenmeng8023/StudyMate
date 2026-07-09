@@ -33,4 +33,23 @@ describe("AdminModerationModule", () => {
       item: expect.objectContaining({ id: "post-1" })
     });
   });
+
+  it("renders the shared loading state before moderation rows arrive", () => {
+    const wrapper = mount(AdminModerationModule, {
+      props: {
+        dataState: {
+          kind: "loading",
+          title: "正在同步审核队列",
+          description: "请稍候，最新待审核内容和状态正在载入。"
+        },
+        items: [],
+        query: "",
+        totalCount: 0
+      }
+    });
+
+    expect(wrapper.text()).toContain("加载中");
+    expect(wrapper.text()).toContain("正在同步审核队列");
+    expect(wrapper.text()).not.toContain("当前没有匹配的待审核内容");
+  });
 });

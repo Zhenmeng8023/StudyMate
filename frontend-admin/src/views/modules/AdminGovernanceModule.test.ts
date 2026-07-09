@@ -69,4 +69,26 @@ describe("AdminGovernanceModule", () => {
       record: selectedRecord
     });
   });
+
+  it("renders the shared error state before governance data is available", () => {
+    const wrapper = mount(AdminGovernanceModule, {
+      props: {
+        columns: ["id", "status"],
+        dataState: {
+          kind: "error",
+          title: "治理记录暂时不可用",
+          description: "读取治理模块失败"
+        },
+        emptyText: "暂无举报记录",
+        query: "",
+        rows: [],
+        selectedRecord: null,
+        summary: null
+      }
+    });
+
+    expect(wrapper.text()).toContain("暂时不可用");
+    expect(wrapper.text()).toContain("治理记录暂时不可用");
+    expect(wrapper.text()).not.toContain("当前模块已接入真实 API，但没有可显示的数据。");
+  });
 });
