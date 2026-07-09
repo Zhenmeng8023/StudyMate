@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Sparkles, BookOpen, Bot, Compass, GraduationCap, LayoutGrid, LibraryBig, Network, NotebookPen, Settings } from "lucide-react";
 import type { AuthSession, CardDraftPayload, MaterialPayload, NotePayload, PostSummary, ReaderAnnotationPayload } from "../api/client";
+import { PageHeader } from "../design-system/primitives";
 
 const sessionStorageKey = "studymate.session";
 const suspiciousQuestionPattern = /(\?{2,}|？{2,}|锟斤拷+)/g;
@@ -196,14 +197,12 @@ export function WorkspaceHeader(props: {
   actions?: ReactNode;
 }) {
   return (
-    <header className="workspace-header">
-      <div>
-        <p className="eyebrow">{props.eyebrow}</p>
-        <h1>{props.title}</h1>
-        <p className="header-copy">{props.description}</p>
-      </div>
-      {props.actions ? <div className="header-actions">{props.actions}</div> : null}
-    </header>
+    <PageHeader
+      actions={props.actions}
+      description={props.description}
+      eyebrow={props.eyebrow}
+      title={props.title}
+    />
   );
 }
 

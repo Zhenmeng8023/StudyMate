@@ -1,3 +1,27 @@
+## 2026-07-09 09:38:52 +08:00 | v1.1.0-alpha.139 | 推进 FE-041 共享 PageHeader 接入工作区头部
+### 任务内容
+
+- 沿当前更高优先级的 `FE-041` 继续做一个最小、可测试的共享 primitive 收口，不偏离共享 UI 主线，也不回到单一冲突场景深挖。
+- 本轮目标是把已经被多个页面复用的工作区头部结构抽成共享 `PageHeader`，并优先通过 `WorkspaceHeader` 这个现有入口把一批真实页面一起接到共享契约，而不是逐页重写头部布局。
+### 实际变更
+
+- 新增 `packages/ui/src/PageHeader.tsx`，补齐共享 `PageHeader` primitive，先统一 `workspace-header`、`eyebrow`、`header-copy` 与 `header-actions` 这组页面头部骨架语义。
+- 更新 `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/PageHeader.tsx` 与 `frontend-user/src/design-system/primitives/index.ts`，补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/app/appShared.tsx`，把 `WorkspaceHeader` 改为直接复用共享 `PageHeader`，让当前所有走这层包装的真实页面一起进入同一套头部契约。
+- 更新 `packages/ui/src/reactPrimitives.test.tsx` 与新增 `frontend-user/src/design-system/primitives/PageHeader.test.tsx`、`frontend-user/src/app/appShared.test.tsx`，先用 RED 锁定“共享 PageHeader 缺失 / 兼容出口缺失 / WorkspaceHeader 仍未走共享实现”的缺口，再用 GREEN 锁定共享导出、头部动作区和包装接线。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 PageHeader 已落地并接入工作区头部”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/PageHeader.test.tsx src/app/appShared.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/PageHeader.test.tsx src/app/appShared.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+### 后续影响
+
+- `@studymate/ui` 现在已经不只覆盖状态、抽屉、检查器、按钮、标签和表单输入，也开始承接页面头部骨架；后续继续推进 `CommandBar` 时，页面骨架层的共享路径会更顺。
+- 当前这轮主要通过 `WorkspaceHeader` 覆盖了主工作区页面；搜索工作区和图谱工作区仍保留各自直接写的 `workspace-header` / 搜索条结构，下一步更值得继续沿这些重复点推进。
+
 ## 2026-07-09 09:32:26 +08:00 | v1.1.0-alpha.138 | 推进 FE-041 共享 Select 接入笔记与阅读表单
 ### 任务内容
 

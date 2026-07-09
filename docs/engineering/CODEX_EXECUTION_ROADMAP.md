@@ -80,6 +80,12 @@
 - 用户端 `NotesPage` 与 `ReaderPage` 已把资料来源、写入 deck 这类真实学习路径里的选择器切到共享 `Select`，说明 `FE-041` 已继续从输入框推进到表单下拉。
 - 下一步更值得继续推进 `CommandBar` 与 `PageHeader`，优先收口搜索、图谱工作区和后台治理页里仍散落的页面骨架与筛选入口。
 
+### 2026-07-09 FE-041 共享 PageHeader 接入工作区头部
+
+- `@studymate/ui` 已新增共享 `PageHeader`，先统一 `workspace-header`、`eyebrow`、`header-copy` 与 `header-actions` 这组页面头部骨架语义。
+- 用户端 `WorkspaceHeader` 已改为直接复用这层共享 primitive，因此设置、资料、社区、仪表盘、AI 等当前走 `WorkspaceHeader` 的页面已经一起进入同一套头部契约。
+- 下一步更值得继续推进 `CommandBar`，并把搜索工作区、图谱工作区里仍直接写的 `workspace-header` / 搜索条骨架继续收口。
+
 ### 2026-07-08 FE / UI 验证收口更新
 
 - FE-010、FE-020、FE-030 与 UI-04 已在真实依赖环境完成类型检查、相关 Vitest、前后台构建与 4 条 Playwright smoke。

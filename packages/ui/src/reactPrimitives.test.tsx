@@ -122,9 +122,11 @@ describe("@studymate/ui react primitive contract", () => {
       />,
     );
 
-    const header = screen.getByRole("banner");
+    const heading = screen.getByRole("heading", { name: "资料总览" });
+    const header = heading.closest("header");
+    expect(header).toBeTruthy();
     expect(header.className).toContain("workspace-header");
-    expect(screen.getByRole("heading", { name: "资料总览" })).toBeTruthy();
+    expect(heading).toBeTruthy();
     expect(screen.getByText("学习空间")).toBeTruthy();
     expect(screen.getByText("集中展示当前工作区的主标题和动作。")).toBeTruthy();
     expect(screen.getByRole("button", { name: "新建资料" })).toBeTruthy();

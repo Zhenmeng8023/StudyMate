@@ -5,6 +5,7 @@ export { Drawer } from "./Drawer";
 export { IconButton } from "./IconButton";
 export { Input } from "./Input";
 export { Inspector } from "./Inspector";
+export { PageHeader } from "./PageHeader";
 export { Select } from "./Select";
 export { Tag } from "./Tag";
 export type { TagTone } from "@studymate/ui";
