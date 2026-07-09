@@ -156,7 +156,7 @@ describe("AdminWorkspaceView governance modules", () => {
     await wrapper.get('[data-governance-action="disable"]').trigger("click");
     await flushPromises();
 
-    expect(wrapper.text()).toContain("纭绂佺敤杩欎釜鐢ㄦ埛");
+    expect(wrapper.text()).toContain("确认禁用这个用户");
     expect(fetchMock).not.toHaveBeenCalledWith(
       disablePath,
       expect.objectContaining({

@@ -4906,3 +4906,31 @@
 
 - 管理端现在已经具备真实 URL 工作台的最小形态，后续补后台治理动作、模块拆页和审计流时，可以直接沿 `/admin/...` 路径继续扩展。
 - 当前页面仍集中在 `AdminWorkspaceView.vue` 内部切换；后续推进 `ADM-010 / ADM-011` 时，更适合把 users、moderation、ai、audit 等模块逐段拆到独立页面和 feature 边界。
+## 2026-07-09 12:25:00 +08:00 | v1.1.0-alpha.150 | 推进 ADM-011 用户治理动作起步
+### 任务内容
+
+- 继续沿 `ADM-011` 做“先把后台治理主路径补齐”的小步推进，这一轮从 AI 任务治理继续扩到用户治理，不回头深挖已有举报 / 资料 / AI 子域。
+- 本轮目标是把用户治理列表从只读推进到最小可执行治理：活跃用户可禁用，已禁用用户可恢复，并让被禁用账号在认证链路里真实失效，而不是只停留在后台展示状态。
+
+### 实际变更
+
+- 新增 `backend/internal/modules/admin/service/user_actions_test.go`，先用 RED 锁定三个缺口：`HandleUser(...)` 尚不存在、用户治理还没有 `disable / activate` 动作、后台也还不会为这些动作写入审计日志。
+- 新增 `backend/internal/modules/auth/service/status_guard_test.go`，先用 RED 锁定被禁用用户仍可 `Login(...)` / `Refresh(...)` 的认证缺口，避免只把用户状态做成“后台列表字段”。
+- 更新 `backend/internal/modules/admin/service/service.go`、`handler/handler.go` 与 `router/router.go`，补齐 `HandleUser(...)`、`/api/v1/admin/users/:id/disable` 与 `/api/v1/admin/users/:id/activate`；当前原型语义是 `active <-> disabled`，并在同一事务内写入 `admin.handle.user` 审计事件，同时保护管理员账号不在这条首切片里被直接禁用。
+- 更新 `backend/internal/modules/user/model/user.go` 与 `backend/internal/modules/auth/service/service.go`，让用户模型显式承接 `status` 字段，并在登录 / 刷新阶段对 `disabled` 账号返回 `user_disabled`，让禁用动作对真实会话生命周期开始生效。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，让用户治理模块按记录状态显示“禁用用户 / 恢复用户”，先进入确认层，再提交 `/api/v1/admin/users/:id/:action`。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-011` 从“举报 + 资料 + AI”三段切片推进到“举报 + 资料 + AI + 用户”四段真实治理切片。
+
+### 验证结果
+
+- RED：`go test ./internal/modules/admin/service ./internal/modules/auth/service`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`go test ./internal/modules/admin/service ./internal/modules/auth/service`
+- `go test ./internal/modules/admin/... ./internal/modules/auth/...`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+
+### 后续影响
+
+- 后台“用户治理”现在已经从只读记录推进到最小可执行动作，且禁用状态开始进入认证链路，不再只是运营视图里的展示字段；后续继续补会话即时失效、更多权限边界和审计查询时，会比现在更顺。
+- 当前用户治理仍先收口在“禁用 / 恢复 + login/refresh 拒绝”这一层，尚未对已签发 access token 做即时拦截；后续若继续推进 `ADM-010 / ADM-011`，更适合把资料、用户、AI、审计动作继续往 page / feature 层下沉，并再决定是否补中间件级状态校验。

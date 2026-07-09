@@ -83,7 +83,7 @@ StudyMate/
 
 - `backend/internal/modules/search` 已存在，且包含 `SearchIndexer` 抽象与 MySQL fallback 实现。
 - `backend/internal/modules/share` 已存在，含 `/share-links` 相关路由。
-- 管理后台真实数据路由已存在，包含 `users`、`reports`、`materials`、`tags`、`ai/tasks`、`ai/usage`、`audit-logs`、`files`；其中举报治理已起步支持 `resolve / dismiss` 动作，并会写回 `handled_by / handled_at` 与审计日志，资料治理也已切到真实材料列表与可执行动作，AI 任务治理则已支持 `retry / cancel` 状态动作与审计留痕。
+- 管理后台真实数据路由已存在，包含 `users`、`reports`、`materials`、`tags`、`ai/tasks`、`ai/usage`、`audit-logs`、`files`；其中举报治理已起步支持 `resolve / dismiss` 动作，并会写回 `handled_by / handled_at` 与审计日志，资料治理也已切到真实材料列表与可执行动作，AI 任务治理已支持 `retry / cancel` 状态动作与审计留痕，用户治理则已支持 `disable / activate`，并让被禁用账号在 login / refresh 阶段被拒绝。
 
 ### 3.5 前端壳层拆分状态
 
@@ -96,7 +96,7 @@ StudyMate/
 - `frontend-user/src/styles.css` 与 `frontend-admin/src/main.ts` 现已都接入 `@studymate/ui/tokens.css`；用户端重复的根 token 定义已经移除，管理端基础背景 / 文本 / 描边 / accent 变量也已映射到共享 token，前后台至少完成了共享设计 token 的共同起步。
 - `packages/ui` 已同时承接共享 `DataStateKind` / `dataStateKinds` / `getDataStateLabel(...)`、共享 `tokens.css`，以及第一批共享 primitive：`DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog`；其中 `IconButton` 与 `Button` 已被图谱工作区骨架真实消费，`Tag` 已被阅读和资料页面消费，`Input` 已接入资料页搜索与详情编辑表单，`Select` 已接入笔记与阅读页的资料/Deck 选择器，`PageHeader` 已通过 `WorkspaceHeader` 接入多条工作区页面头部，`CommandBar` 已接入主站壳层顶部骨架，`ConfirmDialog` 已同时接入 `NotesPage` 删除确认、图谱工作区的“重载最新图谱 / 删除图谱”确认，以及管理端审核队列里的“通过 / 驳回 / 隐藏”确认层；用户端对应 primitive 文件也已改为兼容转发层，管理端则新增了沿同一确认语义实现的 `AdminConfirmDialog`，但更多 primitives、管理端更深层的视觉契约与跨端共享层仍未收口。`packages/api-client/src/index.ts` 已开始承接共享 `requestApi(...)`、`readApiResponse(...)`、`createAuthHeaders(...)`、`buildApiPath(...)`、JSON 请求体归一化、`ApiRequestError`、`createSessionRequest(...)` 与 refresh 失败后的 `SessionInvalidationState`；其中用户端 `frontend-user/src/api/core.ts` 与 `frontend-user/src/app/sessionStore.ts`、管理端 `frontend-admin/src/api/client.ts` 与 `frontend-admin/src/api/sessionStore.ts` 都已接入共享 401 refresh/replay、会话失效原因记录与统一 fail-logout 提示第一段骨架，但更完整的 pagination、更多后台模块请求边界与 HttpOnly Refresh Token 迁移说明仍未收口。`packages/editor-core/src/index.ts` 仍只有最小类型定义；这些包仍需要继续进入真实共享能力建设，而不是继续作为占位目录存在。
 - `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 约 79KB，仍包含大量 `useState` 与跨领域函数；`WB-032` 的冲突处理已经很深，下一步必须把状态边界、commands 与 features 从控制器中拆出，避免继续集中膨胀。
-- `frontend-admin/src/views/AdminWorkspaceView.vue` 已开始从单体工作台向模块壳层收口：最基础的请求边界与后台 session store 已抽到 `frontend-admin/src/api/client.ts` 和 `frontend-admin/src/api/sessionStore.ts`，启动时 refresh 失败会显式清空本地会话并回退登录页；`frontend-admin/src/router/index.ts` 已提供规范化的 `/admin/dashboard`、`/admin/moderation`、`/admin/users` 等路径映射；当前已先后拆出 `frontend-admin/src/views/modules/AdminDashboardModule.vue`、`AdminModerationModule.vue` 与 `AdminGovernanceModule.vue` 三个首批模块视图，以及 `frontend-admin/src/components/admin/AdminLoginPanel.vue`、`AdminShellFrame.vue` 两个工作台壳层组件，让登录视图、已登录框架、概览、审核与治理列表都先脱离单文件模板。`AdminGovernanceModule` 也已开始承接真实治理动作切片：举报可在前端直接 `resolve / dismiss`，资料治理已切到真实材料列表并支持 `approve / reject / hide` 与隐藏后的恢复，AI 任务则可在治理视图里直接 `retry / cancel`。后台目前仍未进入真正的 Vue Router page 级拆分，但 `AdminWorkspaceView.vue` 已进一步回到“session / URL / 确认层 / 数据协调器”的角色。
+- `frontend-admin/src/views/AdminWorkspaceView.vue` 已开始从单体工作台向模块壳层收口：最基础的请求边界与后台 session store 已抽到 `frontend-admin/src/api/client.ts` 和 `frontend-admin/src/api/sessionStore.ts`，启动时 refresh 失败会显式清空本地会话并回退登录页；`frontend-admin/src/router/index.ts` 已提供规范化的 `/admin/dashboard`、`/admin/moderation`、`/admin/users` 等路径映射；当前已先后拆出 `frontend-admin/src/views/modules/AdminDashboardModule.vue`、`AdminModerationModule.vue` 与 `AdminGovernanceModule.vue` 三个首批模块视图，以及 `frontend-admin/src/components/admin/AdminLoginPanel.vue`、`AdminShellFrame.vue` 两个工作台壳层组件，让登录视图、已登录框架、概览、审核与治理列表都先脱离单文件模板。`AdminGovernanceModule` 也已开始承接真实治理动作切片：举报可在前端直接 `resolve / dismiss`，资料治理已切到真实材料列表并支持 `approve / reject / hide` 与隐藏后的恢复，AI 任务可在治理视图里直接 `retry / cancel`，用户治理则已支持 `disable / activate` 与对应确认流。后台目前仍未进入真正的 Vue Router page 级拆分，但 `AdminWorkspaceView.vue` 已进一步回到“session / URL / 确认层 / 数据协调器”的角色。
 - 根 `package.json`、`package-lock.json` 与 `.github/workflows/ci.yml` 在真实仓库中存在，因此 PDF 中“压缩包缺少根工程入口/CI”的判断不作为当前事实；当前仓库已进一步补上 `packageManager` / `engines`、`npm run bootstrap`、`npm run verify:runtimes`、`npm run verify:deps`、`npm run verify:secrets`、`@studymate/graph-core` 显式 `--experimental-strip-types` 测试命令，以及 `toolchain go1.26.5`、前端安全锁文件与默认 CI 里的依赖审计/secret scan 门禁，工程可复现性与依赖安全基线都已进入可执行状态。
 
 ## 4. 当前阶段判断
@@ -139,7 +139,7 @@ StudyMate/
 
 1. 图谱内核继续下沉到 `packages/graph-core`，并把浏览器状态进入 store、用户意图进入 commands，减少工作区控制器逻辑。
 2. 图谱-复习反馈仍需从“局部连接”升级为“稳定回写闭环”，并服务于“资料上传 -> 阅读批注 -> 笔记 -> 图谱草稿 -> 卡片 -> 今日复习”的主演示路径。
-3. 后台治理虽已起步落地举报处理、资料治理和 AI 任务动作，但仍需继续补更强的真实路由、审计模型、审批动作和测试回归。
+3. 后台治理虽已起步落地举报处理、资料治理、AI 任务和用户治理动作，但仍需继续补更强的真实路由、审计模型、审批动作和测试回归。
 4. 搜索需要在现有 MySQL fallback 上补服务端分页、真实 count/total、耗时、空结果建议和排序语义，再评估 Meilisearch。
 
 ## 7. 执行约束提醒

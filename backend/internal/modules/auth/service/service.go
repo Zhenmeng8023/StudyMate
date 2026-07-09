@@ -105,6 +105,10 @@ func (s *Service) Login(request dto.LoginRequest) (*dto.AuthResponse, error) {
 		return nil, apperrors.New(http.StatusUnauthorized, "invalid_credentials", "账号或密码错误")
 	}
 
+	if isUserDisabled(user) {
+		return nil, apperrors.New(http.StatusForbidden, "user_disabled", "当前账号已被禁用")
+	}
+
 	_ = s.auditLogs.Create(user.ID, "auth.login", "user", map[string]any{
 		"role": user.Role,
 	})
@@ -143,6 +147,10 @@ func (s *Service) Refresh(request dto.RefreshRequest) (*dto.AuthResponse, error)
 	user, err := s.users.FindByID(storedToken.UserID)
 	if err != nil {
 		return nil, apperrors.New(http.StatusUnauthorized, "user_not_found", "关联用户不存在")
+	}
+
+	if isUserDisabled(user) {
+		return nil, apperrors.New(http.StatusForbidden, "user_disabled", "当前账号已被禁用")
 	}
 
 	if err := s.refreshTokens.RevokeByHash(tokenHash); err != nil {
@@ -233,4 +241,8 @@ func (s *Service) issueTokens(user *usermodel.User) (*dto.AuthResponse, error) {
 			Role:        user.Role,
 		},
 	}, nil
+}
+
+func isUserDisabled(user *usermodel.User) bool {
+	return strings.EqualFold(strings.TrimSpace(user.Status), "disabled")
 }

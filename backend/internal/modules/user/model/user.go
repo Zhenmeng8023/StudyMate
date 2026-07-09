@@ -14,6 +14,7 @@ type User struct {
 	PasswordHash string    `gorm:"size:255;not null"`
 	DisplayName  string    `gorm:"size:128;not null"`
 	Role         string    `gorm:"size:32;index;not null"`
+	Status       string    `gorm:"size:32;index;not null;default:active"`
 	CreatedAt    time.Time `gorm:"not null"`
 	UpdatedAt    time.Time `gorm:"not null"`
 }
@@ -21,6 +22,10 @@ type User struct {
 func (u *User) BeforeCreate(_ *gorm.DB) error {
 	if u.ID == "" {
 		u.ID = uuid.NewString()
+	}
+
+	if u.Status == "" {
+		u.Status = "active"
 	}
 
 	return nil

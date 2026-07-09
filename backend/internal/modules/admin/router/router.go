@@ -20,6 +20,8 @@ func RegisterRoutes(
 	protected.GET("/me", adminHandler.Me)
 	protected.GET("/overview", adminHandler.Overview)
 	protected.GET("/users", adminHandler.Users)
+	protected.POST("/users/:id/disable", adminHandler.DisableUser)
+	protected.POST("/users/:id/activate", adminHandler.ActivateUser)
 	protected.GET("/materials", adminHandler.Materials)
 	protected.GET("/reports", adminHandler.Reports)
 	protected.POST("/reports/:id/resolve", adminHandler.ResolveReport)

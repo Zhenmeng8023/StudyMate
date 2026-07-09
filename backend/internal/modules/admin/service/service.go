@@ -177,6 +177,78 @@ func (s *Service) ListUsers(limit int) ([]admindto.AdminUserPayload, error) {
 	return result, nil
 }
 
+func (s *Service) HandleUser(actorID string, userID string, action string) error {
+	if action != "disable" && action != "activate" {
+		return apperrors.New(400, "invalid_user_action", "unsupported user action")
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		type row struct {
+			ID     string
+			Role   string
+			Status string
+		}
+
+		var user row
+		if err := tx.Table("users").
+			Select("id, role, COALESCE(status, 'active') AS status").
+			Take(&user, "id = ?", userID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return apperrors.New(404, "user_not_found", "user not found")
+			}
+			return apperrors.Internal("handle admin user failed")
+		}
+
+		if user.Role == "admin" {
+			return apperrors.New(409, "protected_admin_account", "admin accounts cannot be disabled here")
+		}
+
+		nextStatus := ""
+		switch action {
+		case "disable":
+			if user.Status != "active" {
+				return apperrors.New(409, "invalid_user_transition", "only active users can be disabled")
+			}
+			nextStatus = "disabled"
+		case "activate":
+			if user.Status != "disabled" {
+				return apperrors.New(409, "invalid_user_transition", "only disabled users can be activated")
+			}
+			nextStatus = "active"
+		}
+
+		if err := tx.Table("users").
+			Where("id = ?", userID).
+			Updates(map[string]any{
+				"status":     nextStatus,
+				"updated_at": time.Now().UTC(),
+			}).Error; err != nil {
+			return apperrors.Internal("handle admin user failed")
+		}
+
+		metadata, err := json.Marshal(map[string]any{
+			"userId":         userID,
+			"action":         action,
+			"previousStatus": user.Status,
+			"status":         nextStatus,
+		})
+		if err != nil {
+			return apperrors.Internal("create admin user audit log failed")
+		}
+
+		if err := tx.Create(&adminmodel.AuditLog{
+			ActorID:  actorID,
+			Action:   "admin.handle.user",
+			Target:   "user",
+			Metadata: string(metadata),
+		}).Error; err != nil {
+			return apperrors.Internal("create admin user audit log failed")
+		}
+
+		return nil
+	})
+}
+
 func (s *Service) ListMaterials(limit int) ([]admindto.AdminMaterialPayload, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50

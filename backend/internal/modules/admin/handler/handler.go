@@ -73,6 +73,14 @@ func (h *Handler) Users(ctx *gin.Context) {
 	response.Success(ctx, http.StatusOK, result)
 }
 
+func (h *Handler) DisableUser(ctx *gin.Context) {
+	h.handleUser(ctx, "disable")
+}
+
+func (h *Handler) ActivateUser(ctx *gin.Context) {
+	h.handleUser(ctx, "activate")
+}
+
 func (h *Handler) Reports(ctx *gin.Context) {
 	result, err := h.adminService.ListReports(adminLimit(ctx))
 	if err != nil {
@@ -163,6 +171,19 @@ func (h *Handler) handleReport(ctx *gin.Context, status string) {
 		return
 	}
 
+	response.Success(ctx, http.StatusOK, gin.H{"status": status})
+}
+
+func (h *Handler) handleUser(ctx *gin.Context, action string) {
+	if err := h.adminService.HandleUser(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), action); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	status := "active"
+	if action == "disable" {
+		status = "disabled"
+	}
 	response.Success(ctx, http.StatusOK, gin.H{"status": status})
 }
 

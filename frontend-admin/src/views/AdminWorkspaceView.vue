@@ -42,6 +42,7 @@ interface OverviewPayload {
 type AdminView = AdminRouteKey;
 type ModerationAction = "approve" | "reject" | "hide";
 type ReportAction = "resolve" | "dismiss";
+type UserAction = "disable" | "activate";
 type AITaskAction = "retry" | "cancel";
 type AdminNavItem = {
   key: AdminView;
@@ -71,6 +72,8 @@ const pendingModerationAction = ref<{ action: ModerationAction; item: Moderation
 const moderationConfirmError = ref("");
 const pendingReportAction = ref<{ action: ReportAction; record: GovernanceRecord } | null>(null);
 const reportConfirmError = ref("");
+const pendingUserAction = ref<{ action: UserAction; record: GovernanceRecord } | null>(null);
+const userConfirmError = ref("");
 const pendingAITaskAction = ref<{ action: AITaskAction; record: GovernanceRecord } | null>(null);
 const aiTaskConfirmError = ref("");
 
@@ -141,6 +144,21 @@ const governanceActions = computed(() => {
     }
   }
 
+  if (activeView.value === "users") {
+    const role = String(selectedRecord.value.role ?? "").toLowerCase();
+    if (role === "admin") return [];
+    if (status === "active") {
+      return [
+        { key: "disable", label: "禁用用户", tone: "danger" as const }
+      ];
+    }
+    if (status === "disabled") {
+      return [
+        { key: "activate", label: "恢复用户" }
+      ];
+    }
+  }
+
   if (activeView.value === "ai") {
     if (status === "failed") {
       return [
@@ -171,6 +189,22 @@ const reportConfirmDescription = computed(() => {
 const reportConfirmLabel = computed(() => (pendingReportAction.value?.action === "dismiss" ? "确认忽略" : "确认已处理"));
 const reportConfirmingLabel = computed(() => (pendingReportAction.value?.action === "dismiss" ? "忽略中..." : "处理中..."));
 const reportConfirmTone = computed(() => (pendingReportAction.value?.action === "dismiss" ? "danger" : "default"));
+const userConfirmTitle = computed(() => {
+  const pending = pendingUserAction.value;
+  if (!pending) return "";
+  return pending.action === "disable" ? "确认禁用这个用户" : "确认恢复这个用户";
+});
+const userConfirmDescription = computed(() => {
+  const pending = pendingUserAction.value;
+  if (!pending) return "";
+  const username = String(pending.record.username ?? pending.record.displayName ?? pending.record.id ?? "");
+  return pending.action === "disable"
+    ? `禁用后，${username} 将不能继续登录，后续 refresh 也会被拒绝。`
+    : `恢复后，${username} 可以重新登录并继续使用现有账号。`;
+});
+const userConfirmLabel = computed(() => (pendingUserAction.value?.action === "disable" ? "确认禁用" : "确认恢复"));
+const userConfirmingLabel = computed(() => (pendingUserAction.value?.action === "disable" ? "禁用中..." : "恢复中..."));
+const userConfirmTone = computed(() => (pendingUserAction.value?.action === "disable" ? "danger" : "default"));
 const aiTaskConfirmTitle = computed(() => {
   const pending = pendingAITaskAction.value;
   if (!pending) return "";
@@ -326,6 +360,8 @@ const unsubscribeSession = subscribeSession(() => {
     moderationConfirmError.value = "";
     pendingReportAction.value = null;
     reportConfirmError.value = "";
+    pendingUserAction.value = null;
+    userConfirmError.value = "";
     pendingAITaskAction.value = null;
     aiTaskConfirmError.value = "";
     activeView.value = defaultAdminRouteKey;
@@ -470,6 +506,32 @@ async function applyReportAction(record: GovernanceRecord, action: ReportAction)
   }
 }
 
+async function applyUserAction(record: GovernanceRecord, action: UserAction) {
+  if (!session.value) return;
+
+  const userID = String(record.id ?? "");
+  if (!userID) {
+    userConfirmError.value = "用户标识缺失，无法提交治理动作。";
+    return;
+  }
+
+  loading.value = true;
+  errorMessage.value = "";
+  userConfirmError.value = "";
+  try {
+    const data = await post<{ status: string }>(`/api/v1/admin/users/${userID}/${action}`, {});
+    pendingUserAction.value = null;
+    notice.value = `用户 ${userID} 已更新为 ${data.status}。`;
+    await loadGovernance("users");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "更新用户状态失败";
+    errorMessage.value = message;
+    userConfirmError.value = message;
+  } finally {
+    loading.value = false;
+  }
+}
+
 async function applyAITaskAction(record: GovernanceRecord, action: AITaskAction) {
   if (!session.value) return;
 
@@ -525,6 +587,17 @@ function requestGovernanceAction(payload: { action: string; record: GovernanceRe
     return;
   }
 
+  if (activeView.value === "users") {
+    if (payload.action !== "disable" && payload.action !== "activate") return;
+
+    userConfirmError.value = "";
+    pendingUserAction.value = {
+      action: payload.action,
+      record: payload.record
+    };
+    return;
+  }
+
   if (activeView.value === "ai") {
     if (payload.action !== "retry" && payload.action !== "cancel") return;
 
@@ -566,6 +639,12 @@ function closeReportConfirm() {
   reportConfirmError.value = "";
 }
 
+function closeUserConfirm() {
+  if (loading.value) return;
+  pendingUserAction.value = null;
+  userConfirmError.value = "";
+}
+
 function closeAITaskConfirm() {
   if (loading.value) return;
   pendingAITaskAction.value = null;
@@ -584,6 +663,12 @@ async function confirmReportAction() {
   await applyReportAction(pending.record, pending.action);
 }
 
+async function confirmUserAction() {
+  const pending = pendingUserAction.value;
+  if (!pending) return;
+  await applyUserAction(pending.record, pending.action);
+}
+
 async function confirmAITaskAction() {
   const pending = pendingAITaskAction.value;
   if (!pending) return;
@@ -598,6 +683,8 @@ function switchView(view: AdminView) {
   moderationConfirmError.value = "";
   pendingReportAction.value = null;
   reportConfirmError.value = "";
+  pendingUserAction.value = null;
+  userConfirmError.value = "";
   pendingAITaskAction.value = null;
   aiTaskConfirmError.value = "";
   syncAdminLocation(view);
@@ -620,6 +707,8 @@ function logout() {
   moderationConfirmError.value = "";
   pendingReportAction.value = null;
   reportConfirmError.value = "";
+  pendingUserAction.value = null;
+  userConfirmError.value = "";
   pendingAITaskAction.value = null;
   aiTaskConfirmError.value = "";
   activeView.value = defaultAdminRouteKey;
@@ -689,6 +778,20 @@ function selectRecord(row: GovernanceRecord) {
       :title="aiTaskConfirmTitle"
       @cancel="closeAITaskConfirm"
       @confirm="confirmAITaskAction"
+    />
+
+    <AdminConfirmDialog
+      cancel-label="取消"
+      :confirm-label="userConfirmLabel"
+      :confirm-tone="userConfirmTone"
+      :confirming="loading"
+      :confirming-label="userConfirmingLabel"
+      :description="userConfirmDescription"
+      :error-message="userConfirmError"
+      :is-open="Boolean(pendingUserAction)"
+      :title="userConfirmTitle"
+      @cancel="closeUserConfirm"
+      @confirm="confirmUserAction"
     />
 
     <AdminLoginPanel
