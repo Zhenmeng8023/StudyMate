@@ -318,4 +318,91 @@ describe("AdminWorkspaceView governance modules", () => {
     expect(window.location.pathname).toBe("/admin/audit");
     expect(wrapper.text()).toContain("audit-1");
   });
+
+  it("confirms report governance actions before posting report resolution", async () => {
+    window.history.replaceState({}, "", "/admin/community");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const reportRow = {
+      id: "report-1",
+      reporterUserId: "user-9",
+      targetType: "post",
+      targetId: "post-1",
+      reason: "spam",
+      description: "duplicate links",
+      status: "pending"
+    };
+    const resolvePath = "/api/v1/admin/reports/report-1/resolve";
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/reports?limit=20") {
+        return apiPayload([reportRow]);
+      }
+      if (path === resolvePath) {
+        expect(init?.method).toBe("POST");
+        return apiPayload({ status: "resolved" });
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("report-1");
+
+    await wrapper.get('[data-governance-action="resolve"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("确认标记这条举报已处理");
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      resolvePath,
+      expect.objectContaining({
+        method: "POST"
+      })
+    );
+
+    await wrapper.get('[data-confirm-cancel="true"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain("确认标记这条举报已处理");
+
+    await wrapper.get('[data-governance-action="resolve"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-confirm-submit="true"]').trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      resolvePath,
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer admin-token"
+        })
+      })
+    );
+  });
 });

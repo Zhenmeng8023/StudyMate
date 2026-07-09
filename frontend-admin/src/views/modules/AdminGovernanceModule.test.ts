@@ -36,4 +36,37 @@ describe("AdminGovernanceModule", () => {
     await wrapper.get('[data-record-row="audit-1"]').trigger("click");
     expect(wrapper.emitted("selectRecord")?.[0]?.[0]).toMatchObject({ id: "audit-1" });
   });
+
+  it("renders governance actions for the selected record and emits action requests", async () => {
+    const selectedRecord = {
+      id: "report-1",
+      targetType: "post",
+      status: "pending"
+    };
+
+    const wrapper = mount(AdminGovernanceModule, {
+      props: {
+        actions: [
+          { key: "resolve", label: "标记已处理" },
+          { key: "dismiss", label: "忽略举报", tone: "danger" }
+        ],
+        columns: ["id", "status"],
+        emptyText: "暂无举报记录",
+        query: "",
+        rows: [selectedRecord],
+        selectedRecord,
+        summary: null
+      }
+    });
+
+    expect(wrapper.get('[data-governance-action="resolve"]').text()).toContain("标记已处理");
+    expect(wrapper.get('[data-governance-action="dismiss"]').text()).toContain("忽略举报");
+
+    await wrapper.get('[data-governance-action="resolve"]').trigger("click");
+
+    expect(wrapper.emitted("requestAction")?.[0]?.[0]).toEqual({
+      action: "resolve",
+      record: selectedRecord
+    });
+  });
 });
