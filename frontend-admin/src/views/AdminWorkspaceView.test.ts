@@ -11,6 +11,7 @@ function apiPayload<T>(data: T) {
 
 describe("AdminWorkspaceView governance modules", () => {
   afterEach(() => {
+    window.history.replaceState({}, "", "/");
     vi.restoreAllMocks();
     window.localStorage.clear();
   });
@@ -95,6 +96,7 @@ describe("AdminWorkspaceView governance modules", () => {
   });
 
   it("returns to the login screen when refresh fails during admin bootstrap", async () => {
+    window.history.replaceState({}, "", "/admin/dashboard");
     window.localStorage.setItem(
       "studymate.admin.session",
       JSON.stringify({
@@ -149,6 +151,7 @@ describe("AdminWorkspaceView governance modules", () => {
   });
 
   it("asks for confirmation before applying a moderation action", async () => {
+    window.history.replaceState({}, "", "/admin/dashboard");
     window.localStorage.setItem(
       "studymate.admin.session",
       JSON.stringify({

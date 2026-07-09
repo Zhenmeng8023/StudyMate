@@ -111,6 +111,13 @@
 - `frontend-admin/src/views/AdminWorkspaceView.test.ts` 已锁定“驳回动作先确认、取消不触发请求、确认后携带后台 token 发起 POST”的页面级回归，说明 `FE-041` 已开始覆盖管理端真实治理动作。
 - 下一步更值得继续推进后台治理里的下架、恢复、重试等其他高风险动作，并把确认层继续从单工作台组件内收口到后续 `ADM-010 / ADM-011` 的模块边界。
 
+### 2026-07-09 ADM-010 管理端 URL 路由起步
+
+- `frontend-admin/src/router/index.ts` 不再只是 route key 列表，现已补齐 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/audit` 等规范路径的解析与生成。
+- `frontend-admin/src/views/AdminWorkspaceView.vue` 现在会按浏览器路径决定初始模块，并在切换导航、刷新根路径、浏览器前进/后退时同步 `activeView` 与 `/admin/...` URL。
+- `frontend-admin/src/App.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts` 已锁定“根路径归一化到 `/admin/dashboard`”和“切换模块时浏览器地址同步更新”的最小路由契约。
+- 这一步先把后台治理工作台做到了可刷新、可直达、可回退；后续 `ADM-010` 仍需继续把单组件工作台拆成真正的模块页和更完整的 Router 边界。
+
 ### 2026-07-08 FE / UI 验证收口更新
 
 - FE-010、FE-020、FE-030 与 UI-04 已在真实依赖环境完成类型检查、相关 Vitest、前后台构建与 4 条 Playwright smoke。

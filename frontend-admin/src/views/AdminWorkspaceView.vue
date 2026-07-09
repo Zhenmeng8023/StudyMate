@@ -2,8 +2,10 @@
 import "../components/admin/admin.css";
 import { adminGet, adminPost } from "../api/client";
 import type { ApiRequestInit } from "@studymate/api-client";
-import { computed, onBeforeUnmount, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import AdminConfirmDialog from "../components/admin/AdminConfirmDialog.vue";
+import { defaultAdminRouteKey, getAdminRoutePath, normalizeAdminRoutePath, parseAdminRoutePath } from "../router";
+import type { AdminRouteKey } from "../router";
 import {
   clearSessionInvalidation,
   persistSession,
@@ -32,7 +34,7 @@ interface OverviewPayload {
   pendingModerationCount: number;
 }
 
-type AdminView = "dashboard" | "moderation" | "materials" | "community" | "users" | "graph" | "ai" | "system" | "audit";
+type AdminView = AdminRouteKey;
 
 type AdminNavItem = {
   key: AdminView;
@@ -57,7 +59,7 @@ const selectedRecord = ref<GovernanceRecord | null>(null);
 const loading = ref(false);
 const errorMessage = ref("");
 const notice = ref("登录后会同步当前治理队列与运营数据。");
-const activeView = ref<AdminView>("dashboard");
+const activeView = ref<AdminView>(resolveAdminViewFromLocation());
 const recordQuery = ref("");
 const moderationQuery = ref("");
 const pendingModerationAction = ref<{ action: ModerationAction; item: ModerationItem } | null>(null);
@@ -158,6 +160,64 @@ const governanceColumns = computed(() => {
 
 const selectedRecordTitle = computed(() => selectedRecord.value ? getRecordTitle(selectedRecord.value) : "选择一条记录");
 
+function resolveAdminViewFromLocation(): AdminView {
+  if (typeof window === "undefined") {
+    return defaultAdminRouteKey;
+  }
+
+  return parseAdminRoutePath(window.location.pathname) ?? defaultAdminRouteKey;
+}
+
+function syncAdminLocation(view: AdminView, mode: "push" | "replace" = "push") {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const nextPath = getAdminRoutePath(view);
+  if (window.location.pathname === nextPath) {
+    return;
+  }
+
+  window.history[mode === "replace" ? "replaceState" : "pushState"]({}, "", nextPath);
+}
+
+function normalizeAdminLocation() {
+  if (typeof window === "undefined") {
+    return defaultAdminRouteKey;
+  }
+
+  const normalizedPath = normalizeAdminRoutePath(window.location.pathname);
+  if (window.location.pathname !== normalizedPath) {
+    window.history.replaceState({}, "", normalizedPath);
+  }
+
+  return parseAdminRoutePath(normalizedPath) ?? defaultAdminRouteKey;
+}
+
+function loadActiveView(view: AdminView) {
+  if (view === "dashboard") {
+    void Promise.all([loadOverview(), loadModeration()]);
+    return;
+  }
+
+  if (view === "moderation") {
+    void loadModeration();
+    return;
+  }
+
+  void loadGovernance(view);
+}
+
+function handleAdminPopstate() {
+  activeView.value = normalizeAdminLocation();
+  recordQuery.value = "";
+  moderationQuery.value = "";
+
+  if (session.value) {
+    loadActiveView(activeView.value);
+  }
+}
+
 const unsubscribeSession = subscribeSession(() => {
   const nextSession = readStoredAdminSession();
   session.value = nextSession;
@@ -172,19 +232,27 @@ const unsubscribeSession = subscribeSession(() => {
     selectedRecord.value = null;
     pendingModerationAction.value = null;
     moderationConfirmError.value = "";
-    activeView.value = "dashboard";
+    activeView.value = defaultAdminRouteKey;
+    syncAdminLocation(defaultAdminRouteKey, "replace");
     errorMessage.value = "";
     notice.value = "后台会话已失效，请重新登录。";
   }
 });
 
-onBeforeUnmount(() => {
-  unsubscribeSession();
+onMounted(() => {
+  activeView.value = normalizeAdminLocation();
+  window.addEventListener("popstate", handleAdminPopstate);
+
+  if (session.value) {
+    void refreshProfile();
+    loadActiveView(activeView.value);
+  }
 });
 
-if (session.value) {
-  void Promise.all([refreshProfile(), loadModeration(), loadOverview()]);
-}
+onBeforeUnmount(() => {
+  window.removeEventListener("popstate", handleAdminPopstate);
+  unsubscribeSession();
+});
 
 async function login() {
   loading.value = true;
@@ -194,7 +262,8 @@ async function login() {
     const data = await post<AdminSessionPayload>("/api/v1/admin/login", form);
     persistSession(data);
     notice.value = "已进入治理工作台，正在同步当前数据。";
-    await Promise.all([refreshProfile(), loadModeration(), loadOverview()]);
+    await refreshProfile();
+    loadActiveView(activeView.value);
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "管理员登录失败";
   } finally {
@@ -296,19 +365,12 @@ function switchView(view: AdminView) {
   activeView.value = view;
   recordQuery.value = "";
   moderationQuery.value = "";
-  void (view === "dashboard" ? Promise.all([loadOverview(), loadModeration()]) : view === "moderation" ? loadModeration() : loadGovernance(view));
+  syncAdminLocation(view);
+  loadActiveView(view);
 }
 
 function refreshActiveView() {
-  if (activeView.value === "dashboard") {
-    void Promise.all([loadOverview(), loadModeration()]);
-    return;
-  }
-  if (activeView.value === "moderation") {
-    void loadModeration();
-    return;
-  }
-  void loadGovernance(activeView.value);
+  loadActiveView(activeView.value);
 }
 
 function logout() {
@@ -321,7 +383,8 @@ function logout() {
   selectedRecord.value = null;
   pendingModerationAction.value = null;
   moderationConfirmError.value = "";
-  activeView.value = "dashboard";
+  activeView.value = defaultAdminRouteKey;
+  syncAdminLocation(defaultAdminRouteKey, "replace");
   sessionInvalidation.value = null;
   clearSessionInvalidation();
   persistSession(null);

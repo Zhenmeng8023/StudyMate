@@ -46,7 +46,7 @@
 | WB-040 | TODO | 管理端真实只读数据页第一批 | WB-001 | admin backend + frontend-admin | 用户、内容、AI 任务/用量、审计至少展示真实数据。 |
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
-| ADM-010 | TODO | 管理端 Vue Router 模块化与 URL 状态 | WB-040, FE-040 | `frontend-admin/src/app/`、`frontend-admin/src/features/`、`frontend-admin/src/pages/` | `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/materials`、`/admin/reports`、`/admin/ai`、`/admin/files`、`/admin/audit-logs` 可刷新、可回退、可分享。 |
+| ADM-010 | IN_PROGRESS | 管理端 Vue Router 模块化与 URL 状态 | WB-040, FE-040 | `frontend-admin/src/app/`、`frontend-admin/src/features/`、`frontend-admin/src/pages/` | 当前已具备 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/graph`、`/admin/ai`、`/admin/system`、`/admin/audit` 等可刷新、可回退、可直达 URL；后续继续拆成真正模块页并补齐更完整的分享/路由边界。 |
 | ADM-011 | TODO | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 用户封禁/解封、资料下架/恢复、举报处理备注、AI 任务重试/取消、图谱模板审核/发布/下架至少落地一批，并进入权限与审计链路。 |
 | SE-020 | TODO | MySQL fallback 搜索服务端分页与真实统计 | WB-014 | search service/handler/frontend search | `GET /search` 支持 cursor/limit/sort 或等价分页；每类结果有真实命中数、搜索耗时、排序语义、空结果建议和来源跳转契约。 |
 | WB-043 | TODO | SearchIndexer 升级与 Meilisearch 评估 | SE-020 | search module/config/deploy | 前端 API 不变；索引实现可替换，具备配置开关；明确是否进入 Meilisearch 的采用/不采用结论。 |
@@ -63,6 +63,23 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：ADM-010（管理端 URL 路由起步）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `frontend-admin/src/App.test.ts` 新增 RED/GREEN 回归，锁定管理端根路径会归一化到 `/admin/dashboard`，不再停留在无状态的 `/`。
+  - `frontend-admin/src/views/AdminWorkspaceView.test.ts` 新增 RED/GREEN 回归，锁定切换后台模块时浏览器 URL 会同步更新到 `/admin/...`，并补了路径状态在测试之间的隔离。
+  - `frontend-admin/src/router/index.ts` 已从 route key 列表升级为后台模块路径映射层，提供规范路径的解析、生成与默认归一化。
+  - `frontend-admin/src/views/AdminWorkspaceView.vue` 已改为按浏览器路径决定初始模块，并在导航切换、浏览器前进/后退、会话失效与手动退出时同步 URL 与工作台状态。
+- 已执行验证：
+  - RED：`npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts`
+  - GREEN：`npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts src/api/client.test.ts`
+  - `npm run verify:docs`
+- 风险与后续：
+  - 目前后台仍是单个 `AdminWorkspaceView.vue` 在内部切换模块，URL 已真实存在，但还没有拆成真正的模块页与更细的 Router 边界。
+  - 下一步更适合继续沿 `ADM-010 / ADM-011` 把 users / moderation / ai / audit 等高频模块拆页，并逐段补模块动作与审计流。
 
 ### 执行记录：FE-041（管理端审核动作接入确认层）
 - 执行日期：2026-07-09

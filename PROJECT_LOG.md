@@ -4744,3 +4744,28 @@
 
 - 管理端审核动作现在已经开始沿用户端 `ConfirmDialog` 的同一套确认语义收口，后续继续推进后台治理里的下架、恢复、重试等动作时，可以直接沿这层模式扩展。
 - 当前确认状态仍挂在 `AdminWorkspaceView.vue` 单工作台组件内；后续若推进 `ADM-010 / ADM-011`，更适合把这类治理动作与确认状态一起下沉到模块页或 feature 边界。
+## 2026-07-09 10:47:30 +08:00 | v1.1.0-alpha.144 | 推进 ADM-010 管理端 URL 路由起步
+### 任务内容
+
+- 遵循“先把整体工作台做完整，再逐段深入”的原型节奏，优先推进管理端的可刷新、可直达、可回退能力，而不是继续只在单个治理动作上打补丁。
+- 本轮目标是让后台模块切换拥有真实 `/admin/...` URL，并让默认入口、导航切换和浏览器前进/后退都能回到正确模块。
+
+### 实际变更
+
+- 更新 `frontend-admin/src/router/index.ts`，把原先只保存 route key 的文件升级为后台模块路径映射层，提供 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/audit` 等路径的解析、生成和默认归一化。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让管理端工作台按浏览器路径决定初始模块，并在导航切换、根路径归一化、浏览器 `popstate`、会话失效和手动退出时同步 URL 与工作台状态。
+- 更新 `frontend-admin/src/App.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，先用 RED 锁定“根路径不会归一化”和“切换模块不改地址”的缺口，再用 GREEN 固定最小 URL 路由契约；同时补了测试间 URL 状态隔离，避免历史路径串扰。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-010` 从纯待做推进到“URL 路由起步已落地，但尚未拆成独立模块页”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts src/api/client.test.ts`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 管理端现在已经具备真实 URL 工作台的最小形态，后续补后台治理动作、模块拆页和审计流时，可以直接沿 `/admin/...` 路径继续扩展。
+- 当前页面仍集中在 `AdminWorkspaceView.vue` 内部切换；后续推进 `ADM-010 / ADM-011` 时，更适合把 users、moderation、ai、audit 等模块逐段拆到独立页面和 feature 边界。
