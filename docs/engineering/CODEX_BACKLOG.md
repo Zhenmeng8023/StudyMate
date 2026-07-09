@@ -38,7 +38,7 @@
 |---|---|---|---|---|---|
 | WB-030 | DONE | 图谱 API 契约与生命周期整理 | WB-020 | graph routers/handlers/services/docs | graph/document/node/edge/group/snapshot 关系和版本策略清晰。 |
 | WB-031 | DONE | 图谱导出、缩略图与布局能力 | WB-030 | graph backend + frontend | 至少 JSON/SVG 导出；缩略图和布局有明确 API/任务模型。 |
-| WB-032 | IN_PROGRESS | 自动保存/快照/冲突处理可靠性 | WB-030, WB-021 | graph persistence | 保存可追溯、冲突可见、恢复安全；无静默覆盖，冲突导出物可携带人工合并清单、对象级明细与取舍草稿，并支持把已标记取舍显式应用为可保存合并草稿；预检阻断摘要优先展示可读对象原因。 |
+| WB-032 | DONE | 自动保存/快照/冲突处理可靠性 | WB-030, WB-021 | graph persistence | 保存可追溯、冲突可见、恢复安全；无静默覆盖，冲突导出物可携带人工合并清单、对象级明细与取舍草稿，并支持把已标记取舍显式应用为可保存合并草稿；预检阻断摘要优先展示可读对象原因。 |
 | WB-033 | TODO | 图谱-复习学习反馈闭环 | WB-030, FE-030 | graph/card/review | 复习结果可回写节点熟练度；卡片与来源节点可追溯；学习工作台能解释复习反馈如何影响图谱与后续学习。 |
 | WB-034 | TODO | 图谱 API 与工作区回归验证矩阵 | WB-032 | graph backend + frontend + e2e | 覆盖 create/save/restore/export/layout/conflict/权限路径；图谱工作区在桌面与窄屏至少有 smoke 回归，不再只依赖零散组件测试。 |
 | GPH-040 | TODO | 图谱工作区 store / commands / features 拆分 | WB-032, FE-020 | `frontend-user/src/modules/graph/`、`packages/graph-core` | `useGraphWorkspaceController` 不再继续承接新增业务；选中、相机、面板、保存、冲突等浏览器状态进入 store，新增节点/连线/分组/模板/恢复等用户意图进入 commands。 |
@@ -755,6 +755,23 @@
   - 已完成 TypeScript 源码语法转译、文档同步、空白字符和交付压缩包完整性检查。
   - 当前环境缺少完整 npm 依赖，类型检查、Vitest、构建与 Playwright 待在本机或 CI 执行。
 
+
+### 执行记录：WB-032（2026-07-10 验证收口）
+
+- 执行日期：2026-07-10
+- 执行分支/提交：`master` / 未提交
+- 本轮完成：
+  - 复核 `FE-010`、`FE-020`、`FE-030`、`UI-04` 已有验证记录，当前不再存在更高优先级的 `VERIFY` 阻塞项。
+  - 运行 `npm run verify:graph-conflicts`，串行复核图谱冲突处理的前端、后端、E2E 与文档同步入口。
+  - 将 `WB-032` 从 `IN_PROGRESS` 收口为 `DONE`，并明确把更完整的 create/save/restore/export/layout/conflict/权限矩阵继续留给 `WB-034`。
+- 当前结论：
+  - `WB-032` 的验收边界已满足：旧版本保存会返回 `409 graph_version_conflict`，冲突态支持对象级取舍、联动建议、未标记对象默认沿用最新版本、显式应用到 rebased 草稿，以及冲突摘要 / JSON / 处理包导出。
+  - 固定入口 `npm run verify:graph-conflicts` 已覆盖真实 `graph_version_conflict` 处理路径、对象级取舍后再保存、联动建议清阻断后再保存、未标记对象默认回退后再保存、多目标本地连线联动建议后再保存、latest-head 分组依赖清阻断后再保存，以及桌面 / 窄屏 smoke、布局预览、导出状态与权限路径。
+  - 剩余“更完整的全矩阵扩展”属于 `WB-034` 的工作范围，而不是继续阻塞 `WB-032` 的收口。
+- 验证：
+  - `npm run verify:graph-conflicts`
+- 后续衔接：
+  - `WB-034` 应继续复用 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `npm run verify:graph-conflicts` 作为固定入口，在此基础上扩更多权限分支、桌面 / 窄屏组合和 create/save/restore/export/layout/conflict 全矩阵。
 
 ### 执行记录：WB-032（进行中）
 
