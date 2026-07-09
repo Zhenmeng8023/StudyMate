@@ -2,7 +2,7 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { Button, DataState, Drawer, IconButton, Input, Inspector, Select, Tag } from "./index";
+import { Button, DataState, Drawer, IconButton, Input, Inspector, PageHeader, Select, Tag } from "./index";
 
 describe("@studymate/ui react primitive contract", () => {
   it("renders the shared data state copy", () => {
@@ -110,5 +110,23 @@ describe("@studymate/ui react primitive contract", () => {
     expect(select.getAttribute("aria-invalid")).toBe("true");
     expect(select.className).toContain("ds-select");
     expect(select.className).toContain("is-invalid");
+  });
+
+  it("renders a shared page header with actions", () => {
+    render(
+      <PageHeader
+        actions={<button type="button">新建资料</button>}
+        description="集中展示当前工作区的主标题和动作。"
+        eyebrow="学习空间"
+        title="资料总览"
+      />,
+    );
+
+    const header = screen.getByRole("banner");
+    expect(header.className).toContain("workspace-header");
+    expect(screen.getByRole("heading", { name: "资料总览" })).toBeTruthy();
+    expect(screen.getByText("学习空间")).toBeTruthy();
+    expect(screen.getByText("集中展示当前工作区的主标题和动作。")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "新建资料" })).toBeTruthy();
   });
 });
