@@ -2,7 +2,7 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { Button, DataState, Drawer, IconButton, Inspector } from "./index";
+import { Button, DataState, Drawer, IconButton, Inspector, Tag } from "./index";
 
 describe("@studymate/ui react primitive contract", () => {
   it("renders the shared data state copy", () => {
@@ -76,5 +76,14 @@ describe("@studymate/ui react primitive contract", () => {
 
     fireEvent.click(button);
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders a shared tag with muted styling", () => {
+    render(<Tag tone="muted">已归档</Tag>);
+
+    const tag = screen.getByText("已归档");
+    expect(tag.tagName).toBe("SPAN");
+    expect(tag.className).toContain("chip");
+    expect(tag.className).toContain("muted");
   });
 });
