@@ -745,6 +745,7 @@
   - 同图谱工作区现在会在检测到“另一窗口仍在编辑”时给出保存前提醒；若收到另一窗口已保存更高版本的信号，也会在当前页提示先刷新后继续编辑。
   - stale local draft 被放弃时，工作区不再静默回退到最新 head，而会明确告知“本地草稿基于旧版本，已放弃恢复并加载最新图谱”。
   - 图谱状态栏现在会在“另一窗口已保存更高版本”或“当前 batch-save 命中 `409 graph_version_conflict`”时提供 `重新加载最新图谱` 动作；dirty 状态下点击会先确认放弃未保存修改，再拉取服务端最新 head 并清理失败保存态。
+  - `e2e/v1-graph-workspace.spec.ts` 现已同步锁定这条共享确认弹窗合同：冲突态点击 `放弃本地并重载最新图谱` 后，必须先看到 `确认重载最新图谱`，再经 `确认重载` 才进入“已重新加载最新图谱，未保存更改已放弃”的成功路径；常规视口与窄屏视口都已覆盖。
   - dirty 冲突态下，页面会额外提供 `复制当前草稿 JSON` / `导出当前草稿 JSON`，把“先留存本地修改，再决定是否放弃并重载”变成显式路径，而不是让用户自己去工具栏里猜测下一步。
   - 在完整草稿 JSON 之外，冲突辅助卡片现在还支持 `复制冲突摘要` / `导出冲突摘要`，可直接带走一份人类可读的 Markdown 取舍报告，便于后续同步或人工合并。
   - 在已拿到最新 head 的前提下，冲突辅助卡片现在还支持 `复制最新图谱 JSON` / `导出最新图谱 JSON`，让本地草稿、服务端最新版本和可读摘要都能一起带走。
@@ -792,6 +793,8 @@
   - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
   - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
   - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+  - `npm run test:graph:conflicts:e2e`
+  - `npm run verify:graph-conflicts`
   - `npm run verify:docs`
 - 后续待续：
 - 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成；优先考虑更完整的对象联动策略、更多冲突类型的批量取舍辅助，以及把这类已能解释“已标记数量 + 代表对象 + 未标记默认回退 + 可读阻断原因 + 可读明细标题 + 中文节点级建议 + 节点级来源/尺寸阻断页面路径 + 多目标连线附加依赖节点 + latest-head 删除语义下的分组依赖 + latest-head 删除语义下的多目标连线路径”，且已被页面级冲突回归锁定并开始覆盖真实未标记回退操作路径的应用前预检继续扩展成更完整的合并预检反馈；当前固定入口为 `npm run verify:graph-conflicts`，并已纳入带真实 `graph_version_conflict` 处理路径、窄屏 smoke、布局预览与导出状态、权限路径的 `e2e/v1-graph-workspace.spec.ts`，测试映射集中在 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`。

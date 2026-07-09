@@ -622,6 +622,8 @@ test("graph workspace surfaces version conflict actions and reloads the latest h
   await expect(page.getByText("已标记为稍后人工合并，当前继续保留本地草稿。")).toBeVisible();
 
   await page.getByRole("button", { name: "放弃本地并重载最新图谱" }).click();
+  await expect(page.getByRole("dialog", { name: "确认重载最新图谱" })).toBeVisible();
+  await page.getByRole("button", { name: "确认重载" }).click();
 
   await expect(page.getByText("已重新加载最新图谱，未保存更改已放弃")).toBeVisible();
   await expect(page.getByLabel("图谱保存状态：空闲")).toBeVisible();
@@ -732,6 +734,8 @@ test("graph workspace keeps version conflict handling reachable in a narrow view
   await expect(page.getByRole("complementary", { name: "图谱检查器" })).toBeVisible();
 
   await page.getByRole("button", { name: "放弃本地并重载最新图谱" }).click();
+  await expect(page.getByRole("dialog", { name: "确认重载最新图谱" })).toBeVisible();
+  await page.getByRole("button", { name: "确认重载" }).click();
 
   await expect(page.getByText("已重新加载最新图谱，未保存更改已放弃")).toBeVisible();
   await expect(page.getByText("窄屏服务器图谱")).toBeVisible();
