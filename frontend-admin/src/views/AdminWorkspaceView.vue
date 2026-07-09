@@ -12,6 +12,8 @@ import {
 } from "../api/sessionStore";
 import type { AdminAuthUser, AdminSessionPayload } from "../api/sessionStore";
 import AdminConfirmDialog from "../components/admin/AdminConfirmDialog.vue";
+import AdminLoginPanel from "../components/admin/AdminLoginPanel.vue";
+import AdminShellFrame from "../components/admin/AdminShellFrame.vue";
 import { defaultAdminRouteKey, getAdminRoutePath, normalizeAdminRoutePath, parseAdminRoutePath } from "../router";
 import type { AdminRouteKey } from "../router";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
@@ -117,6 +119,24 @@ const navGroups = computed(() => ["总览", "治理", "系统"].map((group) => (
 })));
 const activeMeta = computed(() => navItems.value.find((item) => item.key === activeView.value) ?? navItems.value[0]);
 const loginPrompt = computed(() => (sessionInvalidation.value ? "后台会话已失效，请重新登录后继续治理工作。" : ""));
+const activeDescription = computed(() => {
+  if (activeView.value === "dashboard") {
+    return "优先处理待审核内容，再查看用户、资料与图谱的总体变化。";
+  }
+  if (activeView.value === "moderation") {
+    return "快速判断内容风险与发布状态，所有操作都会保留可追溯线索。";
+  }
+  return governanceConfig[activeView.value as keyof typeof governanceConfig]?.description ?? "";
+});
+const activeCountLabel = computed(() => {
+  if (activeView.value === "moderation") {
+    return `${moderationItems.value.length} 条待处理`;
+  }
+  if (activeView.value === "dashboard") {
+    return "";
+  }
+  return `${governanceRows.value.length} 条记录`;
+});
 const overviewCards = computed(() => [
   { label: "待处理", value: String(overview.value?.pendingModerationCount ?? moderationItems.value.length), helper: "需要审核或复核的公开内容" },
   { label: "用户规模", value: String(overview.value?.userCount ?? 0), helper: "当前已注册的学习者与管理员" },
@@ -398,7 +418,7 @@ function selectRecord(row: GovernanceRecord) {
 </script>
 
 <template>
-  <main class="admin-shell">
+  <main>
     <AdminConfirmDialog
       cancel-label="取消"
       :confirm-label="moderationConfirmLabel"
@@ -413,124 +433,65 @@ function selectRecord(row: GovernanceRecord) {
       @confirm="confirmModerationAction"
     />
 
-    <section v-if="!loggedIn" class="admin-login">
-      <section class="admin-login__brand">
-        <span class="admin-login__mark">S</span>
-        <div>
-          <p>StudyMate 管理后台</p>
-          <h1>治理工作台</h1>
-          <span>面向内容、用户和学习资产的统一运营入口。</span>
-        </div>
-      </section>
-      <section class="login-card">
-        <p class="eyebrow">管理员登录</p>
-        <h2>进入管理后台</h2>
-        <p>使用具备管理权限的账号登录后，查看实时治理队列。</p>
-        <form class="form-stack" @submit.prevent="login">
-          <label><span>账号</span><input v-model="form.login" placeholder="用户名或邮箱" /></label>
-          <label><span>密码</span><input v-model="form.password" placeholder="密码" type="password" /></label>
-          <p v-if="loginPrompt" class="error-text">{{ loginPrompt }}</p>
-          <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
-          <button class="primary-button" :disabled="loading" type="submit">{{ loading ? "登录中…" : "登录工作台" }}</button>
-        </form>
-      </section>
-    </section>
+    <AdminLoginPanel
+      v-if="!loggedIn"
+      :error-message="errorMessage"
+      :loading="loading"
+      :login-prompt="loginPrompt"
+      :login-value="form.login"
+      :password-value="form.password"
+      @submit="login"
+      @update:login-value="form.login = $event"
+      @update:password-value="form.password = $event"
+    />
 
-    <template v-else>
-      <aside class="admin-sidebar">
-        <div class="admin-brand">
-          <span class="admin-brand__mark">S</span>
-          <span><strong>StudyMate</strong><small>运营与治理</small></span>
-        </div>
+    <AdminShellFrame
+      v-else
+      :active-description="activeDescription"
+      :active-group="activeMeta.group"
+      :active-title="activeMeta.label"
+      :active-view="activeView"
+      :count-label="activeCountLabel"
+      :error-message="errorMessage"
+      :loading="loading"
+      :nav-groups="navGroups"
+      :notice="notice"
+      :profile="profile"
+      :profile-initial="profileInitial"
+      @logout="logout"
+      @refresh="refreshActiveView"
+      @switch-view="switchView($event as AdminView)"
+    >
+      <AdminDashboardModule
+        v-if="activeView === 'dashboard'"
+        :moderation-items-count="moderationItems.length"
+        :overview-cards="overviewCards"
+        :pending-materials-count="pendingMaterials.length"
+        :pending-posts-count="pendingPosts.length"
+        @open-moderation="switchView('moderation')"
+      />
 
-        <nav class="admin-nav" aria-label="后台导航">
-          <section v-for="group in navGroups" :key="group.group" class="admin-nav__group">
-            <p>{{ group.group }}</p>
-            <button
-              v-for="item in group.items"
-              :key="item.key"
-              :class="activeView === item.key ? 'nav-item active' : 'nav-item'"
-              :aria-label="item.label"
-              :aria-pressed="activeView === item.key"
-              :data-admin-view="item.key"
-              type="button"
-              @click="switchView(item.key)"
-            >
-              <span class="nav-item__icon" aria-hidden="true">{{ item.icon }}</span>
-              <span>{{ item.label }}</span>
-              <em v-if="item.badge">{{ item.badge }}</em>
-            </button>
-          </section>
-        </nav>
+      <AdminModerationModule
+        v-else-if="activeView === 'moderation'"
+        :items="visibleModerationItems"
+        :query="moderationQuery"
+        :total-count="moderationItems.length"
+        @request-action="requestModerationAction($event.item, $event.action)"
+        @update:query="moderationQuery = $event"
+      />
 
-        <footer class="admin-sidebar__footer">
-          <div class="admin-profile">
-            <span>{{ profileInitial }}</span>
-            <div><strong>{{ profile?.displayName }}</strong><small>{{ profile?.role || "admin" }}</small></div>
-          </div>
-          <button class="admin-logout" type="button" @click="logout"><span>↗</span>退出后台</button>
-        </footer>
-      </aside>
-
-      <section class="admin-main">
-        <header class="admin-topbar">
-          <div class="admin-topbar__crumb"><span>运营中心</span><i>›</i><strong>{{ activeMeta.label }}</strong></div>
-          <div class="admin-topbar__actions">
-            <span class="admin-sync-state" :class="loading ? 'is-loading' : ''"><i />{{ loading ? "同步中" : "数据已连接" }}</span>
-            <button class="secondary-button" :disabled="loading" type="button" @click="refreshActiveView">刷新数据</button>
-          </div>
-        </header>
-
-        <section class="admin-page-heading">
-          <div>
-            <p class="eyebrow">{{ activeMeta.group }}</p>
-            <h1>{{ activeMeta.label }}</h1>
-            <p v-if="activeView !== 'dashboard' && activeView !== 'moderation'">{{ governanceConfig[activeView as keyof typeof governanceConfig]?.description }}</p>
-            <p v-else-if="activeView === 'dashboard'">优先处理待审核内容，再查看用户、资料与图谱的总体变化。</p>
-            <p v-else>快速判断内容风险与发布状态，所有操作都会保留可追溯线索。</p>
-          </div>
-          <div class="admin-page-heading__actions">
-            <span v-if="activeView === 'moderation'" class="admin-count-chip">{{ moderationItems.length }} 条待处理</span>
-            <span v-else-if="activeView !== 'dashboard'" class="admin-count-chip">{{ governanceRows.length }} 条记录</span>
-          </div>
-        </section>
-
-        <div class="admin-notice-stack">
-          <p class="notice"><span>●</span>{{ notice }}</p>
-          <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
-        </div>
-
-        <AdminDashboardModule
-          v-if="activeView === 'dashboard'"
-          :moderation-items-count="moderationItems.length"
-          :overview-cards="overviewCards"
-          :pending-materials-count="pendingMaterials.length"
-          :pending-posts-count="pendingPosts.length"
-          @open-moderation="switchView('moderation')"
-        />
-
-        <AdminModerationModule
-          v-else-if="activeView === 'moderation'"
-          :items="visibleModerationItems"
-          :query="moderationQuery"
-          :total-count="moderationItems.length"
-          @request-action="requestModerationAction($event.item, $event.action)"
-          @update:query="moderationQuery = $event"
-        />
-
-        <AdminGovernanceModule
-          v-else
-          :columns="governanceColumns"
-          :empty-text="governanceConfig[activeView as keyof typeof governanceConfig].empty"
-          :query="recordQuery"
-          :rows="visibleGovernanceRows"
-          :selected-record="selectedRecord"
-          :summary="governanceSummary"
-          :total-count="governanceRows.length"
-          @select-record="selectRecord"
-          @update:query="recordQuery = $event"
-        />
-      </section>
-    </template>
+      <AdminGovernanceModule
+        v-else
+        :columns="governanceColumns"
+        :empty-text="governanceConfig[activeView as keyof typeof governanceConfig].empty"
+        :query="recordQuery"
+        :rows="visibleGovernanceRows"
+        :selected-record="selectedRecord"
+        :summary="governanceSummary"
+        :total-count="governanceRows.length"
+        @select-record="selectRecord"
+        @update:query="recordQuery = $event"
+      />
+    </AdminShellFrame>
   </main>
 </template>

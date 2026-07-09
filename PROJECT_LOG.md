@@ -4744,6 +4744,33 @@
 
 - 管理端审核动作现在已经开始沿用户端 `ConfirmDialog` 的同一套确认语义收口，后续继续推进后台治理里的下架、恢复、重试等动作时，可以直接沿这层模式扩展。
 - 当前确认状态仍挂在 `AdminWorkspaceView.vue` 单工作台组件内；后续若推进 `ADM-010 / ADM-011`，更适合把这类治理动作与确认状态一起下沉到模块页或 feature 边界。
+## 2026-07-09 11:10:00 +08:00 | v1.1.0-alpha.146 | 推进 ADM-010 管理端登录视图与已登录壳层抽离
+### 任务内容
+
+- 在 `ADM-010` 已完成 URL 状态和首批模块视图拆分的基础上，继续做一个小而稳定的后台分层收口，避免 `AdminWorkspaceView.vue` 同时持有登录页面、侧栏、顶部状态条、标题区和模块内容。
+- 本轮目标不是切到真正的 Vue Router page，而是先把“登录态视图”和“已登录壳层”从工作台协调器中剥离出来，让后台单页工作台继续往可维护的多层结构过渡。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminLoginPanel.vue`，承接后台登录品牌区、表单输入、错误提示和提交交互。
+- 新增 `frontend-admin/src/components/admin/AdminShellFrame.vue`，承接后台侧栏导航、顶部状态条、页面标题区、通知区和默认内容插槽。
+- 新增 `frontend-admin/src/components/admin/AdminLoginPanel.test.ts` 与 `AdminShellFrame.test.ts`，先以 RED 复现组件缺失，再在 GREEN 锁定登录输入更新/提交契约，以及壳层导航、刷新、退出事件边界。
+- 重写 `frontend-admin/src/views/AdminWorkspaceView.vue`，让它进一步回到 session、URL、审核确认层和数据加载协调器角色；文件规模从 536 行降到 497 行。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-010` 的最新边界推进到“登录视图 + 已登录壳层 + 模块视图”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts`
+- `npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts src/api/client.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 后台工作台现在已经具备更清晰的三层结构：登录视图、已登录壳层和模块视图；后续继续拆 users / materials / ai / audit 时，不需要再把这些壳层结构重复写回 `AdminWorkspaceView.vue`。
+- 当前数据加载和治理动作仍集中在协调器层；后续若继续推进 `ADM-010 / ADM-011`，更适合把模块内数据边界、动作状态和审计语义继续沉到 page / feature 级别。
+
 ## 2026-07-09 11:02:00 +08:00 | v1.1.0-alpha.145 | 推进 ADM-010 管理端首批模块视图拆分
 ### 任务内容
 

@@ -125,6 +125,13 @@
 - `frontend-admin/src/views/AdminWorkspaceView.vue` 现已回到更聚焦的壳层职责：组合 session、URL 同步、审核确认层与模块选择，而不是继续内联全部治理页面结构。
 - `ADM-010` 现在已从“只有 URL 状态”推进到“URL + 首批模块视图”两层边界；后续更适合继续把 users / materials / ai / audit 等模块拆成真正 page / feature 边界，并逐段补动作和审计流。
 
+### 2026-07-09 ADM-010 登录视图与已登录壳层抽离
+
+- `frontend-admin/src/components/admin/` 已新增 `AdminLoginPanel.vue` 与 `AdminShellFrame.vue`，把后台登录卡片、侧栏、顶部状态条、页面标题区与通知区从 `AdminWorkspaceView.vue` 中抽离出来。
+- 对应新增 `AdminLoginPanel.test.ts` 与 `AdminShellFrame.test.ts`，锁定登录输入更新/提交契约，以及壳层的导航、刷新、退出事件边界，避免后续继续只能通过工作台整页测试间接覆盖。
+- `frontend-admin/src/views/AdminWorkspaceView.vue` 现在进一步收口为 session、URL、审核确认层与数据加载协调器，文件体量也从上轮的 536 行降到 497 行。
+- `ADM-010` 这一步仍然没有进入真正的 page / feature 拆分，但已经把后台单页工作台切成“登录视图 + 已登录壳层 + 模块视图”三层；后续更适合继续把 users / materials / ai / audit 的数据与动作边界往各自模块下沉。
+
 ### 2026-07-08 FE / UI 验证收口更新
 
 - FE-010、FE-020、FE-030 与 UI-04 已在真实依赖环境完成类型检查、相关 Vitest、前后台构建与 4 条 Playwright smoke。
