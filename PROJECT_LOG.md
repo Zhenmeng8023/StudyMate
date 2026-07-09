@@ -1,3 +1,32 @@
+## 2026-07-09 10:07:41 +08:00 | v1.1.0-alpha.141 | 推进 FE-041 共享 ConfirmDialog 接入笔记删除确认
+### 任务内容
+
+- 沿当前更高优先级的 `FE-041` 继续做一个最小、可测试的共享 primitive 收口，不偏离共享 UI 主线，也不回到图谱控制器里一次性改很多确认路径。
+- 本轮目标是把已经出现在真实学习路径里的删除确认，从浏览器原生 `window.confirm(...)` 收口为共享 `ConfirmDialog`，同时保留禁用中、错误提示和工作区状态消息，不把这一步扩散成整套模态系统重写。
+
+### 实际变更
+
+- 新增 `packages/ui/src/ConfirmDialog.tsx`，补齐共享 `ConfirmDialog` primitive，先统一确认标题、说明文案、取消/确认动作、`danger` 变体，以及确认中禁用和错误提示这组最小确认交互契约。
+- 更新 `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/ConfirmDialog.tsx` 与 `frontend-user/src/design-system/primitives/index.ts`，补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/pages/NotesPage.tsx`，把笔记删除从浏览器原生 `window.confirm(...)` 改为共享 `ConfirmDialog`；删除中的禁用态、失败提示和顶部工作区消息保持可见。
+- 更新 `frontend-user/src/styles/ui-redesign.css`，补齐 `ConfirmDialog` 的遮罩、面板、错误态和底部动作区样式，让共享 primitive 在真实页面里有稳定的视觉骨架。
+- 更新 `packages/ui/src/reactPrimitives.test.tsx`、新增 `frontend-user/src/design-system/primitives/ConfirmDialog.test.tsx` 与重写 `frontend-user/src/pages/NotesPage.test.tsx`，先用 RED 锁定“共享 ConfirmDialog 缺失 / 兼容出口缺失 / NotesPage 仍直接依赖原生确认框”的缺口，再用 GREEN 锁定共享导出、确认中禁用态、兼容出口与删除确认接线不回退。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 ConfirmDialog 已落地并接入笔记删除确认”。
+
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/ConfirmDialog.test.tsx src/pages/NotesPage.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/ConfirmDialog.test.tsx src/pages/NotesPage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- `@studymate/ui` 现在已经不只承接页面状态、表单和骨架，也开始承接 destructive action 的确认语义；后续继续推进图谱删除、重载放弃或后台治理动作时，可以沿着同一套确认骨架继续收口。
+- 当前这轮先只覆盖 `NotesPage` 的删除确认；图谱工作区里的“重载最新图谱 / 删除图谱”仍在控制器里直接调用原生确认框，后续更适合按真实高频路径逐段替换，而不是一次性触碰整个控制器。
+
 ## 2026-07-09 09:47:29 +08:00 | v1.1.0-alpha.140 | 推进 FE-041 共享 CommandBar 接入主站顶部骨架
 ### 任务内容
 

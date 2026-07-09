@@ -15,7 +15,7 @@ import {
   restoreNoteVersion,
   updateNote
 } from "../api/client";
-import { DataState, Select } from "../design-system/primitives";
+import { ConfirmDialog, DataState, Select } from "../design-system/primitives";
 import { RichTextEditor } from "../modules/notes/RichTextEditor";
 import {
   buildCardInputsFromDrafts,
@@ -51,6 +51,8 @@ export function NotesPage(props: { session: AuthSession }) {
   const [selectedDeckId, setSelectedDeckId] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [notesOpen, setNotesOpen] = useState(true);
@@ -127,6 +129,8 @@ export function NotesPage(props: { session: AuthSession }) {
     setCardDrafts([]);
     setActiveInspectorTab("source");
     setInspectorOpen(true);
+    setDeleteDialogOpen(false);
+    setDeleteError("");
     setMessage("");
   }
 
@@ -134,6 +138,8 @@ export function NotesPage(props: { session: AuthSession }) {
     setNoteId(nextNoteId);
     setActiveInspectorTab("source");
     setInspectorOpen(true);
+    setDeleteDialogOpen(false);
+    setDeleteError("");
   }
 
   async function handleCreate() {
@@ -172,17 +178,27 @@ export function NotesPage(props: { session: AuthSession }) {
     }
   }
 
+  function handleRequestDelete() {
+    if (!selectedNote) return;
+    setDeleteError("");
+    setDeleteDialogOpen(true);
+  }
+
   async function handleDelete() {
-    if (!selectedNote || !window.confirm("确定删除这条笔记吗？")) return;
+    if (!selectedNote) return;
 
     setBusy("delete");
     setMessage("");
+    setDeleteError("");
     try {
       await deleteNote(props.session, selectedNote.id);
+      setDeleteDialogOpen(false);
       await loadAll();
-      setMessage("笔记已删除。");
+      setMessage("笔记已删除");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "删除笔记失败。");
+      const nextMessage = error instanceof Error ? error.message : "删除笔记失败。";
+      setDeleteError(nextMessage);
+      setMessage(nextMessage);
     } finally {
       setBusy("");
     }
@@ -319,6 +335,22 @@ export function NotesPage(props: { session: AuthSession }) {
       </header>
 
       {message ? <p className="studio-inline-message" role="status">{message}</p> : null}
+      <ConfirmDialog
+        confirmLabel="确认"
+        confirmTone="danger"
+        confirming={busy === "delete"}
+        confirmingLabel="删除中..."
+        description={selectedNote ? `删除《${displayNoteTitle(selectedNote)}》后，这条笔记会从当前工作区移除。` : "删除后，这条笔记会从当前工作区移除。"}
+        errorMessage={deleteError}
+        isOpen={deleteDialogOpen}
+        onCancel={() => {
+          if (busy === "delete") return;
+          setDeleteDialogOpen(false);
+          setDeleteError("");
+        }}
+        onConfirm={() => void handleDelete()}
+        title="确认删除笔记"
+      />
 
       <div className="notes-studio__body">
         <aside className="studio-resource-dock notes-resource-dock" aria-label="笔记列表">
@@ -421,7 +453,7 @@ export function NotesPage(props: { session: AuthSession }) {
               <span>{selectedNote ? `最近更新：${formatDate(selectedNote.updatedAt)}` : "草稿尚未保存"}</span>
               <div className="detail-actions">
                 {selectedNote ? (
-                  <button className="secondary-button danger" disabled={busy === "delete"} onClick={() => void handleDelete()} type="button">删除</button>
+                  <button className="secondary-button danger" disabled={busy === "delete"} onClick={handleRequestDelete} type="button">删除</button>
                 ) : null}
                 {selectedNote ? (
                   <button className="primary-button" disabled={busy === "update"} onClick={() => void handleUpdate()} type="button">保存当前版本</button>

@@ -1,5 +1,6 @@
 export { Button } from "./Button";
 export { CommandBar } from "./CommandBar";
+export { ConfirmDialog } from "./ConfirmDialog";
 export { DataState } from "./DataState";
 export type { DataStateKind } from "@studymate/ui";
 export { Drawer } from "./Drawer";

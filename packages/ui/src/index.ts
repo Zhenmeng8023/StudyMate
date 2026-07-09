@@ -4,6 +4,7 @@ export { dataStateKinds, getDataStateLabel, type DataStateKind } from "./dataSta
 export { DataState, type DataStateProps } from "./DataStateView";
 export { Button, type ButtonProps, type ButtonVariant } from "./Button";
 export { CommandBar, type CommandBarProps } from "./CommandBar";
+export { ConfirmDialog, type ConfirmDialogProps } from "./ConfirmDialog";
 export { Drawer, type DrawerProps } from "./Drawer";
 export { IconButton, type IconButtonProps } from "./IconButton";
 export { Input, type InputProps } from "./Input";
