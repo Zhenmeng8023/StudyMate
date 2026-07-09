@@ -1,6 +1,8 @@
 package service
 
 import (
+	"database/sql"
+	"errors"
 	"time"
 
 	admindto "studymate/backend/internal/modules/admin/dto"
@@ -186,12 +188,25 @@ func (s *Service) ListReports(limit int) ([]admindto.AdminReportPayload, error) 
 		Reason         string
 		Description    string
 		Status         string
+		HandledBy      string
+		HandledAt      sql.NullTime
 		CreatedAt      time.Time
 	}
 
 	var rows []row
 	err := s.db.Table("reports").
-		Select("id, reporter_user_id, target_type, target_id, reason, COALESCE(description, '') AS description, status, created_at").
+		Select(`
+			id,
+			reporter_user_id,
+			target_type,
+			target_id,
+			reason,
+			COALESCE(description, '') AS description,
+			status,
+			COALESCE(handled_by, '') AS handled_by,
+			handled_at,
+			created_at
+		`).
 		Order("created_at DESC").
 		Limit(limit).
 		Scan(&rows).Error
@@ -201,6 +216,11 @@ func (s *Service) ListReports(limit int) ([]admindto.AdminReportPayload, error) 
 
 	result := make([]admindto.AdminReportPayload, 0, len(rows))
 	for _, row := range rows {
+		handledAt := ""
+		if row.HandledAt.Valid {
+			handledAt = row.HandledAt.Time.UTC().Format(time.RFC3339)
+		}
+
 		result = append(result, admindto.AdminReportPayload{
 			ID:             row.ID,
 			ReporterUserID: row.ReporterUserID,
@@ -209,10 +229,57 @@ func (s *Service) ListReports(limit int) ([]admindto.AdminReportPayload, error) 
 			Reason:         row.Reason,
 			Description:    row.Description,
 			Status:         row.Status,
+			HandledBy:      row.HandledBy,
+			HandledAt:      handledAt,
 			CreatedAt:      row.CreatedAt.UTC().Format(time.RFC3339),
 		})
 	}
 	return result, nil
+}
+
+func (s *Service) HandleReport(actorID string, reportID string, status string) error {
+	if status != "resolved" && status != "dismissed" {
+		return apperrors.New(400, "invalid_report_status", "unsupported report status")
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		type row struct {
+			ID     string
+			Status string
+		}
+
+		var report row
+		if err := tx.Table("reports").
+			Select("id, status").
+			Where("id = ?", reportID).
+			Take(&report).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return apperrors.New(404, "report_not_found", "report not found")
+			}
+
+			return apperrors.Internal("handle admin report failed")
+		}
+
+		if err := tx.Table("reports").
+			Where("id = ?", reportID).
+			Updates(map[string]any{
+				"status":     status,
+				"handled_by": actorID,
+				"handled_at": time.Now().UTC(),
+			}).Error; err != nil {
+			return apperrors.Internal("handle admin report failed")
+		}
+
+		if err := adminrepo.NewAuditLogRepository(tx).Create(actorID, "admin.handle.report", "report", map[string]any{
+			"reportId":       reportID,
+			"previousStatus": report.Status,
+			"status":         status,
+		}); err != nil {
+			return apperrors.Internal("create admin report audit log failed")
+		}
+
+		return nil
+	})
 }
 
 func (s *Service) ListTags(limit int) ([]admindto.AdminTagPayload, error) {

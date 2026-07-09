@@ -132,6 +132,12 @@
 - `frontend-admin/src/views/AdminWorkspaceView.vue` 现在进一步收口为 session、URL、审核确认层与数据加载协调器，文件体量也从上轮的 536 行降到 497 行。
 - `ADM-010` 这一步仍然没有进入真正的 page / feature 拆分，但已经把后台单页工作台切成“登录视图 + 已登录壳层 + 模块视图”三层；后续更适合继续把 users / materials / ai / audit 的数据与动作边界往各自模块下沉。
 
+### 2026-07-09 ADM-011 举报治理动作起步
+
+- 后端已补齐 `/api/v1/admin/reports/:id/resolve` 与 `/api/v1/admin/reports/:id/dismiss` 两条治理动作路由，服务层会在事务内更新举报 `status`、`handled_by`、`handled_at`，并写入 `admin.handle.report` 审计事件。
+- `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 与 `frontend-admin/src/views/AdminWorkspaceView.vue` 现在已把举报列表从只读推进到可确认执行的 `resolve / dismiss` 动作，处理完成后会同步回写治理记录展示。
+- `ADM-011` 当前仍只是第一段首切片：先打通举报处理与审计链路，不把封禁/解封、下架/恢复、AI 重试/取消等更大治理面一次性压进同一轮。
+
 ### 2026-07-08 FE / UI 验证收口更新
 
 - FE-010、FE-020、FE-030 与 UI-04 已在真实依赖环境完成类型检查、相关 Vitest、前后台构建与 4 条 Playwright smoke。
@@ -292,7 +298,7 @@
 - WB-041：补审批动作、角色校验、分页筛选和状态流转。
 - WB-042：完善审计事件模型。
 - ADM-010：将管理端拆为 Vue Router 模块页面，提供 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/materials`、`/admin/reports`、`/admin/ai`、`/admin/files`、`/admin/audit-logs` 等可刷新 URL。
-- ADM-011：把治理模块从只读列表推进到可执行任务，补封禁/解封、下架/恢复、举报处理备注、AI 任务重试/取消、模板审核/发布/下架等受控动作。
+- ADM-011：继续从已落地的举报 `resolve / dismiss` 首切片往外扩，补封禁/解封、下架/恢复、举报处理备注、AI 任务重试/取消、模板审核/发布/下架等受控动作。
 - SE-020：在现有 MySQL fallback 上补搜索服务端分页、真实命中数、排序语义、耗时和空结果建议。
 - WB-043：在现有 `SearchIndexer` 边界上评估 / 接入 Meilisearch。
 - WB-044：补搜索同步任务、失败重试、重建索引能力。

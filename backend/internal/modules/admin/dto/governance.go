@@ -18,6 +18,8 @@ type AdminReportPayload struct {
 	Reason         string `json:"reason"`
 	Description    string `json:"description"`
 	Status         string `json:"status"`
+	HandledBy      string `json:"handledBy"`
+	HandledAt      string `json:"handledAt"`
 	CreatedAt      string `json:"createdAt"`
 }
 

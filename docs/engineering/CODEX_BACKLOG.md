@@ -47,7 +47,7 @@
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
 | ADM-010 | IN_PROGRESS | 管理端 Vue Router 模块化与 URL 状态 | WB-040, FE-040 | `frontend-admin/src/app/`、`frontend-admin/src/features/`、`frontend-admin/src/pages/` | 当前已具备 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/graph`、`/admin/ai`、`/admin/system`、`/admin/audit` 等可刷新、可回退、可直达 URL，并已拆出登录视图、已登录壳层以及 dashboard / moderation / governance 首批模块视图；后续继续推进真正 page / feature 边界与更完整的治理路由。 |
-| ADM-011 | TODO | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 用户封禁/解封、资料下架/恢复、举报处理备注、AI 任务重试/取消、图谱模板审核/发布/下架至少落地一批，并进入权限与审计链路。 |
+| ADM-011 | IN_PROGRESS | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 首个真实动作切片已落地：举报支持 `resolve / dismiss`、写回 `handled_by / handled_at` 并进入审计链路；后续继续补用户封禁/解封、资料下架/恢复、AI 任务重试/取消、图谱模板审核/发布/下架。 |
 | SE-020 | TODO | MySQL fallback 搜索服务端分页与真实统计 | WB-014 | search service/handler/frontend search | `GET /search` 支持 cursor/limit/sort 或等价分页；每类结果有真实命中数、搜索耗时、排序语义、空结果建议和来源跳转契约。 |
 | WB-043 | TODO | SearchIndexer 升级与 Meilisearch 评估 | SE-020 | search module/config/deploy | 前端 API 不变；索引实现可替换，具备配置开关；明确是否进入 Meilisearch 的采用/不采用结论。 |
 | WB-044 | TODO | 搜索同步与失败恢复任务 | WB-043 | jobs/queue/search | 具备重建索引、失败重试、幂等与可观测字段。 |
@@ -63,6 +63,24 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：ADM-011（举报治理动作与审计链路起步）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `backend/internal/modules/admin/service/report_actions_test.go` 新增 RED/GREEN 服务层回归，锁定举报处理只允许 `resolved / dismissed` 两种状态，且必须同步写入 `handled_by`、`handled_at` 与审计日志。
+  - `backend/internal/modules/admin/service/service.go` 新增 `HandleReport(...)`，以事务方式更新举报状态、处理人、处理时间，并追加 `admin.handle.report` 审计事件；`ListReports(...)` 也补回 `handledBy`、`handledAt` 字段，供后台真实展示治理结果。
+  - `backend/internal/modules/admin/handler/handler.go` 与 `router/router.go` 已补齐 `/admin/reports/:id/resolve`、`/admin/reports/:id/dismiss` 两条受控动作路由，保持管理员身份校验与统一响应 envelope。
+  - `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 与 `AdminWorkspaceView.vue` 已把举报治理从只读记录推进到可确认执行的 `resolve / dismiss` 动作；`frontend-admin/src/views/modules/AdminGovernanceModule.test.ts` 与 `AdminWorkspaceView.test.ts` 也锁定了按钮展示、确认层与提交后的状态回写。
+- 已执行验证：
+  - RED：`go test ./internal/modules/admin/service`
+  - RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+  - GREEN：`go test ./internal/modules/admin/service`
+  - `go test ./internal/modules/admin/...`
+  - GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+- 风险与后续：
+  - 当前 `ADM-011` 只完成了举报治理首个动作切片，还没有把封禁/解封、下架/恢复、AI 任务重试/取消等其他高风险治理动作一并接入。
+  - 举报处理确认状态仍由 `AdminWorkspaceView.vue` 协调；后续更适合沿 `ADM-010` 继续把 users / materials / ai / audit 的动作状态和确认流下沉到模块页或 feature 边界。
 
 ### 执行记录：ADM-010（管理端 URL 路由起步）
 - 执行日期：2026-07-09

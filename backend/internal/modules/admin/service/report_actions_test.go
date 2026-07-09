@@ -2,19 +2,22 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
 	adminrepo "studymate/backend/internal/modules/admin/repository"
 	"studymate/backend/internal/pkg/apperrors"
-	"gorm.io/gorm"
 )
 
 func newReportActionTestService(t *testing.T) (*Service, *gorm.DB) {
 	t.Helper()
 
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", strings.ReplaceAll(t.Name(), "/", "-"))
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite db: %v", err)
 	}

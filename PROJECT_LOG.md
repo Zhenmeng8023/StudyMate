@@ -1,3 +1,32 @@
+## 2026-07-09 11:36:00 +08:00 | v1.1.0-alpha.147 | 推进 ADM-011 举报治理动作与审计链路起步
+### 任务内容
+
+- 按当前“先补全局主路径、再深挖单点”的节奏，启动 `ADM-011` 的最小首切片，不一次性铺开封禁、下架、重试等全部后台治理动作。
+- 本轮目标是把管理端举报列表从只读推进到真实可执行任务：管理员可以显式 `resolve / dismiss` 举报，并把处理人、处理时间和审计事件写进后端链路。
+
+### 实际变更
+
+- 新增 `backend/internal/modules/admin/service/report_actions_test.go`，先用 RED 锁定三类缺口：`HandleReport(...)` 尚不存在、非法状态不会被拒绝、举报处理还不会同步写入审计日志。
+- 更新 `backend/internal/modules/admin/service/service.go`，新增事务化的 `HandleReport(actorID, reportID, status)`；只接受 `resolved / dismissed`，会写回 `reports.status`、`handled_by`、`handled_at`，并追加 `admin.handle.report` 审计事件；`ListReports(...)` 也补回 `handledBy`、`handledAt` 字段。
+- 更新 `backend/internal/modules/admin/handler/handler.go` 与 `backend/internal/modules/admin/router/router.go`，补齐 `/api/v1/admin/reports/:id/resolve`、`/api/v1/admin/reports/:id/dismiss` 两条治理动作入口，沿用现有管理员身份上下文与统一响应 envelope。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`、`frontend-admin/src/views/AdminWorkspaceView.vue` 与 `frontend-admin/src/components/admin/admin.css`，让举报详情区出现 `resolve / dismiss` 动作按钮，并通过确认层提交后台治理动作，再回写列表与详情状态。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，锁定治理模块的动作按钮展示、事件发射、确认层和提交后的状态回写不回退。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-011` 从纯规划推进到“举报治理动作首切片已起步”。
+
+### 验证结果
+
+- RED：`go test ./internal/modules/admin/service`
+- RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- GREEN：`go test ./internal/modules/admin/service`
+- `go test ./internal/modules/admin/...`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+
+### 后续影响
+
+- `ADM-011` 现在已经从“后台治理全是只读列表”推进到“举报处理具备真实动作与审计链路”，后续继续补资料下架/恢复、AI 任务重试/取消、模板审核/发布时，可以沿同一套确认流和审计语义扩展。
+- 当前后台治理动作状态仍主要由 `AdminWorkspaceView.vue` 协调；后续若继续推进 `ADM-010 / ADM-011`，更适合把 users / materials / ai / audit 的动作边界、确认状态和失败处理一起下沉到模块页或 feature 层。
+
 ## 2026-07-09 10:18:44 +08:00 | v1.1.0-alpha.142 | 推进 FE-041 共享 ConfirmDialog 扩展到图谱工作区主路径
 ### 任务内容
 

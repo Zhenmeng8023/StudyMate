@@ -82,6 +82,14 @@ func (h *Handler) Reports(ctx *gin.Context) {
 	response.Success(ctx, http.StatusOK, result)
 }
 
+func (h *Handler) ResolveReport(ctx *gin.Context) {
+	h.handleReport(ctx, "resolved")
+}
+
+func (h *Handler) DismissReport(ctx *gin.Context) {
+	h.handleReport(ctx, "dismissed")
+}
+
 func (h *Handler) Tags(ctx *gin.Context) {
 	result, err := h.adminService.ListTags(adminLimit(ctx))
 	if err != nil {
@@ -130,4 +138,13 @@ func (h *Handler) Files(ctx *gin.Context) {
 func adminLimit(ctx *gin.Context) int {
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "50"))
 	return limit
+}
+
+func (h *Handler) handleReport(ctx *gin.Context, status string) {
+	if err := h.adminService.HandleReport(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), status); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, gin.H{"status": status})
 }

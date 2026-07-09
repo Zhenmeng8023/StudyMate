@@ -1,7 +1,13 @@
 <script setup lang="ts">
 type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
+type GovernanceAction = {
+  key: string;
+  label: string;
+  tone?: "default" | "danger";
+};
 
 const props = defineProps<{
+  actions?: GovernanceAction[];
   columns: string[];
   emptyText: string;
   query: string;
@@ -13,6 +19,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update:query": [value: string];
+  requestAction: [payload: { action: string; record: GovernanceRecord }];
   selectRecord: [record: GovernanceRecord];
 }>();
 
@@ -37,6 +44,11 @@ function formatFieldLabel(key: string) {
     createdAt: "创建时间",
     updatedAt: "更新时间",
     ownerUserId: "归属用户",
+    reporterUserId: "举报用户",
+    handledBy: "处理人",
+    handledAt: "处理时间",
+    targetType: "目标类型",
+    targetId: "目标标识",
     size: "文件大小",
     mimeType: "文件类型"
   };
@@ -45,6 +57,11 @@ function formatFieldLabel(key: string) {
 
 function getRecordTitle(row: GovernanceRecord) {
   return formatCell(row.title ?? row.name ?? row.originalName ?? row.username ?? row.action ?? row.id);
+}
+
+function requestAction(action: string) {
+  if (!props.selectedRecord) return;
+  emit("requestAction", { action, record: props.selectedRecord });
 }
 </script>
 
@@ -88,6 +105,18 @@ function getRecordTitle(row: GovernanceRecord) {
       <header><p class="eyebrow">记录详情</p><h2>{{ selectedRecord ? getRecordTitle(selectedRecord) : "选择一条记录" }}</h2></header>
       <dl v-if="selectedRecord"><template v-for="(value, key) in selectedRecord" :key="String(key)"><dt>{{ formatFieldLabel(String(key)) }}</dt><dd>{{ formatCell(value) }}</dd></template></dl>
       <div v-else class="admin-inspector-empty">从左侧表格选择一条记录，查看完整字段。</div>
+      <div v-if="selectedRecord && actions?.length" class="admin-record-inspector__actions">
+        <button
+          v-for="action in actions"
+          :key="action.key"
+          :class="action.tone === 'danger' ? 'secondary-button is-danger' : 'secondary-button'"
+          :data-governance-action="action.key"
+          type="button"
+          @click="requestAction(action.key)"
+        >
+          {{ action.label }}
+        </button>
+      </div>
     </aside>
   </section>
 </template>

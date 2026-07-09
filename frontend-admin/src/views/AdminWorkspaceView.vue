@@ -41,6 +41,7 @@ interface OverviewPayload {
 
 type AdminView = AdminRouteKey;
 type ModerationAction = "approve" | "reject" | "hide";
+type ReportAction = "resolve" | "dismiss";
 type AdminNavItem = {
   key: AdminView;
   label: string;
@@ -67,6 +68,8 @@ const recordQuery = ref("");
 const moderationQuery = ref("");
 const pendingModerationAction = ref<{ action: ModerationAction; item: ModerationItem } | null>(null);
 const moderationConfirmError = ref("");
+const pendingReportAction = ref<{ action: ReportAction; record: GovernanceRecord } | null>(null);
+const reportConfirmError = ref("");
 
 const loggedIn = computed(() => Boolean(session.value));
 const pendingPosts = computed(() => moderationItems.value.filter((item) => item.type === "post"));
@@ -101,6 +104,30 @@ const moderationConfirmingLabel = computed(() => {
   return "隐藏中…";
 });
 const moderationConfirmTone = computed(() => (pendingModerationAction.value?.action === "approve" ? "default" : "danger"));
+const governanceActions = computed(() => {
+  if (activeView.value !== "community" || !selectedRecord.value) return [];
+  if (String(selectedRecord.value.status ?? "").toLowerCase() !== "pending") return [];
+
+  return [
+    { key: "resolve", label: "标记已处理" },
+    { key: "dismiss", label: "忽略举报", tone: "danger" as const }
+  ];
+});
+const reportConfirmTitle = computed(() => {
+  const pending = pendingReportAction.value;
+  if (!pending) return "";
+  if (pending.action === "resolve") return "确认标记这条举报已处理";
+  return "确认忽略这条举报";
+});
+const reportConfirmDescription = computed(() => {
+  const pending = pendingReportAction.value;
+  if (!pending) return "";
+  if (pending.action === "resolve") return "处理后，这条举报会退出待处理状态，并记录处理人和处理时间。";
+  return "忽略后，这条举报会标记为已忽略，并保留完整审计记录。";
+});
+const reportConfirmLabel = computed(() => (pendingReportAction.value?.action === "dismiss" ? "确认忽略" : "确认已处理"));
+const reportConfirmingLabel = computed(() => (pendingReportAction.value?.action === "dismiss" ? "忽略中..." : "处理中..."));
+const reportConfirmTone = computed(() => (pendingReportAction.value?.action === "dismiss" ? "danger" : "default"));
 
 const navItems = computed<AdminNavItem[]>(() => [
   { key: "dashboard", label: "概览", icon: "▦", group: "总览" },
@@ -167,7 +194,7 @@ const visibleGovernanceRows = computed(() => {
   );
 });
 const governanceColumns = computed(() => {
-  const preferred = ["title", "name", "originalName", "username", "email", "role", "status", "action", "createdAt", "updatedAt", "id"];
+  const preferred = ["title", "name", "originalName", "username", "email", "role", "status", "handledBy", "handledAt", "action", "createdAt", "updatedAt", "id"];
   const keys = new Set<string>();
   governanceRows.value.forEach((row) => Object.keys(row).forEach((key) => keys.add(key)));
   return Array.from(keys)
@@ -238,6 +265,8 @@ const unsubscribeSession = subscribeSession(() => {
     selectedRecord.value = null;
     pendingModerationAction.value = null;
     moderationConfirmError.value = "";
+    pendingReportAction.value = null;
+    reportConfirmError.value = "";
     activeView.value = defaultAdminRouteKey;
     syncAdminLocation(defaultAdminRouteKey, "replace");
     errorMessage.value = "";
@@ -351,9 +380,46 @@ async function applyModerationAction(item: ModerationItem, action: ModerationAct
   }
 }
 
+async function applyReportAction(record: GovernanceRecord, action: ReportAction) {
+  if (!session.value) return;
+
+  const reportID = String(record.id ?? "");
+  if (!reportID) {
+    reportConfirmError.value = "举报标识缺失，无法提交处理结果。";
+    return;
+  }
+
+  loading.value = true;
+  errorMessage.value = "";
+  reportConfirmError.value = "";
+  try {
+    const data = await post<{ status: string }>(`/api/v1/admin/reports/${reportID}/${action}`, {});
+    pendingReportAction.value = null;
+    notice.value = `举报 ${reportID} 已更新为 ${data.status}。`;
+    await loadGovernance("community");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "更新举报状态失败";
+    errorMessage.value = message;
+    reportConfirmError.value = message;
+  } finally {
+    loading.value = false;
+  }
+}
+
 function requestModerationAction(item: ModerationItem, action: ModerationAction) {
   moderationConfirmError.value = "";
   pendingModerationAction.value = { action, item };
+}
+
+function requestGovernanceAction(payload: { action: string; record: GovernanceRecord }) {
+  if (activeView.value !== "community") return;
+  if (payload.action !== "resolve" && payload.action !== "dismiss") return;
+
+  reportConfirmError.value = "";
+  pendingReportAction.value = {
+    action: payload.action,
+    record: payload.record
+  };
 }
 
 function closeModerationConfirm() {
@@ -362,10 +428,22 @@ function closeModerationConfirm() {
   moderationConfirmError.value = "";
 }
 
+function closeReportConfirm() {
+  if (loading.value) return;
+  pendingReportAction.value = null;
+  reportConfirmError.value = "";
+}
+
 async function confirmModerationAction() {
   const pending = pendingModerationAction.value;
   if (!pending) return;
   await applyModerationAction(pending.item, pending.action);
+}
+
+async function confirmReportAction() {
+  const pending = pendingReportAction.value;
+  if (!pending) return;
+  await applyReportAction(pending.record, pending.action);
 }
 
 function switchView(view: AdminView) {
@@ -390,6 +468,8 @@ function logout() {
   selectedRecord.value = null;
   pendingModerationAction.value = null;
   moderationConfirmError.value = "";
+  pendingReportAction.value = null;
+  reportConfirmError.value = "";
   activeView.value = defaultAdminRouteKey;
   syncAdminLocation(defaultAdminRouteKey, "replace");
   sessionInvalidation.value = null;
@@ -431,6 +511,19 @@ function selectRecord(row: GovernanceRecord) {
       :title="moderationConfirmTitle"
       @cancel="closeModerationConfirm"
       @confirm="confirmModerationAction"
+    />
+    <AdminConfirmDialog
+      cancel-label="取消"
+      :confirm-label="reportConfirmLabel"
+      :confirm-tone="reportConfirmTone"
+      :confirming="loading"
+      :confirming-label="reportConfirmingLabel"
+      :description="reportConfirmDescription"
+      :error-message="reportConfirmError"
+      :is-open="Boolean(pendingReportAction)"
+      :title="reportConfirmTitle"
+      @cancel="closeReportConfirm"
+      @confirm="confirmReportAction"
     />
 
     <AdminLoginPanel
@@ -482,6 +575,7 @@ function selectRecord(row: GovernanceRecord) {
 
       <AdminGovernanceModule
         v-else
+        :actions="governanceActions"
         :columns="governanceColumns"
         :empty-text="governanceConfig[activeView as keyof typeof governanceConfig].empty"
         :query="recordQuery"
@@ -489,6 +583,7 @@ function selectRecord(row: GovernanceRecord) {
         :selected-record="selectedRecord"
         :summary="governanceSummary"
         :total-count="governanceRows.length"
+        @request-action="requestGovernanceAction"
         @select-record="selectRecord"
         @update:query="recordQuery = $event"
       />
