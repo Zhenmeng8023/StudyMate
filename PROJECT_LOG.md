@@ -1,3 +1,23 @@
+## 2026-07-09 14:07:00 +08:00 | v1.1.0-alpha.155 | 扩充 WB-032 联动取舍建议清阻断后的固定入口 E2E
+### 任务内容
+
+- 继续沿 `WB-032` 扩固定验证入口，这次不再只看“已标记取舍直接应用”，而是补上一条更贴近真实人工合并辅助的浏览器主路径。
+- 本轮目标是把“本地草稿恢复 -> `dangling_edge` 阻断 -> 一键应用联动取舍建议 -> 应用已标记取舍 -> 再次保存”接进 `verify:graph-conflicts`，避免联动建议这条主线只停留在页面级回归里。
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增 Playwright 用例覆盖同图谱同版本草稿恢复后的冲突保存路径：先故意触发 `graph_version_conflict`，再对 `Local edge` 施加对象级取舍，利用联动建议一键补齐依赖取舍，最后应用合并草稿并再次保存。
+- 这条新 E2E 会捕获第二次 `batch-save` 请求，断言提交的是 rebased `document.version = 5`，并且最终提交结果符合联动建议的真实合同：保留本地节点 `Local concept`，回退本地连线 `Local edge`，形成 `2 节点 / 0 连线` 的合并草稿。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，把这条新增固定入口路径补回 `WB-032` 的执行记录和图谱冲突回归矩阵。
+### 验证结果
+
+- RED：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can batch-apply linked conflict suggestions, clear blockers, and save the rebased draft"`
+- GREEN：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can batch-apply linked conflict suggestions, clear blockers, and save the rebased draft"`
+- `npm run verify:graph-conflicts`
+### 后续影响
+
+- `WB-032` 的固定入口现在不仅覆盖“冲突后重载最新图谱”和“冲突后直接应用已标记取舍再保存”，也开始覆盖“依赖阻断 -> 联动建议 -> 合并保存”的真实浏览器链路，后续继续扩多目标依赖或未标记默认回退时，有了更贴近真实人工合并的 E2E 基座。
+- 这次没有修改冲突处理运行时语义，主要是把页面级已经存在的联动建议清阻断流程提升到了 Playwright 固定入口里，降低后续重构时只靠局部测试发现回归的风险。
+
 ## 2026-07-09 13:58:00 +08:00 | v1.1.0-alpha.154 | 扩充 WB-032 对象级取舍应用后的固定入口 E2E
 ### 任务内容
 
