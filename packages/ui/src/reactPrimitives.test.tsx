@@ -2,7 +2,7 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { Button, DataState, Drawer, IconButton, Input, Inspector, PageHeader, Select, Tag } from "./index";
+import { Button, CommandBar, DataState, Drawer, IconButton, Input, Inspector, PageHeader, Select, Tag } from "./index";
 
 describe("@studymate/ui react primitive contract", () => {
   it("renders the shared data state copy", () => {
@@ -130,5 +130,26 @@ describe("@studymate/ui react primitive contract", () => {
     expect(screen.getByText("学习空间")).toBeTruthy();
     expect(screen.getByText("集中展示当前工作区的主标题和动作。")).toBeTruthy();
     expect(screen.getByRole("button", { name: "新建资料" })).toBeTruthy();
+  });
+
+  it("renders a shared command bar with search and actions", () => {
+    render(
+      <CommandBar
+        actions={<button type="button">退出登录</button>}
+        crumb="学习空间"
+        search={<form role="search"><input aria-label="搜索资料、笔记或图谱" /></form>}
+        subtitle="继续一项已开始的学习任务"
+        title="学习概览"
+      />,
+    );
+
+    const heading = screen.getByRole("heading", { name: "学习概览" });
+    const header = heading.closest("header");
+    expect(header).toBeTruthy();
+    expect(header?.className).toContain("topbar");
+    expect(screen.getByText("学习空间")).toBeTruthy();
+    expect(screen.getByText("继续一项已开始的学习任务")).toBeTruthy();
+    expect(screen.getByRole("search")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "退出登录" })).toBeTruthy();
   });
 });
