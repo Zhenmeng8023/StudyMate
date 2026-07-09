@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import "../components/admin/admin.css";
-import { adminGet, adminPost } from "../api/client";
-import type { ApiRequestInit } from "@studymate/api-client";
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
-import AdminConfirmDialog from "../components/admin/AdminConfirmDialog.vue";
-import { defaultAdminRouteKey, getAdminRoutePath, normalizeAdminRoutePath, parseAdminRoutePath } from "../router";
-import type { AdminRouteKey } from "../router";
+import type { ApiRequestInit } from "@studymate/api-client";
+import { adminGet, adminPost } from "../api/client";
 import {
   clearSessionInvalidation,
   persistSession,
@@ -14,6 +11,12 @@ import {
   subscribeSession
 } from "../api/sessionStore";
 import type { AdminAuthUser, AdminSessionPayload } from "../api/sessionStore";
+import AdminConfirmDialog from "../components/admin/AdminConfirmDialog.vue";
+import { defaultAdminRouteKey, getAdminRoutePath, normalizeAdminRoutePath, parseAdminRoutePath } from "../router";
+import type { AdminRouteKey } from "../router";
+import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
+import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
+import AdminModerationModule from "./modules/AdminModerationModule.vue";
 
 interface ModerationItem {
   id: string;
@@ -35,7 +38,7 @@ interface OverviewPayload {
 }
 
 type AdminView = AdminRouteKey;
-
+type ModerationAction = "approve" | "reject" | "hide";
 type AdminNavItem = {
   key: AdminView;
   label: string;
@@ -43,9 +46,7 @@ type AdminNavItem = {
   group: "总览" | "治理" | "系统";
   badge?: string;
 };
-
 type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
-type ModerationAction = "approve" | "reject" | "hide";
 
 const form = reactive({ login: "", password: "" });
 const session = ref<AdminSessionPayload | null>(readStoredAdminSession());
@@ -97,7 +98,7 @@ const moderationConfirmingLabel = computed(() => {
   if (pending.action === "reject") return "驳回中…";
   return "隐藏中…";
 });
-const moderationConfirmTone = computed(() => pendingModerationAction.value?.action === "approve" ? "default" : "danger");
+const moderationConfirmTone = computed(() => (pendingModerationAction.value?.action === "approve" ? "default" : "danger"));
 
 const navItems = computed<AdminNavItem[]>(() => [
   { key: "dashboard", label: "概览", icon: "▦", group: "总览" },
@@ -110,18 +111,18 @@ const navItems = computed<AdminNavItem[]>(() => [
   { key: "system", label: "文件治理", icon: "▣", group: "系统" },
   { key: "audit", label: "审计日志", icon: "≡", group: "系统" }
 ]);
-
-const navGroups = computed(() => ["总览", "治理", "系统"].map((group) => ({ group, items: navItems.value.filter((item) => item.group === group) })));
+const navGroups = computed(() => ["总览", "治理", "系统"].map((group) => ({
+  group: group as AdminNavItem["group"],
+  items: navItems.value.filter((item) => item.group === group)
+})));
 const activeMeta = computed(() => navItems.value.find((item) => item.key === activeView.value) ?? navItems.value[0]);
-const loginPrompt = computed(() => sessionInvalidation.value ? "后台会话已失效，请重新登录后继续治理工作。" : "");
-
+const loginPrompt = computed(() => (sessionInvalidation.value ? "后台会话已失效，请重新登录后继续治理工作。" : ""));
 const overviewCards = computed(() => [
   { label: "待处理", value: String(overview.value?.pendingModerationCount ?? moderationItems.value.length), helper: "需要审核或复核的公开内容" },
   { label: "用户规模", value: String(overview.value?.userCount ?? 0), helper: "当前已注册的学习者与管理员" },
   { label: "资料沉淀", value: String(overview.value?.materialCount ?? 0), helper: "可被阅读、引用和治理的资料" },
   { label: "知识图谱", value: String(overview.value?.graphCount ?? 0), helper: "用户持续维护的知识结构" }
 ]);
-
 const governanceConfig: Record<Exclude<AdminView, "dashboard" | "moderation">, { endpoint: string; query: { limit: number }; empty: string; description: string }> = {
   materials: { endpoint: "/api/v1/admin/files", query: { limit: 20 }, empty: "暂无文件治理记录。", description: "检查文件状态、归属与存储信息。" },
   community: { endpoint: "/api/v1/admin/reports", query: { limit: 20 }, empty: "暂无举报记录。", description: "集中查看用户提交的举报与处理线索。" },
@@ -131,66 +132,54 @@ const governanceConfig: Record<Exclude<AdminView, "dashboard" | "moderation">, {
   system: { endpoint: "/api/v1/admin/files", query: { limit: 20 }, empty: "暂无文件记录。", description: "查看上传文件与存储治理信息。" },
   audit: { endpoint: "/api/v1/admin/audit-logs", query: { limit: 20 }, empty: "暂无审计日志。", description: "查看关键治理操作的可追溯记录。" }
 };
-
 const visibleModerationItems = computed(() => {
   const query = moderationQuery.value.trim().toLowerCase();
   if (!query) return moderationItems.value;
-  return moderationItems.value.filter((item) => [item.title, item.summary, item.authorName, item.type, item.status].join(" ").toLowerCase().includes(query));
+  return moderationItems.value.filter((item) =>
+    [item.title, item.summary, item.authorName, item.type, item.status].join(" ").toLowerCase().includes(query)
+  );
 });
-
 const visibleGovernanceRows = computed(() => {
   const query = recordQuery.value.trim().toLowerCase();
   if (!query) return governanceRows.value;
-  return governanceRows.value.filter((row) => Object.values(row).some((value) => formatCell(value).toLowerCase().includes(query)));
+  return governanceRows.value.filter((row) =>
+    Object.values(row).some((value) => formatCell(value).toLowerCase().includes(query))
+  );
 });
-
 const governanceColumns = computed(() => {
   const preferred = ["title", "name", "originalName", "username", "email", "role", "status", "action", "createdAt", "updatedAt", "id"];
   const keys = new Set<string>();
   governanceRows.value.forEach((row) => Object.keys(row).forEach((key) => keys.add(key)));
-  return Array.from(keys).sort((a, b) => {
-    const aIndex = preferred.indexOf(a);
-    const bIndex = preferred.indexOf(b);
-    if (aIndex === -1 && bIndex === -1) return a.localeCompare(b);
-    if (aIndex === -1) return 1;
-    if (bIndex === -1) return -1;
-    return aIndex - bIndex;
-  }).slice(0, 7);
+  return Array.from(keys)
+    .sort((a, b) => {
+      const aIndex = preferred.indexOf(a);
+      const bIndex = preferred.indexOf(b);
+      if (aIndex === -1 && bIndex === -1) return a.localeCompare(b);
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    })
+    .slice(0, 7);
 });
 
-const selectedRecordTitle = computed(() => selectedRecord.value ? getRecordTitle(selectedRecord.value) : "选择一条记录");
-
 function resolveAdminViewFromLocation(): AdminView {
-  if (typeof window === "undefined") {
-    return defaultAdminRouteKey;
-  }
-
+  if (typeof window === "undefined") return defaultAdminRouteKey;
   return parseAdminRoutePath(window.location.pathname) ?? defaultAdminRouteKey;
 }
 
 function syncAdminLocation(view: AdminView, mode: "push" | "replace" = "push") {
-  if (typeof window === "undefined") {
-    return;
-  }
-
+  if (typeof window === "undefined") return;
   const nextPath = getAdminRoutePath(view);
-  if (window.location.pathname === nextPath) {
-    return;
-  }
-
+  if (window.location.pathname === nextPath) return;
   window.history[mode === "replace" ? "replaceState" : "pushState"]({}, "", nextPath);
 }
 
 function normalizeAdminLocation() {
-  if (typeof window === "undefined") {
-    return defaultAdminRouteKey;
-  }
-
+  if (typeof window === "undefined") return defaultAdminRouteKey;
   const normalizedPath = normalizeAdminRoutePath(window.location.pathname);
   if (window.location.pathname !== normalizedPath) {
     window.history.replaceState({}, "", normalizedPath);
   }
-
   return parseAdminRoutePath(normalizedPath) ?? defaultAdminRouteKey;
 }
 
@@ -199,12 +188,10 @@ function loadActiveView(view: AdminView) {
     void Promise.all([loadOverview(), loadModeration()]);
     return;
   }
-
   if (view === "moderation") {
     void loadModeration();
     return;
   }
-
   void loadGovernance(view);
 }
 
@@ -212,7 +199,6 @@ function handleAdminPopstate() {
   activeView.value = normalizeAdminLocation();
   recordQuery.value = "";
   moderationQuery.value = "";
-
   if (session.value) {
     loadActiveView(activeView.value);
   }
@@ -314,7 +300,9 @@ async function loadGovernance(view: AdminView) {
     const config = governanceConfig[view];
     governanceRows.value = await get<GovernanceRecord[]>(config.endpoint, config.query);
     selectedRecord.value = governanceRows.value[0] ?? null;
-    if (view === "ai") governanceSummary.value = await get<GovernanceRecord>("/api/v1/admin/ai/usage");
+    if (view === "ai") {
+      governanceSummary.value = await get<GovernanceRecord>("/api/v1/admin/ai/usage");
+    }
     notice.value = `已加载 ${governanceRows.value.length} 条治理记录。`;
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "读取治理模块失败";
@@ -328,7 +316,6 @@ async function applyModerationAction(item: ModerationItem, action: ModerationAct
   loading.value = true;
   errorMessage.value = "";
   moderationConfirmError.value = "";
-
   try {
     const path = `/api/v1/admin/moderation/${item.type === "post" ? "posts" : "materials"}/${item.id}/${action}`;
     const data = await post<{ status: string }>(path, { reason: "" });
@@ -405,17 +392,6 @@ function formatCell(value: string | number | boolean | null | undefined) {
   return String(value);
 }
 
-function formatFieldLabel(key: string) {
-  const labels: Record<string, string> = {
-    id: "标识", title: "标题", name: "名称", originalName: "文件名", username: "用户名", email: "邮箱", displayName: "显示名称", role: "角色", status: "状态", action: "操作", createdAt: "创建时间", updatedAt: "更新时间", ownerUserId: "归属用户", size: "文件大小", mimeType: "文件类型"
-  };
-  return labels[key] ?? key.replace(/([A-Z])/g, " $1").trim();
-}
-
-function getRecordTitle(row: GovernanceRecord) {
-  return formatCell(row.title ?? row.name ?? row.originalName ?? row.username ?? row.action ?? row.id);
-}
-
 function selectRecord(row: GovernanceRecord) {
   selectedRecord.value = row;
 }
@@ -436,6 +412,7 @@ function selectRecord(row: GovernanceRecord) {
       @cancel="closeModerationConfirm"
       @confirm="confirmModerationAction"
     />
+
     <section v-if="!loggedIn" class="admin-login">
       <section class="admin-login__brand">
         <span class="admin-login__mark">S</span>
@@ -489,7 +466,7 @@ function selectRecord(row: GovernanceRecord) {
         <footer class="admin-sidebar__footer">
           <div class="admin-profile">
             <span>{{ profileInitial }}</span>
-            <div><strong>{{ profile?.displayName }}</strong><small>{{ profile?.role || 'admin' }}</small></div>
+            <div><strong>{{ profile?.displayName }}</strong><small>{{ profile?.role || "admin" }}</small></div>
           </div>
           <button class="admin-logout" type="button" @click="logout"><span>↗</span>退出后台</button>
         </footer>
@@ -499,7 +476,7 @@ function selectRecord(row: GovernanceRecord) {
         <header class="admin-topbar">
           <div class="admin-topbar__crumb"><span>运营中心</span><i>›</i><strong>{{ activeMeta.label }}</strong></div>
           <div class="admin-topbar__actions">
-            <span class="admin-sync-state" :class="loading ? 'is-loading' : ''"><i />{{ loading ? '同步中' : '数据已连接' }}</span>
+            <span class="admin-sync-state" :class="loading ? 'is-loading' : ''"><i />{{ loading ? "同步中" : "数据已连接" }}</span>
             <button class="secondary-button" :disabled="loading" type="button" @click="refreshActiveView">刷新数据</button>
           </div>
         </header>
@@ -523,76 +500,36 @@ function selectRecord(row: GovernanceRecord) {
           <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
         </div>
 
-        <template v-if="activeView === 'dashboard'">
-          <section class="admin-metric-grid">
-            <article v-for="card in overviewCards" :key="card.label" class="metric-card">
-              <span>{{ card.label }}</span><strong>{{ card.value }}</strong><p>{{ card.helper }}</p>
-            </article>
-          </section>
-          <section class="admin-dashboard-grid">
-            <article class="admin-priority-card">
-              <div><p class="eyebrow">优先队列</p><h2>先处理内容审核</h2><p>审核队列中的资料和帖子会直接影响社区与资料库的公开可见性。</p></div>
-              <button class="primary-button" type="button" @click="switchView('moderation')">进入审核队列</button>
-            </article>
-            <article class="admin-status-card">
-              <p class="eyebrow">当前数据</p>
-              <ul>
-                <li><span>待审帖子</span><strong>{{ pendingPosts.length }}</strong></li>
-                <li><span>待审资料</span><strong>{{ pendingMaterials.length }}</strong></li>
-                <li><span>审核压力</span><strong>{{ moderationItems.length ? '需要关注' : '平稳' }}</strong></li>
-              </ul>
-            </article>
-          </section>
-        </template>
+        <AdminDashboardModule
+          v-if="activeView === 'dashboard'"
+          :moderation-items-count="moderationItems.length"
+          :overview-cards="overviewCards"
+          :pending-materials-count="pendingMaterials.length"
+          :pending-posts-count="pendingPosts.length"
+          @open-moderation="switchView('moderation')"
+        />
 
-        <template v-else-if="activeView === 'moderation'">
-          <section class="admin-toolbar">
-            <label class="admin-search"><span>⌕</span><input v-model="moderationQuery" placeholder="搜索标题、作者或状态" /></label>
-            <div class="admin-toolbar__meta"><span>{{ visibleModerationItems.length }} / {{ moderationItems.length }} 条</span></div>
-          </section>
-          <section class="admin-data-card admin-moderation-table">
-            <header class="admin-data-card__head"><div><h2>审核队列</h2><p>按内容类型、作者和创建时间快速定位待处理项目。</p></div></header>
-            <div v-if="!visibleModerationItems.length" class="admin-empty-state"><strong>当前没有匹配的待审核内容</strong><span>调整搜索条件，或刷新最新治理数据。</span></div>
-            <div v-else class="admin-table admin-table--moderation" role="table">
-              <div class="admin-table__head" role="row"><span>内容</span><span>类型</span><span>作者</span><span>提交时间</span><span>状态</span><span>操作</span></div>
-              <article v-for="item in visibleModerationItems" :key="item.id" class="admin-table__row" role="row">
-                <div class="admin-content-cell"><strong>{{ item.title }}</strong><p>{{ item.summary }}</p></div>
-                <span><i class="admin-type-badge">{{ item.type === 'post' ? '帖子' : '资料' }}</i></span>
-                <span>{{ item.authorName }}</span>
-                <span>{{ new Date(item.createdAt).toLocaleString('zh-CN') }}</span>
-                <span><i class="admin-status-badge">{{ item.status }}</i></span>
-                <div class="admin-row-actions"><button type="button" @click="requestModerationAction(item, 'approve')">通过</button><button class="is-danger" type="button" @click="requestModerationAction(item, 'reject')">驳回</button><button type="button" @click="requestModerationAction(item, 'hide')">隐藏</button></div>
-              </article>
-            </div>
-          </section>
-        </template>
+        <AdminModerationModule
+          v-else-if="activeView === 'moderation'"
+          :items="visibleModerationItems"
+          :query="moderationQuery"
+          :total-count="moderationItems.length"
+          @request-action="requestModerationAction($event.item, $event.action)"
+          @update:query="moderationQuery = $event"
+        />
 
-        <template v-else>
-          <section v-if="governanceSummary" class="admin-metric-grid admin-metric-grid--summary">
-            <article v-for="(value, key) in governanceSummary" :key="key" class="metric-card"><span>{{ formatFieldLabel(String(key)) }}</span><strong>{{ formatCell(value) }}</strong><p>AI 任务用量概览</p></article>
-          </section>
-          <section class="admin-toolbar">
-            <label class="admin-search"><span>⌕</span><input v-model="recordQuery" placeholder="搜索当前记录" /></label>
-            <div class="admin-toolbar__meta"><span>{{ visibleGovernanceRows.length }} / {{ governanceRows.length }} 条</span></div>
-          </section>
-          <section class="admin-governance-layout">
-            <section class="admin-data-card">
-              <header class="admin-data-card__head"><div><h2>记录列表</h2><p>选择一条记录，在右侧查看完整字段和值。</p></div></header>
-              <div v-if="!visibleGovernanceRows.length" class="admin-empty-state"><strong>{{ governanceConfig[activeView as keyof typeof governanceConfig].empty }}</strong><span>当前模块已接入真实 API，但没有可显示的数据。</span></div>
-              <div v-else class="admin-table admin-table--records" role="table">
-                <div class="admin-table__head" role="row"><span v-for="column in governanceColumns" :key="column">{{ formatFieldLabel(column) }}</span></div>
-                <button v-for="(row, index) in visibleGovernanceRows" :key="index" :class="selectedRecord === row ? 'admin-table__row is-selected' : 'admin-table__row'" type="button" @click="selectRecord(row)">
-                  <span v-for="column in governanceColumns" :key="column" :title="formatCell(row[column])">{{ formatCell(row[column]) }}</span>
-                </button>
-              </div>
-            </section>
-            <aside class="admin-record-inspector">
-              <header><p class="eyebrow">记录详情</p><h2>{{ selectedRecordTitle }}</h2></header>
-              <dl v-if="selectedRecord"><template v-for="(value, key) in selectedRecord" :key="String(key)"><dt>{{ formatFieldLabel(String(key)) }}</dt><dd>{{ formatCell(value) }}</dd></template></dl>
-              <div v-else class="admin-inspector-empty">从左侧表格选择一条记录，查看完整字段。</div>
-            </aside>
-          </section>
-        </template>
+        <AdminGovernanceModule
+          v-else
+          :columns="governanceColumns"
+          :empty-text="governanceConfig[activeView as keyof typeof governanceConfig].empty"
+          :query="recordQuery"
+          :rows="visibleGovernanceRows"
+          :selected-record="selectedRecord"
+          :summary="governanceSummary"
+          :total-count="governanceRows.length"
+          @select-record="selectRecord"
+          @update:query="recordQuery = $event"
+        />
       </section>
     </template>
   </main>

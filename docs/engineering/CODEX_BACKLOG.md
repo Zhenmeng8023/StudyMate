@@ -46,7 +46,7 @@
 | WB-040 | TODO | 管理端真实只读数据页第一批 | WB-001 | admin backend + frontend-admin | 用户、内容、AI 任务/用量、审计至少展示真实数据。 |
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
-| ADM-010 | IN_PROGRESS | 管理端 Vue Router 模块化与 URL 状态 | WB-040, FE-040 | `frontend-admin/src/app/`、`frontend-admin/src/features/`、`frontend-admin/src/pages/` | 当前已具备 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/graph`、`/admin/ai`、`/admin/system`、`/admin/audit` 等可刷新、可回退、可直达 URL；后续继续拆成真正模块页并补齐更完整的分享/路由边界。 |
+| ADM-010 | IN_PROGRESS | 管理端 Vue Router 模块化与 URL 状态 | WB-040, FE-040 | `frontend-admin/src/app/`、`frontend-admin/src/features/`、`frontend-admin/src/pages/` | 当前已具备 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/graph`、`/admin/ai`、`/admin/system`、`/admin/audit` 等可刷新、可回退、可直达 URL，并已拆出 dashboard / moderation / governance 首批模块视图；后续继续推进真正 page / feature 边界与更完整的治理路由。 |
 | ADM-011 | TODO | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 用户封禁/解封、资料下架/恢复、举报处理备注、AI 任务重试/取消、图谱模板审核/发布/下架至少落地一批，并进入权限与审计链路。 |
 | SE-020 | TODO | MySQL fallback 搜索服务端分页与真实统计 | WB-014 | search service/handler/frontend search | `GET /search` 支持 cursor/limit/sort 或等价分页；每类结果有真实命中数、搜索耗时、排序语义、空结果建议和来源跳转契约。 |
 | WB-043 | TODO | SearchIndexer 升级与 Meilisearch 评估 | SE-020 | search module/config/deploy | 前端 API 不变；索引实现可替换，具备配置开关；明确是否进入 Meilisearch 的采用/不采用结论。 |
@@ -80,6 +80,22 @@
 - 风险与后续：
   - 目前后台仍是单个 `AdminWorkspaceView.vue` 在内部切换模块，URL 已真实存在，但还没有拆成真正的模块页与更细的 Router 边界。
   - 下一步更适合继续沿 `ADM-010 / ADM-011` 把 users / moderation / ai / audit 等高频模块拆页，并逐段补模块动作与审计流。
+
+### 执行记录：ADM-010（管理端首批模块视图拆分）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - 新增 `frontend-admin/src/views/modules/AdminDashboardModule.vue`、`AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，先把概览指标、审核列表与治理记录展示从 `AdminWorkspaceView.vue` 中抽离为首批独立模块视图。
+  - 新增 `frontend-admin/src/views/modules/AdminDashboardModule.test.ts`、`AdminModerationModule.test.ts` 与 `AdminGovernanceModule.test.ts`，先以 RED 锁定“模块文件尚不存在”的缺口，再在 GREEN 锁定模块级渲染、查询输入与事件发射契约。
+  - `frontend-admin/src/views/AdminWorkspaceView.vue` 已改为以 session、URL、审核确认层和模块选择为主的壳组件，不再内联 dashboard / moderation / governance 的完整页面结构。
+- 已执行验证：
+  - RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+  - GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+  - `npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts src/api/client.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run verify:docs`
+- 风险与后续：
+  - 当前拆出的还是“模块视图组件”而不是真正独立 page；路由入口、数据边界和治理动作仍由 `AdminWorkspaceView.vue` 统一调度。
+  - 下一步更适合继续沿 `ADM-010 / ADM-011` 把 users / materials / ai / audit 等模块拆到更清晰的 page / feature 边界，并把封禁、下架、重试等动作沉到对应模块。
 
 ### 执行记录：FE-041（管理端审核动作接入确认层）
 - 执行日期：2026-07-09

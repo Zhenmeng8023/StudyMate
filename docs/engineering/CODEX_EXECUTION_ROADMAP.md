@@ -118,6 +118,13 @@
 - `frontend-admin/src/App.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts` 已锁定“根路径归一化到 `/admin/dashboard`”和“切换模块时浏览器地址同步更新”的最小路由契约。
 - 这一步先把后台治理工作台做到了可刷新、可直达、可回退；后续 `ADM-010` 仍需继续把单组件工作台拆成真正的模块页和更完整的 Router 边界。
 
+### 2026-07-09 ADM-010 首批管理端模块视图拆分
+
+- `frontend-admin/src/views/modules/` 已新增 `AdminDashboardModule.vue`、`AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，先把概览卡片、审核列表和治理记录视图从 `AdminWorkspaceView.vue` 中抽离出来。
+- 对应新增 `AdminDashboardModule.test.ts`、`AdminModerationModule.test.ts` 与 `AdminGovernanceModule.test.ts`，锁定模块级渲染、查询输入和事件发射契约，避免后续继续只能依赖工作台级大测试。
+- `frontend-admin/src/views/AdminWorkspaceView.vue` 现已回到更聚焦的壳层职责：组合 session、URL 同步、审核确认层与模块选择，而不是继续内联全部治理页面结构。
+- `ADM-010` 现在已从“只有 URL 状态”推进到“URL + 首批模块视图”两层边界；后续更适合继续把 users / materials / ai / audit 等模块拆成真正 page / feature 边界，并逐段补动作和审计流。
+
 ### 2026-07-08 FE / UI 验证收口更新
 
 - FE-010、FE-020、FE-030 与 UI-04 已在真实依赖环境完成类型检查、相关 Vitest、前后台构建与 4 条 Playwright smoke。

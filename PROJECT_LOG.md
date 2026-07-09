@@ -4744,6 +4744,32 @@
 
 - 管理端审核动作现在已经开始沿用户端 `ConfirmDialog` 的同一套确认语义收口，后续继续推进后台治理里的下架、恢复、重试等动作时，可以直接沿这层模式扩展。
 - 当前确认状态仍挂在 `AdminWorkspaceView.vue` 单工作台组件内；后续若推进 `ADM-010 / ADM-011`，更适合把这类治理动作与确认状态一起下沉到模块页或 feature 边界。
+## 2026-07-09 11:02:00 +08:00 | v1.1.0-alpha.145 | 推进 ADM-010 管理端首批模块视图拆分
+### 任务内容
+
+- 在 `ADM-010` 已完成 URL 路由起步的基础上，继续做一个最小、可测试的后台模块化收口，避免 `AdminWorkspaceView.vue` 再继续吸纳 dashboard、moderation 和治理列表的整块模板。
+- 本轮目标不是一次性完成真正的 Vue Router page 拆分，而是先把最高频的三块展示层抽成独立模块视图，让后台工作台开始回到“session / URL / 确认层壳组件”的职责。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/modules/AdminDashboardModule.vue`、`frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`，分别承接概览指标卡、审核队列表格和治理记录/摘要/详情展示。
+- 新增 `frontend-admin/src/views/modules/AdminDashboardModule.test.ts`、`frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `frontend-admin/src/views/modules/AdminGovernanceModule.test.ts`，先以 RED 复现“模块文件不存在”的缺口，再在 GREEN 锁定模块渲染、查询输入和事件发射契约。
+- 重写 `frontend-admin/src/views/AdminWorkspaceView.vue`，让工作台主视图改为组合 session、URL、审核确认层与模块切换，不再继续内联 dashboard / moderation / governance 的完整页面结构。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-010` 从“只有 URL 状态”推进到“URL + 首批模块视图拆分”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- `npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts src/api/client.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 后台工作台现在已经不再只有 URL 路由能力，也开始具备首批模块级视图边界；后续继续拆 users / materials / ai / audit 时，可以沿 `src/views/modules/` 这层模式继续推进，而不是把整页模板继续堆回 `AdminWorkspaceView.vue`。
+- 当前数据加载和治理动作仍集中在壳组件里；后续若继续推进 `ADM-010 / ADM-011`，更适合把模块数据边界、动作状态和审计语义一起下沉到 page / feature 级别。
+
 ## 2026-07-09 10:47:30 +08:00 | v1.1.0-alpha.144 | 推进 ADM-010 管理端 URL 路由起步
 ### 任务内容
 
