@@ -2,7 +2,7 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { Button, DataState, Drawer, IconButton, Inspector, Tag } from "./index";
+import { Button, DataState, Drawer, IconButton, Input, Inspector, Tag } from "./index";
 
 describe("@studymate/ui react primitive contract", () => {
   it("renders the shared data state copy", () => {
@@ -85,5 +85,15 @@ describe("@studymate/ui react primitive contract", () => {
     expect(tag.tagName).toBe("SPAN");
     expect(tag.className).toContain("chip");
     expect(tag.className).toContain("muted");
+  });
+
+  it("renders a shared input with default type and invalid state", () => {
+    render(<Input invalid placeholder="搜索资料" />);
+
+    const input = screen.getByPlaceholderText("搜索资料");
+    expect(input).toHaveAttribute("type", "text");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input.className).toContain("ds-input");
+    expect(input.className).toContain("is-invalid");
   });
 });
