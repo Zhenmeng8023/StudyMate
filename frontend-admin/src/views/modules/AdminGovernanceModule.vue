@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { computed } from "vue";
+import AdminDataState from "../../components/admin/AdminDataState.vue";
+import type { AdminDataStatePayload } from "../../components/admin/dataState";
+
 type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
 type GovernanceAction = {
   key: string;
@@ -9,6 +13,7 @@ type GovernanceAction = {
 const props = defineProps<{
   actions?: GovernanceAction[];
   columns: string[];
+  dataState?: AdminDataStatePayload | null;
   emptyText: string;
   query: string;
   rows: GovernanceRecord[];
@@ -68,12 +73,22 @@ function requestAction(action: string) {
   if (!props.selectedRecord) return;
   emit("requestAction", { action, record: props.selectedRecord });
 }
+
+const resolvedDataState = computed<AdminDataStatePayload>(() =>
+  props.dataState ?? {
+    kind: "empty",
+    title: props.emptyText,
+    description: "当前模块已接入真实 API，但没有可显示的数据。"
+  }
+);
 </script>
 
 <template>
   <section v-if="summary" class="admin-metric-grid admin-metric-grid--summary">
     <article v-for="(value, key) in summary" :key="key" class="metric-card">
-      <span>{{ formatFieldLabel(String(key)) }}</span><strong>{{ formatCell(value) }}</strong><p>AI 任务用量概览</p>
+      <span>{{ formatFieldLabel(String(key)) }}</span>
+      <strong>{{ formatCell(value) }}</strong>
+      <p>AI 任务用量概览</p>
     </article>
   </section>
   <section class="admin-toolbar">
@@ -91,9 +106,16 @@ function requestAction(action: string) {
           <p>选择一条记录，在右侧查看完整字段和值。</p>
         </div>
       </header>
-      <div v-if="!rows.length" class="admin-empty-state"><strong>{{ emptyText }}</strong><span>当前模块已接入真实 API，但没有可显示的数据。</span></div>
+      <AdminDataState
+        v-if="dataState || !rows.length"
+        :description="resolvedDataState.description"
+        :kind="resolvedDataState.kind"
+        :title="resolvedDataState.title"
+      />
       <div v-else class="admin-table admin-table--records" role="table">
-        <div class="admin-table__head" role="row"><span v-for="column in columns" :key="column">{{ formatFieldLabel(column) }}</span></div>
+        <div class="admin-table__head" role="row">
+          <span v-for="column in columns" :key="column">{{ formatFieldLabel(column) }}</span>
+        </div>
         <button
           v-for="(row, index) in rows"
           :key="index"
@@ -107,8 +129,16 @@ function requestAction(action: string) {
       </div>
     </section>
     <aside class="admin-record-inspector">
-      <header><p class="eyebrow">记录详情</p><h2>{{ selectedRecord ? getRecordTitle(selectedRecord) : "选择一条记录" }}</h2></header>
-      <dl v-if="selectedRecord"><template v-for="(value, key) in selectedRecord" :key="String(key)"><dt>{{ formatFieldLabel(String(key)) }}</dt><dd>{{ formatCell(value) }}</dd></template></dl>
+      <header>
+        <p class="eyebrow">记录详情</p>
+        <h2>{{ selectedRecord ? getRecordTitle(selectedRecord) : "选择一条记录" }}</h2>
+      </header>
+      <dl v-if="selectedRecord">
+        <template v-for="(value, key) in selectedRecord" :key="String(key)">
+          <dt>{{ formatFieldLabel(String(key)) }}</dt>
+          <dd>{{ formatCell(value) }}</dd>
+        </template>
+      </dl>
       <div v-else class="admin-inspector-empty">从左侧表格选择一条记录，查看完整字段。</div>
       <div v-if="selectedRecord && actions?.length" class="admin-record-inspector__actions">
         <button

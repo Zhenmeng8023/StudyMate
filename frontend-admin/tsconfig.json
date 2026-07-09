@@ -11,10 +11,10 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "jsx": "preserve",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true
   },
   "include": ["src/**/*.ts", "src/**/*.vue"]
 }
-

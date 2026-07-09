@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import type { ApiRequestInit } from "@studymate/api-client";
 import { getSessionInvalidationPrompt } from "@studymate/api-client";
 import { adminGet, adminPost } from "../api/client";
+import type { AdminDataStatePayload } from "../components/admin/dataState";
 import {
   clearSessionInvalidation,
   persistSession,
@@ -289,6 +290,41 @@ const activeCountLabel = computed(() => {
     return "";
   }
   return `${governanceRows.value.length} 条记录`;
+});
+const moderationDataState = computed<AdminDataStatePayload | null>(() => {
+  if (loading.value && moderationItems.value.length === 0) {
+    return {
+      kind: "loading",
+      title: "正在同步审核队列",
+      description: "请稍候，最新待审核内容和状态正在载入。"
+    };
+  }
+  if (errorMessage.value && moderationItems.value.length === 0) {
+    return {
+      kind: "error",
+      title: "审核队列暂时不可用",
+      description: errorMessage.value
+    };
+  }
+  return null;
+});
+const governanceDataState = computed<AdminDataStatePayload | null>(() => {
+  if (activeView.value === "dashboard" || activeView.value === "moderation") return null;
+  if (loading.value && governanceRows.value.length === 0) {
+    return {
+      kind: "loading",
+      title: `正在同步${activeMeta.value.label}`,
+      description: "请稍候，最新治理记录正在载入。"
+    };
+  }
+  if (errorMessage.value && governanceRows.value.length === 0) {
+    return {
+      kind: "error",
+      title: `${activeMeta.value.label}暂时不可用`,
+      description: errorMessage.value
+    };
+  }
+  return null;
 });
 const overviewCards = computed(() => [
   { label: "待处理", value: String(overview.value?.pendingModerationCount ?? moderationItems.value.length), helper: "需要审核或复核的公开内容" },
@@ -942,6 +978,7 @@ function selectRecord(row: GovernanceRecord) {
 
       <AdminModerationModule
         v-else-if="activeView === 'moderation'"
+        :data-state="moderationDataState"
         :items="visibleModerationItems"
         :query="moderationQuery"
         :total-count="moderationItems.length"
@@ -953,6 +990,7 @@ function selectRecord(row: GovernanceRecord) {
         v-else
         :actions="governanceActions"
         :columns="governanceColumns"
+        :data-state="governanceDataState"
         :empty-text="governanceConfig[activeView as keyof typeof governanceConfig].empty"
         :query="recordQuery"
         :rows="visibleGovernanceRows"

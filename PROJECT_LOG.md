@@ -1,3 +1,27 @@
+## 2026-07-09 14:51:28 +08:00 | v1.1.0-alpha.159 | 推进 FE-040 管理端页面状态协议接线
+### 任务内容
+
+- 继续沿 `FE-040` 推进“页面状态协议”这条更偏全局骨架的工作线，这次不再扩 token，而是补管理端对共享 `DataState` 语义的真实消费。
+- 本轮目标是把后台模块页至少先接上 `loading / error / empty` 这三类共享状态，避免用户端已经统一、管理端还继续各自手写空态块与局部提示。
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminDataState.vue` 与 `frontend-admin/src/components/admin/dataState.ts`，让管理端开始直接消费 `@studymate/ui` 的 `DataStateKind` / `getDataStateLabel(...)`，以 Vue 适配层承接共享状态语义。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`，模块页现在会优先渲染共享状态骨架；当传入 `dataState` 时显示 `loading / error`，当列表为空时统一回落到共享 `empty` 状态，而不是继续使用各自分叉的空态 DOM。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，为审核队列和治理记录补上最小状态载荷透传：列表尚无数据时，工作台会根据当前 `loading/error` 状态生成共享 `dataState` 并交给模块页消费。
+- 同时更新 `frontend-admin/tsconfig.json`，补齐 `jsx: "preserve"`，解决管理端直接消费 `@studymate/ui` 导出时 `vue-tsc` 无法解析包内 `.tsx` 入口的问题。
+- 更新 `frontend-admin/src/components/admin/admin.css` 与相关测试文件，把这条状态协议补成真实可回归的管理端切片。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+### 后续影响
+
+- `FE-040` 现在已经从“共享 token 单一来源”进一步推进到“管理端开始真实消费共享页面状态语义”，这更接近“先把全局骨架补齐”的目标。
+- 这次先覆盖的是后台模块页的 `loading / error / empty` 首层协议；后续如果继续扩 `unauthorized / stale / conflict`，已经有了可复用的 Vue 侧状态适配层与页面入口。
+
 ## 2026-07-09 14:34:33 +08:00 | v1.1.0-alpha.158 | 扩充 WB-032 latest-head 分组依赖固定入口 E2E
 ### 任务内容
 

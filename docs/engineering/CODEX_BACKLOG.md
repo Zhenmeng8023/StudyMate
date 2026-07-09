@@ -468,6 +468,24 @@
   - 继续沿 `FE-040` 把管理端更多局部硬编码颜色、圆角与输入/按钮态映射到共享 token，而不是只停留在基础壳层变量。
   - 继续沿 `FE-041` 把 `Drawer`、`Inspector`、`DataState` 之外的更多视觉契约沉到 `@studymate/ui`，让共享层开始承接“组件级”而不只是“变量级”一致性。
 
+### 执行记录：FE-040（管理端页面状态协议接线起步）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - 新增 `frontend-admin/src/components/admin/AdminDataState.vue` 与 `dataState.ts`，让管理端开始直接消费 `@studymate/ui` 的 `DataStateKind` / `getDataStateLabel(...)` 语义，不再只共享 token、却继续各自手写页面状态文案。
+  - `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue` 已接入新的 `dataState` 协议；当前至少 `loading / error / empty` 三类列表态会通过同一套管理端状态骨架呈现，而不是继续混用局部空态块。
+  - `frontend-admin/src/views/AdminWorkspaceView.vue` 已补齐最小透传：当审核队列或治理列表还没有数据时，会按当前工作台 `loading/error` 状态生成共享状态载荷，再交给模块页统一显示。
+  - 新增 `frontend-admin/src/components/admin/AdminDataState.test.ts`，并补强 `AdminModerationModule.test.ts`、`AdminGovernanceModule.test.ts`，先用 RED 锁定“缺少共享状态组件与模块接线”的缺口，再在 GREEN 锁定管理端对共享状态标签的真实消费。
+  - `frontend-admin/tsconfig.json` 已补 `jsx: "preserve"`，确保管理端在直接消费 `@studymate/ui` 的 `.tsx` 导出时仍能稳定通过 `vue-tsc`。
+- 已执行验证：
+  - RED：`npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+  - GREEN：`npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+  - `npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+- 后续建议：
+  - 这一步先覆盖了管理端模块页的 `loading / error / empty` 首层状态；后续继续沿 `FE-040` 扩 `unauthorized / stale / conflict` 的真实页面入口，避免这些状态只存在于共享枚举里。
+  - 当前后台顶部 `notice/error` 仍是另一层壳组件提示；后续如继续推进 page / feature 拆分，更适合把壳层提示与模块级 `DataState` 的边界一起显式化。
+
 ### 执行记录：FE-040（共享设计 token 单一来源起步）
 - 执行日期：2026-07-09
 - 本轮完成：

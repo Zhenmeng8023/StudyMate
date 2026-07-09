@@ -139,6 +139,12 @@ button:disabled { cursor: not-allowed; opacity: .58; }
 .admin-empty-state { display: grid; place-items: center; min-height: 240px; gap: 6px; color: var(--admin-text-soft); text-align: center; }
 .admin-empty-state strong { color: var(--admin-text); }
 .admin-empty-state span { color: var(--admin-text-muted); font-size: 13px; }
+.admin-data-state { display: grid; place-items: center; min-height: 240px; padding: 24px; text-align: center; }
+.admin-data-state__copy { display: grid; gap: 8px; max-width: 420px; }
+.admin-data-state__copy h2, .admin-data-state__copy p { margin: 0; }
+.admin-data-state__copy h2 { color: var(--admin-text); font-size: 20px; letter-spacing: -.02em; }
+.admin-data-state__copy p:not(.eyebrow) { color: var(--admin-text-soft); line-height: 1.65; }
+.admin-data-state--error .eyebrow, .admin-data-state--conflict .eyebrow, .admin-data-state--unauthorized .eyebrow { color: var(--admin-danger); }
 .admin-table { width: 100%; overflow: auto; }
 .admin-table__head, .admin-table__row { display: grid; align-items: center; min-width: 920px; }
 .admin-table__head { min-height: 42px; padding: 0 20px; color: var(--admin-text-muted); font-size: 11px; font-weight: 800; letter-spacing: .035em; text-transform: uppercase; background: #fafbfc; }
