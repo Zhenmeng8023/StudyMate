@@ -1,3 +1,23 @@
+## 2026-07-09 14:34:33 +08:00 | v1.1.0-alpha.158 | 扩充 WB-032 latest-head 分组依赖固定入口 E2E
+### 任务内容
+
+- 继续沿 `WB-032` 扩固定验证入口，这次聚焦“latest-head 删除语义下的分组依赖阻断”这条页面级已经锁定、但固定入口还没有覆盖的真实浏览器路径。
+- 本轮目标是把“本地草稿恢复 -> latest-head 新增 `Server node` 与 `Server group` -> 一键应用 2 项联动取舍建议 -> 应用已标记取舍 -> 再次保存”接进 `verify:graph-conflicts`，避免这条分组依赖主线只停留在页面级回归里。
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增 Playwright 用例覆盖真实 `graph_version_conflict` 后的 latest-head 分组依赖路径：本地草稿保持只有 `Graph root`，服务端最新版本额外包含 `Server node` 与引用它的 `Server group`，随后在冲突卡片中先误选“保留本地节点删除 + 保留服务端分组删除”。
+- 这条新 E2E 会先锁定阻断提示“分组 `Server group` 仍引用未保留的节点”，再根据真实浏览器合同断言两条联动建议分别是“联动保留服务端：节点｜删除｜Server node”和“联动保留本地：分组｜删除｜Server group”，随后一键应用 2 项联动取舍建议并继续保存。
+- 同一个用例还会捕获第二次 `batch-save` 请求，断言提交的是 rebased `document.version = 5`，并且最终保存结果符合当前 latest-head 分组依赖合同：保留 `Graph root` 与 `Server node`，同时按本地删除 `Server group`，形成 `2 节点 / 0 分组 / 0 连线` 的合并草稿。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，把这条新增固定入口路径补回 `WB-032` 的执行记录和图谱冲突回归矩阵。
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can clear latest-head group dependency blockers and save the rebased draft"`
+- `npm run verify:graph-conflicts`
+### 后续影响
+
+- `WB-032` 的固定入口现在已经开始覆盖 latest-head 分组依赖联动清阻断后的真实浏览器链路；后续如果继续扩 latest-head 多目标删除语义或更多组级依赖阻断，可以直接沿这条 E2E 主线补充。
+- 这次没有修改冲突处理运行时语义，新增用例在现有实现上直接 GREEN，说明页面级已经锁定的 latest-head 分组联动合同现在也被提升到了 Playwright 固定入口里。
+
 ## 2026-07-09 14:25:00 +08:00 | v1.1.0-alpha.157 | 扩充 WB-032 多目标本地连线联动建议后的固定入口 E2E
 ### 任务内容
 

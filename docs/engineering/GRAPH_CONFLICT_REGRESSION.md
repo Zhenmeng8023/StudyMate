@@ -42,7 +42,7 @@
 | 前端页面 | 图谱工作区真实冲突路径、latest-head 组合场景、页面级联动建议 | `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`、`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx` | `npm run test:graph:conflicts:frontend` |
 | 前端持久化 | 本地草稿恢复、跨窗口提醒、冲突后状态保持 | `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx`、`frontend-user/src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx` | `npm run test:graph:conflicts:frontend` |
 | 后端 DTO / handler / service | 版本权威、`409 graph_version_conflict`、restore 生命周期 | `backend/internal/modules/graph/dto/*.go`、`handler/*.go`、`service/*.go` | `npm run test:graph:conflicts:backend` |
-| E2E smoke | 图谱工作区真实预览环境下的桌面与窄屏加载、保存、导入、历史、布局预览、导出状态、权限路径、失败态、版本冲突处理，以及“应用已标记取舍 -> 生成合并草稿 -> 以 rebased document 再次保存”“联动取舍建议清除阻断 -> 应用已标记取舍 -> 以 rebased document 再次保存”“未标记对象默认沿用最新版本 -> 以 rebased document 再次保存”与“多目标本地连线联动建议 -> 应用已标记取舍 -> 以 rebased document 再次保存”的主路径 | `e2e/v1-graph-workspace.spec.ts` | `npm run test:graph:conflicts:e2e` |
+| E2E smoke | 图谱工作区真实预览环境下的桌面与窄屏加载、保存、导入、历史、布局预览、导出状态、权限路径、失败态、版本冲突处理，以及“应用已标记取舍 -> 生成合并草稿 -> 以 rebased document 再次保存”“联动取舍建议清除阻断 -> 应用已标记取舍 -> 以 rebased document 再次保存”“未标记对象默认沿用最新版本 -> 以 rebased document 再次保存”“多目标本地连线联动建议 -> 应用已标记取舍 -> 以 rebased document 再次保存”与“latest-head 分组依赖阻断 -> 一键应用 2 项联动取舍建议 -> 应用已标记取舍 -> 以 rebased document 再次保存”的主路径 | `e2e/v1-graph-workspace.spec.ts` | `npm run test:graph:conflicts:e2e` |
 | 文档同步 | 路线图、backlog、主文档与里程碑记录一致 | `README.md` / `docs/DEVELOPMENT.md` / `PROJECT_LOG.md` 等 | `npm run verify:docs` |
 
 ## 3. 推荐执行入口
@@ -69,7 +69,7 @@ npm run ci
 ## 4. 当前边界说明
 
 - 当前入口聚焦图谱冲突生命周期与工作区回归，不等同于 `WB-034` 已完成。
-- 当前固定入口已经覆盖对象级取舍应用后的真实保存路径、联动取舍建议清除阻断后的真实保存路径、未标记对象默认沿用最新版本后的真实保存路径，以及多目标本地连线联动建议后的真实保存路径，并会断言第二次 `batch-save` 使用 rebased `document.version`；后续若再扩取舍能力，应继续把这类真实保存链路接进同一入口。
+- 当前固定入口已经覆盖对象级取舍应用后的真实保存路径、联动取舍建议清除阻断后的真实保存路径、未标记对象默认沿用最新版本后的真实保存路径、多目标本地连线联动建议后的真实保存路径，以及 latest-head 分组依赖阻断清除后的真实保存路径，并会断言第二次 `batch-save` 使用 rebased `document.version`；后续若再扩取舍能力，应继续把这类真实保存链路接进同一入口。
 - 它还没有覆盖：
   - 更完整的桌面 / 窄屏冲突组合矩阵
 - 更完整的 create/save/restore/export/layout/conflict/权限全矩阵，尤其是更多权限分支与桌面/窄屏组合

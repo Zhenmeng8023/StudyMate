@@ -1419,6 +1419,239 @@ test("graph workspace can batch-apply multi-target linked suggestions and save t
   });
 });
 
+test("graph workspace can clear latest-head group dependency blockers and save the rebased draft", async ({
+  page
+}) => {
+  const initialDetail = buildGraphDetail({
+    currentVersion: 4,
+    description: "latest-head 分组依赖阻断烟测",
+    document: {
+      graphId: "graph-1",
+      version: 4,
+      schemaVersion: 1,
+      viewport: { x: 140, y: 120, zoom: 1 },
+      nodes: [
+        {
+          id: "node-1",
+          type: "text",
+          title: "Graph root",
+          x: 140,
+          y: 120,
+          width: 220,
+          height: 132,
+          source: null,
+          metadata: {}
+        }
+      ],
+      edges: [],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 0,
+    nodeCount: 1,
+    title: "latest-head 分组冲突图谱",
+    updatedAt: "2026-07-09T09:00:00Z"
+  });
+  const latestDetail = buildGraphDetail({
+    currentVersion: 5,
+    description: "服务端新增分组与节点",
+    document: {
+      ...initialDetail.document,
+      version: 5,
+      nodes: [
+        ...initialDetail.document.nodes,
+        {
+          id: "node-server",
+          type: "concept",
+          title: "Server node",
+          x: 420,
+          y: 120,
+          width: 220,
+          height: 132,
+          source: null,
+          metadata: {}
+        }
+      ],
+      groups: [
+        {
+          id: "group-server",
+          title: "Server group",
+          nodeIds: ["node-server"],
+          x: 380,
+          y: 80,
+          width: 320,
+          height: 220,
+          collapsed: false,
+          metadata: {}
+        }
+      ]
+    },
+    edgeCount: 0,
+    nodeCount: 2,
+    title: "latest-head 服务端图谱",
+    updatedAt: "2026-07-09T09:05:00Z"
+  });
+  const draftKey = "studymate:graph-workspace:draft:graph-1";
+  const draftValue = JSON.stringify({
+    currentVersion: 4,
+    description: "local draft",
+    document: {
+      ...initialDetail.document,
+      nodes: [...initialDetail.document.nodes],
+      edges: [],
+      groups: []
+    },
+    graphId: "graph-1",
+    savedAt: "2026-07-09T09:01:00Z",
+    title: "Recovered graph"
+  });
+  let graphRequestCount = 0;
+  let batchSaveCount = 0;
+  const batchSavePayloads: Array<Record<string, unknown>> = [];
+
+  await page.addInitScript(
+    ({ storedSession, storedDraftKey, storedDraftValue }) => {
+      window.localStorage.setItem("studymate.session", JSON.stringify(storedSession));
+      window.sessionStorage.setItem(storedDraftKey, storedDraftValue);
+    },
+    {
+      storedSession: session,
+      storedDraftKey: draftKey,
+      storedDraftValue: draftValue
+    }
+  );
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      graphRequestCount += 1;
+      await route.fulfill({
+        contentType: "application/json",
+        body: success(graphRequestCount === 1 ? initialDetail : latestDetail)
+      });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-1/batch-save") {
+      batchSaveCount += 1;
+      const payload = route.request().postDataJSON() as Record<string, unknown>;
+      batchSavePayloads.push(payload);
+      if (batchSaveCount === 1) {
+        await route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: "graph_version_conflict",
+              message: "图谱已被其他窗口更新，请刷新当前图谱后再保存。"
+            }
+          })
+        });
+        return;
+      }
+
+      const requestDocument = payload.document as {
+        edges: Array<Record<string, unknown>>;
+        graphId: string;
+        groups: Array<Record<string, unknown>>;
+        metadata: Record<string, unknown>;
+        nodes: Array<Record<string, unknown>>;
+        schemaVersion: number;
+        theme: Record<string, unknown>;
+        version: number;
+        viewport: Record<string, unknown>;
+      };
+
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          ...latestDetail,
+          currentVersion: 6,
+          edgeCount: requestDocument.edges.length,
+          nodeCount: requestDocument.nodes.length,
+          updatedAt: "2026-07-09T09:08:00Z",
+          document: {
+            ...requestDocument,
+            version: 6
+          }
+        })
+      });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([initialDetail]) });
+      return;
+    }
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+
+  await expect(page.getByText("已恢复本地未保存草稿，请尽快保存图谱")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toBeVisible();
+  await expect(page.getByText("Recovered graph")).toBeVisible();
+  await page.getByRole("button", { name: "保存" }).click();
+
+  await expect(page.getByLabel("图谱冲突辅助")).toBeVisible();
+  await page.getByRole("button", { name: "保留本地（与最新图谱相比）：节点｜删除｜Server node" }).click();
+  await page.getByRole("button", { name: "保留服务端（与最新图谱相比）：分组｜删除｜Server group" }).click();
+
+  await expect(page.getByLabel("取舍依赖校验问题")).toContainText(
+    "分组“Server group”仍引用未保留的节点，请先同步保留相关节点或改为保留服务端。"
+  );
+  await expect(page.getByLabel("联动取舍建议")).toBeVisible();
+  await expect(page.getByRole("button", { name: "联动保留服务端：节点｜删除｜Server node" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "联动保留本地：分组｜删除｜Server group" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "一键应用 2 项联动取舍建议" })).toBeVisible();
+
+  await page.getByRole("button", { name: "一键应用 2 项联动取舍建议" }).click();
+
+  await expect(
+    page.getByText("已批量标记 2 条联动取舍建议（保留本地 1 项，保留服务端 1 项），当前已解除依赖阻断，可继续应用已标记取舍")
+  ).toBeVisible();
+  await expect(page.locator('[aria-label="取舍依赖校验问题"]')).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "应用已标记取舍到当前草稿" }).click();
+
+  await expect(page.getByText("已基于最新图谱生成合并草稿：保留本地 1 项，保留服务端 1 项，请确认后保存")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toBeVisible();
+  await expect(page.getByText("版本 5 · 2 节点 · 0 连线")).toBeVisible();
+  await expect(page.locator('[aria-label="图谱冲突辅助"]')).toHaveCount(0);
+
+  await page.getByRole("button", { name: "保存" }).click();
+
+  await expect(page.getByText("图谱已保存", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：已保存")).toBeVisible();
+  await expect(page.getByText("版本 6 · 2 节点 · 0 连线")).toBeVisible();
+  await expect
+    .poll(() => batchSavePayloads.length, { message: "expected latest-head group resolution payload to be captured" })
+    .toBe(2);
+  expect(batchSavePayloads[1]?.document).toMatchObject({
+    version: 5,
+    nodes: [
+      expect.objectContaining({ title: "Graph root" }),
+      expect.objectContaining({ title: "Server node" })
+    ],
+    edges: [],
+    groups: []
+  });
+});
+
 test("graph workspace keeps version conflict handling reachable in a narrow viewport", async ({ page }) => {
   const initialDetail = buildGraphDetail({
     currentVersion: 4,
