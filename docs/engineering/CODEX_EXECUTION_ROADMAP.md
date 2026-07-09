@@ -104,6 +104,13 @@
 - 共享确认语义已经从笔记页扩展到图谱主路径，说明 `FE-041` 不再只覆盖静态页面骨架和简单表单，也开始统一 destructive action 的真实工作流。
 - 下一步更值得继续推进管理端治理动作，把删除、下架、重试等后台确认路径也一起纳入共享 `ConfirmDialog`，形成更完整的跨端确认语义。
 
+### 2026-07-09 FE-041 管理端审核动作接入确认层
+
+- 管理端新增 `frontend-admin/src/components/admin/AdminConfirmDialog.vue`，沿共享 `ConfirmDialog` 的标题、说明、取消/确认、危险动作、确认中禁用和错误提示语义，实现 Vue 侧可复用的后台确认层，而不是回退到原生确认框。
+- `frontend-admin/src/views/AdminWorkspaceView.vue` 里的审核队列动作现在都会先进入确认层，再执行 `/api/v1/admin/moderation/.../:action`；取消时不会发请求，确认后才真正提交审核结果。
+- `frontend-admin/src/views/AdminWorkspaceView.test.ts` 已锁定“驳回动作先确认、取消不触发请求、确认后携带后台 token 发起 POST”的页面级回归，说明 `FE-041` 已开始覆盖管理端真实治理动作。
+- 下一步更值得继续推进后台治理里的下架、恢复、重试等其他高风险动作，并把确认层继续从单工作台组件内收口到后续 `ADM-010 / ADM-011` 的模块边界。
+
 ### 2026-07-08 FE / UI 验证收口更新
 
 - FE-010、FE-020、FE-030 与 UI-04 已在真实依赖环境完成类型检查、相关 Vitest、前后台构建与 4 条 Playwright smoke。

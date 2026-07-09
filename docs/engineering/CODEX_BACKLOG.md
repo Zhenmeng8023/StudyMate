@@ -24,7 +24,7 @@
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
 | FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。 |
-| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `ConfirmDialog` 已覆盖笔记删除与图谱工作区的重载/删除确认，后续继续推进管理端筛选/确认模式与更多跨端状态语义。 |
+| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层，后续继续推进更多后台治理动作与跨端状态语义。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一 401 会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；补 HttpOnly Refresh Token 迁移说明。 |
 | DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
@@ -63,6 +63,23 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：FE-041（管理端审核动作接入确认层）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `frontend-admin/src/views/AdminWorkspaceView.test.ts` 新增 RED/GREEN 页面级回归，锁定后台审核队列里的驳回动作不再直接提交，而是先弹确认层；取消不会发请求，确认后才真正调用 `/api/v1/admin/moderation/posts/:id/reject`。
+  - 新增 `frontend-admin/src/components/admin/AdminConfirmDialog.vue`，沿共享 `ConfirmDialog` 的标题、说明、取消/确认、危险动作、确认中禁用和错误提示语义，实现 Vue 侧后台确认骨架。
+  - `frontend-admin/src/views/AdminWorkspaceView.vue` 已把审核队列里的“通过 / 驳回 / 隐藏”从直接执行改为先进入确认层，再发起原有审核 POST 请求；登录页重复提示文案也一并收口为单条。
+  - `frontend-admin/src/components/admin/admin.css` 已补齐后台确认层的遮罩、面板、危险确认按钮和错误提示样式，使管理端在共享 token 之上拥有与用户端一致的 destructive action 视觉节奏。
+- 已执行验证：
+  - RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts src/api/client.test.ts`
+  - `npm run verify:docs`
+- 风险与后续：
+  - 当前后台确认层仍先挂在 `AdminWorkspaceView.vue` 单工作台组件内，后续推进 `ADM-010 / ADM-011` 时，更适合把这类治理动作和确认状态一起沉到模块页或 feature 边界，而不是继续堆在单文件里。
+  - 这一步先覆盖了审核队列的高频动作；后续更值得继续推进资料下架/恢复、AI 任务重试/取消、模板审核/发布/下架等后台高风险动作，把管理端 destructive action 语义继续补齐。
 
 ### 执行记录：FE-041（共享 ConfirmDialog 扩展到图谱工作区主路径）
 - 执行日期：2026-07-09

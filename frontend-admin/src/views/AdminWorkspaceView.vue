@@ -3,6 +3,7 @@ import "../components/admin/admin.css";
 import { adminGet, adminPost } from "../api/client";
 import type { ApiRequestInit } from "@studymate/api-client";
 import { computed, onBeforeUnmount, reactive, ref } from "vue";
+import AdminConfirmDialog from "../components/admin/AdminConfirmDialog.vue";
 import {
   clearSessionInvalidation,
   persistSession,
@@ -42,6 +43,7 @@ type AdminNavItem = {
 };
 
 type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
+type ModerationAction = "approve" | "reject" | "hide";
 
 const form = reactive({ login: "", password: "" });
 const session = ref<AdminSessionPayload | null>(readStoredAdminSession());
@@ -58,11 +60,42 @@ const notice = ref("登录后会同步当前治理队列与运营数据。");
 const activeView = ref<AdminView>("dashboard");
 const recordQuery = ref("");
 const moderationQuery = ref("");
+const pendingModerationAction = ref<{ action: ModerationAction; item: ModerationItem } | null>(null);
+const moderationConfirmError = ref("");
 
 const loggedIn = computed(() => Boolean(session.value));
 const pendingPosts = computed(() => moderationItems.value.filter((item) => item.type === "post"));
 const pendingMaterials = computed(() => moderationItems.value.filter((item) => item.type === "material"));
 const profileInitial = computed(() => profile.value?.displayName?.trim().slice(0, 1) || "A");
+const moderationConfirmTitle = computed(() => {
+  const pending = pendingModerationAction.value;
+  if (!pending) return "";
+  if (pending.action === "approve") return "确认通过这条内容";
+  if (pending.action === "reject") return "确认驳回这条内容";
+  return "确认隐藏这条内容";
+});
+const moderationConfirmDescription = computed(() => {
+  const pending = pendingModerationAction.value;
+  if (!pending) return "";
+  if (pending.action === "approve") return `通过后，“${pending.item.title}”将按审核结果进入可见状态。`;
+  if (pending.action === "reject") return `驳回后，“${pending.item.title}”会退出当前待处理队列。`;
+  return `隐藏后，“${pending.item.title}”将不再继续对外展示。`;
+});
+const moderationConfirmLabel = computed(() => {
+  const pending = pendingModerationAction.value;
+  if (!pending) return "确认";
+  if (pending.action === "approve") return "确认通过";
+  if (pending.action === "reject") return "确认驳回";
+  return "确认隐藏";
+});
+const moderationConfirmingLabel = computed(() => {
+  const pending = pendingModerationAction.value;
+  if (!pending) return "处理中…";
+  if (pending.action === "approve") return "通过中…";
+  if (pending.action === "reject") return "驳回中…";
+  return "隐藏中…";
+});
+const moderationConfirmTone = computed(() => pendingModerationAction.value?.action === "approve" ? "default" : "danger");
 
 const navItems = computed<AdminNavItem[]>(() => [
   { key: "dashboard", label: "概览", icon: "▦", group: "总览" },
@@ -137,6 +170,8 @@ const unsubscribeSession = subscribeSession(() => {
     governanceRows.value = [];
     governanceSummary.value = null;
     selectedRecord.value = null;
+    pendingModerationAction.value = null;
+    moderationConfirmError.value = "";
     activeView.value = "dashboard";
     errorMessage.value = "";
     notice.value = "后台会话已失效，请重新登录。";
@@ -219,20 +254,42 @@ async function loadGovernance(view: AdminView) {
   }
 }
 
-async function moderate(item: ModerationItem, action: "approve" | "reject" | "hide") {
+async function applyModerationAction(item: ModerationItem, action: ModerationAction) {
   if (!session.value) return;
   loading.value = true;
   errorMessage.value = "";
+  moderationConfirmError.value = "";
+
   try {
     const path = `/api/v1/admin/moderation/${item.type === "post" ? "posts" : "materials"}/${item.id}/${action}`;
     const data = await post<{ status: string }>(path, { reason: "" });
+    pendingModerationAction.value = null;
     notice.value = `“${item.title}” 已更新为 ${data.status}。`;
     await Promise.all([loadModeration(), loadOverview()]);
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : "更新审核状态失败";
+    const message = error instanceof Error ? error.message : "更新审核状态失败";
+    errorMessage.value = message;
+    moderationConfirmError.value = message;
   } finally {
     loading.value = false;
   }
+}
+
+function requestModerationAction(item: ModerationItem, action: ModerationAction) {
+  moderationConfirmError.value = "";
+  pendingModerationAction.value = { action, item };
+}
+
+function closeModerationConfirm() {
+  if (loading.value) return;
+  pendingModerationAction.value = null;
+  moderationConfirmError.value = "";
+}
+
+async function confirmModerationAction() {
+  const pending = pendingModerationAction.value;
+  if (!pending) return;
+  await applyModerationAction(pending.item, pending.action);
 }
 
 function switchView(view: AdminView) {
@@ -262,6 +319,8 @@ function logout() {
   governanceRows.value = [];
   governanceSummary.value = null;
   selectedRecord.value = null;
+  pendingModerationAction.value = null;
+  moderationConfirmError.value = "";
   activeView.value = "dashboard";
   sessionInvalidation.value = null;
   clearSessionInvalidation();
@@ -301,6 +360,19 @@ function selectRecord(row: GovernanceRecord) {
 
 <template>
   <main class="admin-shell">
+    <AdminConfirmDialog
+      cancel-label="取消"
+      :confirm-label="moderationConfirmLabel"
+      :confirm-tone="moderationConfirmTone"
+      :confirming="loading"
+      :confirming-label="moderationConfirmingLabel"
+      :description="moderationConfirmDescription"
+      :error-message="moderationConfirmError"
+      :is-open="Boolean(pendingModerationAction)"
+      :title="moderationConfirmTitle"
+      @cancel="closeModerationConfirm"
+      @confirm="confirmModerationAction"
+    />
     <section v-if="!loggedIn" class="admin-login">
       <section class="admin-login__brand">
         <span class="admin-login__mark">S</span>
@@ -317,7 +389,6 @@ function selectRecord(row: GovernanceRecord) {
         <form class="form-stack" @submit.prevent="login">
           <label><span>账号</span><input v-model="form.login" placeholder="用户名或邮箱" /></label>
           <label><span>密码</span><input v-model="form.password" placeholder="密码" type="password" /></label>
-          <p v-if="loginPrompt" class="error-text">{{ loginPrompt }}</p>
           <p v-if="loginPrompt" class="error-text">{{ loginPrompt }}</p>
           <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
           <button class="primary-button" :disabled="loading" type="submit">{{ loading ? "登录中…" : "登录工作台" }}</button>
@@ -427,7 +498,7 @@ function selectRecord(row: GovernanceRecord) {
                 <span>{{ item.authorName }}</span>
                 <span>{{ new Date(item.createdAt).toLocaleString('zh-CN') }}</span>
                 <span><i class="admin-status-badge">{{ item.status }}</i></span>
-                <div class="admin-row-actions"><button type="button" @click="moderate(item, 'approve')">通过</button><button class="is-danger" type="button" @click="moderate(item, 'reject')">驳回</button><button type="button" @click="moderate(item, 'hide')">隐藏</button></div>
+                <div class="admin-row-actions"><button type="button" @click="requestModerationAction(item, 'approve')">通过</button><button class="is-danger" type="button" @click="requestModerationAction(item, 'reject')">驳回</button><button type="button" @click="requestModerationAction(item, 'hide')">隐藏</button></div>
               </article>
             </div>
           </section>

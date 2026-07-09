@@ -4718,3 +4718,29 @@
 
 - `@studymate/ui` 现在不再只承接状态组件和图标按钮，也开始承接普通动作按钮这类更高频的交互 primitive；后续继续收口 Input、Select、Tag、ConfirmDialog、CommandBar 时，可以沿着同一条变体语义继续扩展。
 - 这一轮仍然只先接了图谱工作区，阅读、笔记、复习与管理端里散落的普通按钮还没有统一迁入共享出口；`FE-041` 下一步更适合继续按真实页面主路径逐段替换，而不是重新设计一套新按钮体系。
+## 2026-07-09 10:33:52 +08:00 | v1.1.0-alpha.143 | 推进 FE-041 管理端审核动作接入确认层
+### 任务内容
+
+- 继续沿 `FE-041` 的共享交互语义收口，不回头深挖单一图谱能力，而是把确认流程推进到后台治理这条真实高频主路径。
+- 本轮目标是让管理端审核队列里的“通过 / 驳回 / 隐藏”先进入确认层，再执行原有审核动作，形成跨前后台更一致的 destructive/action 处理节奏。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminConfirmDialog.vue`，提供 Vue 侧可复用的后台确认层，统一承接标题、说明、取消/确认、危险动作、确认中禁用和错误提示。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，把审核队列里的“通过 / 驳回 / 隐藏”从直接执行改为先打开确认层；取消时不发请求，确认后才调用 `/api/v1/admin/moderation/.../:action`。
+- 更新 `frontend-admin/src/components/admin/admin.css`，补齐后台确认层的遮罩、面板、危险确认按钮和错误提示样式，并顺手去掉登录页重复提示文案。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，新增 RED/GREEN 页面级回归，锁定“驳回动作先确认、取消不触发请求、确认后携带后台 token 发起 POST”的契约。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 的当前边界推进到“管理端审核动作也已进入确认层”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts src/api/client.test.ts`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 管理端审核动作现在已经开始沿用户端 `ConfirmDialog` 的同一套确认语义收口，后续继续推进后台治理里的下架、恢复、重试等动作时，可以直接沿这层模式扩展。
+- 当前确认状态仍挂在 `AdminWorkspaceView.vue` 单工作台组件内；后续若推进 `ADM-010 / ADM-011`，更适合把这类治理动作与确认状态一起下沉到模块页或 feature 边界。
