@@ -68,6 +68,12 @@
 - 用户端 `ReaderPage` 与 `MaterialsPage` 已开始接入这层共享 primitive，说明 `FE-041` 不再只停留在图谱工作区骨架，而开始扩展到学习主路径页面。
 - 下一步应继续沿同一路径推进 Input、Select、ConfirmDialog、CommandBar、PageHeader 等更高层或更高频 primitives，而不是让共享层再次停在“有几个按钮和 chips，但表单与页面骨架仍各写各的”。
 
+### 2026-07-09 FE-041 共享 Input 接入资料页表单
+
+- `@studymate/ui` 已新增共享 `Input`，先统一默认 `type="text"`、`ds-input` class 与最小 `invalid` 错误态语义，让共享层开始承接最常见的表单输入契约。
+- 用户端 `MaterialsPage` 已把资料搜索框与详情编辑表单切到共享 `Input`，说明 `FE-041` 已从动作型 primitive 扩展到真实学习路径里的高频表单输入。
+- 下一步更值得继续推进 `Select`、`CommandBar` 与 `PageHeader`，优先收口仍散落在阅读、笔记、搜索和后台治理页里的重复输入与页面骨架模式。
+
 ### 2026-07-08 FE / UI 验证收口更新
 
 - FE-010、FE-020、FE-030 与 UI-04 已在真实依赖环境完成类型检查、相关 Vitest、前后台构建与 4 条 Playwright smoke。

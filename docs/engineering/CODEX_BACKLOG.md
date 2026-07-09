@@ -24,7 +24,7 @@
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
 | FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。 |
-| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag` 都已接到真实页面或图谱骨架；后续继续推进 Input、Select、ConfirmDialog、CommandBar、PageHeader 的共享 token、变体、禁用/加载/错误状态与最小测试或文档示例。 |
+| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input` 都已接到真实页面或图谱骨架；后续继续推进 Select、ConfirmDialog、CommandBar、PageHeader 的共享 token、变体、禁用/加载/错误状态与最小测试或文档示例。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一 401 会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；补 HttpOnly Refresh Token 迁移说明。 |
 | DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
@@ -63,6 +63,23 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：FE-041（共享 Input 接入资料页表单）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `packages/ui/src/Input.tsx` 新增共享 `Input` primitive，先统一默认 `type="text"`、`ds-input` class 与 `invalid -> aria-invalid / is-invalid` 的最小契约，避免表单输入继续停留在页面层裸写。
+  - `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/Input.tsx` 与 `frontend-user/src/design-system/primitives/index.ts` 已补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+  - `frontend-user/src/pages/MaterialsPage.tsx` 已将资料页搜索框与资料详情编辑表单切到共享 `Input`，说明 `FE-041` 已开始从按钮与标签扩展到真实学习路径里的高频表单输入。
+  - `packages/ui/src/reactPrimitives.test.tsx`、`frontend-user/src/design-system/primitives/Input.test.tsx` 与 `frontend-user/src/pages/MaterialsPage.test.tsx` 新增 RED/GREEN 回归，锁定共享导出、默认输入类型、错误态语义、用户端兼容出口与资料页搜索接线。
+- 已执行验证：
+  - RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+  - RED：`npm --workspace frontend-user run test -- src/design-system/primitives/Input.test.tsx src/pages/MaterialsPage.test.tsx`
+  - GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+  - GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/Input.test.tsx src/pages/MaterialsPage.test.tsx`
+  - `npm --workspace frontend-user run typecheck`
+- 风险与后续：
+  - 当前共享 `Input` 仍只收口了最小 class 与错误态语义，尚未进一步统一 loading、prefix/suffix、textarea/select 等更高层表单模式；后续更适合继续沿 `FE-041` 推进 `Select` 与 `CommandBar` 一类高频输入骨架。
+  - 管理端暂未直接消费这层 `Input`，后续如需更深共享，应优先复用同一套输入语义与 token，而不是再新增一套局部表单基础构件。
 
 ### 执行记录：QA-010（默认覆盖率基线门禁收口）
 - 执行日期：2026-07-09

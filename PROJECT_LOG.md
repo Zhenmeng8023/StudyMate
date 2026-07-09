@@ -1,3 +1,27 @@
+## 2026-07-09 09:25:25 +08:00 | v1.1.0-alpha.137 | 推进 FE-041 共享 Input 接入资料页表单
+### 任务内容
+
+- 沿当前更高优先级的 `FE-041` 继续做一个最小、可测试的共享 primitive 收口，不偏离共享 UI 主线，也不回到单一冲突场景深挖。
+- 本轮目标是把资料页已经重复出现的搜索输入与编辑表单输入抽成共享 `Input`，并至少接到一条真实学习路径页面，而不是只停留在包里“新增一个输入组件文件”。
+### 实际变更
+
+- 新增 `packages/ui/src/Input.tsx`，补齐共享 `Input` primitive，先统一默认 `type="text"`、`ds-input` class 与 `invalid` 错误态语义。
+- 更新 `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/Input.tsx` 与 `frontend-user/src/design-system/primitives/index.ts`，补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/pages/MaterialsPage.tsx`，把资料搜索框和资料详情编辑表单切到共享 `Input`，让 `FE-041` 从按钮、标签继续扩展到高频表单输入。
+- 更新 `packages/ui/src/reactPrimitives.test.tsx` 与新增 `frontend-user/src/design-system/primitives/Input.test.tsx`、`frontend-user/src/pages/MaterialsPage.test.tsx`，先用 RED 锁定“共享 Input 缺失 / 兼容出口缺失”的缺口，再用 GREEN 锁定共享导出、默认输入类型、错误态语义与资料页搜索接线。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 Input 已落地并接入资料页表单”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/Input.test.tsx src/pages/MaterialsPage.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/Input.test.tsx src/pages/MaterialsPage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+### 后续影响
+
+- `@studymate/ui` 现在已经不只覆盖状态、抽屉、检查器、按钮和标签，也开始承接真实学习路径里的高频输入；后续继续推进 `Select`、`CommandBar`、`PageHeader` 时会更顺。
+- 当前这轮仍只覆盖 React 用户端；管理端尚未直接消费这层 `Input`，下一步更值得继续沿资料、笔记、搜索和后台治理页里重复最明显的输入/筛选骨架继续收口。
+
 ## 2026-07-09 09:14:18 +08:00 | v1.1.0-alpha.136 | 推进 FE-041 共享 Tag 接入阅读与资料页
 ### 任务内容
 

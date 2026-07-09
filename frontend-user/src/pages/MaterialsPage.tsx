@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import type { AuthSession, FilePayload, MaterialPayload } from "../api/client";
 import { createMaterial, listMaterials, rateMaterial, toggleMaterialFavorite, updateMaterial, uploadFile } from "../api/client";
 import { displayMaterialCategory, displayMaterialDescription, displayMaterialOwner, displayMaterialTags, displayMaterialTitle, formatDate, quickActions, SectionFrame, WorkspaceHeader } from "../app/appShared";
-import { Tag } from "../design-system/primitives";
+import { Input, Tag } from "../design-system/primitives";
 
 export function MaterialsPage(props: { session: AuthSession | null }) {
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
@@ -193,7 +193,7 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
             <label className="secondary-button">
               <Upload size={16} />
               选择附件
-              <input
+              <Input
                 hidden
                 onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
                 type="file"
@@ -300,19 +300,19 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
               <div className="form-stack">
                 <label>
                   <span>标题</span>
-                  <input onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} value={draft.title} />
+                  <Input onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} value={draft.title} />
                 </label>
                 <label>
                   <span>说明</span>
-                  <input onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} value={draft.description} />
+                  <Input onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} value={draft.description} />
                 </label>
                 <label>
                   <span>分类</span>
-                  <input onChange={(event) => setDraft((current) => ({ ...current, category: event.target.value }))} value={draft.category} />
+                  <Input onChange={(event) => setDraft((current) => ({ ...current, category: event.target.value }))} value={draft.category} />
                 </label>
                 <label>
                   <span>标签</span>
-                  <input onChange={(event) => setDraft((current) => ({ ...current, tags: event.target.value }))} value={draft.tags} />
+                  <Input onChange={(event) => setDraft((current) => ({ ...current, tags: event.target.value }))} value={draft.tags} />
                 </label>
                 <button className="primary-button" disabled={!props.session || busy === "update"} onClick={handleUpdate} type="button">
                   保存资料信息

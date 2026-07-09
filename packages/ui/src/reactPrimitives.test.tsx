@@ -91,8 +91,8 @@ describe("@studymate/ui react primitive contract", () => {
     render(<Input invalid placeholder="搜索资料" />);
 
     const input = screen.getByPlaceholderText("搜索资料");
-    expect(input).toHaveAttribute("type", "text");
-    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input.getAttribute("type")).toBe("text");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(input.className).toContain("ds-input");
     expect(input.className).toContain("is-invalid");
   });
