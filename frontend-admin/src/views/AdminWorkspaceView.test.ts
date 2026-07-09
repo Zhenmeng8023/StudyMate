@@ -16,6 +16,7 @@ describe("AdminWorkspaceView governance modules", () => {
   });
 
   it("loads the real users governance API from an existing admin session", async () => {
+    window.history.replaceState({}, "", "/admin/users");
     window.localStorage.setItem(
       "studymate.admin.session",
       JSON.stringify({
@@ -88,6 +89,7 @@ describe("AdminWorkspaceView governance modules", () => {
         })
       })
     );
+    expect(window.location.pathname).toBe("/admin/users");
     expect(wrapper.text()).toContain("alice");
     expect(wrapper.text()).toContain("1");
   });
@@ -249,5 +251,68 @@ describe("AdminWorkspaceView governance modules", () => {
       })
     );
     confirmSpy.mockRestore();
+  });
+
+  it("updates the browser URL when switching admin modules", async () => {
+    window.history.replaceState({}, "", "/admin/dashboard");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/overview") {
+        return apiPayload({
+          userCount: 12,
+          postCount: 4,
+          materialCount: 5,
+          graphCount: 6,
+          pendingModerationCount: 0
+        });
+      }
+      if (path === "/api/v1/admin/moderation") {
+        return apiPayload([]);
+      }
+      if (path === "/api/v1/admin/audit-logs?limit=20") {
+        return apiPayload([
+          {
+            id: "audit-1",
+            action: "moderation.approve",
+            status: "success"
+          }
+        ]);
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    await wrapper.get('[data-admin-view="audit"]').trigger("click");
+    await flushPromises();
+
+    expect(window.location.pathname).toBe("/admin/audit");
+    expect(wrapper.text()).toContain("audit-1");
   });
 });
