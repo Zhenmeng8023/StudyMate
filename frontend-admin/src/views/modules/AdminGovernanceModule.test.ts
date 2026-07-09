@@ -93,4 +93,33 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.text()).toContain("治理记录暂时不可用");
     expect(wrapper.text()).not.toContain("当前模块已接入真实 API，但没有可显示的数据。");
   });
+
+  it("keeps rendering existing governance rows while surfacing the shared stale state", () => {
+    const selectedRecord = {
+      id: "audit-1",
+      action: "moderation.approve",
+      status: "success"
+    };
+
+    const wrapper = mount(AdminGovernanceModule, {
+      props: {
+        columns: ["id", "action", "status"],
+        dataState: {
+          kind: "stale",
+          title: "治理记录需要刷新",
+          description: "当前显示的是上一次同步结果，请刷新后再继续判断。"
+        },
+        emptyText: "暂无记录",
+        query: "",
+        rows: [selectedRecord],
+        selectedRecord,
+        summary: null
+      }
+    });
+
+    expect(wrapper.text()).toContain("需要刷新");
+    expect(wrapper.text()).toContain("治理记录需要刷新");
+    expect(wrapper.text()).toContain("audit-1");
+    expect(wrapper.find('[data-record-row="audit-1"]').exists()).toBe(true);
+  });
 });

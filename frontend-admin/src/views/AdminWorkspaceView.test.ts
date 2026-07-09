@@ -300,7 +300,7 @@ describe("AdminWorkspaceView governance modules", () => {
     await wrapper.get('[data-admin-view="moderation"]').trigger("click");
     await flushPromises();
 
-    await wrapper.get(".admin-row-actions .is-danger").trigger("click");
+    await wrapper.get('[data-moderation-action="reject"]').trigger("click");
 
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain("确认驳回这条内容");
@@ -322,7 +322,7 @@ describe("AdminWorkspaceView governance modules", () => {
       })
     );
 
-    await wrapper.get(".admin-row-actions .is-danger").trigger("click");
+    await wrapper.get('[data-moderation-action="reject"]').trigger("click");
     await flushPromises();
     await wrapper.get('[data-confirm-submit="true"]').trigger("click");
     await flushPromises();
@@ -815,5 +815,140 @@ describe("AdminWorkspaceView governance modules", () => {
     );
     expect(wrapper.text()).toContain("进入管理后台");
     expect(wrapper.text()).toContain("当前账号已被禁用，请联系其他管理员后重新登录。");
+  });
+
+  it("surfaces a stale moderation state when refreshing the queue fails after data already loaded", async () => {
+    window.history.replaceState({}, "", "/admin/moderation");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const moderationItem = {
+      id: "post-1",
+      type: "post" as const,
+      title: "Pending Post",
+      summary: "Needs moderation review",
+      authorName: "Alice",
+      status: "pending",
+      createdAt: "2026-06-02T12:00:00Z",
+      updatedAt: "2026-06-02T12:00:00Z"
+    };
+
+    let moderationRequestCount = 0;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/moderation") {
+        moderationRequestCount += 1;
+        if (moderationRequestCount === 1) {
+          return apiPayload([moderationItem]);
+        }
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "moderation_sync_failed", message: "审核队列刷新失败" } }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Pending Post");
+
+    await wrapper.get('button[data-admin-refresh="true"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("需要刷新");
+    expect(wrapper.text()).toContain("审核队列需要刷新");
+    expect(wrapper.text()).toContain("Pending Post");
+    expect(wrapper.text()).toContain("审核队列刷新失败");
+  });
+
+  it("surfaces a stale governance state when refreshing a loaded module fails", async () => {
+    window.history.replaceState({}, "", "/admin/users");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const userRow = {
+      id: "user-1",
+      username: "alice",
+      email: "alice@example.test",
+      role: "student",
+      status: "active"
+    };
+
+    let usersRequestCount = 0;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/users?limit=20") {
+        usersRequestCount += 1;
+        if (usersRequestCount === 1) {
+          return apiPayload([userRow]);
+        }
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "governance_sync_failed", message: "治理记录刷新失败" } }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("alice");
+
+    await wrapper.get('button[data-admin-refresh="true"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("需要刷新");
+    expect(wrapper.text()).toContain("治理记录需要刷新");
+    expect(wrapper.text()).toContain("alice");
+    expect(wrapper.text()).toContain("治理记录刷新失败");
   });
 });
