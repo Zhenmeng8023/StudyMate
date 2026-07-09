@@ -1,3 +1,24 @@
+## 2026-07-09 14:25:00 +08:00 | v1.1.0-alpha.157 | 扩充 WB-032 多目标本地连线联动建议后的固定入口 E2E
+### 任务内容
+
+- 继续沿 `WB-032` 扩固定验证入口，这次聚焦“本地多目标连线触发联动建议”这条页面级已经锁定、但固定入口还没有覆盖的真实浏览器路径。
+- 本轮目标是把“本地草稿恢复 -> 多目标连线触发 `graph_version_conflict` -> 一键应用 3 项联动取舍建议 -> 应用已标记取舍 -> 再次保存”接进 `verify:graph-conflicts`，避免多目标依赖这条主线只停留在页面级回归里。
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增 Playwright 用例覆盖同图谱同版本草稿恢复后的多目标本地连线路径：本地草稿中新增 `Local concept`、`Extra target node` 两个节点，并通过 `metadata.targetNodeIds` 挂一条多目标 `Local edge`，然后故意触发 `graph_version_conflict`。
+- 这条新 E2E 会先锁定冲突卡片里的两条“联动保留本地”节点建议和 `一键应用 3 项联动取舍建议`，再根据真实浏览器合同断言批量建议结果是“保留本地 2 项、保留服务端 1 项”，随后应用已标记取舍并再次保存。
+- 同一个用例还会捕获第二次 `batch-save` 请求，断言提交的是 rebased `document.version = 5`，并且最终保存结果符合当前多目标联动合同：保留两个本地目标节点，回退本地多目标连线，形成 `3 节点 / 0 连线` 的合并草稿。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，把这条新增固定入口路径补回 `WB-032` 的执行记录和图谱冲突回归矩阵。
+### 验证结果
+
+- RED：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can batch-apply multi-target linked suggestions and save the rebased draft"`
+- GREEN：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can batch-apply multi-target linked suggestions and save the rebased draft"`
+- `npm run verify:graph-conflicts`
+### 后续影响
+
+- `WB-032` 的固定入口现在已经开始覆盖多目标本地连线的真实浏览器链路，后续若继续扩 `latest-head` 多目标删除语义或更复杂的依赖联动，已经有一条更贴近真实人工合并的 E2E 基座可继续扩展。
+- 这次没有修改冲突处理运行时语义，主要是把页面级已经存在的多目标联动建议流程提升到了 Playwright 固定入口里，降低后续只靠局部测试发现回归的风险。
+
 ## 2026-07-09 14:14:00 +08:00 | v1.1.0-alpha.156 | 扩充 WB-032 未标记对象默认回退后的固定入口 E2E
 ### 任务内容
 
