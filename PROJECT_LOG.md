@@ -4422,3 +4422,30 @@
 
 - `verify:graph-conflicts` 现在不只覆盖图谱工作区的加载/保存/导入/历史与版本冲突路径，也开始固定验证布局预览 API 和三种导出状态提示，后续继续补 `WB-034` 时有了更贴近真实操作的 smoke 基座。
 - 当前仍未覆盖更完整的桌面/窄屏组合矩阵和权限路径；后续应继续沿这条固定入口扩展，而不是重新分散成临时命令。
+
+## 2026-07-09 08:28:00 +08:00 | v1.1.0-alpha.136 | 收口工作区权限路径 smoke
+### 任务内容
+
+- 继续沿 `verify:graph-conflicts` 这条固定入口推进 `WB-032/WB-034` 的最小增量收口，把图谱工作区回归从“冲突、布局、导出”再补到“权限路径”。
+- 本轮仍然不扩张图谱功能，只把已有后端 `forbidden` 权限语义接进页级与真实工作区 smoke，扩大原型的全局可靠性覆盖面。
+
+### 实际变更
+
+- 更新 `scripts/graph-conflict-regression-baseline.test.mjs`，先用 RED 锁定新缺口：当前 `e2e/v1-graph-workspace.spec.ts` 尚未覆盖 `forbidden` 权限路径，固定回归矩阵虽然提到权限全矩阵，但还没有真正落到 smoke。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补页级回归：切换到无权限图谱失败时，应显示“只能访问自己的图谱”，并保持当前图谱继续可用。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增真实工作区权限路径 smoke：当资源面板里切到返回 `403 forbidden` 的图谱时，页面需要给出错误提示，同时保持当前图谱标题、节点与状态栏不被破坏。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`、`README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，统一把图谱工作区固定回归描述推进到“布局预览/导出状态 + 权限路径 + 真实冲突处理”。
+
+### 验证结果
+
+- RED：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- GREEN：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm run test:graph:conflicts:e2e`
+- `npm run verify:graph-conflicts`
+- `npm run verify:docs`
+
+### 后续影响
+
+- `verify:graph-conflicts` 现在除了冲突、布局和导出之外，也开始固定验证图谱工作区的权限失败路径，为后续 `WB-034` 继续补权限分支矩阵提供了稳定基座。
+- 当前仍未覆盖更完整的权限组合，比如创建/保存/恢复/导出在不同权限角色下的更多分支；后续仍应沿这条固定入口扩展，而不是重新分散成临时命令。

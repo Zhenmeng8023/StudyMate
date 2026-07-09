@@ -325,7 +325,7 @@ go test ./...
 - 用户端搜索页现支持 URL `types` 类型筛选，并有页面级 Vitest 回归覆盖无关键词空态、后端错误态、筛选请求形状与来源链接渲染。
 - 搜索页分页目前明确限定在“当前批次结果”内：前端每次最多请求每组 `12` 条结果，并按每页 `4` 条切换；若后续需要跨批次真分页，应先扩展后端 offset/cursor 契约。
 - 搜索专项回归入口为 `npm run verify:search`；契约、权限矩阵和自动化映射集中记录在 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`。
-- 图谱冲突专项回归入口为 `npm run verify:graph-conflicts`；当前冲突生命周期、工作区测试映射、图谱工作区桌面/窄屏 smoke、布局预览/导出状态、真实 `graph_version_conflict` 路径和固定入口集中记录在 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`。
+- 图谱冲突专项回归入口为 `npm run verify:graph-conflicts`；当前冲突生命周期、工作区测试映射、图谱工作区桌面/窄屏 smoke、布局预览/导出状态、权限路径、真实 `graph_version_conflict` 路径和固定入口集中记录在 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`。
 - 分享入口为受保护的 `GET/POST /api/v1/share-links` 与 `DELETE /api/v1/share-links/:id`，公开解析为 `GET /api/v1/share/:token`；`share_links` 表由 `004_share_links.sql` 创建，`.down.sql` 可回滚。
 - 分享目标白名单为 `material,note,graph,deck`，模式为 `private,public,token`。创建时会校验 owner，公开解析只返回只读摘要和目标 URL，不暴露可写接口。
 - 管理后台治理 API 位于 `/api/v1/admin/users`、`/reports`、`/tags`、`/ai/tasks`、`/ai/usage`、`/audit-logs`、`/files`，全部要求 admin token。

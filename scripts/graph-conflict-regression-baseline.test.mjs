@@ -28,7 +28,10 @@ test("graph conflict regression entrypoint is wired into scripts and docs", () =
     "npm run test:graph:conflicts:frontend && npm run test:graph:conflicts:backend && npm run test:graph:conflicts:e2e && npm run verify:docs"
   );
   assert.ok(packageJson.scripts?.["test:graph:conflicts:frontend"]);
-  assert.equal(packageJson.scripts?.["test:graph:conflicts:backend"], "cd backend && go test ./internal/modules/graph/dto ./internal/modules/graph/handler ./internal/modules/graph/service");
+  assert.equal(
+    packageJson.scripts?.["test:graph:conflicts:backend"],
+    "cd backend && go test ./internal/modules/graph/dto ./internal/modules/graph/handler ./internal/modules/graph/service"
+  );
   assert.equal(
     packageJson.scripts?.["test:graph:conflicts:e2e"],
     "npm run build:user && npm run build:admin && playwright test e2e/v1-graph-workspace.spec.ts"
@@ -45,15 +48,15 @@ test("graph conflict regression entrypoint is wired into scripts and docs", () =
   assert.match(graphWorkspaceE2E, /setViewportSize/);
   assert.match(graphWorkspaceE2E, /layouts\/preview/);
   assert.match(graphWorkspaceE2E, /forbidden/);
-  assert.match(graphWorkspaceE2E, /宸插鍑?PNG 鍥捐氨/);
-  assert.match(graphWorkspaceE2E, /宸插鍑?SVG 鍥捐氨/);
-  assert.match(graphWorkspaceE2E, /宸插鍑?StudyMate 鍥捐氨 JSON/);
-  assert.match(graphWorkspaceE2E, /鍥捐氨鍐茬獊杈呭姪/);
-  assert.match(graphWorkspaceE2E, /鏀惧純鏈湴骞堕噸杞芥渶鏂板浘璋?/);
-  assert.match(regressionDoc, /鐗堟湰鍐茬獊澶勭悊/);
-  assert.match(regressionDoc, /妗岄潰/);
-  assert.match(regressionDoc, /绐勫睆/);
-  assert.match(regressionDoc, /甯冨眬棰勮/);
-  assert.match(regressionDoc, /瀵煎嚭鐘舵€?/);
-  assert.match(regressionDoc, /鏉冮檺璺緞/);
+  assert.match(graphWorkspaceE2E, /导出 PNG/);
+  assert.match(graphWorkspaceE2E, /导出 SVG/);
+  assert.match(graphWorkspaceE2E, /导出 StudyMate JSON/);
+  assert.match(graphWorkspaceE2E, /生成来源泳道/);
+  assert.match(graphWorkspaceE2E, /只能访问自己的图谱/);
+  assert.match(regressionDoc, /布局预览/);
+  assert.match(regressionDoc, /权限路径/);
+  assert.match(regressionDoc, /导出状态/);
+  assert.match(regressionDoc, /失败态/);
+  assert.match(regressionDoc, /版本冲突处理/);
+  assert.match(regressionDoc, /桌面与窄屏/);
 });

@@ -523,6 +523,61 @@ describe("GraphWorkspacePage persistence states", () => {
     expect(screen.getByTitle("新建概念节点")).toBeEnabled();
   });
 
+  it("keeps the current graph loaded when switching to a forbidden graph fails", async () => {
+    const user = userEvent.setup();
+    listGraphsMock.mockResolvedValue([
+      {
+        ...graphSummary,
+        id: "graph-1",
+        title: "当前图谱",
+        nodeCount: 1
+      },
+      {
+        ...graphSummary,
+        id: "graph-2",
+        ownerUserId: "user-2",
+        title: "他人图谱",
+        nodeCount: 2
+      }
+    ]);
+    getGraphMock.mockReset();
+    getGraphMock
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        title: "当前图谱",
+        nodeCount: 1,
+        document: {
+          ...graphDetail.document,
+          nodes: [
+            {
+              id: "node-1",
+              type: "concept",
+              title: "当前节点",
+              x: 120,
+              y: 140,
+              width: 220,
+              height: 132,
+              source: null,
+              metadata: {}
+            }
+          ]
+        }
+      })
+      .mockRejectedValueOnce(new Error("只能访问自己的图谱"));
+
+    renderWorkspace();
+
+    await waitFor(() => expect(getCanvasSaveButton()).toBeInTheDocument());
+    await openResourceTab(user, "图谱");
+    await user.click(screen.getByRole("button", { name: /他人图谱/ }));
+
+    await expect(screen.findByText("只能访问自己的图谱")).resolves.toBeInTheDocument();
+    expect(document.querySelector(".graph-list-item.active")).toHaveTextContent("当前图谱");
+    expect(screen.getByText("当前节点")).toBeInTheDocument();
+    expect(screen.getByText(/版本 4.*1 节点.*0 连线/)).toBeInTheDocument();
+    expect(getGraphMock).toHaveBeenNthCalledWith(2, session, "graph-2");
+  });
+
   it("creates extended node types from the toolbar type selector", async () => {
     const user = userEvent.setup();
 
@@ -532,9 +587,10 @@ describe("GraphWorkspacePage persistence states", () => {
     expect(screen.getByRole("option", { name: "PDF 锚点" })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("选择新建节点类型"), { target: { value: "url" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "新建URL节点" })).toBeEnabled());
     await user.click(screen.getByRole("button", { name: "新建URL节点" }));
 
-    expect(screen.getByText("URL 节点")).toBeInTheDocument();
+    await expect(screen.findByLabelText("URL 节点 URL")).resolves.toBeInTheDocument();
     await user.type(screen.getByLabelText("URL 节点 URL"), "https://example.test/lesson");
     expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
   });
