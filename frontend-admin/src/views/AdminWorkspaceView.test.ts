@@ -405,4 +405,102 @@ describe("AdminWorkspaceView governance modules", () => {
       })
     );
   });
+
+  it("loads real materials governance rows and confirms material hide actions", async () => {
+    window.history.replaceState({}, "", "/admin/materials");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const materialRow = {
+      id: "material-1",
+      ownerUserId: "user-9",
+      ownerName: "Alice",
+      title: "Linear Algebra",
+      category: "math",
+      attachmentName: "algebra.pdf",
+      status: "approved",
+      createdAt: "2026-06-02T12:00:00Z",
+      updatedAt: "2026-06-02T12:00:00Z"
+    };
+    const hidePath = "/api/v1/admin/moderation/materials/material-1/hide";
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/materials?limit=20") {
+        expect(init?.headers).toMatchObject({
+          Authorization: "Bearer admin-token"
+        });
+        return apiPayload([materialRow]);
+      }
+      if (path === "/api/v1/admin/moderation") {
+        return apiPayload([]);
+      }
+      if (path === hidePath) {
+        expect(init?.method).toBe("POST");
+        return apiPayload({ status: "hidden" });
+      }
+      if (path === "/api/v1/admin/overview") {
+        return apiPayload({
+          userCount: 12,
+          postCount: 4,
+          materialCount: 5,
+          graphCount: 6,
+          pendingModerationCount: 0
+        });
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Linear Algebra");
+    expect(wrapper.text()).toContain("algebra.pdf");
+
+    await wrapper.get('[data-governance-action="hide"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("确认隐藏这条内容");
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      hidePath,
+      expect.objectContaining({
+        method: "POST"
+      })
+    );
+
+    await wrapper.get('[data-confirm-submit="true"]').trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      hidePath,
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer admin-token"
+        })
+      })
+    );
+  });
 });
