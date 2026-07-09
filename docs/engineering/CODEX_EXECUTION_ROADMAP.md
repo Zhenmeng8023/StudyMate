@@ -43,6 +43,12 @@
 - 用户端 `DataState` 已改为直接消费这层共享契约，并补齐 `conflict` 页面状态语义，作为阅读、笔记、复习等工作台后续统一状态协议的第一步。
 - `packages/ui` 已新增共享 `tokens.css`，并通过 `@studymate/ui/tokens.css` 接入用户端样式入口；`app.css` 与 `ui-redesign.css` 内重复的根 token 块已经移除，FE-040 从“要做”推进到“已开始落地”。
 - 管理端 `frontend-admin/src/main.ts` 现也已接入 `@studymate/ui/tokens.css`，`admin.css` 的基础背景 / 文本 / 描边 / accent 变量已映射到共享 token，前后台开始进入同一套视觉源头。
+
+### 2026-07-09 FE-041 共享基础组件契约第一批落地
+
+- `@studymate/ui` 现在已开始直接导出共享 `DataState`、`Drawer`、`Inspector` 三个基础 primitive，而不再只提供 token 与状态文案 helper。
+- 用户端 `frontend-user/src/design-system/primitives/` 中对应文件已收口为兼容转发层，现有 import 路径不变，但真实实现与最小测试已经集中回到 `packages/ui`。
+- 这一步仍然只覆盖第一批最稳定 primitives；`FE-041` 后续重点应继续推进 Button、Input、Select、Tag、ConfirmDialog、CommandBar、PageHeader 等组件级契约，而不是停留在“共享变量但不共享构件”的状态。
 - Iteration 4 的下一步应继续把更多现有 primitives 和管理端细节样式收敛到这层共享 token 和状态契约，而不是继续散落在各端页面里维护。
 
 ### 2026-07-08 FE / UI 验证收口更新

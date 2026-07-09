@@ -24,7 +24,7 @@
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
 | FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。 |
-| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | Button、IconButton、Input、Select、Tag、DataState、Drawer、Inspector、ConfirmDialog、CommandBar、PageHeader 至少具备共享 token、变体、禁用/加载/错误状态与最小测试或文档示例。 |
+| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector` 已收口到共享包并保留用户端兼容出口；后续继续推进 Button、IconButton、Input、Select、Tag、ConfirmDialog、CommandBar、PageHeader 的共享 token、变体、禁用/加载/错误状态与最小测试或文档示例。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一 401 会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；补 HttpOnly Refresh Token 迁移说明。 |
 | DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
@@ -169,6 +169,20 @@
 - 后续建议：
   - 继续沿 `FE-040` 让前后台更多局部样式细节消费共享 token，避免只在入口层统一、在组件层继续分叉。
   - 继续沿 `FE-041` 把更多 primitives 的视觉变量与状态契约收敛到 `@studymate/ui`，而不是继续在页面层维护局部副本。
+
+### 执行记录：FE-041（共享基础组件契约第一批落地）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `packages/ui/src/index.ts` 开始直接导出共享 `DataState`、`Drawer`、`Inspector` 及其 props 类型，让 `@studymate/ui` 不再只承接 token 和状态文案，也开始承接真实组件契约。
+  - `packages/ui/src/DataStateView.tsx`、`Drawer.tsx`、`Inspector.tsx` 新增最小 React primitive 实现，并保持既有 `ds-*` class 语义，避免用户端样式与调用面被迫重写。
+  - `frontend-user/src/design-system/primitives/DataState.tsx`、`Drawer.tsx`、`Inspector.tsx` 改为兼容转发层，用户端既有 import 路径不变，但实现来源已收口到共享包。
+  - `packages/ui/src/reactPrimitives.test.tsx` 新增共享组件契约回归，先用 RED 锁定缺失导出，再用 GREEN 验证共享包和用户端兼容面都能稳定通过。
+- 验证：
+  - `npx vitest run packages/ui/src/index.test.ts packages/ui/src/reactPrimitives.test.tsx`
+  - `npm --workspace frontend-user run test -- src/design-system/primitives/DataState.test.tsx src/design-system/primitives/Drawer.test.tsx src/design-system/primitives/Inspector.test.tsx`
+- 后续建议：
+  - 继续沿 `FE-041` 把 Button、IconButton、Input、Select、Tag、ConfirmDialog、CommandBar、PageHeader 等更多 primitives 收口到 `@studymate/ui`，而不是继续在页面层保留平行实现。
+  - 管理端后续如需共享更深的视觉/交互契约，应优先消费这层组件出口，而不是再从 `tokens.css` 重新拼装一套局部基础构件。
 
 ### 执行记录：FE-040 / FE-041（共享页面状态契约起步）
 - 执行日期：2026-07-09

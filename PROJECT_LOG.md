@@ -4398,6 +4398,29 @@
 
 - 默认 CI 现在不再只在 release checklist 里“提醒要做 secret scan”，而是会直接执行 `npm run verify:secrets`；后续若有人把私钥、已知 Token 格式或明显的硬编码密钥赋值提交进仓库，会先在本地和 CI 被拦下。
 - 当前剩余的工程级 P0 质量门禁主要收敛为覆盖率硬门槛与覆盖率汇总治理；secret scan 这条线已经从“手工约定”转成“默认可执行基线”。
+## 2026-07-09 08:20:50 +08:00 | v1.1.0-alpha.137 | 推进 FE-041 共享基础组件契约第一批落地
+### 任务内容
+
+- 按新的快速原型节奏继续沿 `CODEX_BACKLOG.md` 推进 `FE-041`，从“共享 token / 文案 helper”再往前走一小步，先收口已经稳定存在于用户端的 `DataState`、`Drawer`、`Inspector` 三个基础 primitive。
+- 本轮目标是在不改动页面调用面的前提下，让 `@studymate/ui` 真正开始承接组件级契约，并通过 RED/GREEN 把共享包与用户端兼容层都锁进回归里。
+### 实际变更
+
+- 新增 `packages/ui/src/DataStateView.tsx`、`packages/ui/src/Drawer.tsx`、`packages/ui/src/Inspector.tsx`，把 `DataState`、`Drawer`、`Inspector` 的最小 React primitive 实现沉到共享包，并保留既有 `ds-*` class 语义。
+- 更新 `packages/ui/src/index.ts`，让 `@studymate/ui` 直接导出这三个组件与对应 props 类型，使共享 UI 包不再只暴露 token 和状态 helper。
+- 新增 `packages/ui/src/reactPrimitives.test.tsx`，先用 RED 锁定共享组件缺失导出，再在 GREEN 验证 `DataState`、`Drawer`、`Inspector` 的基础可访问性与关闭交互。
+- 更新 `frontend-user/src/design-system/primitives/DataState.tsx`、`Drawer.tsx`、`Inspector.tsx`，将用户端本地实现收口为兼容转发层，保持既有 import 路径和测试入口不变。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 从“共享状态契约起步”推进到“第一批基础组件契约已落地”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/index.test.ts packages/ui/src/reactPrimitives.test.tsx`
+- `npm --workspace frontend-user run test -- src/design-system/primitives/DataState.test.tsx src/design-system/primitives/Drawer.test.tsx src/design-system/primitives/Inspector.test.tsx`
+
+### 后续影响
+
+- `@studymate/ui` 现在已经不只是 token 和状态文案容器，而是开始承接真实共享 primitive；后续继续统一 Button、Input、ConfirmDialog、CommandBar 等组件时，可以沿着同一条共享出口继续扩展。
+- 这一轮仍然只完成了第一批最稳定的基础构件，管理端也还没有直接消费这层组件出口；`FE-041` 后续更值得继续推进的是更多 primitives 的收口，而不是重新在页面层复制基础构件。
+
 ## 2026-07-09 08:08:00 +08:00 | v1.1.0-alpha.135 | 收口工作区布局预览与导出状态 smoke
 ### 任务内容
 

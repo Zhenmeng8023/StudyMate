@@ -8,9 +8,9 @@ describe("@studymate/ui react primitive contract", () => {
   it("renders the shared data state copy", () => {
     render(<DataState description="正在加载图谱数据。" kind="loading" title="正在准备画布" />);
 
-    expect(screen.getByText("加载中")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "正在准备画布" })).toBeInTheDocument();
-    expect(screen.getByText("正在加载图谱数据。")).toBeInTheDocument();
+    expect(screen.getByText("加载中")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "正在准备画布" })).toBeTruthy();
+    expect(screen.getByText("正在加载图谱数据。")).toBeTruthy();
   });
 
   it("renders a drawer with a working close action", () => {
@@ -22,7 +22,7 @@ describe("@studymate/ui react primitive contract", () => {
       </Drawer>,
     );
 
-    expect(screen.getByLabelText("来源")).toBeInTheDocument();
+    expect(screen.getByLabelText("来源")).toBeTruthy();
     fireEvent.click(screen.getByLabelText("关闭来源"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -34,8 +34,8 @@ describe("@studymate/ui react primitive contract", () => {
       </Inspector>,
     );
 
-    expect(screen.getByLabelText("节点详情")).toBeInTheDocument();
-    expect(screen.getByText("当前选中节点的属性。")).toBeInTheDocument();
-    expect(screen.getByText("节点内容")).toBeInTheDocument();
+    expect(screen.getByLabelText("节点详情")).toBeTruthy();
+    expect(screen.getByText("当前选中节点的属性。")).toBeTruthy();
+    expect(screen.getByText("节点内容")).toBeTruthy();
   });
 });
