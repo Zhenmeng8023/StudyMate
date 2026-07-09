@@ -1,3 +1,27 @@
+## 2026-07-10 00:33:10 +08:00 | v1.1.0-alpha.160 | 推进 FE-041 管理端共享 Input/Button 适配层接线
+### 任务内容
+
+- 沿当前更高优先级的 `FE-041` 继续做一个范围小但覆盖面广的共享 primitive 收口，不回头深挖单一图谱或后台治理动作。
+- 本轮目标是让管理端也开始真实消费共享 `Input` / `Button` 契约，优先覆盖登录、已登录壳层、dashboard CTA、审核搜索/动作和治理搜索/动作这些高频真实入口。
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminInput.vue` 与 `AdminButton.vue`，以 Vue 适配层承接共享 `ds-input`、`primary/secondary/ghost`、`danger` 和默认 `type="button"` 语义，不强行复用 React 组件实现。
+- 新增 `frontend-admin/src/components/admin/AdminInput.test.ts` 与 `AdminButton.test.ts`，先用 RED 锁定“管理端共享输入/按钮适配层必须存在且符合共享契约”的缺口，再在 GREEN 阶段固定默认类型、错误态 class 与点击/更新事件。
+- 更新 `frontend-admin/src/components/admin/AdminLoginPanel.vue`、`AdminShellFrame.vue`、`AdminConfirmDialog.vue`，把登录输入、登录提交、刷新、退出和确认层按钮切到新的 Vue 适配层。
+- 更新 `frontend-admin/src/views/modules/AdminDashboardModule.vue`、`AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，把 dashboard CTA、审核/治理搜索框和治理动作按钮切到管理端共享 `Input/Button` 适配层。
+- 更新 `frontend-admin/src/components/admin/admin.css`，补齐 `ghost-button` 与 `danger` class 语义，让管理端样式和共享 `Button` 契约保持一致，不再只依赖局部 `is-danger`。
+- 更新相关管理端测试文件，锁定这些真实页面入口已经开始消费共享 `ds-input` / `ghost-button` / `danger` 语义，而不是继续渲染裸 `input` / `button`。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/components/admin/AdminInput.test.ts src/components/admin/AdminButton.test.ts src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/components/admin/AdminInput.test.ts src/components/admin/AdminButton.test.ts src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+### 后续影响
+
+- `FE-041` 现在不再只覆盖用户端 React 页面；管理端也已经开始通过 Vue 适配层消费同一套 `Input` / `Button` 语义，这让后续继续收口 `Select`、筛选条和更多治理动作时成本更低。
+- 这一轮仍然只覆盖了管理端高频 `Input/Button` 入口；导航按钮、更多表格交互和复杂筛选结构还没有统一收进共享层，后续更适合继续沿 `FE-041 / ADM-010 / ADM-011` 推进。
+
 ## 2026-07-09 14:51:28 +08:00 | v1.1.0-alpha.159 | 推进 FE-040 管理端页面状态协议接线
 ### 任务内容
 

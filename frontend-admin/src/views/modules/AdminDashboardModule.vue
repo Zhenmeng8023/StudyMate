@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AdminButton from "../../components/admin/AdminButton.vue";
+
 defineProps<{
   moderationItemsCount: number;
   overviewCards: Array<{ label: string; value: string; helper: string }>;
@@ -24,7 +26,9 @@ const emit = defineEmits<{
         <h2>先处理内容审核</h2>
         <p>审核队列中的资料和帖子会直接影响社区与资料库的公开可见性。</p>
       </div>
-      <button class="primary-button" data-dashboard-action="open-moderation" type="button" @click="emit('openModeration')">进入审核队列</button>
+      <AdminButton data-dashboard-action="open-moderation" variant="primary" @click="emit('openModeration')">
+        进入审核队列
+      </AdminButton>
     </article>
     <article class="admin-status-card">
       <p class="eyebrow">当前数据</p>

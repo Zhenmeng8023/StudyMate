@@ -24,7 +24,7 @@
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
 | FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。 |
-| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层，后续继续推进更多后台治理动作与跨端状态语义。 |
+| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层，管理端也已新增 `AdminButton` / `AdminInput` Vue 适配层，并接入登录、壳层、dashboard、审核与治理模块，后续继续推进更多后台治理动作与跨端状态语义。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；请求阶段直接收到 `403 user_disabled` 时也会统一清 session 并给出禁用提示；补 HttpOnly Refresh Token 迁移说明。 |
 | DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
@@ -63,6 +63,23 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：FE-041（管理端共享 Input/Button 适配层接线）
+- 执行日期：2026-07-10
+- 本轮完成：
+  - 新增 `frontend-admin/src/components/admin/AdminInput.vue`、`AdminButton.vue`，以 Vue 适配层复用共享 `Input` / `Button` 的最小契约，而不是让管理端继续散落裸 `input` / `button`。
+  - 新增 `frontend-admin/src/components/admin/AdminInput.test.ts`、`AdminButton.test.ts`，先用 RED 锁定“管理端共享输入/按钮适配层必须存在且遵循 `ds-input` / `primary|secondary|ghost + danger + 默认 type=button` 语义”的缺口，再在 GREEN 阶段锁定事件与 class 合同。
+  - 更新 `frontend-admin/src/components/admin/AdminLoginPanel.vue`、`AdminShellFrame.vue`、`AdminConfirmDialog.vue` 与 `src/views/modules/AdminDashboardModule.vue`、`AdminModerationModule.vue`、`AdminGovernanceModule.vue`，把登录表单、后台刷新/退出、dashboard CTA、审核搜索/动作、治理搜索/动作都接到新的 Vue 适配层。
+  - 更新 `frontend-admin/src/components/admin/admin.css`，补齐 `ghost-button` 与 `danger` class 语义，避免管理端继续停留在局部 `is-danger` 变体。
+  - 补强 `AdminLoginPanel.test.ts`、`AdminShellFrame.test.ts`、`AdminDashboardModule.test.ts`、`AdminModerationModule.test.ts`、`AdminGovernanceModule.test.ts`，锁定这些真实页面入口已经开始消费共享 `ds-input` / `ghost-button` / `danger` 契约，而不是只保留视觉上相似的裸 DOM。
+- 已执行验证：
+  - RED：`npm --workspace frontend-admin run test -- src/components/admin/AdminInput.test.ts src/components/admin/AdminButton.test.ts src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+  - GREEN：`npm --workspace frontend-admin run test -- src/components/admin/AdminInput.test.ts src/components/admin/AdminButton.test.ts src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+- 风险与后续：
+  - 当前这轮只把管理端高频 `Input/Button` 原语接线到壳层和首批模块页，导航按钮、表格行按钮以及更复杂的筛选/下拉仍未统一收口到共享层。
+  - 后续继续沿 `FE-041` 推进时，更适合补管理端 `Select`、页头/筛选骨架，以及把治理动作里的更多危险操作全部收回同一套共享交互语义。
 
 ### 执行记录：SE-020（真实命中数与首批返回数分离）
 - 执行日期：2026-07-09

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import AdminButton from "./AdminButton.vue";
 
 const props = withDefaults(defineProps<{
   cancelLabel?: string;
@@ -49,24 +50,22 @@ const confirmText = computed(() => {
         <p v-if="errorMessage" class="admin-confirm-dialog__error" role="alert">{{ errorMessage }}</p>
       </div>
       <div class="admin-confirm-dialog__footer">
-        <button
-          class="secondary-button"
+        <AdminButton
           data-confirm-cancel="true"
           :disabled="confirming"
-          type="button"
           @click="emit('cancel')"
         >
           {{ cancelLabel }}
-        </button>
-        <button
-          :class="confirmTone === 'danger' ? 'primary-button is-danger' : 'primary-button'"
+        </AdminButton>
+        <AdminButton
           data-confirm-submit="true"
+          :danger="confirmTone === 'danger'"
           :disabled="confirming || confirmDisabled"
-          type="button"
+          variant="primary"
           @click="emit('confirm')"
         >
           {{ confirmText }}
-        </button>
+        </AdminButton>
       </div>
     </section>
   </div>

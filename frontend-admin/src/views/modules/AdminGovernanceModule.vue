@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import AdminButton from "../../components/admin/AdminButton.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
+import AdminInput from "../../components/admin/AdminInput.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
 type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
@@ -94,7 +96,11 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
   <section class="admin-toolbar">
     <label class="admin-search">
       <span>⌕</span>
-      <input :value="query" placeholder="搜索当前记录" @input="emit('update:query', ($event.target as HTMLInputElement).value)" />
+      <AdminInput
+        :model-value="query"
+        placeholder="搜索当前记录"
+        @update:model-value="emit('update:query', $event)"
+      />
     </label>
     <div class="admin-toolbar__meta"><span>{{ rows.length }} / {{ totalCount ?? rows.length }} 条</span></div>
   </section>
@@ -141,16 +147,15 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
       </dl>
       <div v-else class="admin-inspector-empty">从左侧表格选择一条记录，查看完整字段。</div>
       <div v-if="selectedRecord && actions?.length" class="admin-record-inspector__actions">
-        <button
+        <AdminButton
           v-for="action in actions"
           :key="action.key"
-          :class="action.tone === 'danger' ? 'secondary-button is-danger' : 'secondary-button'"
+          :danger="action.tone === 'danger'"
           :data-governance-action="action.key"
-          type="button"
           @click="requestAction(action.key)"
         >
           {{ action.label }}
-        </button>
+        </AdminButton>
       </div>
     </aside>
   </section>

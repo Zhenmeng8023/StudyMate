@@ -20,6 +20,7 @@ describe("AdminDashboardModule", () => {
     expect(wrapper.text()).toContain("用户规模");
     expect(wrapper.text()).toContain("2");
     expect(wrapper.text()).toContain("1");
+    expect(wrapper.get('[data-dashboard-action="open-moderation"]').classes()).toContain("primary-button");
 
     await wrapper.get('[data-dashboard-action="open-moderation"]').trigger("click");
     expect(wrapper.emitted("openModeration")).toHaveLength(1);

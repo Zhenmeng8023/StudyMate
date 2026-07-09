@@ -105,11 +105,14 @@ button:disabled { cursor: not-allowed; opacity: .58; }
 .admin-confirm-dialog__error { color: #b42318; font-weight: 600; }
 .admin-confirm-dialog__footer { display: flex; justify-content: flex-end; gap: 10px; padding: 0 24px 24px; }
 
-.primary-button, .secondary-button { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 13px; border: 1px solid transparent; border-radius: 9px; font-size: 13px; font-weight: 720; }
+.primary-button, .secondary-button, .ghost-button { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 13px; border: 1px solid transparent; border-radius: 9px; font-size: 13px; font-weight: 720; }
 .primary-button { color: #fff; background: linear-gradient(135deg,#2563eb,#4f46e5); box-shadow: 0 7px 16px rgba(37,99,235,.17); }
+.primary-button.danger,
 .primary-button.is-danger { background: linear-gradient(135deg,#dc2626,#b91c1c); box-shadow: 0 7px 16px rgba(185,28,28,.18); }
 .secondary-button { border-color: var(--admin-line); color: #526071; background: #fff; }
 .secondary-button:hover { border-color: #cfd8e6; color: var(--admin-text); background: #fbfcfe; }
+.ghost-button { color: #526071; background: transparent; }
+.ghost-button:hover { color: var(--admin-text); background: rgba(82, 96, 113, 0.08); }
 
 .admin-metric-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; }
 .metric-card { display: grid; gap: 8px; min-height: 140px; padding: 18px; border: 1px solid var(--admin-line); border-radius: 14px; background: linear-gradient(180deg,#fff,#fbfcfe); box-shadow: 0 2px 8px rgba(31,45,68,.035); }
@@ -162,6 +165,7 @@ button:disabled { cursor: not-allowed; opacity: .58; }
 .admin-row-actions { display: flex; gap: 6px; }
 .admin-row-actions button { min-height: 28px; padding: 0 8px; border: 1px solid #dce4ef; border-radius: 7px; color: #53657a; font-size: 11px; font-weight: 720; background: #fff; }
 .admin-row-actions button:hover { border-color: #a9c5fb; color: #1d4ed8; background: #eff5ff; }
+.admin-row-actions .danger:hover,
 .admin-row-actions .is-danger:hover { border-color: #fecaca; color: #b42318; background: #fff5f5; }
 .admin-governance-layout { display: grid; grid-template-columns: minmax(0,1fr) 310px; gap: 14px; align-items: start; }
 .admin-record-inspector { position: sticky; top: 82px; display: grid; gap: 16px; padding: 19px; border: 1px solid var(--admin-line); border-radius: 14px; background: #fff; box-shadow: 0 2px 8px rgba(31,45,68,.035); }
@@ -171,7 +175,9 @@ button:disabled { cursor: not-allowed; opacity: .58; }
 .admin-record-inspector dd { margin: -6px 0 0; padding-bottom: 10px; border-bottom: 1px solid #edf0f5; color: var(--admin-text); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .admin-record-inspector__actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .admin-inspector-empty { padding: 28px 0; color: var(--admin-text-muted); font-size: 13px; line-height: 1.65; }
-.secondary-button.is-danger { border-color: #fecaca; color: #b42318; background: #fff5f5; }
+.secondary-button.danger,
+.secondary-button.is-danger,
+.ghost-button.danger { border-color: #fecaca; color: #b42318; background: #fff5f5; }
 
 .form-stack { display: grid; gap: 14px; }
 .form-stack label { display: grid; gap: 7px; color: #4f5b6b; font-size: 13px; font-weight: 700; }

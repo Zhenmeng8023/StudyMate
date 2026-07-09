@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AdminButton from "./AdminButton.vue";
+
 type ShellNavItem = {
   key: string;
   label: string;
@@ -70,7 +72,9 @@ const emit = defineEmits<{
           <span>{{ profileInitial }}</span>
           <div><strong>{{ profile?.displayName }}</strong><small>{{ profile?.role || "admin" }}</small></div>
         </div>
-        <button data-admin-logout="true" class="admin-logout" type="button" @click="emit('logout')"><span>↗</span>退出后台</button>
+        <AdminButton class="admin-logout" data-admin-logout="true" variant="ghost" @click="emit('logout')">
+          <span>↗</span>退出后台
+        </AdminButton>
       </footer>
     </aside>
 
@@ -79,7 +83,7 @@ const emit = defineEmits<{
         <div class="admin-topbar__crumb"><span>运营中心</span><i>•</i><strong>{{ activeTitle }}</strong></div>
         <div class="admin-topbar__actions">
           <span class="admin-sync-state" :class="loading ? 'is-loading' : ''"><i />{{ loading ? "同步中" : "数据已连接" }}</span>
-          <button data-admin-refresh="true" class="secondary-button" :disabled="loading" type="button" @click="emit('refresh')">刷新数据</button>
+          <AdminButton data-admin-refresh="true" :disabled="loading" @click="emit('refresh')">刷新数据</AdminButton>
         </div>
       </header>
 

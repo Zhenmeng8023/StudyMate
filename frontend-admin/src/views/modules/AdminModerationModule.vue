@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import AdminButton from "../../components/admin/AdminButton.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
+import AdminInput from "../../components/admin/AdminInput.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
 type ModerationItem = {
@@ -39,10 +41,10 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
   <section class="admin-toolbar">
     <label class="admin-search">
       <span>⌕</span>
-      <input
-        :value="query"
+      <AdminInput
+        :model-value="query"
         placeholder="搜索标题、作者或状态"
-        @input="emit('update:query', ($event.target as HTMLInputElement).value)"
+        @update:model-value="emit('update:query', $event)"
       />
     </label>
     <div class="admin-toolbar__meta"><span>{{ items.length }} / {{ totalCount }} 条</span></div>
@@ -79,20 +81,19 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
         <span>{{ new Date(item.createdAt).toLocaleString("zh-CN") }}</span>
         <span><i class="admin-status-badge">{{ item.status }}</i></span>
         <div class="admin-row-actions">
-          <button data-moderation-action="approve" type="button" @click="emit('requestAction', { action: 'approve', item })">
+          <AdminButton data-moderation-action="approve" variant="primary" @click="emit('requestAction', { action: 'approve', item })">
             通过
-          </button>
-          <button
-            class="is-danger"
+          </AdminButton>
+          <AdminButton
             data-moderation-action="reject"
-            type="button"
+            danger
             @click="emit('requestAction', { action: 'reject', item })"
           >
             驳回
-          </button>
-          <button data-moderation-action="hide" type="button" @click="emit('requestAction', { action: 'hide', item })">
+          </AdminButton>
+          <AdminButton data-moderation-action="hide" @click="emit('requestAction', { action: 'hide', item })">
             隐藏
-          </button>
+          </AdminButton>
         </div>
       </article>
     </div>

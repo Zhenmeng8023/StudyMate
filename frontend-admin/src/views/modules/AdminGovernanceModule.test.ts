@@ -29,6 +29,7 @@ describe("AdminGovernanceModule", () => {
 
     expect(wrapper.text()).toContain("audit-1");
     expect(wrapper.text()).toContain("moderation.approve");
+    expect(wrapper.get('input[placeholder="搜索当前记录"]').classes()).toContain("ds-input");
 
     await wrapper.get('input[placeholder="搜索当前记录"]').setValue("success");
     expect(wrapper.emitted("update:query")?.[0]).toEqual(["success"]);
@@ -61,6 +62,7 @@ describe("AdminGovernanceModule", () => {
 
     expect(wrapper.get('[data-governance-action="resolve"]').text()).toContain("标记已处理");
     expect(wrapper.get('[data-governance-action="dismiss"]').text()).toContain("忽略举报");
+    expect(wrapper.get('[data-governance-action="dismiss"]').classes()).toContain("danger");
 
     await wrapper.get('[data-governance-action="resolve"]').trigger("click");
 

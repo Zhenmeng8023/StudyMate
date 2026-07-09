@@ -24,6 +24,9 @@ describe("AdminModerationModule", () => {
     });
 
     expect(wrapper.text()).toContain("Pending Post");
+    expect(wrapper.get('input[placeholder="搜索标题、作者或状态"]').classes()).toContain("ds-input");
+    expect(wrapper.get('[data-moderation-action="reject"]').classes()).toContain("danger");
+
     await wrapper.get('input[placeholder="搜索标题、作者或状态"]').setValue("alice");
     expect(wrapper.emitted("update:query")?.[0]).toEqual(["alice"]);
 

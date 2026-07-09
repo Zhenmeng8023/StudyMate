@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import AdminButton from "./AdminButton.vue";
+import AdminInput from "./AdminInput.vue";
+
 defineProps<{
   errorMessage: string;
   loading: boolean;
@@ -31,24 +34,26 @@ const emit = defineEmits<{
       <form class="form-stack" @submit.prevent="emit('submit')">
         <label>
           <span>账号</span>
-          <input
-            :value="loginValue"
+          <AdminInput
+            :model-value="loginValue"
             placeholder="用户名或邮箱"
-            @input="emit('update:loginValue', ($event.target as HTMLInputElement).value)"
+            @update:model-value="emit('update:loginValue', $event)"
           />
         </label>
         <label>
           <span>密码</span>
-          <input
-            :value="passwordValue"
+          <AdminInput
+            :model-value="passwordValue"
             placeholder="密码"
             type="password"
-            @input="emit('update:passwordValue', ($event.target as HTMLInputElement).value)"
+            @update:model-value="emit('update:passwordValue', $event)"
           />
         </label>
         <p v-if="loginPrompt" class="error-text">{{ loginPrompt }}</p>
         <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
-        <button class="primary-button" :disabled="loading" type="submit">{{ loading ? "登录中…" : "登录工作台" }}</button>
+        <AdminButton :disabled="loading" type="submit" variant="primary">
+          {{ loading ? "登录中…" : "登录工作台" }}
+        </AdminButton>
       </form>
     </section>
   </section>
