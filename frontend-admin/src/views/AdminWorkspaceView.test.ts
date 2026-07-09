@@ -503,4 +503,101 @@ describe("AdminWorkspaceView governance modules", () => {
       })
     );
   });
+
+  it("confirms ai governance actions before retrying a failed task", async () => {
+    window.history.replaceState({}, "", "/admin/ai");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const aiTaskRow = {
+      id: "task-1",
+      userId: "user-9",
+      taskType: "reader.generate_cards",
+      sourceType: "material",
+      sourceId: "material-1",
+      status: "failed",
+      model: "local-draft-engine",
+      inputTokens: 120,
+      outputTokens: 0,
+      errorMessage: "timeout"
+    };
+    const retryPath = "/api/v1/admin/ai/tasks/task-1/retry";
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/ai/tasks?limit=20") {
+        expect(init?.headers).toMatchObject({
+          Authorization: "Bearer admin-token"
+        });
+        return apiPayload([aiTaskRow]);
+      }
+      if (path === "/api/v1/admin/ai/usage") {
+        return apiPayload({
+          totalTasks: 1,
+          completedTasks: 0,
+          failedTasks: 1,
+          totalInputTokens: 120,
+          totalOutputTokens: 0,
+          totalCostUnits: 0
+        });
+      }
+      if (path === retryPath) {
+        expect(init?.method).toBe("POST");
+        return apiPayload({ status: "pending" });
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("reader.generate_cards");
+    expect(wrapper.text()).toContain("timeout");
+
+    await wrapper.get('[data-governance-action="retry"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("确认重试这个 AI 任务");
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      retryPath,
+      expect.objectContaining({
+        method: "POST"
+      })
+    );
+
+    await wrapper.get('[data-confirm-submit="true"]').trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      retryPath,
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer admin-token"
+        })
+      })
+    );
+  });
 });
