@@ -1,4 +1,4 @@
-import { flushPromises, mount } from "@vue/test-utils";
+﻿import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import AdminWorkspaceView from "./AdminWorkspaceView.vue";
 
@@ -764,5 +764,56 @@ describe("AdminWorkspaceView governance modules", () => {
         })
       })
     );
+  });
+
+  it("returns to the login screen immediately when admin bootstrap receives user_disabled", async () => {
+    window.history.replaceState({}, "", "/admin/dashboard");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "disabled-admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      const authorization = new Headers(init?.headers as HeadersInit).get("Authorization");
+
+      if (path === "/api/v1/admin/me") {
+        expect(authorization).toBe("Bearer disabled-admin-token");
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "user_disabled", message: "当前账号已被禁用" } }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      if (path === "/api/v1/auth/refresh") {
+        throw new Error("refresh should not run");
+      }
+
+      throw new Error(`Unexpected request: ${path} ${authorization}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(window.localStorage.getItem("studymate.admin.session")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/v1/auth/refresh",
+      expect.objectContaining({
+        method: "POST"
+      })
+    );
+    expect(wrapper.text()).toContain("进入管理后台");
+    expect(wrapper.text()).toContain("当前账号已被禁用，请联系其他管理员后重新登录。");
   });
 });

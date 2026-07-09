@@ -1,3 +1,30 @@
+## 2026-07-09 13:04:11 +08:00 | v1.1.0-alpha.152 | 收口 API-011 / ADM-011 的 403 user_disabled 前端会话联动
+### 任务内容
+
+- 在 `ADM-011` 已补齐“禁用即撤销 refresh + 请求时按真实用户状态拦截”的后端边界基础上，继续收掉前端最后一段体验缺口，不让运行中的被禁用账号只收到裸 `403` 而保留旧 session。
+- 本轮目标不是继续扩后台治理面，而是沿 `API-011 / ADM-011` 做一个小而完整的联动切片：共享 API client 识别 `403 user_disabled`、前后台统一清 session、登录页显示明确的禁用提示，并用跨端测试锁住行为。
+### 实际变更
+
+- 更新 `packages/api-client/src/index.ts` 与 `packages/api-client/src/index.test.ts`，把共享 `SessionInvalidationState` 扩到 `refresh_failed | session_rejected`，并让 `createSessionRequest(...)` 在请求阶段直接收到 `403 user_disabled` 时不触发 refresh，而是立即清 session、记录结构化失效原因。
+- 更新 `frontend-user/src/api/sessionRefresh.test.ts`、`frontend-user/src/pages/AuthPages.tsx` 与 `frontend-user/src/pages/AuthPages.test.tsx`，锁定用户端受保护请求在 `user_disabled` 时直接回到登录页，并显示“当前账号已被禁用，请联系管理员后重新登录。”
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，让后台自举或后续受保护请求在 `user_disabled` 时同样立即清空后台 session、回退登录页，并显示“当前账号已被禁用，请联系其他管理员后重新登录。”
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `API-011 / ADM-011` 从“前端还没接 403 user_disabled”推进到“跨端会话联动已收口”的当前事实。
+### 验证结果
+
+- RED：`npx vitest run packages/api-client/src/index.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npx vitest run packages/api-client/src/index.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-user run typecheck`
+- `npm --workspace frontend-admin run typecheck`
+
+### 后续影响
+
+- `API-011` 现在不再只处理 refresh 失败时的被动登出；请求阶段直接收到 `403 user_disabled` 也会走统一的清 session 和禁用提示语义，后续新受保护请求边界不需要再各自补一套局部处理。
+- 当前共享会话层仍未进入 HttpOnly Refresh Token 迁移说明、更多后台模块 API client 拆分与更细粒度的失效分类；后续更适合继续沿 `API-011 / ADM-010 / ADM-011` 收口，而不是回到页面里散落新的会话 helper。
+
 ## 2026-07-09 12:05:00 +08:00 | v1.1.0-alpha.149 | 推进 ADM-011 AI 任务治理动作起步
 ### 任务内容
 

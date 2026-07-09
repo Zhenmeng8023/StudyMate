@@ -188,4 +188,52 @@ describe("@studymate/api-client", () => {
     );
     expect(persistSession).toHaveBeenCalledWith(null);
   });
+  it("clears the persisted session immediately when the backend rejects the current account", async () => {
+    const currentSession = {
+      accessToken: "disabled-token",
+      refreshToken: "refresh-token"
+    };
+    const persistSession = vi.fn();
+    const onSessionInvalidated = vi.fn();
+    const refreshSession = vi.fn(async () => {
+      throw new Error("refresh should not run");
+    });
+    const requestWithSession = createSessionRequest({
+      getSession: () => currentSession,
+      persistSession,
+      refreshSession,
+      onSessionInvalidated
+    });
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      const authorization = new Headers(init?.headers as HeadersInit).get("Authorization");
+
+      if (path !== "/api/v1/protected") {
+        throw new Error(`Unexpected path: ${path}`);
+      }
+
+      if (authorization === "Bearer disabled-token") {
+        return new Response(JSON.stringify({ success: false, error: { code: "user_disabled", message: "褰撳墠璐﹀彿宸茶绂佺敤" } }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      throw new Error(`Unexpected auth header: ${authorization}`);
+    });
+
+    await expect(requestWithSession("/api/v1/protected")).rejects.toThrow("褰撳墠璐﹀彿宸茶绂佺敤");
+
+    expect(refreshSession).not.toHaveBeenCalled();
+    expect(onSessionInvalidated).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "session_rejected",
+        code: "user_disabled",
+        message: "褰撳墠璐﹀彿宸茶绂佺敤",
+        status: 403
+      })
+    );
+    expect(persistSession).toHaveBeenCalledWith(null);
+  });
 });

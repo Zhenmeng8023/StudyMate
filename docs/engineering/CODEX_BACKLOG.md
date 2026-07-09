@@ -26,7 +26,7 @@
 | FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。 |
 | FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层，后续继续推进更多后台治理动作与跨端状态语义。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
-| API-011 | IN_PROGRESS | Token refresh 与统一 401 会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；补 HttpOnly Refresh Token 迁移说明。 |
+| API-011 | IN_PROGRESS | Token refresh 与统一会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；请求阶段直接收到 `403 user_disabled` 时也会统一清 session 并给出禁用提示；补 HttpOnly Refresh Token 迁移说明。 |
 | DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
 | SEC-010 | DONE | 依赖安全基线收口 | DEV-010 | `package-lock.json`、前台/后台 package manifest、`backend/go.mod`、CI、开发文档 | 锁定 `vite` / `esbuild` / `undici` / `glob` 与 Go toolchain / `golang.org/x/net` / `quic-go` 安全下限；`npm run verify:deps` 通过并纳入默认 CI。 |
 | SEC-011 | DONE | 默认 secret scan 门禁收口 | SEC-010 | 根 `package.json`、`.github/workflows/ci.yml`、`scripts/`、发布/开发文档 | 新增 `npm run verify:secrets`、仓库级扫描脚本与基线测试；默认 CI 执行 secret scan，并对 placeholder 示例值保持低误报。 |
@@ -47,7 +47,7 @@
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
 | ADM-010 | IN_PROGRESS | 管理端 Vue Router 模块化与 URL 状态 | WB-040, FE-040 | `frontend-admin/src/app/`、`frontend-admin/src/features/`、`frontend-admin/src/pages/` | 当前已具备 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/graph`、`/admin/ai`、`/admin/system`、`/admin/audit` 等可刷新、可回退、可直达 URL，并已拆出登录视图、已登录壳层以及 dashboard / moderation / governance 首批模块视图；后续继续推进真正 page / feature 边界与更完整的治理路由。 |
-| ADM-011 | IN_PROGRESS | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 当前已落地五段真实治理切片并开始补强会话边界：举报支持 `resolve / dismiss`、写回 `handled_by / handled_at` 并进入审计链路；资料治理已切到真实 `/admin/materials` 列表，并可对资料执行 `approve / reject / hide`，其中已隐藏资料可直接恢复；AI 任务已支持 `retry / cancel` 状态动作与审计留痕；用户治理已支持 `disable / activate`，禁用时会撤销该用户仍有效的 refresh token，且认证中间件会在请求时按数据库中的当前用户状态与角色做校验；图谱模板治理已切到真实 `/admin/diagram-templates` 列表，并可对模板执行 `publish / unpublish`，且会同步影响用户端 `/api/v1/diagram/templates` 可见性。后续继续补举报处理备注、更细粒度的资源权限边界与前端失效提示联动。 |
+| ADM-011 | IN_PROGRESS | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 当前已落地五段真实治理切片并开始补强会话边界：举报支持 `resolve / dismiss`、写回 `handled_by / handled_at` 并进入审计链路；资料治理已切到真实 `/admin/materials` 列表，并可对资料执行 `approve / reject / hide`，其中已隐藏资料可直接恢复；AI 任务已支持 `retry / cancel` 状态动作与审计留痕；用户治理已支持 `disable / activate`，禁用时会撤销该用户仍有效的 refresh token，认证中间件会在请求时按数据库中的当前用户状态与角色做校验，且前端对运行中收到的 `403 user_disabled` 已能统一清 session 并回退登录页；图谱模板治理已切到真实 `/admin/diagram-templates` 列表，并可对模板执行 `publish / unpublish`，且会同步影响用户端 `/api/v1/diagram/templates` 可见性。后续继续补举报处理备注与更细粒度的资源权限边界。 |
 | SE-020 | TODO | MySQL fallback 搜索服务端分页与真实统计 | WB-014 | search service/handler/frontend search | `GET /search` 支持 cursor/limit/sort 或等价分页；每类结果有真实命中数、搜索耗时、排序语义、空结果建议和来源跳转契约。 |
 | WB-043 | TODO | SearchIndexer 升级与 Meilisearch 评估 | SE-020 | search module/config/deploy | 前端 API 不变；索引实现可替换，具备配置开关；明确是否进入 Meilisearch 的采用/不采用结论。 |
 | WB-044 | TODO | 搜索同步与失败恢复任务 | WB-043 | jobs/queue/search | 具备重建索引、失败重试、幂等与可观测字段。 |
@@ -82,6 +82,28 @@
 - 风险与后续：
   - 当前前后台共享会话层仍主要围绕 `401 refresh/replay/fail-logout`；对于请求阶段直接返回的 `403 user_disabled`，前端还没有统一把这类被动失效转成清 session 与统一提示。
   - 这一步先补的是“用户状态/角色即时生效”这条最小权限边界；更细粒度的资源归属校验、举报处理备注和后台模块 page / feature 下沉仍需沿 `ADM-010 / ADM-011` 继续收口。
+
+### 执行记录：API-011 / ADM-011（403 user_disabled 前端会话联动）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `packages/api-client/src/index.test.ts` 新增 RED/GREEN 回归，锁定受保护请求直接收到 `403 user_disabled` 时不会触发 refresh，而是立即记录 `session_rejected`、清空本地 session，并把结构化原因保留给登录页消费。
+  - `packages/api-client/src/index.ts` 现已把 `SessionInvalidationState.kind` 扩到 `refresh_failed | session_rejected`，并在 `createSessionRequest(...)` 里识别请求阶段直接返回的 `403 user_disabled`，统一走 `persistSession(null)` 与 `onSessionInvalidated(...)`。
+  - `frontend-user/src/api/sessionRefresh.test.ts` 与 `frontend-user/src/pages/AuthPages.test.tsx` 新增 RED/GREEN 回归，锁定用户端图谱请求在 `user_disabled` 时会直接清 session，登录页则显示“当前账号已被禁用，请联系管理员后重新登录。”
+  - `frontend-user/src/pages/AuthPages.tsx` 已改为直接消费共享 `getSessionInvalidationPrompt(...)`，不再在登录页本地硬编码单一的“会话失效”提示。
+  - `frontend-admin/src/views/AdminWorkspaceView.test.ts` 新增 RED/GREEN 回归，锁定后台自举请求直接收到 `403 user_disabled` 时不会触发 refresh，而是立即清空后台会话并回退到带禁用提示的登录页。
+  - `frontend-admin/src/views/AdminWorkspaceView.vue` 已改为让登录页提示和被动失效后的 notice 都直接消费共享 `getSessionInvalidationPrompt(...)`，不再只显示统一的后台会话失效文案。
+- 已执行验证：
+  - RED：`npx vitest run packages/api-client/src/index.test.ts`
+  - RED：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
+  - RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - GREEN：`npx vitest run packages/api-client/src/index.test.ts`
+  - GREEN：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
+  - GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm --workspace frontend-admin run typecheck`
+- 风险与后续：
+  - 当前共享会话层已经覆盖 `401 refresh/replay/fail-logout` 与 `403 user_disabled` 两条主被动失效路径，但还没有进入 HttpOnly Refresh Token 迁移、更多后台模块 API client 拆分与更细粒度的失效分类。
+  - 管理端治理动作、会话提示与确认层状态仍较多集中在 `AdminWorkspaceView.vue`；后续继续推进 `ADM-010 / ADM-011` 时，更适合把模块动作状态与会话提示消费边界继续往 page / feature 层下沉。
 
 ### 执行记录：ADM-011（图谱模板治理起步）
 - 执行日期：2026-07-09

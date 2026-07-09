@@ -1,12 +1,9 @@
 import { FormEvent, useState, useSyncExternalStore } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { getSessionInvalidationPrompt } from "@studymate/api-client";
 import type { AuthSession } from "../api/client";
 import { loginUser, registerUser } from "../api/client";
 import { clearSessionInvalidation, readSessionInvalidation, subscribeSessionInvalidation } from "../app/sessionStore";
-
-function getLoginPrompt() {
-  return "当前登录状态已失效，请重新登录后继续学习。";
-}
 
 export function AuthLead() {
   return (
@@ -97,7 +94,7 @@ export function LoginPage(props: { onLogin: (session: AuthSession) => void }) {
                 value={form.password}
               />
             </label>
-            {sessionInvalidation ? <p className="error-text">{getLoginPrompt()}</p> : null}
+            {sessionInvalidation ? <p className="error-text">{getSessionInvalidationPrompt(sessionInvalidation, "user")}</p> : null}
             {error ? <p className="error-text">{error}</p> : null}
             <button className="primary-button" disabled={loading} type="submit">
               {loading ? "登录中..." : "登录"}

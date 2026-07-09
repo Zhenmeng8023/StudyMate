@@ -2,6 +2,7 @@
 import "../components/admin/admin.css";
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import type { ApiRequestInit } from "@studymate/api-client";
+import { getSessionInvalidationPrompt } from "@studymate/api-client";
 import { adminGet, adminPost } from "../api/client";
 import {
   clearSessionInvalidation,
@@ -270,7 +271,7 @@ const navGroups = computed(() => ["总览", "治理", "系统"].map((group) => (
   items: navItems.value.filter((item) => item.group === group)
 })));
 const activeMeta = computed(() => navItems.value.find((item) => item.key === activeView.value) ?? navItems.value[0]);
-const loginPrompt = computed(() => (sessionInvalidation.value ? "后台会话已失效，请重新登录后继续治理工作。" : ""));
+const loginPrompt = computed(() => getSessionInvalidationPrompt(sessionInvalidation.value, "admin"));
 const activeDescription = computed(() => {
   if (activeView.value === "dashboard") {
     return "优先处理待审核内容，再查看用户、资料与图谱的总体变化。";
@@ -403,10 +404,12 @@ const unsubscribeSession = subscribeSession(() => {
     userConfirmError.value = "";
     pendingAITaskAction.value = null;
     aiTaskConfirmError.value = "";
+    pendingTemplateAction.value = null;
+    templateConfirmError.value = "";
     activeView.value = defaultAdminRouteKey;
     syncAdminLocation(defaultAdminRouteKey, "replace");
     errorMessage.value = "";
-    notice.value = "后台会话已失效，请重新登录。";
+    notice.value = getSessionInvalidationPrompt(sessionInvalidation.value, "admin") || "后台会话已失效，请重新登录。";
   }
 });
 

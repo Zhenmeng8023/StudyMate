@@ -24,7 +24,7 @@ export interface ApiSession {
 }
 
 export interface SessionInvalidationState {
-  kind: "refresh_failed";
+  kind: "refresh_failed" | "session_rejected";
   code: string;
   message: string;
   status: number;
@@ -64,10 +64,16 @@ export class ApiRequestError extends Error {
   }
 }
 
-function createSessionInvalidationState(error: unknown): SessionInvalidationState {
+function createSessionInvalidationState(
+  kind: SessionInvalidationState["kind"],
+  error: unknown,
+  fallbackCode: string,
+  fallbackMessage: string,
+  fallbackStatus: number
+): SessionInvalidationState {
   if (error instanceof ApiRequestError) {
     return {
-      kind: "refresh_failed",
+      kind,
       code: error.code,
       message: error.message,
       status: error.status,
@@ -76,12 +82,52 @@ function createSessionInvalidationState(error: unknown): SessionInvalidationStat
   }
 
   return {
-    kind: "refresh_failed",
-    code: "session_refresh_failed",
-    message: error instanceof Error ? error.message : "Session refresh failed",
-    status: 401,
+    kind,
+    code: fallbackCode,
+    message: error instanceof Error ? error.message : fallbackMessage,
+    status: fallbackStatus,
     occurredAt: new Date().toISOString()
   };
+}
+
+function createRefreshFailureState(error: unknown): SessionInvalidationState {
+  return createSessionInvalidationState(
+    "refresh_failed",
+    error,
+    "session_refresh_failed",
+    "Session refresh failed",
+    401
+  );
+}
+
+function createSessionRejectedState(error: unknown): SessionInvalidationState {
+  return createSessionInvalidationState(
+    "session_rejected",
+    error,
+    "session_rejected",
+    "Session rejected",
+    403
+  );
+}
+
+function isSessionRejectedError(error: unknown) {
+  return error instanceof ApiRequestError && error.status === 403 && error.code === "user_disabled";
+}
+
+export function getSessionInvalidationPrompt(reason: SessionInvalidationState | null, audience: "user" | "admin" = "user") {
+  if (!reason) {
+    return "";
+  }
+
+  if (reason.code === "user_disabled") {
+    return audience === "admin"
+      ? "当前账号已被禁用，请联系其他管理员后重新登录。"
+      : "当前账号已被禁用，请联系管理员后重新登录。";
+  }
+
+  return audience === "admin"
+    ? "后台会话已失效，请重新登录后继续治理工作。"
+    : "当前登录状态已失效，请重新登录后继续学习。";
 }
 
 export function createAuthHeaders(token?: string | null): Record<string, string> {
@@ -206,7 +252,7 @@ export function createSessionRequest<TSession extends ApiSession>(options: Sessi
           return nextSession;
         })
         .catch((error) => {
-          options.onSessionInvalidated?.(createSessionInvalidationState(error));
+          options.onSessionInvalidated?.(createRefreshFailureState(error));
           options.persistSession(null);
           throw error;
         })
@@ -224,6 +270,12 @@ export function createSessionRequest<TSession extends ApiSession>(options: Sessi
     try {
       return await performRequest<T>(input, init, activeSession?.accessToken ?? null);
     } catch (error) {
+      if (activeSession && isSessionRejectedError(error)) {
+        options.onSessionInvalidated?.(createSessionRejectedState(error));
+        options.persistSession(null);
+        throw error;
+      }
+
       if (!(error instanceof ApiRequestError) || error.status !== 401 || !activeSession) {
         throw error;
       }

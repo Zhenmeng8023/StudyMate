@@ -129,4 +129,35 @@ describe("frontend-user session refresh flow", () => {
       })
     );
   });
+  it("clears the persisted session immediately when a protected request returns user_disabled", async () => {
+    persistSession(staleSession);
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      const authorization = new Headers(init?.headers as HeadersInit).get("Authorization");
+
+      if (path === "/api/v1/graphs") {
+        expect(authorization).toBe("Bearer stale-access-token");
+        return apiError(403, "user_disabled", "褰撳墠璐﹀彿宸茶绂佺敤");
+      }
+
+      if (path === "/api/v1/auth/refresh") {
+        throw new Error("refresh should not run");
+      }
+
+      throw new Error(`Unexpected request: ${path} ${authorization}`);
+    });
+
+    await expect(listGraphs(staleSession)).rejects.toThrow("褰撳墠璐﹀彿宸茶绂佺敤");
+
+    expect(readSession()).toBeNull();
+    expect(readSessionInvalidation()).toEqual(
+      expect.objectContaining({
+        kind: "session_rejected",
+        code: "user_disabled",
+        message: "褰撳墠璐﹀彿宸茶绂佺敤",
+        status: 403
+      })
+    );
+  });
 });

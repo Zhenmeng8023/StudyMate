@@ -37,6 +37,13 @@
 - 用户端登录页与管理端登录页现在都会在被动登出后显示统一的重新登录提示；手动退出会主动清掉旧 invalidation，避免下次进入时误报“会话已失效”。
 - `API-011` 当前仍未结束，但“会话失效原因记录 / 统一 fail-logout 提示语义”这段骨架已收口，下一步更适合转向 HttpOnly Refresh Token 迁移说明与后台更多模块 API 接线。
 
+### 2026-07-09 API-011 / ADM-011 403 user_disabled 前端会话联动
+
+- `packages/api-client` 的 `createSessionRequest(...)` 现在会把请求阶段直接收到的 `403 user_disabled` 识别为 `session_rejected`，而不是继续只把它当普通业务错误抛回页面。
+- 用户端 `frontend-user/src/api/core.ts` 与 `frontend-user/src/app/sessionStore.ts` 现在会在受保护请求直接收到 `403 user_disabled` 时立即清掉本地 session，并把结构化失效原因保留给登录页消费。
+- 管理端 `frontend-admin/src/api/client.ts`、`frontend-admin/src/api/sessionStore.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.vue` 现在也会沿同一语义把后台会话清空、回退登录页，并提示“当前账号已被禁用，请联系其他管理员后重新登录。”
+- `packages/api-client/src/index.test.ts`、`frontend-user/src/api/sessionRefresh.test.ts`、`frontend-user/src/pages/AuthPages.test.tsx` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts` 已锁定“403 user_disabled 不触发 refresh、直接清 session、登录页显示禁用提示”的跨端回归。
+
 ### 2026-07-09 FE-040 / FE-041 共享状态契约起步
 
 - `packages/ui` 已从纯占位包升级为最小共享状态契约层，先导出 `DataStateKind`、`dataStateKinds` 与 `getDataStateLabel(...)`。
@@ -161,7 +168,8 @@
 
 - `backend/internal/modules/admin/service/service.go` 已在用户 `disable` 动作事务内同步撤销该用户所有未撤销的 `refresh_tokens`，让后台禁用动作不再只影响下一次登录，而是立即阻断后续 refresh。
 - `backend/internal/middleware/auth.go` 已改为在每次受保护请求中按 `claims.UserID` 回查数据库中的当前用户，并以真实 `status / role / username` 写入上下文；被禁用账号会在中间件层收到 `user_disabled`，角色变更后的旧 JWT claim 也不再继续保留旧权限。
-- 这一步把 `ADM-011` 从“后台治理可操作”继续推进到“治理动作会真实影响运行中会话边界”；后续更值得补的是举报处理备注、前端对 `403 user_disabled` 的统一被动登出提示，以及更细粒度的资源权限矩阵。
+- 随后的前端联动已把 `403 user_disabled` 统一收口到共享会话层：运行中的用户端与管理端都会立即清 session 并回退到带禁用提示的登录页。
+- 这一步把 `ADM-011` 从“后台治理可操作”继续推进到“治理动作会真实影响运行中会话边界”；后续更值得补的是举报处理备注与更细粒度的资源权限矩阵。
 
 ### 2026-07-09 ADM-011 图谱模板治理起步
 
