@@ -1,3 +1,31 @@
+## 2026-07-09 12:05:00 +08:00 | v1.1.0-alpha.149 | 推进 ADM-011 AI 任务治理动作起步
+### 任务内容
+
+- 继续沿 `ADM-011` 做“先把后台治理主路径补齐”的小步推进，这一轮从资料治理继续扩到 AI 任务治理，不回头深挖已有举报/资料子域。
+- 本轮目标是把 AI 任务列表从只读推进到最小可执行治理：失败任务可重试，待处理任务可取消，并保留后台可追溯审计记录。
+
+### 实际变更
+
+- 新增 `backend/internal/modules/admin/service/ai_task_actions_test.go`，先用 RED 锁定三个缺口：`HandleAITask(...)` 尚不存在、AI 任务还没有 `retry / cancel` 状态动作、后台也还不会为这些动作写入审计日志。
+- 更新 `backend/internal/modules/admin/service/service.go`、`handler/handler.go` 与 `router/router.go`，补齐 `HandleAITask(...)`、`/api/v1/admin/ai/tasks/:id/retry` 与 `/api/v1/admin/ai/tasks/:id/cancel`；当前原型语义是 `failed -> pending`、`pending -> cancelled`，并在同一事务内写入 `admin.handle.ai_task` 审计事件。
+- 更新 `backend/internal/modules/admin/dto/governance.go`，为后台 AI 任务治理列表补回 `errorMessage` 与 `updatedAt` 字段，让失败原因和最近更新时间能直接显示在治理视图里。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue` 与 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`，让 AI 模块在失败任务上显示“重试任务”，在待处理任务上显示“取消任务”，并通过确认层提交真实后台动作。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，锁定 AI 任务治理页会显示动作按钮、先弹确认层，再提交 `/api/v1/admin/ai/tasks/:id/retry`；同时保留现有管理端会话头与模块加载路径不回退。
+
+### 验证结果
+
+- RED：`go test ./internal/modules/admin/service`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`go test ./internal/modules/admin/service`
+- `go test ./internal/modules/admin/...`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+
+### 后续影响
+
+- 后台 AI 模块现在已经从只读列表推进到最小可操作治理，后续继续补“真正重排执行 / 真取消执行器 / 更细任务失败原因与审计视图”时，会比现在顺很多。
+- 当前 AI 任务治理仍是“状态迁移级”原型，`retry` 先回到 `pending`，`cancel` 先写成 `cancelled`，还没有对接真正的异步执行器重排或中断机制；后续若继续推进 `ADM-010 / ADM-011`，更适合把 AI、资料、用户与审计动作继续往 page / feature 层下沉。
+
 ## 2026-07-09 11:50:00 +08:00 | v1.1.0-alpha.148 | 推进 ADM-011 资料治理切到真实材料列表
 ### 任务内容
 

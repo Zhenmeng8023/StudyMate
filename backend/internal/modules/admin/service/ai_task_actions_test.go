@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"github.com/glebarez/sqlite"
-	adminrepo "studymate/backend/internal/modules/admin/repository"
 	"gorm.io/gorm"
+	adminrepo "studymate/backend/internal/modules/admin/repository"
+	"studymate/backend/internal/pkg/apperrors"
 )
 
 func openAITaskActionTestDB(t *testing.T) *gorm.DB {
@@ -66,7 +67,7 @@ func TestHandleAITaskRejectsUnsupportedAction(t *testing.T) {
 		t.Fatal("expected invalid ai action error")
 	}
 
-	appErr, ok := err.(*apperrors.AppError)
+	appErr, ok := err.(*apperrors.Error)
 	if !ok {
 		t.Fatalf("expected AppError, got %T", err)
 	}

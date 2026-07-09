@@ -26,6 +26,8 @@ func RegisterRoutes(
 	protected.POST("/reports/:id/dismiss", adminHandler.DismissReport)
 	protected.GET("/tags", adminHandler.Tags)
 	protected.GET("/ai/tasks", adminHandler.AITasks)
+	protected.POST("/ai/tasks/:id/retry", adminHandler.RetryAITask)
+	protected.POST("/ai/tasks/:id/cancel", adminHandler.CancelAITask)
 	protected.GET("/ai/usage", adminHandler.AIUsage)
 	protected.GET("/audit-logs", adminHandler.AuditLogs)
 	protected.GET("/files", adminHandler.Files)

@@ -47,7 +47,7 @@
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
 | ADM-010 | IN_PROGRESS | 管理端 Vue Router 模块化与 URL 状态 | WB-040, FE-040 | `frontend-admin/src/app/`、`frontend-admin/src/features/`、`frontend-admin/src/pages/` | 当前已具备 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/graph`、`/admin/ai`、`/admin/system`、`/admin/audit` 等可刷新、可回退、可直达 URL，并已拆出登录视图、已登录壳层以及 dashboard / moderation / governance 首批模块视图；后续继续推进真正 page / feature 边界与更完整的治理路由。 |
-| ADM-011 | IN_PROGRESS | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 当前已落地两段真实治理切片：举报支持 `resolve / dismiss`、写回 `handled_by / handled_at` 并进入审计链路；资料治理已切到真实 `/admin/materials` 列表，并可对资料执行 `approve / reject / hide`，其中已隐藏资料可直接恢复。后续继续补用户封禁/解封、AI 任务重试/取消、图谱模板审核/发布/下架。 |
+| ADM-011 | IN_PROGRESS | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 当前已落地三段真实治理切片：举报支持 `resolve / dismiss`、写回 `handled_by / handled_at` 并进入审计链路；资料治理已切到真实 `/admin/materials` 列表，并可对资料执行 `approve / reject / hide`，其中已隐藏资料可直接恢复；AI 任务已支持 `retry / cancel` 状态动作与审计留痕。后续继续补用户封禁/解封、图谱模板审核/发布/下架，并深化资料与 AI 的运营语义。 |
 | SE-020 | TODO | MySQL fallback 搜索服务端分页与真实统计 | WB-014 | search service/handler/frontend search | `GET /search` 支持 cursor/limit/sort 或等价分页；每类结果有真实命中数、搜索耗时、排序语义、空结果建议和来源跳转契约。 |
 | WB-043 | TODO | SearchIndexer 升级与 Meilisearch 评估 | SE-020 | search module/config/deploy | 前端 API 不变；索引实现可替换，具备配置开关；明确是否进入 Meilisearch 的采用/不采用结论。 |
 | WB-044 | TODO | 搜索同步与失败恢复任务 | WB-043 | jobs/queue/search | 具备重建索引、失败重试、幂等与可观测字段。 |
@@ -63,6 +63,24 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：ADM-011（AI 任务治理动作起步）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `backend/internal/modules/admin/service/ai_task_actions_test.go` 新增 RED/GREEN 服务层回归，锁定 `failed` 任务可 `retry`、`pending` 任务可 `cancel`，且必须写入后台审计日志。
+  - `backend/internal/modules/admin/service/service.go`、`handler/handler.go` 与 `router/router.go` 已补齐 `HandleAITask(...)`、`/admin/ai/tasks/:id/retry` 与 `/admin/ai/tasks/:id/cancel`；任务状态会在服务层受控迁移，重试时清空错误信息，取消时写回 `cancelled` 状态。
+  - `backend/internal/modules/admin/dto/governance.go` 已扩展 AI 任务治理字段，补回 `errorMessage` 与 `updatedAt`，让后台不仅能看到状态，还能看到失败原因与最近更新时间。
+  - `frontend-admin/src/views/AdminWorkspaceView.vue` 与 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 已把 AI 任务从只读列表推进到可确认执行的 `retry / cancel` 动作；`frontend-admin/src/views/AdminWorkspaceView.test.ts` 锁定了动作按钮展示、确认层与提交请求路径。
+- 已执行验证：
+  - RED：`go test ./internal/modules/admin/service`
+  - RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - GREEN：`go test ./internal/modules/admin/service`
+  - `go test ./internal/modules/admin/...`
+  - GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+- 风险与后续：
+  - 当前 AI 任务治理还是“状态迁移级”原型：`retry` 先回到 `pending`，`cancel` 先写成 `cancelled`，还没有接到真正的异步执行器重排或中断机制。
+  - AI 任务确认状态仍在 `AdminWorkspaceView.vue` 协调；后续更适合沿 `ADM-010 / ADM-011` 继续把资料、AI、用户、审计的动作状态下沉到 page / feature 边界。
 
 ### 执行记录：ADM-011（资料治理脱离文件占位）
 - 执行日期：2026-07-09

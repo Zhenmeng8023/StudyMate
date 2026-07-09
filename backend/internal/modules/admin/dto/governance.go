@@ -54,7 +54,9 @@ type AdminAITaskPayload struct {
 	InputTokens  int64   `json:"inputTokens"`
 	OutputTokens int64   `json:"outputTokens"`
 	CostUnits    float64 `json:"costUnits"`
+	ErrorMessage string  `json:"errorMessage"`
 	CreatedAt    string  `json:"createdAt"`
+	UpdatedAt    string  `json:"updatedAt"`
 }
 
 type AdminAIUsagePayload struct {

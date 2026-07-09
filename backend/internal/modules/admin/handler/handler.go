@@ -117,6 +117,14 @@ func (h *Handler) AITasks(ctx *gin.Context) {
 	response.Success(ctx, http.StatusOK, result)
 }
 
+func (h *Handler) RetryAITask(ctx *gin.Context) {
+	h.handleAITask(ctx, "retry")
+}
+
+func (h *Handler) CancelAITask(ctx *gin.Context) {
+	h.handleAITask(ctx, "cancel")
+}
+
 func (h *Handler) AIUsage(ctx *gin.Context) {
 	result, err := h.adminService.AIUsage()
 	if err != nil {
@@ -155,5 +163,18 @@ func (h *Handler) handleReport(ctx *gin.Context, status string) {
 		return
 	}
 
+	response.Success(ctx, http.StatusOK, gin.H{"status": status})
+}
+
+func (h *Handler) handleAITask(ctx *gin.Context, action string) {
+	if err := h.adminService.HandleAITask(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), action); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	status := "pending"
+	if action == "cancel" {
+		status = "cancelled"
+	}
 	response.Success(ctx, http.StatusOK, gin.H{"status": status})
 }

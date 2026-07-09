@@ -2,10 +2,12 @@ package service
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"time"
 
 	admindto "studymate/backend/internal/modules/admin/dto"
+	adminmodel "studymate/backend/internal/modules/admin/model"
 	adminrepo "studymate/backend/internal/modules/admin/repository"
 	communityrepo "studymate/backend/internal/modules/community/repository"
 	graphrepo "studymate/backend/internal/modules/graph/repository"
@@ -375,7 +377,9 @@ func (s *Service) ListAITasks(limit int) ([]admindto.AdminAITaskPayload, error) 
 		InputTokens  int64
 		OutputTokens int64
 		CostUnits    float64
+		ErrorMessage string
 		CreatedAt    time.Time
+		UpdatedAt    time.Time
 	}
 
 	var rows []row
@@ -391,7 +395,9 @@ func (s *Service) ListAITasks(limit int) ([]admindto.AdminAITaskPayload, error) 
 			COALESCE(input_tokens, 0) AS input_tokens,
 			COALESCE(output_tokens, 0) AS output_tokens,
 			0 AS cost_units,
-			created_at
+			COALESCE(error_message, '') AS error_message,
+			created_at,
+			updated_at
 		`).
 		Order("created_at DESC").
 		Limit(limit).
@@ -413,10 +419,78 @@ func (s *Service) ListAITasks(limit int) ([]admindto.AdminAITaskPayload, error) 
 			InputTokens:  row.InputTokens,
 			OutputTokens: row.OutputTokens,
 			CostUnits:    row.CostUnits,
+			ErrorMessage: row.ErrorMessage,
 			CreatedAt:    row.CreatedAt.UTC().Format(time.RFC3339),
+			UpdatedAt:    row.UpdatedAt.UTC().Format(time.RFC3339),
 		})
 	}
 	return result, nil
+}
+
+func (s *Service) HandleAITask(actorID string, taskID string, action string) error {
+	if action != "retry" && action != "cancel" {
+		return apperrors.New(400, "invalid_ai_task_action", "unsupported ai task action")
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		type row struct {
+			ID     string
+			Status string
+		}
+
+		var task row
+		if err := tx.Table("ai_tasks").
+			Select("id, status").
+			Take(&task, "id = ?", taskID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return apperrors.New(404, "ai_task_not_found", "AI task not found")
+			}
+			return apperrors.Internal("handle admin ai task failed")
+		}
+
+		nextStatus := ""
+		updates := map[string]any{}
+		switch action {
+		case "retry":
+			if task.Status != "failed" {
+				return apperrors.New(409, "invalid_ai_task_transition", "only failed tasks can be retried")
+			}
+			nextStatus = "pending"
+			updates["status"] = nextStatus
+			updates["error_message"] = ""
+		case "cancel":
+			if task.Status != "pending" {
+				return apperrors.New(409, "invalid_ai_task_transition", "only pending tasks can be cancelled")
+			}
+			nextStatus = "cancelled"
+			updates["status"] = nextStatus
+		}
+
+		if err := tx.Table("ai_tasks").Where("id = ?", taskID).Updates(updates).Error; err != nil {
+			return apperrors.Internal("handle admin ai task failed")
+		}
+
+		metadata, err := json.Marshal(map[string]any{
+			"taskId":         taskID,
+			"action":         action,
+			"previousStatus": task.Status,
+			"status":         nextStatus,
+		})
+		if err != nil {
+			return apperrors.Internal("create admin ai task audit log failed")
+		}
+
+		if err := tx.Create(&adminmodel.AuditLog{
+			ActorID:  actorID,
+			Action:   "admin.handle.ai_task",
+			Target:   "ai_task",
+			Metadata: string(metadata),
+		}).Error; err != nil {
+			return apperrors.Internal("create admin ai task audit log failed")
+		}
+
+		return nil
+	})
 }
 
 func (s *Service) AIUsage() (*admindto.AdminAIUsagePayload, error) {

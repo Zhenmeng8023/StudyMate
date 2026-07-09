@@ -42,6 +42,7 @@ interface OverviewPayload {
 type AdminView = AdminRouteKey;
 type ModerationAction = "approve" | "reject" | "hide";
 type ReportAction = "resolve" | "dismiss";
+type AITaskAction = "retry" | "cancel";
 type AdminNavItem = {
   key: AdminView;
   label: string;
@@ -70,6 +71,8 @@ const pendingModerationAction = ref<{ action: ModerationAction; item: Moderation
 const moderationConfirmError = ref("");
 const pendingReportAction = ref<{ action: ReportAction; record: GovernanceRecord } | null>(null);
 const reportConfirmError = ref("");
+const pendingAITaskAction = ref<{ action: AITaskAction; record: GovernanceRecord } | null>(null);
+const aiTaskConfirmError = ref("");
 
 const loggedIn = computed(() => Boolean(session.value));
 const pendingPosts = computed(() => moderationItems.value.filter((item) => item.type === "post"));
@@ -138,6 +141,19 @@ const governanceActions = computed(() => {
     }
   }
 
+  if (activeView.value === "ai") {
+    if (status === "failed") {
+      return [
+        { key: "retry", label: "重试任务" }
+      ];
+    }
+    if (status === "pending") {
+      return [
+        { key: "cancel", label: "取消任务", tone: "danger" as const }
+      ];
+    }
+  }
+
   return [];
 });
 const reportConfirmTitle = computed(() => {
@@ -155,6 +171,22 @@ const reportConfirmDescription = computed(() => {
 const reportConfirmLabel = computed(() => (pendingReportAction.value?.action === "dismiss" ? "确认忽略" : "确认已处理"));
 const reportConfirmingLabel = computed(() => (pendingReportAction.value?.action === "dismiss" ? "忽略中..." : "处理中..."));
 const reportConfirmTone = computed(() => (pendingReportAction.value?.action === "dismiss" ? "danger" : "default"));
+const aiTaskConfirmTitle = computed(() => {
+  const pending = pendingAITaskAction.value;
+  if (!pending) return "";
+  return pending.action === "retry" ? "确认重试这个 AI 任务" : "确认取消这个 AI 任务";
+});
+const aiTaskConfirmDescription = computed(() => {
+  const pending = pendingAITaskAction.value;
+  if (!pending) return "";
+  const taskID = String(pending.record.id ?? "");
+  return pending.action === "retry"
+    ? `重试后，任务 ${taskID} 会重新回到待处理状态，并清空当前失败信息。`
+    : `取消后，任务 ${taskID} 会退出待处理状态，并保留可追溯审计记录。`;
+});
+const aiTaskConfirmLabel = computed(() => (pendingAITaskAction.value?.action === "cancel" ? "确认取消" : "确认重试"));
+const aiTaskConfirmingLabel = computed(() => (pendingAITaskAction.value?.action === "cancel" ? "取消中..." : "重试中..."));
+const aiTaskConfirmTone = computed(() => (pendingAITaskAction.value?.action === "cancel" ? "danger" : "default"));
 
 const navItems = computed<AdminNavItem[]>(() => [
   { key: "dashboard", label: "概览", icon: "▦", group: "总览" },
@@ -221,7 +253,7 @@ const visibleGovernanceRows = computed(() => {
   );
 });
 const governanceColumns = computed(() => {
-  const preferred = ["title", "name", "originalName", "username", "email", "role", "status", "handledBy", "handledAt", "action", "createdAt", "updatedAt", "id"];
+  const preferred = ["title", "taskType", "name", "originalName", "username", "email", "role", "status", "handledBy", "handledAt", "model", "errorMessage", "sourceType", "sourceId", "action", "createdAt", "updatedAt", "id"];
   const keys = new Set<string>();
   governanceRows.value.forEach((row) => Object.keys(row).forEach((key) => keys.add(key)));
   return Array.from(keys)
@@ -294,6 +326,8 @@ const unsubscribeSession = subscribeSession(() => {
     moderationConfirmError.value = "";
     pendingReportAction.value = null;
     reportConfirmError.value = "";
+    pendingAITaskAction.value = null;
+    aiTaskConfirmError.value = "";
     activeView.value = defaultAdminRouteKey;
     syncAdminLocation(defaultAdminRouteKey, "replace");
     errorMessage.value = "";
@@ -436,6 +470,32 @@ async function applyReportAction(record: GovernanceRecord, action: ReportAction)
   }
 }
 
+async function applyAITaskAction(record: GovernanceRecord, action: AITaskAction) {
+  if (!session.value) return;
+
+  const taskID = String(record.id ?? "");
+  if (!taskID) {
+    aiTaskConfirmError.value = "AI 任务标识缺失，无法提交治理动作。";
+    return;
+  }
+
+  loading.value = true;
+  errorMessage.value = "";
+  aiTaskConfirmError.value = "";
+  try {
+    const data = await post<{ status: string }>(`/api/v1/admin/ai/tasks/${taskID}/${action}`, {});
+    pendingAITaskAction.value = null;
+    notice.value = `AI 任务 ${taskID} 已更新为 ${data.status}。`;
+    await loadGovernance("ai");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "更新 AI 任务状态失败";
+    errorMessage.value = message;
+    aiTaskConfirmError.value = message;
+  } finally {
+    loading.value = false;
+  }
+}
+
 function requestModerationAction(item: ModerationItem, action: ModerationAction) {
   moderationConfirmError.value = "";
   pendingModerationAction.value = { action, item };
@@ -462,6 +522,17 @@ function requestGovernanceAction(payload: { action: string; record: GovernanceRe
       return;
     }
     requestModerationAction(item, payload.action);
+    return;
+  }
+
+  if (activeView.value === "ai") {
+    if (payload.action !== "retry" && payload.action !== "cancel") return;
+
+    aiTaskConfirmError.value = "";
+    pendingAITaskAction.value = {
+      action: payload.action,
+      record: payload.record
+    };
   }
 }
 
@@ -495,6 +566,12 @@ function closeReportConfirm() {
   reportConfirmError.value = "";
 }
 
+function closeAITaskConfirm() {
+  if (loading.value) return;
+  pendingAITaskAction.value = null;
+  aiTaskConfirmError.value = "";
+}
+
 async function confirmModerationAction() {
   const pending = pendingModerationAction.value;
   if (!pending) return;
@@ -507,10 +584,22 @@ async function confirmReportAction() {
   await applyReportAction(pending.record, pending.action);
 }
 
+async function confirmAITaskAction() {
+  const pending = pendingAITaskAction.value;
+  if (!pending) return;
+  await applyAITaskAction(pending.record, pending.action);
+}
+
 function switchView(view: AdminView) {
   activeView.value = view;
   recordQuery.value = "";
   moderationQuery.value = "";
+  pendingModerationAction.value = null;
+  moderationConfirmError.value = "";
+  pendingReportAction.value = null;
+  reportConfirmError.value = "";
+  pendingAITaskAction.value = null;
+  aiTaskConfirmError.value = "";
   syncAdminLocation(view);
   loadActiveView(view);
 }
@@ -531,6 +620,8 @@ function logout() {
   moderationConfirmError.value = "";
   pendingReportAction.value = null;
   reportConfirmError.value = "";
+  pendingAITaskAction.value = null;
+  aiTaskConfirmError.value = "";
   activeView.value = defaultAdminRouteKey;
   syncAdminLocation(defaultAdminRouteKey, "replace");
   sessionInvalidation.value = null;
@@ -585,6 +676,19 @@ function selectRecord(row: GovernanceRecord) {
       :title="reportConfirmTitle"
       @cancel="closeReportConfirm"
       @confirm="confirmReportAction"
+    />
+    <AdminConfirmDialog
+      cancel-label="取消"
+      :confirm-label="aiTaskConfirmLabel"
+      :confirm-tone="aiTaskConfirmTone"
+      :confirming="loading"
+      :confirming-label="aiTaskConfirmingLabel"
+      :description="aiTaskConfirmDescription"
+      :error-message="aiTaskConfirmError"
+      :is-open="Boolean(pendingAITaskAction)"
+      :title="aiTaskConfirmTitle"
+      @cancel="closeAITaskConfirm"
+      @confirm="confirmAITaskAction"
     />
 
     <AdminLoginPanel
