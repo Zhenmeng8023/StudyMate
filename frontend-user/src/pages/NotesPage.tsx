@@ -15,7 +15,7 @@ import {
   restoreNoteVersion,
   updateNote
 } from "../api/client";
-import { DataState } from "../design-system/primitives";
+import { DataState, Select } from "../design-system/primitives";
 import { RichTextEditor } from "../modules/notes/RichTextEditor";
 import {
   buildCardInputsFromDrafts,
@@ -385,12 +385,12 @@ export function NotesPage(props: { session: AuthSession }) {
               </label>
               <label>
                 <span>资料来源</span>
-                <select aria-label="资料来源" onChange={(event) => setDraft((current) => ({ ...current, materialId: event.target.value }))} value={draft.materialId}>
+                <Select aria-label="资料来源" onChange={(event) => setDraft((current) => ({ ...current, materialId: event.target.value }))} value={draft.materialId}>
                   <option value="">暂不关联资料</option>
                   {materials.map((material) => (
                     <option key={material.id} value={material.id}>{displayMaterialTitle(material)}</option>
                   ))}
-                </select>
+                </Select>
               </label>
               <label>
                 <span>文件夹</span>
@@ -524,10 +524,10 @@ export function NotesPage(props: { session: AuthSession }) {
                     <section className="notes-review-actions">
                       <label className="form-stack">
                         <span>写入 Deck</span>
-                        <select aria-label="写入 Deck" onChange={(event) => setSelectedDeckId(event.target.value)} value={selectedDeckId}>
+                        <Select aria-label="写入 Deck" onChange={(event) => setSelectedDeckId(event.target.value)} value={selectedDeckId}>
                           <option value="">请选择一个 deck</option>
                           {decks.map((deck) => <option key={deck.id} value={deck.id}>{deck.title}</option>)}
-                        </select>
+                        </Select>
                       </label>
                       <button className="primary-button" disabled={!selectedDeckId || busy === "note-commit"} onClick={() => void handleCommitCardDrafts()} type="button">写入复习系统</button>
                     </section>

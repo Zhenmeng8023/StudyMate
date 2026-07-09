@@ -13,7 +13,7 @@ import {
   listMaterials,
   updateReaderProgress
 } from "../api/client";
-import { DataState, Tag } from "../design-system/primitives";
+import { DataState, Select, Tag } from "../design-system/primitives";
 import { PdfReaderPane } from "../modules/reader/PdfReaderPane";
 import {
   buildCardInputsFromDrafts,
@@ -547,12 +547,12 @@ export function ReaderPage(props: { session: AuthSession }) {
                     <section className="reader-draft-actions">
                       <label className="form-stack">
                         <span>写入 Deck</span>
-                        <select aria-label="写入 Deck" onChange={(event) => setSelectedDeckId(event.target.value)} value={selectedDeckId}>
+                        <Select aria-label="写入 Deck" onChange={(event) => setSelectedDeckId(event.target.value)} value={selectedDeckId}>
                           <option value="">请选择一个 deck</option>
                           {decks.map((deck) => (
                             <option key={deck.id} value={deck.id}>{deck.title}</option>
                           ))}
-                        </select>
+                        </Select>
                       </label>
                       <button className="primary-button" disabled={!selectedDeckId || busy === "annotation-commit"} onClick={() => void handleCommitAnnotationDrafts()} type="button">
                         写入复习系统

@@ -7,4 +7,5 @@ export { Drawer, type DrawerProps } from "./Drawer";
 export { IconButton, type IconButtonProps } from "./IconButton";
 export { Input, type InputProps } from "./Input";
 export { Inspector, type InspectorProps } from "./Inspector";
+export { Select, type SelectProps } from "./Select";
 export { Tag, type TagProps, type TagTone } from "./Tag";
