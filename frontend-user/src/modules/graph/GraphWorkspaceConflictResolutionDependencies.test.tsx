@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+﻿import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -680,6 +680,140 @@ describe("GraphWorkspacePage conflict dependency guard", () => {
       screen.findByText("已批量标记 3 条联动取舍建议（保留本地 1 项，保留服务端 2 项），当前已解除依赖阻断，可继续应用已标记取舍")
     ).resolves.toBeInTheDocument();
     expect(screen.queryByLabelText("取舍依赖校验问题")).toBeNull();
+    expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeEnabled();
+  });
+
+  it("surfaces linked keep-latest guidance for invalid local node sources", async () => {
+    const user = userEvent.setup();
+    window.sessionStorage.setItem(
+      buildGraphWorkspaceDraftStorageKey("graph-1"),
+      JSON.stringify({
+        currentVersion: 4,
+        description: "local draft",
+        document: {
+          ...graphDetail.document,
+          nodes: [
+            ...graphDetail.document.nodes,
+            {
+              id: "node-broken-source",
+              type: "concept",
+              title: "Broken source node",
+              x: 420,
+              y: 120,
+              width: 220,
+              height: 132,
+              source: {
+                type: "note",
+                id: "",
+                label: "Broken note"
+              },
+              metadata: {}
+            }
+          ],
+          edges: [],
+          groups: []
+        },
+        graphId: "graph-1",
+        savedAt: "2026-07-01T20:10:00Z",
+        title: "Recovered graph"
+      })
+    );
+    batchSaveGraphMock.mockRejectedValueOnce(new Error("graph_version_conflict"));
+    getGraphMock.mockReset();
+    getGraphMock
+      .mockResolvedValueOnce(graphDetail)
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        currentVersion: 5,
+        updatedAt: "2026-07-01T20:20:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 5
+        }
+      });
+
+    renderWorkspace();
+
+    await expect(screen.findByRole("button", { name: "保存修改" })).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "保存修改" }));
+    await expect(screen.findByLabelText("图谱冲突辅助")).resolves.toBeInTheDocument();
+
+    const brokenSourceRow = screen.getByText(/Broken source node/).closest("li");
+    expect(brokenSourceRow).not.toBeNull();
+    await user.click(within(brokenSourceRow as HTMLElement).getAllByRole("button")[0]);
+
+    await expect(screen.findByLabelText("取舍依赖校验问题")).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("取舍依赖校验问题")).toHaveTextContent(/Broken source node/);
+    await expect(screen.findByLabelText("联动取舍建议")).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Broken source node/ }));
+
+    expect(screen.queryByLabelText("取舍依赖校验问题")).toBeNull();
+    expect(screen.queryByLabelText("联动取舍建议")).toBeNull();
+    expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeEnabled();
+  });
+
+  it("surfaces linked keep-latest guidance for invalid local node sizes", async () => {
+    const user = userEvent.setup();
+    window.sessionStorage.setItem(
+      buildGraphWorkspaceDraftStorageKey("graph-1"),
+      JSON.stringify({
+        currentVersion: 4,
+        description: "local draft",
+        document: {
+          ...graphDetail.document,
+          nodes: [
+            ...graphDetail.document.nodes,
+            {
+              id: "node-invalid-size",
+              type: "concept",
+              title: "Oversized local node",
+              x: 420,
+              y: 120,
+              width: 30,
+              height: 20,
+              source: null,
+              metadata: {}
+            }
+          ],
+          edges: [],
+          groups: []
+        },
+        graphId: "graph-1",
+        savedAt: "2026-07-01T20:10:00Z",
+        title: "Recovered graph"
+      })
+    );
+    batchSaveGraphMock.mockRejectedValueOnce(new Error("graph_version_conflict"));
+    getGraphMock.mockReset();
+    getGraphMock
+      .mockResolvedValueOnce(graphDetail)
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        currentVersion: 5,
+        updatedAt: "2026-07-01T20:20:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 5
+        }
+      });
+
+    renderWorkspace();
+
+    await expect(screen.findByRole("button", { name: "保存修改" })).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "保存修改" }));
+    await expect(screen.findByLabelText("图谱冲突辅助")).resolves.toBeInTheDocument();
+
+    const invalidSizeRow = screen.getByText(/Oversized local node/).closest("li");
+    expect(invalidSizeRow).not.toBeNull();
+    await user.click(within(invalidSizeRow as HTMLElement).getAllByRole("button")[0]);
+
+    await expect(screen.findByLabelText("取舍依赖校验问题")).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("取舍依赖校验问题")).toHaveTextContent(/Oversized local node/);
+    await expect(screen.findByLabelText("联动取舍建议")).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Oversized local node/ }));
+
+    expect(screen.queryByLabelText("取舍依赖校验问题")).toBeNull();
+    expect(screen.queryByLabelText("联动取舍建议")).toBeNull();
     expect(screen.getByRole("button", { name: "应用已标记取舍到当前草稿" })).toBeEnabled();
   });
 });
