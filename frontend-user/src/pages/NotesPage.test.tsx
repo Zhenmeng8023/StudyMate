@@ -1,9 +1,11 @@
+// @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createNote,
+  deleteNote,
   listDecks,
   listMaterials,
   listNotes,
@@ -24,6 +26,7 @@ vi.mock("../api/client", async () => {
   return {
     ...actual,
     createNote: vi.fn(),
+    deleteNote: vi.fn(),
     listDecks: vi.fn(),
     listMaterials: vi.fn(),
     listNotes: vi.fn(),
@@ -49,41 +52,43 @@ const listNotesMock = vi.mocked(listNotes);
 const listMaterialsMock = vi.mocked(listMaterials);
 const listDecksMock = vi.mocked(listDecks);
 const listNoteVersionsMock = vi.mocked(listNoteVersions);
+const deleteNoteMock = vi.mocked(deleteNote);
 const updateNoteMock = vi.mocked(updateNote);
+
+const noteFixture = {
+  id: "note-1",
+  ownerUserId: "user-1",
+  title: "Binary Search Notes",
+  summary: "Boundary conditions",
+  content: "<p>Initial content</p>",
+  materialId: "material-1",
+  folderName: "Algorithms",
+  tags: ["algo"],
+  versionNumber: 2,
+  createdAt: "2026-06-02T12:00:00Z",
+  updatedAt: "2026-06-02T12:00:00Z"
+};
 
 describe("NotesPage", () => {
   afterEach(cleanup);
 
   beforeEach(() => {
     vi.mocked(createNote).mockReset();
+    deleteNoteMock.mockReset();
     listNotesMock.mockReset();
     listMaterialsMock.mockReset();
     listDecksMock.mockReset();
     listNoteVersionsMock.mockReset();
     updateNoteMock.mockReset();
 
-    listNotesMock.mockResolvedValue([
-      {
-        id: "note-1",
-        ownerUserId: "user-1",
-        title: "二分查找笔记",
-        summary: "边界条件",
-        content: "<p>初始内容</p>",
-        materialId: "material-1",
-        folderName: "算法",
-        tags: ["算法"],
-        versionNumber: 2,
-        createdAt: "2026-06-02T12:00:00Z",
-        updatedAt: "2026-06-02T12:00:00Z"
-      }
-    ]);
+    listNotesMock.mockResolvedValue([noteFixture]);
     listMaterialsMock.mockResolvedValue([
       {
         id: "material-1",
         ownerUserId: "user-1",
         ownerName: "Alice",
-        title: "算法导论",
-        description: "二分查找",
+        title: "Algorithms Guide",
+        description: "Binary search",
         category: "book",
         tags: ["algo"],
         coverFileId: "",
@@ -100,8 +105,8 @@ describe("NotesPage", () => {
         id: "material-2",
         ownerUserId: "user-1",
         ownerName: "Alice",
-        title: "线性代数",
-        description: "矩阵基础",
+        title: "Linear Algebra",
+        description: "Matrix basics",
         category: "course",
         tags: ["math"],
         coverFileId: "",
@@ -121,12 +126,13 @@ describe("NotesPage", () => {
         id: "version-1",
         noteId: "note-1",
         versionNumber: 1,
-        title: "二分查找笔记",
-        summary: "旧摘要",
-        content: "<p>旧内容</p>",
+        title: "Binary Search Notes",
+        summary: "Old summary",
+        content: "<p>Old content</p>",
         createdAt: "2026-06-01T12:00:00Z"
       }
     ]);
+    deleteNoteMock.mockResolvedValue(undefined as never);
     updateNoteMock.mockResolvedValue({} as never);
   });
 
@@ -138,8 +144,8 @@ describe("NotesPage", () => {
       </MemoryRouter>
     );
 
-    expect((await screen.findAllByText("二分查找笔记")).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText("算法导论").length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("Binary Search Notes")).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Algorithms Guide").length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole("button", { name: "历史" }));
     expect(await screen.findByText("v1")).toBeInTheDocument();
@@ -173,5 +179,35 @@ describe("NotesPage", () => {
 
     await user.selectOptions(select, "material-2");
     expect(screen.getByLabelText("资料来源")).toHaveValue("material-2");
+  });
+
+  it("uses the shared confirm dialog before deleting a note", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    listNotesMock.mockResolvedValueOnce([noteFixture]).mockResolvedValueOnce([]);
+
+    render(
+      <MemoryRouter>
+        <NotesPage session={session} />
+      </MemoryRouter>
+    );
+
+    await expect(screen.findByRole("button", { name: "删除" })).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "删除" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "确认删除笔记" })).toBeInTheDocument();
+    expect(deleteNoteMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "取消" }));
+    expect(screen.queryByRole("dialog", { name: "确认删除笔记" })).not.toBeInTheDocument();
+    expect(deleteNoteMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "删除" }));
+    await user.click(screen.getByRole("button", { name: "确认" }));
+
+    expect(deleteNoteMock).toHaveBeenCalledWith(session, "note-1");
+    await expect(screen.findByText("笔记已删除")).resolves.toBeInTheDocument();
+    confirmSpy.mockRestore();
   });
 });

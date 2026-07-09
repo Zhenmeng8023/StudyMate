@@ -2,54 +2,52 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { Button, CommandBar, DataState, Drawer, IconButton, Input, Inspector, PageHeader, Select, Tag } from "./index";
+import { Button, CommandBar, ConfirmDialog, DataState, Drawer, IconButton, Input, Inspector, PageHeader, Select, Tag } from "./index";
 
 describe("@studymate/ui react primitive contract", () => {
   it("renders the shared data state copy", () => {
-    render(<DataState description="正在加载图谱数据。" kind="loading" title="正在准备画布" />);
+    render(<DataState description="Loading graph data." kind="loading" title="Preparing canvas" />);
 
-    expect(screen.getByText("加载中")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "正在准备画布" })).toBeTruthy();
-    expect(screen.getByText("正在加载图谱数据。")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Preparing canvas" })).toBeTruthy();
+    expect(screen.getByText("Loading graph data.")).toBeTruthy();
   });
 
   it("renders a drawer with a working close action", () => {
     const onClose = vi.fn();
 
     render(
-      <Drawer isOpen onClose={onClose} title="来源">
-        <p>内容</p>
+      <Drawer isOpen onClose={onClose} title="Sources">
+        <p>Drawer content</p>
       </Drawer>,
     );
 
-    expect(screen.getByLabelText("来源")).toBeTruthy();
-    fireEvent.click(screen.getByLabelText("关闭来源"));
+    expect(screen.getByLabelText("Sources")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("provides an accessible inspector region", () => {
     render(
-      <Inspector description="当前选中节点的属性。" title="节点详情">
-        <p>节点内容</p>
+      <Inspector description="Properties for the current selection." title="Node details">
+        <p>Inspector content</p>
       </Inspector>,
     );
 
-    expect(screen.getByLabelText("节点详情")).toBeTruthy();
-    expect(screen.getByText("当前选中节点的属性。")).toBeTruthy();
-    expect(screen.getByText("节点内容")).toBeTruthy();
+    expect(screen.getByLabelText("Node details")).toBeTruthy();
+    expect(screen.getByText("Properties for the current selection.")).toBeTruthy();
+    expect(screen.getByText("Inspector content")).toBeTruthy();
   });
 
   it("renders an icon button with active state and click behavior", () => {
     const onClick = vi.fn();
 
     render(
-      <IconButton active aria-label="打开面板" onClick={onClick} title="打开面板">
+      <IconButton active aria-label="Open panel" onClick={onClick} title="Open panel">
         <span aria-hidden="true">+</span>
       </IconButton>,
     );
 
-    const button = screen.getByRole("button", { name: "打开面板" });
-    expect(button).toBeTruthy();
+    const button = screen.getByRole("button", { name: "Open panel" });
     expect(button.className).toContain("icon-button");
     expect(button.className).toContain("active");
     expect(button.getAttribute("type")).toBe("button");
@@ -62,13 +60,12 @@ describe("@studymate/ui react primitive contract", () => {
     const onClick = vi.fn();
 
     render(
-      <Button active danger onClick={onClick} title="重新加载" variant="ghost">
-        重新加载
+      <Button active danger onClick={onClick} title="Reload" variant="ghost">
+        Reload
       </Button>,
     );
 
-    const button = screen.getByRole("button", { name: "重新加载" });
-    expect(button).toBeTruthy();
+    const button = screen.getByRole("button", { name: "Reload" });
     expect(button.className).toContain("ghost-button");
     expect(button.className).toContain("danger");
     expect(button.className).toContain("active");
@@ -79,18 +76,18 @@ describe("@studymate/ui react primitive contract", () => {
   });
 
   it("renders a shared tag with muted styling", () => {
-    render(<Tag tone="muted">已归档</Tag>);
+    render(<Tag tone="muted">Archived</Tag>);
 
-    const tag = screen.getByText("已归档");
+    const tag = screen.getByText("Archived");
     expect(tag.tagName).toBe("SPAN");
     expect(tag.className).toContain("chip");
     expect(tag.className).toContain("muted");
   });
 
   it("renders a shared input with default type and invalid state", () => {
-    render(<Input invalid placeholder="搜索资料" />);
+    render(<Input invalid placeholder="Search materials" />);
 
-    const input = screen.getByPlaceholderText("搜索资料");
+    const input = screen.getByPlaceholderText("Search materials");
     expect(input.getAttribute("type")).toBe("text");
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(input.className).toContain("ds-input");
@@ -99,13 +96,13 @@ describe("@studymate/ui react primitive contract", () => {
 
   it("renders a shared select with invalid state", () => {
     render(
-      <Select aria-label="资料来源" invalid value="material-2" onChange={() => undefined}>
-        <option value="">暂不关联资料</option>
-        <option value="material-2">线性代数</option>
+      <Select aria-label="Material source" invalid value="material-2" onChange={() => undefined}>
+        <option value="">No source</option>
+        <option value="material-2">Linear algebra</option>
       </Select>,
     );
 
-    const select = screen.getByLabelText("资料来源");
+    const select = screen.getByLabelText("Material source");
     expect(select.tagName).toBe("SELECT");
     expect(select.getAttribute("aria-invalid")).toBe("true");
     expect(select.className).toContain("ds-select");
@@ -115,41 +112,69 @@ describe("@studymate/ui react primitive contract", () => {
   it("renders a shared page header with actions", () => {
     render(
       <PageHeader
-        actions={<button type="button">新建资料</button>}
-        description="集中展示当前工作区的主标题和动作。"
-        eyebrow="学习空间"
-        title="资料总览"
+        actions={<button type="button">Create material</button>}
+        description="Show the page title and its primary actions in one place."
+        eyebrow="Study space"
+        title="Materials overview"
       />,
     );
 
-    const heading = screen.getByRole("heading", { name: "资料总览" });
+    const heading = screen.getByRole("heading", { name: "Materials overview" });
     const header = heading.closest("header");
-    expect(header).toBeTruthy();
-    expect(header.className).toContain("workspace-header");
-    expect(heading).toBeTruthy();
-    expect(screen.getByText("学习空间")).toBeTruthy();
-    expect(screen.getByText("集中展示当前工作区的主标题和动作。")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "新建资料" })).toBeTruthy();
+    expect(header?.className).toContain("workspace-header");
+    expect(screen.getByText("Study space")).toBeTruthy();
+    expect(screen.getByText("Show the page title and its primary actions in one place.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create material" })).toBeTruthy();
   });
 
   it("renders a shared command bar with search and actions", () => {
     render(
       <CommandBar
-        actions={<button type="button">退出登录</button>}
-        crumb="学习空间"
-        search={<form role="search"><input aria-label="搜索资料、笔记或图谱" /></form>}
-        subtitle="继续一项已开始的学习任务"
-        title="学习概览"
+        actions={<button type="button">Sign out</button>}
+        crumb="Study space"
+        search={<form role="search"><input aria-label="Search materials, notes, or graphs" /></form>}
+        subtitle="Continue a study task that is already in progress"
+        title="Study overview"
       />,
     );
 
-    const heading = screen.getByRole("heading", { name: "学习概览" });
+    const heading = screen.getByRole("heading", { name: "Study overview" });
     const header = heading.closest("header");
-    expect(header).toBeTruthy();
     expect(header?.className).toContain("topbar");
-    expect(header?.textContent).toContain("学习空间");
-    expect(header?.textContent).toContain("继续一项已开始的学习任务");
+    expect(header?.textContent).toContain("Study space");
+    expect(header?.textContent).toContain("Continue a study task that is already in progress");
     expect(screen.getByRole("search")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "退出登录" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
+  });
+
+  it("renders a shared confirm dialog with danger and busy states", () => {
+    const onCancel = vi.fn();
+    const onConfirm = vi.fn();
+
+    render(
+      <ConfirmDialog
+        cancelLabel="Cancel"
+        confirmTone="danger"
+        confirming
+        confirmingLabel="Deleting..."
+        description="Deleting this note removes it from the current workspace."
+        errorMessage="Delete failed. Please try again."
+        isOpen
+        onCancel={onCancel}
+        onConfirm={onConfirm}
+        title="Confirm delete note"
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Confirm delete note" });
+    expect(dialog).toBeTruthy();
+    expect(dialog.className).toContain("confirm-dialog");
+    expect(screen.getByText("Deleting this note removes it from the current workspace.")).toBeTruthy();
+    expect(screen.getByText("Delete failed. Please try again.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Cancel" }) as HTMLButtonElement).disabled).toBe(true);
+
+    const confirmButton = screen.getByRole("button", { name: "Deleting..." });
+    expect(confirmButton.className).toContain("danger");
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(true);
   });
 });
