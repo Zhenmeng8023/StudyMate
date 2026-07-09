@@ -95,6 +95,89 @@ describe("AdminWorkspaceView governance modules", () => {
     expect(wrapper.text()).toContain("1");
   });
 
+  it("confirms user governance actions before disabling an active user", async () => {
+    window.history.replaceState({}, "", "/admin/users");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const disablePath = "/api/v1/admin/users/user-1/disable";
+    const userRow = {
+      id: "user-1",
+      username: "alice",
+      email: "alice@example.test",
+      displayName: "Alice",
+      role: "user",
+      status: "active",
+      createdAt: "2026-06-02T12:00:00Z"
+    };
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/users?limit=20") {
+        expect(init?.headers).toMatchObject({
+          Authorization: "Bearer admin-token"
+        });
+        return apiPayload([userRow]);
+      }
+      if (path === disablePath) {
+        expect(init?.method).toBe("POST");
+        return apiPayload({ status: "disabled" });
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("alice");
+
+    await wrapper.get('[data-governance-action="disable"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("纭绂佺敤杩欎釜鐢ㄦ埛");
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      disablePath,
+      expect.objectContaining({
+        method: "POST"
+      })
+    );
+
+    await wrapper.get('[data-confirm-submit="true"]').trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      disablePath,
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer admin-token"
+        })
+      })
+    );
+  });
+
   it("returns to the login screen when refresh fails during admin bootstrap", async () => {
     window.history.replaceState({}, "", "/admin/dashboard");
     window.localStorage.setItem(
