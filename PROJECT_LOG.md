@@ -1,3 +1,30 @@
+## 2026-07-09 11:50:00 +08:00 | v1.1.0-alpha.148 | 推进 ADM-011 资料治理切到真实材料列表
+### 任务内容
+
+- 继续沿 `ADM-011` 做“先把后台治理主路径补齐”的小步推进，不在举报动作上继续单点深挖。
+- 本轮目标是把 `materials` 模块从 `/api/v1/admin/files` 的占位列表推进到真实材料治理：读取实际资料记录，并在治理视图里直接执行资料审核/下架动作。
+
+### 实际变更
+
+- 新增 `backend/internal/modules/admin/service/materials_list_test.go`，先用 RED 锁定后台缺少 `ListMaterials(...)`、资料治理页仍在走文件列表占位这两个缺口。
+- 更新 `backend/internal/modules/admin/dto/governance.go`、`service/service.go`、`handler/handler.go` 与 `router/router.go`，补齐 `AdminMaterialPayload`、`ListMaterials(...)` 以及 `/api/v1/admin/materials`；后台现在会返回资料标题、作者、分类、附件名、状态和时间字段。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，把 `materials` 模块切到真实 `/api/v1/admin/materials`，并按资料状态暴露 `approve / reject / hide` 动作；若资料当前为 `hidden`，治理视图里可直接执行恢复。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，锁定资料治理会加载真实材料记录、显示动作按钮，并在确认后提交 `/api/v1/admin/moderation/materials/:id/:action`，不再回退到 `/api/v1/admin/files`。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-011` 从“只有举报动作起步”推进到“举报 + 资料治理”两段真实切片。
+
+### 验证结果
+
+- RED：`go test ./internal/modules/admin/service`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`go test ./internal/modules/admin/service`
+- `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+
+### 后续影响
+
+- 后台“资料治理”现在已经脱离文件占位页，开始具备真实材料记录和可执行动作；后续继续补“下架 / 恢复”的更清晰运营语义、独立审计事件和失败回滚时，会比现在更顺。
+- 当前资料治理动作仍复用审核流的 `approve / reject / hide` 语义，且动作状态还集中在 `AdminWorkspaceView.vue`；后续若继续推进 `ADM-010 / ADM-011`，更适合把资料、用户、AI、审计等模块动作继续往 page / feature 层下沉。
+
 ## 2026-07-09 11:36:00 +08:00 | v1.1.0-alpha.147 | 推进 ADM-011 举报治理动作与审计链路起步
 ### 任务内容
 

@@ -82,6 +82,15 @@ func (h *Handler) Reports(ctx *gin.Context) {
 	response.Success(ctx, http.StatusOK, result)
 }
 
+func (h *Handler) Materials(ctx *gin.Context) {
+	result, err := h.adminService.ListMaterials(adminLimit(ctx))
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+	response.Success(ctx, http.StatusOK, result)
+}
+
 func (h *Handler) ResolveReport(ctx *gin.Context) {
 	h.handleReport(ctx, "resolved")
 }

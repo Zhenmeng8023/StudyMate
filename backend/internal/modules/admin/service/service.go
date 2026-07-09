@@ -175,6 +175,65 @@ func (s *Service) ListUsers(limit int) ([]admindto.AdminUserPayload, error) {
 	return result, nil
 }
 
+func (s *Service) ListMaterials(limit int) ([]admindto.AdminMaterialPayload, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+
+	type row struct {
+		ID             string
+		OwnerUserID    string
+		OwnerName      string
+		Title          string
+		Description    string
+		Category       string
+		AttachmentName string
+		Status         string
+		CreatedAt      time.Time
+		UpdatedAt      time.Time
+	}
+
+	var rows []row
+	err := s.db.Table("materials").
+		Select(`
+			materials.id,
+			materials.owner_user_id,
+			users.display_name AS owner_name,
+			materials.title,
+			materials.description,
+			materials.category,
+			files.original_name AS attachment_name,
+			materials.status,
+			materials.created_at,
+			materials.updated_at
+		`).
+		Joins("left join users on users.id = materials.owner_user_id").
+		Joins("left join file_records as files on files.id = materials.attachment_file_id").
+		Order("materials.created_at DESC").
+		Limit(limit).
+		Scan(&rows).Error
+	if err != nil {
+		return nil, apperrors.Internal("list admin materials failed")
+	}
+
+	result := make([]admindto.AdminMaterialPayload, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, admindto.AdminMaterialPayload{
+			ID:             row.ID,
+			OwnerUserID:    row.OwnerUserID,
+			OwnerName:      row.OwnerName,
+			Title:          row.Title,
+			Description:    row.Description,
+			Category:       row.Category,
+			AttachmentName: row.AttachmentName,
+			Status:         row.Status,
+			CreatedAt:      row.CreatedAt.UTC().Format(time.RFC3339),
+			UpdatedAt:      row.UpdatedAt.UTC().Format(time.RFC3339),
+		})
+	}
+	return result, nil
+}
+
 func (s *Service) ListReports(limit int) ([]admindto.AdminReportPayload, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50

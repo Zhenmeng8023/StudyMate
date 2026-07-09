@@ -138,6 +138,12 @@
 - `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 与 `frontend-admin/src/views/AdminWorkspaceView.vue` 现在已把举报列表从只读推进到可确认执行的 `resolve / dismiss` 动作，处理完成后会同步回写治理记录展示。
 - `ADM-011` 当前仍只是第一段首切片：先打通举报处理与审计链路，不把封禁/解封、下架/恢复、AI 重试/取消等更大治理面一次性压进同一轮。
 
+### 2026-07-09 ADM-011 资料治理切到真实材料列表
+
+- 后端已补齐 `/api/v1/admin/materials`，管理端不再需要用 `/api/v1/admin/files` 充当资料治理占位；资料列表现在会返回标题、作者、分类、附件名、状态与时间字段。
+- `frontend-admin/src/views/AdminWorkspaceView.vue` 已把 `materials` 模块切到真实材料接口，并按状态暴露 `approve / reject / hide` 动作；已隐藏资料可在同一治理视图里直接恢复。
+- 这一步继续遵循“先把全局治理主路径补齐”的节奏：先把资料治理从占位页推进到真实可操作模块，后续再继续细化术语、审计语义和 page / feature 边界。
+
 ### 2026-07-08 FE / UI 验证收口更新
 
 - FE-010、FE-020、FE-030 与 UI-04 已在真实依赖环境完成类型检查、相关 Vitest、前后台构建与 4 条 Playwright smoke。
@@ -298,7 +304,7 @@
 - WB-041：补审批动作、角色校验、分页筛选和状态流转。
 - WB-042：完善审计事件模型。
 - ADM-010：将管理端拆为 Vue Router 模块页面，提供 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/materials`、`/admin/reports`、`/admin/ai`、`/admin/files`、`/admin/audit-logs` 等可刷新 URL。
-- ADM-011：继续从已落地的举报 `resolve / dismiss` 首切片往外扩，补封禁/解封、下架/恢复、举报处理备注、AI 任务重试/取消、模板审核/发布/下架等受控动作。
+- ADM-011：继续从已落地的“举报处理 + 资料治理”两段首切片往外扩，补封禁/解封、举报处理备注、AI 任务重试/取消、模板审核/发布/下架等受控动作，并继续收口资料治理的下架/恢复语义。
 - SE-020：在现有 MySQL fallback 上补搜索服务端分页、真实命中数、排序语义、耗时和空结果建议。
 - WB-043：在现有 `SearchIndexer` 边界上评估 / 接入 Meilisearch。
 - WB-044：补搜索同步任务、失败重试、重建索引能力。

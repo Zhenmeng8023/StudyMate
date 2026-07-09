@@ -78,40 +78,67 @@ const profileInitial = computed(() => profile.value?.displayName?.trim().slice(0
 const moderationConfirmTitle = computed(() => {
   const pending = pendingModerationAction.value;
   if (!pending) return "";
-  if (pending.action === "approve") return "确认通过这条内容";
+  if (pending.action === "approve") return pending.item.status === "hidden" ? "确认恢复这条资料" : "确认通过这条内容";
   if (pending.action === "reject") return "确认驳回这条内容";
   return "确认隐藏这条内容";
 });
 const moderationConfirmDescription = computed(() => {
   const pending = pendingModerationAction.value;
   if (!pending) return "";
-  if (pending.action === "approve") return `通过后，“${pending.item.title}”将按审核结果进入可见状态。`;
+  if (pending.action === "approve") {
+    if (pending.item.status === "hidden") return `恢复后，“${pending.item.title}”会重新回到可见资料状态。`;
+    return `通过后，“${pending.item.title}”将按审核结果进入可见状态。`;
+  }
   if (pending.action === "reject") return `驳回后，“${pending.item.title}”会退出当前待处理队列。`;
   return `隐藏后，“${pending.item.title}”将不再继续对外展示。`;
 });
 const moderationConfirmLabel = computed(() => {
   const pending = pendingModerationAction.value;
   if (!pending) return "确认";
-  if (pending.action === "approve") return "确认通过";
+  if (pending.action === "approve") return pending.item.status === "hidden" ? "确认恢复" : "确认通过";
   if (pending.action === "reject") return "确认驳回";
   return "确认隐藏";
 });
 const moderationConfirmingLabel = computed(() => {
   const pending = pendingModerationAction.value;
   if (!pending) return "处理中…";
-  if (pending.action === "approve") return "通过中…";
+  if (pending.action === "approve") return pending.item.status === "hidden" ? "恢复中…" : "通过中…";
   if (pending.action === "reject") return "驳回中…";
   return "隐藏中…";
 });
 const moderationConfirmTone = computed(() => (pendingModerationAction.value?.action === "approve" ? "default" : "danger"));
 const governanceActions = computed(() => {
-  if (activeView.value !== "community" || !selectedRecord.value) return [];
-  if (String(selectedRecord.value.status ?? "").toLowerCase() !== "pending") return [];
+  if (!selectedRecord.value) return [];
 
-  return [
-    { key: "resolve", label: "标记已处理" },
-    { key: "dismiss", label: "忽略举报", tone: "danger" as const }
-  ];
+  const status = String(selectedRecord.value.status ?? "").toLowerCase();
+  if (activeView.value === "community") {
+    if (status !== "pending") return [];
+    return [
+      { key: "resolve", label: "标记已处理" },
+      { key: "dismiss", label: "忽略举报", tone: "danger" as const }
+    ];
+  }
+
+  if (activeView.value === "materials") {
+    if (status === "pending") {
+      return [
+        { key: "approve", label: "通过资料" },
+        { key: "reject", label: "驳回资料", tone: "danger" as const }
+      ];
+    }
+    if (status === "approved") {
+      return [
+        { key: "hide", label: "下架资料", tone: "danger" as const }
+      ];
+    }
+    if (status === "hidden") {
+      return [
+        { key: "approve", label: "恢复资料" }
+      ];
+    }
+  }
+
+  return [];
 });
 const reportConfirmTitle = computed(() => {
   const pending = pendingReportAction.value;
@@ -171,7 +198,7 @@ const overviewCards = computed(() => [
   { label: "知识图谱", value: String(overview.value?.graphCount ?? 0), helper: "用户持续维护的知识结构" }
 ]);
 const governanceConfig: Record<Exclude<AdminView, "dashboard" | "moderation">, { endpoint: string; query: { limit: number }; empty: string; description: string }> = {
-  materials: { endpoint: "/api/v1/admin/files", query: { limit: 20 }, empty: "暂无文件治理记录。", description: "检查文件状态、归属与存储信息。" },
+  materials: { endpoint: "/api/v1/admin/materials", query: { limit: 20 }, empty: "暂无资料治理记录。", description: "查看资料状态、作者与附件，并直接执行审核或上下架动作。" },
   community: { endpoint: "/api/v1/admin/reports", query: { limit: 20 }, empty: "暂无举报记录。", description: "集中查看用户提交的举报与处理线索。" },
   users: { endpoint: "/api/v1/admin/users", query: { limit: 20 }, empty: "暂无用户记录。", description: "按账号状态与角色查看用户资料。" },
   graph: { endpoint: "/api/v1/admin/tags", query: { limit: 20 }, empty: "暂无标签记录。", description: "管理资料、笔记与图谱中的分类标签。" },
@@ -371,6 +398,9 @@ async function applyModerationAction(item: ModerationItem, action: ModerationAct
     pendingModerationAction.value = null;
     notice.value = `“${item.title}” 已更新为 ${data.status}。`;
     await Promise.all([loadModeration(), loadOverview()]);
+    if (activeView.value === "materials" && item.type === "material") {
+      await loadGovernance("materials");
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新审核状态失败";
     errorMessage.value = message;
@@ -412,13 +442,44 @@ function requestModerationAction(item: ModerationItem, action: ModerationAction)
 }
 
 function requestGovernanceAction(payload: { action: string; record: GovernanceRecord }) {
-  if (activeView.value !== "community") return;
-  if (payload.action !== "resolve" && payload.action !== "dismiss") return;
+  if (activeView.value === "community") {
+    if (payload.action !== "resolve" && payload.action !== "dismiss") return;
 
-  reportConfirmError.value = "";
-  pendingReportAction.value = {
-    action: payload.action,
-    record: payload.record
+    reportConfirmError.value = "";
+    pendingReportAction.value = {
+      action: payload.action,
+      record: payload.record
+    };
+    return;
+  }
+
+  if (activeView.value === "materials") {
+    if (payload.action !== "approve" && payload.action !== "reject" && payload.action !== "hide") return;
+
+    const item = mapGovernanceRecordToMaterial(payload.record);
+    if (!item) {
+      errorMessage.value = "资料记录字段不完整，无法提交治理动作。";
+      return;
+    }
+    requestModerationAction(item, payload.action);
+  }
+}
+
+function mapGovernanceRecordToMaterial(record: GovernanceRecord): ModerationItem | null {
+  const id = String(record.id ?? "").trim();
+  const title = String(record.title ?? "").trim();
+  if (!id || !title) return null;
+
+  const summarySource = record.description ?? record.category ?? record.attachmentName ?? "";
+  return {
+    id,
+    type: "material",
+    title,
+    summary: String(summarySource),
+    authorName: String(record.ownerName ?? ""),
+    status: String(record.status ?? ""),
+    createdAt: String(record.createdAt ?? ""),
+    updatedAt: String(record.updatedAt ?? "")
   };
 }
 

@@ -23,6 +23,19 @@ type AdminReportPayload struct {
 	CreatedAt      string `json:"createdAt"`
 }
 
+type AdminMaterialPayload struct {
+	ID             string `json:"id"`
+	OwnerUserID    string `json:"ownerUserId"`
+	OwnerName      string `json:"ownerName"`
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	Category       string `json:"category"`
+	AttachmentName string `json:"attachmentName"`
+	Status         string `json:"status"`
+	CreatedAt      string `json:"createdAt"`
+	UpdatedAt      string `json:"updatedAt"`
+}
+
 type AdminTagPayload struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
