@@ -13,7 +13,7 @@ import {
   listMaterials,
   updateReaderProgress
 } from "../api/client";
-import { DataState } from "../design-system/primitives";
+import { DataState, Tag } from "../design-system/primitives";
 import { PdfReaderPane } from "../modules/reader/PdfReaderPane";
 import {
   buildCardInputsFromDrafts,
@@ -394,8 +394,8 @@ export function ReaderPage(props: { session: AuthSession }) {
                   <strong>{displayMaterialTitle(selectedMaterial)}</strong>
                 </div>
                 <div className="reader-stage-card__chips">
-                  <span>共 {readerState.totalPages || "待识别"} 页</span>
-                  <span>上次阅读 {formatDate(readerState.lastReadAt)}</span>
+                  <Tag>共 {readerState.totalPages || "待识别"} 页</Tag>
+                  <Tag tone="muted">上次阅读 {formatDate(readerState.lastReadAt)}</Tag>
                 </div>
               </div>
               <div className="reader-stage reader-stage--studio">

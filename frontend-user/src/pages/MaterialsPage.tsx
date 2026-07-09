@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import type { AuthSession, FilePayload, MaterialPayload } from "../api/client";
 import { createMaterial, listMaterials, rateMaterial, toggleMaterialFavorite, updateMaterial, uploadFile } from "../api/client";
 import { displayMaterialCategory, displayMaterialDescription, displayMaterialOwner, displayMaterialTags, displayMaterialTitle, formatDate, quickActions, SectionFrame, WorkspaceHeader } from "../app/appShared";
+import { Tag } from "../design-system/primitives";
 
 export function MaterialsPage(props: { session: AuthSession | null }) {
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
@@ -223,8 +224,8 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
               />
             </label>
             <div className="chip-row">
-              <span className="chip">公开资料 {materials.length}</span>
-              <span className="chip muted">可公开浏览</span>
+              <Tag>公开资料 {materials.length}</Tag>
+              <Tag tone="muted">可公开浏览</Tag>
             </div>
             <div className="sidebar-action-list">
               {quickActions.map((item) => (
@@ -279,9 +280,7 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
 
               <div className="chip-row">
                 {displayMaterialTags(selectedMaterial).map((tag) => (
-                  <span className="chip" key={tag}>
-                    {tag}
-                  </span>
+                  <Tag key={tag}>{tag}</Tag>
                 ))}
               </div>
 

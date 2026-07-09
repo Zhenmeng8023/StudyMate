@@ -1,3 +1,26 @@
+## 2026-07-09 09:14:18 +08:00 | v1.1.0-alpha.136 | 推进 FE-041 共享 Tag 接入阅读与资料页
+### 任务内容
+
+- 沿当前更高优先级的 `FE-041` 继续做一个最小、可测试的共享 primitive 收口，不回到单一冲突子场景深挖。
+- 本轮目标是把最轻量、重复最明显的 `chip/tag` 语义从页面层抽成共享 `Tag`，并至少接到阅读和资料两条真实学习路径页面，而不是只停留在包里“新增一个组件文件”。
+### 实际变更
+
+- 新增 `packages/ui/src/Tag.tsx`，补齐共享 `Tag` primitive，先统一 `chip` / `muted` 两种基础语义。
+- 更新 `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/Tag.tsx` 与 `frontend-user/src/design-system/primitives/index.ts`，补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/pages/ReaderPage.tsx` 与 `frontend-user/src/pages/MaterialsPage.tsx`，把阅读元信息 chips 和资料详情标签切到共享 `Tag`，让 `FE-041` 从图谱骨架继续扩展到学习主路径页面。
+- 更新 `packages/ui/src/reactPrimitives.test.tsx` 与新增 `frontend-user/src/design-system/primitives/Tag.test.tsx`，先用 RED 锁定“共享 Tag 缺失 / 兼容出口缺失”的缺口，再用 GREEN 锁定共享导出、`muted` 变体与用户端兼容出口。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 Tag 已落地并接入真实页面”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx frontend-user/src/design-system/primitives/Tag.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx frontend-user/src/design-system/primitives/Tag.test.tsx`
+- `npm --workspace frontend-user run test -- src/pages/ReaderPage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+### 后续影响
+
+- `@studymate/ui` 现在不再只共享页面状态、抽屉、检查器和按钮，`Tag` 也已经进入真实学习页面，为后续继续统一表单、页面头部和确认交互提供了更稳的路径。
+- 当前这轮仍只覆盖 React 用户端；管理端尚未直接消费这层 `Tag`，下一步更值得继续推进的是 Input、Select、ConfirmDialog、CommandBar、PageHeader 这类更高频且更能收口页面骨架分叉的 primitives。
+
 ## 2026-07-09 09:06:40 +08:00 | v1.1.0-alpha.135 | 收口 WB-032 节点级来源与尺寸冲突页面级回归
 ### 任务内容
 

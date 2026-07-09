@@ -62,6 +62,12 @@
 - 用户端 `GraphWorkspaceCanvasChrome`、`GraphWorkspaceShell`、`GraphWorkspaceImportPanel` 与 `GraphWorkspaceStageChrome` 已开始接入这层共享 primitive，说明 `FE-041` 已从图标按钮继续扩展到普通动作按钮。
 - 下一步应继续沿真实页面主路径推进，把阅读、笔记、复习与管理端里仍散落的普通按钮逐段收口到共享 `Button`，而不是重新设计一套平行按钮体系。
 
+### 2026-07-09 FE-041 共享 Tag 接入真实页面
+
+- `@studymate/ui` 已新增共享 `Tag`，先统一 `chip` / `muted` 两种基础语义，并保留用户端兼容出口，避免阅读、资料等主路径页面继续直接拼裸 `span` + 局部 class。
+- 用户端 `ReaderPage` 与 `MaterialsPage` 已开始接入这层共享 primitive，说明 `FE-041` 不再只停留在图谱工作区骨架，而开始扩展到学习主路径页面。
+- 下一步应继续沿同一路径推进 Input、Select、ConfirmDialog、CommandBar、PageHeader 等更高层或更高频 primitives，而不是让共享层再次停在“有几个按钮和 chips，但表单与页面骨架仍各写各的”。
+
 ### 2026-07-08 FE / UI 验证收口更新
 
 - FE-010、FE-020、FE-030 与 UI-04 已在真实依赖环境完成类型检查、相关 Vitest、前后台构建与 4 条 Playwright smoke。

@@ -24,7 +24,7 @@
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
 | FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。 |
-| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button` 已收口到共享包并保留用户端兼容出口，且 `IconButton` 与 `Button` 都已接到图谱工作区骨架；后续继续推进 Input、Select、Tag、ConfirmDialog、CommandBar、PageHeader 的共享 token、变体、禁用/加载/错误状态与最小测试或文档示例。 |
+| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag` 都已接到真实页面或图谱骨架；后续继续推进 Input、Select、ConfirmDialog、CommandBar、PageHeader 的共享 token、变体、禁用/加载/错误状态与最小测试或文档示例。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一 401 会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；补 HttpOnly Refresh Token 迁移说明。 |
 | DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
@@ -216,6 +216,22 @@
 - 后续建议：
   - 继续沿 `FE-041` 把阅读、笔记、复习与管理端里散落的普通动作按钮逐段迁入共享 `Button`，而不是只停留在图谱工作区。
   - 在共享 `Button` 语义稳定后，再继续推进 Input、Select、Tag、ConfirmDialog、CommandBar、PageHeader 等更高层 primitives 的统一出口。
+
+### 执行记录：FE-041（共享 Tag 接入阅读与资料页）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `packages/ui/src/Tag.tsx` 新增共享 `Tag` primitive，先统一 `chip` / `muted` 两种基础语义，避免阅读、资料等页面继续各自写裸 `span` 与局部 class 组合。
+  - `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/Tag.tsx` 与 `index.ts` 已补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+  - `frontend-user/src/pages/ReaderPage.tsx` 与 `frontend-user/src/pages/MaterialsPage.tsx` 已接入共享 `Tag`，覆盖阅读工作区元信息 chips 与资料详情标签，说明 `FE-041` 已开始从图谱骨架扩展到学习主路径页面。
+  - `packages/ui/src/reactPrimitives.test.tsx` 与 `frontend-user/src/design-system/primitives/Tag.test.tsx` 新增 RED/GREEN 回归，锁定共享导出、`muted` 变体和用户端兼容出口。
+- 验证：
+  - RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx frontend-user/src/design-system/primitives/Tag.test.tsx`
+  - GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx frontend-user/src/design-system/primitives/Tag.test.tsx`
+  - `npm --workspace frontend-user run test -- src/pages/ReaderPage.test.tsx`
+  - `npm --workspace frontend-user run typecheck`
+- 后续建议：
+  - 继续沿 `FE-041` 把 Input、Select、ConfirmDialog、CommandBar、PageHeader 等仍未共享的 primitives 收口到 `@studymate/ui`，优先挑选已经出现在阅读、笔记、资料和后台治理页中的重复模式。
+  - 管理端暂未直接消费这层 `Tag` 组件；后续如需更深共享，应优先复用同一套 class 语义和 token，而不是再扩写新的 badge/chip 分叉。
 
 ### 执行记录：FE-040 / FE-041（共享页面状态契约起步）
 - 执行日期：2026-07-09
