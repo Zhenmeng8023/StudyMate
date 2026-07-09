@@ -2,7 +2,7 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { DataState, Drawer, IconButton, Inspector } from "./index";
+import { Button, DataState, Drawer, IconButton, Inspector } from "./index";
 
 describe("@studymate/ui react primitive contract", () => {
   it("renders the shared data state copy", () => {
@@ -51,6 +51,26 @@ describe("@studymate/ui react primitive contract", () => {
     const button = screen.getByRole("button", { name: "打开面板" });
     expect(button).toBeTruthy();
     expect(button.className).toContain("icon-button");
+    expect(button.className).toContain("active");
+    expect(button.getAttribute("type")).toBe("button");
+
+    fireEvent.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders a shared button with variant, danger, and active classes", () => {
+    const onClick = vi.fn();
+
+    render(
+      <Button active danger onClick={onClick} title="重新加载" variant="ghost">
+        重新加载
+      </Button>,
+    );
+
+    const button = screen.getByRole("button", { name: "重新加载" });
+    expect(button).toBeTruthy();
+    expect(button.className).toContain("ghost-button");
+    expect(button.className).toContain("danger");
     expect(button.className).toContain("active");
     expect(button.getAttribute("type")).toBe("button");
 
