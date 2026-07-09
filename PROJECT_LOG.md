@@ -1,3 +1,22 @@
+## 2026-07-09 09:06:40 +08:00 | v1.1.0-alpha.135 | 收口 WB-032 节点级来源与尺寸冲突页面级回归
+### 任务内容
+
+- 继续沿 `WB-032` 做一个最小、可测试的冲突处理收口，不扩新逻辑，只把已经存在于 helper 层的节点级阻断建议补到页面级真实操作回归里。
+- 本轮重点是把 `invalid_source_target` 与 `invalid_node_size` 两条路径接进 `GraphWorkspaceConflictResolutionDependencies`：用户先误选“保留本地”，随后看到阻断与联动“保留服务端”建议，并能在解除阻断后继续应用已标记取舍。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，新增两条页面级回归，分别覆盖“来源信息不完整节点”和“尺寸非法节点”的冲突辅助交互。
+- 两条新回归都锁定同一条真实操作链：`保存修改` 触发 `graph_version_conflict`、进入 `图谱冲突辅助`、先标记 `保留本地`、出现 `取舍依赖校验问题` 与 `联动取舍建议`、再通过 `联动保留服务端` 清除阻断并重新允许 `应用已标记取舍到当前草稿`。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“节点级来源/尺寸阻断也有页面级真实操作回归”。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+### 后续影响
+
+- `WB-032` 的页面级冲突矩阵现在不只覆盖 dangling edge、latest-head 删除语义和多目标连线，也开始锁定节点级结构错误在真实冲突卡片里的阻断与联动修正路径。
+- 当前仍未新增新的冲突处理逻辑；下一步更值得继续补的是更多节点/边/分组阻断类型的页面级真实路径，或继续沿 `WB-034` 把这些路径并入更成体系的验证矩阵。
+
 ## 2026-07-09 07:47:00 +08:00 | v1.1.0-alpha.134 | 收口图谱冲突 E2E 的窄屏 smoke
 ### 任务内容
 

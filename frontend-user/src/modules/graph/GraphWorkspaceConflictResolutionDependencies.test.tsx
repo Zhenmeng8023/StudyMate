@@ -1,4 +1,4 @@
-﻿import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -738,14 +738,12 @@ describe("GraphWorkspacePage conflict dependency guard", () => {
     await user.click(screen.getByRole("button", { name: "保存修改" }));
     await expect(screen.findByLabelText("图谱冲突辅助")).resolves.toBeInTheDocument();
 
-    const brokenSourceRow = screen.getByText(/Broken source node/).closest("li");
-    expect(brokenSourceRow).not.toBeNull();
-    await user.click(within(brokenSourceRow as HTMLElement).getAllByRole("button")[0]);
+    await user.click(screen.getByRole("button", { name: /^保留本地.*Broken source node$/ }));
 
     await expect(screen.findByLabelText("取舍依赖校验问题")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("取舍依赖校验问题")).toHaveTextContent(/Broken source node/);
     await expect(screen.findByLabelText("联动取舍建议")).resolves.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Broken source node/ }));
+    await user.click(screen.getByRole("button", { name: /^联动保留服务端.*Broken source node$/ }));
 
     expect(screen.queryByLabelText("取舍依赖校验问题")).toBeNull();
     expect(screen.queryByLabelText("联动取舍建议")).toBeNull();
@@ -803,14 +801,12 @@ describe("GraphWorkspacePage conflict dependency guard", () => {
     await user.click(screen.getByRole("button", { name: "保存修改" }));
     await expect(screen.findByLabelText("图谱冲突辅助")).resolves.toBeInTheDocument();
 
-    const invalidSizeRow = screen.getByText(/Oversized local node/).closest("li");
-    expect(invalidSizeRow).not.toBeNull();
-    await user.click(within(invalidSizeRow as HTMLElement).getAllByRole("button")[0]);
+    await user.click(screen.getByRole("button", { name: /^保留本地.*Oversized local node$/ }));
 
     await expect(screen.findByLabelText("取舍依赖校验问题")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("取舍依赖校验问题")).toHaveTextContent(/Oversized local node/);
     await expect(screen.findByLabelText("联动取舍建议")).resolves.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Oversized local node/ }));
+    await user.click(screen.getByRole("button", { name: /^联动保留服务端.*Oversized local node$/ }));
 
     expect(screen.queryByLabelText("取舍依赖校验问题")).toBeNull();
     expect(screen.queryByLabelText("联动取舍建议")).toBeNull();

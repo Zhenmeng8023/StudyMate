@@ -443,6 +443,7 @@
 - 这条“应用前预检”摘要现在还会再补一层代表对象示例，例如“保留本地：本地节点 / 保留服务端：旧关系”，让用户在最终点击前不只知道数量，也知道这轮取舍主要覆盖了哪些对象。
 - 这些阻断摘要现在会优先展示校验器生成的对象级短原因；当 message 只是泛化短码时，才回退到 `targetId` 或 `ruleType`，避免预检只暴露内部 ID。
 - 冲突辅助现在还会为 `invalid_source_target` / `invalid_node_size` 这类节点级阻断生成可执行建议：如果本地节点来源信息不完整或尺寸非法，可直接改为保留服务端，而不是只停留在错误说明；对应阻断 message 与建议文案也已统一为中文。
+- `GraphWorkspaceConflictResolutionDependencies` 页面级回归现在还锁定了 `invalid_source_target` / `invalid_node_size` 两条真实操作路径：先标记保留本地，再通过联动“保留服务端”解除阻断，并重新允许应用已标记取舍。
 - 联动取舍建议现在还会按对象差异的 `action` 判定真正的“保留 / 放弃”方向；当阻断来自 latest head 里仍存在的边或分组、而当前取舍试图沿用本地删除结果时，建议会正确改成“保留服务端节点”或“按本地删除结果处理该服务端对象”，不再把 `removed` 语义反向解释成继续 `keep-local`。
 - 当用户应用已标记取舍后，工作区状态栏现在还会返回可解释的结果摘要，例如“保留本地 2 项 / 保留服务端 1 项 / 稍后处理 1 项（已沿用最新版本）”，降低多端合并后的不确定感。
 - 验证：
@@ -464,7 +465,7 @@
   - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
   - `npm run verify:docs`
 - 后续待续：
-- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成；优先考虑更完整的对象联动策略、更多冲突类型的批量取舍辅助，以及把这类已能解释“已标记数量 + 代表对象 + 未标记默认回退 + 可读阻断原因 + 可读明细标题 + 中文节点级建议 + 多目标连线附加依赖节点 + latest-head 删除语义下的分组依赖 + latest-head 删除语义下的多目标连线路径”，且已被页面级冲突回归锁定并开始覆盖真实未标记回退操作路径的应用前预检继续扩展成更完整的合并预检反馈；当前固定入口为 `npm run verify:graph-conflicts`，并已纳入带真实 `graph_version_conflict` 处理路径、窄屏 smoke、布局预览与导出状态、权限路径的 `e2e/v1-graph-workspace.spec.ts`，测试映射集中在 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`。
+- 继续补更系统的多端 conflict handling，再将 `WB-032` 标记为完成；优先考虑更完整的对象联动策略、更多冲突类型的批量取舍辅助，以及把这类已能解释“已标记数量 + 代表对象 + 未标记默认回退 + 可读阻断原因 + 可读明细标题 + 中文节点级建议 + 节点级来源/尺寸阻断页面路径 + 多目标连线附加依赖节点 + latest-head 删除语义下的分组依赖 + latest-head 删除语义下的多目标连线路径”，且已被页面级冲突回归锁定并开始覆盖真实未标记回退操作路径的应用前预检继续扩展成更完整的合并预检反馈；当前固定入口为 `npm run verify:graph-conflicts`，并已纳入带真实 `graph_version_conflict` 处理路径、窄屏 smoke、布局预览与导出状态、权限路径的 `e2e/v1-graph-workspace.spec.ts`，测试映射集中在 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`。
 
 ### 执行记录：WB-031
 

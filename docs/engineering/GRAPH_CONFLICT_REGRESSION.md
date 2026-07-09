@@ -25,6 +25,8 @@
 ### 1.3 当前重点组合路径
 
 - 本地新增节点 / 连线导致的 `dangling_edge`
+- 本地新增节点来源失效触发的 `invalid_source_target`
+- 本地新增节点尺寸非法触发的 `invalid_node_size`
 - latest-head 删除语义下的 `dangling_edge`
 - latest-head 删除语义下的 `invalid_group_node`
 - 多目标连线 `metadata.targetNodeIds` 附加依赖节点
