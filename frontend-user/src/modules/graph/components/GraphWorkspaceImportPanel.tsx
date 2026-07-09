@@ -1,5 +1,6 @@
 import { FileDown, ScanSearch } from "lucide-react";
 import type { GraphValidationIssuePayload } from "../../../api/client";
+import { Button } from "../../../design-system/primitives";
 import type { ImportMode } from "../lib/workspaceControllerHelpers";
 import { GraphValidationIssueList } from "./GraphWorkspacePanels";
 
@@ -32,14 +33,14 @@ export function GraphWorkspaceImportPanel(props: {
 
       <div className="graph-segmented" aria-label="图谱导入格式">
         {importModeLabels.map((item) => (
-          <button
-            className={props.importMode === item.mode ? "ghost-button active" : "ghost-button"}
+          <Button
+            active={props.importMode === item.mode}
             key={item.mode}
             onClick={() => props.onImportModeChange(item.mode)}
-            type="button"
+            variant="ghost"
           >
             {item.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -52,19 +53,14 @@ export function GraphWorkspaceImportPanel(props: {
       />
 
       <div className="graph-inline-actions">
-        <button
-          className="secondary-button"
-          disabled={!props.canImport || props.saving}
-          onClick={props.onImport}
-          type="button"
-        >
+        <Button disabled={!props.canImport || props.saving} onClick={props.onImport} variant="secondary">
           <FileDown size={16} />
           导入草稿
-        </button>
-        <button className="secondary-button" disabled={!props.canValidate} onClick={props.onValidate} type="button">
+        </Button>
+        <Button disabled={!props.canValidate} onClick={props.onValidate} variant="secondary">
           <ScanSearch size={16} />
           校验图谱
-        </button>
+        </Button>
       </div>
 
       <GraphValidationIssueList issues={props.validationIssues} />

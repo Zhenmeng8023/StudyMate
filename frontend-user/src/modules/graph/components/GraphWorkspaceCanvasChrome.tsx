@@ -15,7 +15,7 @@ import {
   Sparkles
 } from "lucide-react";
 import type { GraphDetailPayload } from "../../../api/client";
-import { IconButton } from "../../../design-system/primitives";
+import { Button, IconButton } from "../../../design-system/primitives";
 import type { GraphWorkspaceSaveState } from "../state/types";
 import type { GraphWorkspaceResourceTab } from "./GraphWorkspaceShell";
 
@@ -57,18 +57,17 @@ export function GraphWorkspaceCanvasCommandBar(props: {
       </div>
 
       <div className="graph-canvas-commandbar__actions">
-        <button className="secondary-button graph-command-new" disabled={props.saving} onClick={props.onCreateGraph} type="button">
+        <Button className="graph-command-new" disabled={props.saving} onClick={props.onCreateGraph} variant="secondary">
           <Layers3 size={16} />
           <span>新建图谱</span>
-        </button>
-        <button
-          className={props.saveState === "dirty" ? "primary-button" : "secondary-button"}
+        </Button>
+        <Button
           disabled={!props.graphDetail || props.saving || props.saveState === "saved"}
           onClick={props.onSave}
-          type="button"
+          variant={props.saveState === "dirty" ? "primary" : "secondary"}
         >
           {saveLabel}
-        </button>
+        </Button>
         <IconButton
           aria-expanded={props.inspectorOpen}
           aria-label={props.inspectorOpen ? "关闭检查器" : "打开检查器"}

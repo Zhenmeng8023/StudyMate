@@ -23,7 +23,7 @@ import type {
   MaterialPayload,
   NotePayload
 } from "../../../api/client";
-import { IconButton } from "../../../design-system/primitives";
+import { Button, IconButton } from "../../../design-system/primitives";
 import type { GraphWorkspaceSaveState } from "../state/types";
 import type { GraphNodeCreationType, GraphNodeTypeOption } from "../lib/graphNodeTypes";
 
@@ -47,14 +47,14 @@ export function GraphWorkspaceHeader(props: {
         </p>
       </div>
       <div className="header-actions">
-        <button className="secondary-button" disabled={props.saving} onClick={props.onCreateGraph} type="button">
+        <Button disabled={props.saving} onClick={props.onCreateGraph} variant="secondary">
           <Plus size={16} />
           新建图谱
-        </button>
-        <button className="primary-button" disabled={!props.graphDetail || props.saving} onClick={props.onSave} type="button">
+        </Button>
+        <Button disabled={!props.graphDetail || props.saving} onClick={props.onSave} variant="primary">
           <Save size={16} />
           {props.saving ? "保存中..." : "保存"}
-        </button>
+        </Button>
         <span className={`graph-save-state ${props.saveState}`} aria-label={`图谱保存状态：${props.saveStateLabel}`}>
           {props.saveStateLabel}
         </span>

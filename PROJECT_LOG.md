@@ -4496,3 +4496,32 @@
 
 - `verify:graph-conflicts` 现在除了冲突、布局和导出之外，也开始固定验证图谱工作区的权限失败路径，为后续 `WB-034` 继续补权限分支矩阵提供了稳定基座。
 - 当前仍未覆盖更完整的权限组合，比如创建/保存/恢复/导出在不同权限角色下的更多分支；后续仍应沿这条固定入口扩展，而不是重新分散成临时命令。
+## 2026-07-09 08:41:12 +08:00 | v1.1.0-alpha.139 | 推进 FE-041 共享 Button 图谱接线
+### 任务内容
+
+- 沿着 `FE-041` 已经落地的共享 `DataState / Drawer / Inspector / IconButton` 继续往前推进一小步，这一轮聚焦最常见的普通动作按钮，而不是继续只停留在图标按钮层。
+- 本轮目标是在不重写图谱业务的前提下，把 `primary-button` / `secondary-button` / `ghost-button` 的基础语义先收口到共享 `Button`，并优先接到图谱工作区这条真实主路径上。
+
+### 实际变更
+
+- 新增 `packages/ui/src/Button.tsx`，统一提供 `primary`、`secondary`、`ghost` 三种变体，并收口 `active`、`danger`、默认 `type="button"` 等基础行为。
+- 更新 `packages/ui/src/index.ts`，让 `@studymate/ui` 正式导出 `Button`、`ButtonProps` 与 `ButtonVariant`。
+- 新增 `frontend-user/src/design-system/primitives/Button.tsx` 与兼容导出，让用户端页面层继续沿用本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/design-system/primitives/index.ts`，把共享 `Button` 纳入统一 primitive 出口。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceCanvasChrome.tsx`、`GraphWorkspaceShell.tsx`、`GraphWorkspaceImportPanel.tsx`、`GraphWorkspaceStageChrome.tsx`，把图谱工作区里的新建、保存、导入、校验、冲突处理等普通动作按钮接到共享 `Button`，同时保留现有页面语义与可访问性。
+- 新增 `frontend-user/src/design-system/primitives/Button.test.tsx`，并扩展 `packages/ui/src/reactPrimitives.test.tsx`，用 RED/GREEN 锁定共享导出、按钮变体、`active`/`danger` 状态、点击行为与默认按钮类型。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 现状推进到“普通动作按钮也已开始走共享 primitive 出口”。
+
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/Button.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- `npm --workspace frontend-user run test -- src/design-system/primitives/Button.test.tsx src/modules/graph/components/GraphWorkspaceCanvasChrome.test.tsx src/modules/graph/components/GraphWorkspaceShell.test.tsx src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- `npm run typecheck`
+- `npm run build:user`
+
+### 后续影响
+
+- `@studymate/ui` 现在不再只承接状态组件和图标按钮，也开始承接普通动作按钮这类更高频的交互 primitive；后续继续收口 Input、Select、Tag、ConfirmDialog、CommandBar 时，可以沿着同一条变体语义继续扩展。
+- 这一轮仍然只先接了图谱工作区，阅读、笔记、复习与管理端里散落的普通按钮还没有统一迁入共享出口；`FE-041` 下一步更适合继续按真实页面主路径逐段替换，而不是重新设计一套新按钮体系。

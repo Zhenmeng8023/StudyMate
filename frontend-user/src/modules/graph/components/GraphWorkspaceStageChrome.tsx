@@ -7,6 +7,7 @@ import type {
   GraphEdgePayload,
   GraphNodePayload
 } from "../../../api/client";
+import { Button } from "../../../design-system/primitives";
 import {
   buildGraphConflictResolutionBlockingIssueTitle,
   buildGraphConflictResolutionBlockingIssueSummary,
@@ -93,8 +94,8 @@ export function GraphStageCanvas(props: {
               >
                 <div className="graph-group-head">
                   <strong>{group.title}</strong>
-                  <button
-                    className="ghost-button"
+                  <Button
+                    variant="ghost"
                     onClick={(event) => {
                       event.stopPropagation();
                       props.onToggleGroupCollapse(group.id);
@@ -102,7 +103,7 @@ export function GraphStageCanvas(props: {
                     type="button"
                   >
                     {group.collapsed ? "展开" : "折叠"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -261,9 +262,9 @@ export function GraphStageStatus(props: {
           </small>
         ) : null}
         {props.statusActionLabel && props.onStatusAction ? (
-          <button className="ghost-button" onClick={props.onStatusAction} type="button">
+          <Button onClick={props.onStatusAction} variant="ghost">
             {props.statusActionLabel}
-          </button>
+          </Button>
         ) : null}
       </div>
     </div>
@@ -408,9 +409,9 @@ export function GraphConflictAssistCard(props: {
         <div className="graph-inline-copy" aria-label="联动取舍建议">
           <strong>可直接补齐以下联动取舍</strong>
           <div className="graph-inline-actions">
-            <button className="secondary-button" onClick={props.onApplyResolutionSuggestions} type="button">
+            <Button onClick={props.onApplyResolutionSuggestions} variant="secondary">
               {`一键应用 ${props.resolutionSuggestions.length} 项联动取舍建议`}
-            </button>
+            </Button>
           </div>
           <ul className="graph-issue-list">
             {props.resolutionSuggestions.map((suggestion) => (
@@ -420,13 +421,12 @@ export function GraphConflictAssistCard(props: {
               >
                 <p>{suggestion.description}</p>
                 <div className="graph-inline-actions">
-                  <button
-                    className="secondary-button"
+                  <Button
                     onClick={() => props.onChooseResolution(suggestion.scope, suggestion.detail, suggestion.choice)}
-                    type="button"
+                    variant="secondary"
                   >
                     {buildConflictResolutionSuggestionButtonLabel(suggestion)}
-                  </button>
+                  </Button>
                 </div>
               </li>
             ))}
@@ -464,42 +464,42 @@ export function GraphConflictAssistCard(props: {
         <p>如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱。</p>
       </div>
       <div className="graph-inline-actions">
-        <button className="secondary-button" onClick={props.onCopySummaryReport} type="button">
+        <Button onClick={props.onCopySummaryReport} variant="secondary">
           复制冲突摘要
-        </button>
-        <button className="ghost-button" onClick={props.onExportSummaryReport} type="button">
+        </Button>
+        <Button onClick={props.onExportSummaryReport} variant="ghost">
           导出冲突摘要
-        </button>
+        </Button>
         {props.latestHeadAvailable ? (
-          <button className="secondary-button" onClick={props.onCopyLatestJson} type="button">
+          <Button onClick={props.onCopyLatestJson} variant="secondary">
             复制最新图谱 JSON
-          </button>
+          </Button>
         ) : null}
         {props.latestHeadAvailable ? (
-          <button className="ghost-button" onClick={props.onExportLatestJson} type="button">
+          <Button onClick={props.onExportLatestJson} variant="ghost">
             导出最新图谱 JSON
-          </button>
+          </Button>
         ) : null}
         {props.latestHeadAvailable ? (
-          <button className="secondary-button" onClick={props.onExportConflictBundle} type="button">
+          <Button onClick={props.onExportConflictBundle} variant="secondary">
             导出冲突处理包
-          </button>
+          </Button>
         ) : null}
-        <button className="secondary-button" disabled={applyDisabled} onClick={props.onApplyResolutionDrafts} type="button">
+        <Button disabled={applyDisabled} onClick={props.onApplyResolutionDrafts} variant="secondary">
           应用已标记取舍到当前草稿
-        </button>
-        <button className="ghost-button" onClick={props.onDeferManualMerge} type="button">
+        </Button>
+        <Button onClick={props.onDeferManualMerge} variant="ghost">
           先保留本地，稍后人工合并
-        </button>
-        <button className="secondary-button" onClick={props.onCopyDraftJson} type="button">
+        </Button>
+        <Button onClick={props.onCopyDraftJson} variant="secondary">
           复制当前草稿 JSON
-        </button>
-        <button className="ghost-button" onClick={props.onExportDraftJson} type="button">
+        </Button>
+        <Button onClick={props.onExportDraftJson} variant="ghost">
           导出当前草稿 JSON
-        </button>
-        <button className="primary-button" onClick={props.onReloadLatest} type="button">
+        </Button>
+        <Button onClick={props.onReloadLatest} variant="primary">
           放弃本地并重载最新图谱
-        </button>
+        </Button>
       </div>
     </article>
   );
@@ -645,14 +645,13 @@ function renderConflictResolutionButtons(input: {
   return conflictResolutionChoices.map((choice) => {
     const selected = input.resolutionSelections[buildGraphConflictObjectDecisionKey(input.scope, input.detail)] === choice;
     return (
-      <button
-        className={selected ? "secondary-button" : "ghost-button"}
+      <Button
         key={`${input.scope}-${input.detail.id}-${choice}`}
         onClick={() => input.onChooseResolution(input.scope, input.detail, choice)}
-        type="button"
+        variant={selected ? "secondary" : "ghost"}
       >
         {buildConflictResolutionButtonLabel(choice, input.scope, input.detail)}
-      </button>
+      </Button>
     );
   });
 }

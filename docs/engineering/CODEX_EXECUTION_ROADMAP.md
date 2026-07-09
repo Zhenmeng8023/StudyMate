@@ -1,4 +1,4 @@
-# StudyMate 后续执行路线图（基于 2026-07-01 实际仓库）
+﻿# StudyMate 后续执行路线图（基于 2026-07-01 实际仓库）
 
 **原则：先收口安全默认值、质量门禁、设计系统与 API 契约，再补强已有搜索与图谱闭环，最后再扩展工程图谱与桌面端。**
 
@@ -55,6 +55,12 @@
 - `@studymate/ui` 已新增共享 `IconButton`，统一 `icon-button` / `active` class 语义，并开始收口顶栏、图谱 command bar、图谱工具栏这类骨架层图标动作。
 - 用户端 `CommandBar`、`GraphWorkspaceCanvasChrome`、`GraphWorkspaceShell` 与共享 `Drawer` 已接入这层共享 primitive，说明 `FE-041` 正在从“共享单个组件”推进到“共享组件被多个主路径真实消费”。
 - Iteration 4 的下一步应继续把更多现有 primitives 和管理端细节样式收敛到这层共享 token 和状态契约，而不是继续散落在各端页面里维护。
+
+### 2026-07-09 FE-041 共享 Button 图谱接线
+
+- `@studymate/ui` 已新增共享 `Button`，统一 `primary` / `secondary` / `ghost` 变体，并补齐 `active`、`danger` 与默认 `type="button"` 的基础行为语义。
+- 用户端 `GraphWorkspaceCanvasChrome`、`GraphWorkspaceShell`、`GraphWorkspaceImportPanel` 与 `GraphWorkspaceStageChrome` 已开始接入这层共享 primitive，说明 `FE-041` 已从图标按钮继续扩展到普通动作按钮。
+- 下一步应继续沿真实页面主路径推进，把阅读、笔记、复习与管理端里仍散落的普通按钮逐段收口到共享 `Button`，而不是重新设计一套平行按钮体系。
 
 ### 2026-07-08 FE / UI 验证收口更新
 
