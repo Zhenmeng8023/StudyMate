@@ -31,6 +31,7 @@ import {
   previewGraphLayout,
   validateGraph
 } from "../../../api/client";
+import { ConfirmDialog } from "../../../design-system/primitives";
 import {
   getNodeEmphasis,
   getNodeTone,
@@ -202,6 +203,8 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [historyState, setHistoryState] = useState<GraphHistoryState>(createEmptyGraphHistoryState);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("正在加载图谱工作区...");
+  const [confirmDialogAction, setConfirmDialogAction] = useState<"reload-latest" | "delete-graph" | "">("");
+  const [confirmDialogError, setConfirmDialogError] = useState("");
   const [reloadLatestSuggested, setReloadLatestSuggested] = useState(false);
   const [conflictArtifactsCaptured, setConflictArtifactsCaptured] = useState(false);
   const [manualMergeDeferred, setManualMergeDeferred] = useState(false);
@@ -950,12 +953,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     }
 
     const shouldConfirmDiscard = dirty;
-    if (shouldConfirmDiscard && !window.confirm("重新加载最新图谱会丢弃当前未保存修改，确定继续吗？")) {
-      return;
-    }
-
     setLoading(true);
     setReloadLatestSuggested(false);
+    setConfirmDialogError("");
     setWorkspaceStatusMessage("正在重新加载最新图谱...");
     try {
       const detail = await getGraph(props.session, current.id);
@@ -963,6 +963,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       resetHistory(normalized, "重新加载最新图谱");
       const snapshotsLoaded = await loadSnapshots(current.id);
       setSaveState("idle");
+      setConfirmDialogAction("");
       setWorkspaceStatusMessage(
         snapshotsLoaded
           ? shouldConfirmDiscard
@@ -973,10 +974,22 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             : `已重新加载最新图谱；${buildSnapshotListFailureState().statusMessage}`
       );
     } catch (error) {
-      setWorkspaceStatusMessage(error instanceof Error ? error.message : "重新加载图谱失败", { suggestReload: true });
+      const nextMessage = error instanceof Error ? error.message : "重新加载图谱失败";
+      setConfirmDialogError(nextMessage);
+      setWorkspaceStatusMessage(nextMessage, { suggestReload: true });
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleRequestReloadLatestGraph() {
+    if (dirty) {
+      setConfirmDialogError("");
+      setConfirmDialogAction("reload-latest");
+      return;
+    }
+
+    void reloadLatestGraph();
   }
 
   function deferManualMergeUntilLater() {
@@ -1785,11 +1798,8 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       return;
     }
 
-    if (!window.confirm(`确定删除图谱“${current.title}”吗？`)) {
-      return;
-    }
-
     setSaving(true);
+    setConfirmDialogError("");
     try {
       await deleteGraph(props.session, current.id);
       const remaining = graphs.filter((graph) => graph.id !== current.id);
@@ -1801,12 +1811,25 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
         setGraphDetail(null);
         await handleCreateGraph();
       }
+      setConfirmDialogAction("");
       setWorkspaceStatusMessage("图谱已删除");
     } catch (error) {
-      setWorkspaceStatusMessage(error instanceof Error ? error.message : "删除图谱失败");
+      const nextMessage = error instanceof Error ? error.message : "删除图谱失败";
+      setConfirmDialogError(nextMessage);
+      setWorkspaceStatusMessage(nextMessage);
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleRequestDeleteCurrentGraph() {
+    const current = detailRef.current;
+    if (!current) {
+      return;
+    }
+
+    setConfirmDialogError("");
+    setConfirmDialogAction("delete-graph");
   }
 
   function shouldUseOverlayDock() {
@@ -1883,6 +1906,23 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const visibleNotes = notes.slice(0, 6);
   const hasConflict = reloadLatestSuggested && dirty;
   const hasSelection = Boolean(selectedNode || selectedEdge || selectedNodes.length > 1);
+  const currentGraphTitle = graphDetail?.title || detailRef.current?.title || "当前图谱";
+  const confirmDialogOpen = Boolean(confirmDialogAction);
+  const confirmDialogBusy = confirmDialogAction === "reload-latest" ? loading : confirmDialogAction === "delete-graph" ? saving : false;
+  const confirmDialogTitle =
+    confirmDialogAction === "reload-latest"
+      ? "确认重载最新图谱"
+      : confirmDialogAction === "delete-graph"
+        ? "确认删除图谱"
+        : "";
+  const confirmDialogDescription =
+    confirmDialogAction === "reload-latest"
+      ? "继续后会放弃当前未保存修改，并以服务端最新版本替换当前画布。"
+      : confirmDialogAction === "delete-graph"
+        ? `删除“${currentGraphTitle}”后，会切换到剩余图谱或创建新的空白图谱。`
+        : "";
+  const confirmDialogLabel = confirmDialogAction === "reload-latest" ? "确认重载" : "确认删除";
+  const confirmDialogLoadingLabel = confirmDialogAction === "reload-latest" ? "重载中..." : "删除中...";
 
   useEffect(() => {
     if (hasSelection) {
@@ -1899,11 +1939,38 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   }, [hasConflict]);
 
   return (
-    <div
-      className="graph-canvas-workspace"
-      data-inspector-open={inspectorOpen}
-      data-resource-open={resourcePanelOpen}
-    >
+    <>
+      <ConfirmDialog
+        confirmLabel={confirmDialogLabel}
+        confirmTone="danger"
+        confirming={confirmDialogBusy}
+        confirmingLabel={confirmDialogLoadingLabel}
+        description={confirmDialogDescription}
+        errorMessage={confirmDialogError}
+        isOpen={confirmDialogOpen}
+        onCancel={() => {
+          if (confirmDialogBusy) {
+            return;
+          }
+          setConfirmDialogAction("");
+          setConfirmDialogError("");
+        }}
+        onConfirm={() => {
+          if (confirmDialogAction === "reload-latest") {
+            void reloadLatestGraph();
+            return;
+          }
+          if (confirmDialogAction === "delete-graph") {
+            void handleDeleteCurrentGraph();
+          }
+        }}
+        title={confirmDialogTitle}
+      />
+      <div
+        className="graph-canvas-workspace"
+        data-inspector-open={inspectorOpen}
+        data-resource-open={resourcePanelOpen}
+      >
       <GraphWorkspaceCanvasCommandBar
         graphDetail={graphDetail}
         inspectorOpen={inspectorOpen}
@@ -2119,7 +2186,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
               {inspectorTab === "overview" ? (
                 <GraphWorkspaceOverviewPanel
                   graphDetail={graphDetail}
-                  onDelete={() => void handleDeleteCurrentGraph()}
+                  onDelete={handleRequestDeleteCurrentGraph}
                   onDescriptionChange={handleGraphDescriptionChange}
                   onTitleChange={handleGraphTitleChange}
                   saving={saving}
@@ -2289,7 +2356,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                     onChooseResolution={handleConflictResolutionChoice}
                     onDeferManualMerge={deferManualMergeUntilLater}
                     onExportConflictBundle={exportConflictBundle}
-                    onReloadLatest={() => void reloadLatestGraph()}
+                    onReloadLatest={handleRequestReloadLatestGraph}
                     onCopyLatestJson={() => void copyLatestConflictJson()}
                     onCopySummaryReport={() => void copyConflictSummaryReport()}
                     onCopyDraftJson={() => void copyConflictDraftJson()}
@@ -2308,6 +2375,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
           </aside>
         ) : null}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

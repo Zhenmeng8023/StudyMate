@@ -1,3 +1,29 @@
+## 2026-07-09 10:18:44 +08:00 | v1.1.0-alpha.142 | 推进 FE-041 共享 ConfirmDialog 扩展到图谱工作区主路径
+### 任务内容
+
+- 继续沿 `FE-041` 做一个最小、可测试的共享 primitive 扩展，不回到图谱控制器的更深重构，也不新开后台治理分支。
+- 本轮目标是把图谱工作区里仅剩的两处高频原生确认收口到共享 `ConfirmDialog`：一处是冲突处理中的“放弃本地并重载最新图谱”，另一处是概览面板里的“删除当前图谱”。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，先用 RED 锁定图谱工作区的两个目标路径不再直接依赖原生 `window.confirm(...)`，而是先出现共享确认框，再由用户明确点击确认继续执行重载或删除。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增图谱工作区级别的共享确认框状态，统一承接 `reload-latest` 与 `delete-graph` 两类 destructive action，并保留 `danger` 动作、确认中禁用和失败提示。
+- `GraphConflictAssistCard` 的“放弃本地并重载最新图谱”以及 `GraphWorkspaceOverviewPanel` 的“删除当前图谱”现在都会先弹出共享 `ConfirmDialog`，再进入原有的重载或删除业务流。
+- 这一轮完成后，`frontend-user`、`frontend-admin` 与 `packages` 范围内的原生 `window.confirm` 调用已清零，说明用户端主路径的确认交互第一阶段已经从浏览器原生实现统一收口到共享确认框。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 ConfirmDialog 已从笔记页扩展到图谱工作区主路径”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `rg -n "window\\.confirm" frontend-user frontend-admin packages`
+
+### 后续影响
+
+- `ConfirmDialog` 现在已经从单页删除确认扩展到图谱工作区主路径，后续继续推进后台治理里的删除、下架、重试等确认动作时，可以沿同一套 destructive action 语义继续收口。
+- 当前图谱工作区的确认框状态仍然由 `useGraphWorkspaceController.tsx` 直接维护；后续如果沿 `GPH-040` 拆 commands / store，更适合把这类 destructive intent 和对话框状态一起沉到更清晰的边界层。
+
 ## 2026-07-09 10:07:41 +08:00 | v1.1.0-alpha.141 | 推进 FE-041 共享 ConfirmDialog 接入笔记删除确认
 ### 任务内容
 
