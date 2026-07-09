@@ -145,4 +145,109 @@ describe("AdminWorkspaceView governance modules", () => {
     expect(wrapper.text()).toContain("进入管理后台");
     expect(wrapper.text()).toContain("后台会话已失效，请重新登录后继续治理工作。");
   });
+
+  it("asks for confirmation before applying a moderation action", async () => {
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const rejectPath = "/api/v1/admin/moderation/posts/post-1/reject";
+    const moderationItem = {
+      id: "post-1",
+      type: "post" as const,
+      title: "Pending Post",
+      summary: "Needs moderation review",
+      authorName: "Alice",
+      status: "pending",
+      createdAt: "2026-06-02T12:00:00Z",
+      updatedAt: "2026-06-02T12:00:00Z"
+    };
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/overview") {
+        return apiPayload({
+          userCount: 12,
+          postCount: 4,
+          materialCount: 5,
+          graphCount: 6,
+          pendingModerationCount: 1
+        });
+      }
+      if (path === "/api/v1/admin/moderation") {
+        return apiPayload([moderationItem]);
+      }
+      if (path === rejectPath) {
+        expect(init?.method).toBe("POST");
+        return apiPayload({ status: "rejected" });
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    await wrapper.get('[data-admin-view="moderation"]').trigger("click");
+    await flushPromises();
+
+    await wrapper.get(".admin-row-actions .is-danger").trigger("click");
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain("确认驳回这条内容");
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      rejectPath,
+      expect.objectContaining({
+        method: "POST"
+      })
+    );
+
+    await wrapper.get('[data-confirm-cancel="true"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain("确认驳回这条内容");
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      rejectPath,
+      expect.objectContaining({
+        method: "POST"
+      })
+    );
+
+    await wrapper.get(".admin-row-actions .is-danger").trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-confirm-submit="true"]').trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      rejectPath,
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer admin-token"
+        })
+      })
+    );
+    confirmSpy.mockRestore();
+  });
 });
