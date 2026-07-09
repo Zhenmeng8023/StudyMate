@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   batchSaveGraph,
   createGraph,
+  deleteGraph,
   getGraph,
   listDecks,
   listDiagramTemplates,
@@ -26,6 +27,7 @@ vi.mock("../../api/client", async () => {
     ...actual,
     batchSaveGraph: vi.fn(),
     createGraph: vi.fn(),
+    deleteGraph: vi.fn(),
     getGraph: vi.fn(),
     listDecks: vi.fn(),
     listDiagramTemplates: vi.fn(),
@@ -92,6 +94,7 @@ const listGraphSnapshotsMock = vi.mocked(listGraphSnapshots);
 const batchSaveGraphMock = vi.mocked(batchSaveGraph);
 const restoreGraphSnapshotMock = vi.mocked(restoreGraphSnapshot);
 const createGraphMock = vi.mocked(createGraph);
+const deleteGraphMock = vi.mocked(deleteGraph);
 const validateGraphMock = vi.mocked(validateGraph);
 const clipboardWriteTextMock = vi.fn();
 const createObjectUrlMock = vi.fn();
@@ -176,6 +179,7 @@ describe("GraphWorkspacePage persistence states", () => {
     batchSaveGraphMock.mockResolvedValue(graphDetail);
     restoreGraphSnapshotMock.mockResolvedValue(graphDetail);
     createGraphMock.mockResolvedValue(graphDetail);
+    deleteGraphMock.mockResolvedValue(undefined as never);
     validateGraphMock.mockResolvedValue({ issues: [] });
   });
 
@@ -278,7 +282,15 @@ describe("GraphWorkspacePage persistence states", () => {
 
     await user.click(screen.getByRole("button", { name: "放弃本地并重载最新图谱" }));
 
-    expect(confirmSpy).toHaveBeenCalledWith("重新加载最新图谱会丢弃当前未保存修改，确定继续吗？");
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "确认重载最新图谱" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "取消" }));
+    expect(screen.queryByRole("dialog", { name: "确认重载最新图谱" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "放弃本地并重载最新图谱" }));
+    await user.click(screen.getByRole("button", { name: "确认重载" }));
+
     await expect(screen.findByText("已重新加载最新图谱，未保存更改已放弃")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("图谱保存状态：空闲")).toBeInTheDocument();
     expect(screen.getByText(/版本 5 · 0 节点 · 0 连线/)).toBeInTheDocument();
@@ -462,9 +474,64 @@ describe("GraphWorkspacePage persistence states", () => {
     await user.click(screen.getByRole("button", { name: "查看冲突处理" }));
     await user.click(screen.getByRole("button", { name: "放弃本地并重载最新图谱" }));
 
-    expect(confirmSpy).toHaveBeenCalledWith("重新加载最新图谱会丢弃当前未保存修改，确定继续吗？");
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "确认重载最新图谱" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "确认重载" }));
     await expect(screen.findByText("已重新加载最新图谱，未保存更改已放弃")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("图谱保存状态：空闲")).toBeInTheDocument();
+    confirmSpy.mockRestore();
+  });
+
+  it("uses the shared confirm dialog before deleting the current graph", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    listGraphsMock.mockResolvedValue([
+      {
+        ...graphSummary,
+        id: "graph-1",
+        title: "Graph A"
+      },
+      {
+        ...graphSummary,
+        id: "graph-2",
+        title: "Graph B"
+      }
+    ]);
+    getGraphMock.mockReset();
+    getGraphMock
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        title: "Graph A"
+      })
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        id: "graph-2",
+        title: "Graph B",
+        document: {
+          ...graphDetail.document,
+          graphId: "graph-2"
+        }
+      });
+
+    renderWorkspace();
+
+    await openInspectorTab(user, "概览");
+    await user.click(screen.getByRole("button", { name: "删除当前图谱" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "确认删除图谱" })).toBeInTheDocument();
+    expect(deleteGraphMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "取消" }));
+    expect(screen.queryByRole("dialog", { name: "确认删除图谱" })).not.toBeInTheDocument();
+    expect(deleteGraphMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "删除当前图谱" }));
+    await user.click(screen.getByRole("button", { name: "确认删除" }));
+
+    expect(deleteGraphMock).toHaveBeenCalledWith(session, "graph-1");
+    await expect(screen.findByText("图谱已删除")).resolves.toBeInTheDocument();
+    await expect(screen.findByDisplayValue("Graph B")).resolves.toBeInTheDocument();
     confirmSpy.mockRestore();
   });
 
