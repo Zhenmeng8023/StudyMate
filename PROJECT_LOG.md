@@ -1,3 +1,23 @@
+## 2026-07-09 13:58:00 +08:00 | v1.1.0-alpha.154 | 扩充 WB-032 对象级取舍应用后的固定入口 E2E
+### 任务内容
+
+- 继续沿 `WB-032` 推进冲突处理固定验证入口，但这次不再只覆盖“冲突后重载最新图谱”，而是补上一条更贴近对象级冲突主线的真实浏览器路径。
+- 本轮目标是把“标记对象级取舍 -> 应用已标记取舍到当前草稿 -> 以 rebased document 再次保存”接进 `verify:graph-conflicts`，避免这条关键链路只在页面级测试里存在、固定入口还看不到。
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增 Playwright 用例覆盖真实 `graph_version_conflict` 后的对象级取舍应用路径：先保留本地新增节点，再应用已标记取舍生成合并草稿，最后再次点击保存。
+- 这条新 E2E 不只看页面提示，还会捕获第二次 `batch-save` 请求，断言提交的是 rebased `document.version = 5`，并且请求体里带有保留下来的本地节点标题 `新概念`。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，把这条新增固定入口路径补回 `WB-032` 的执行记录和图谱冲突回归矩阵。
+### 验证结果
+
+- RED：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace applies marked conflict resolutions onto the latest head and saves the rebased draft"`
+- GREEN：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace applies marked conflict resolutions onto the latest head and saves the rebased draft"`
+- `npm run verify:graph-conflicts`
+### 后续影响
+
+- `WB-032` 的固定入口现在不再只验证“冲突后放弃并重载”，也开始覆盖“冲突后保留部分本地修改并继续保存”的主路径，后续补更多对象联动与未标记默认回退场景时，可以直接沿这条 E2E 主线扩展。
+- 这次没有改变冲突处理运行时语义，主要是把页面级已经存在的对象级取舍保存链路提升到了 Playwright 固定入口里，降低后续重构时只靠局部测试兜底的风险。
+
 ## 2026-07-09 13:46:00 +08:00 | v1.1.0-alpha.153 | 收口 WB-032 图谱冲突重载确认的 E2E 合同
 ### 任务内容
 

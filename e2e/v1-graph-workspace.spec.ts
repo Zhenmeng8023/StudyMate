@@ -632,6 +632,152 @@ test("graph workspace surfaces version conflict actions and reloads the latest h
   await expect(page.locator('[aria-label="图谱冲突辅助"]')).toHaveCount(0);
 });
 
+test("graph workspace applies marked conflict resolutions onto the latest head and saves the rebased draft", async ({ page }) => {
+  const initialDetail = buildGraphDetail({
+    currentVersion: 4,
+    description: "对象级冲突取舍烟测",
+    document: {
+      graphId: "graph-1",
+      version: 4,
+      schemaVersion: 1,
+      viewport: { x: 140, y: 120, zoom: 1 },
+      nodes: [],
+      edges: [],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 0,
+    nodeCount: 0,
+    title: "冲突图谱",
+    updatedAt: "2026-07-09T08:20:00Z"
+  });
+  const latestDetail = buildGraphDetail({
+    currentVersion: 5,
+    description: "服务端已保存更新后的图谱标题",
+    document: {
+      ...initialDetail.document,
+      version: 5
+    },
+    edgeCount: 0,
+    nodeCount: 0,
+    title: "Graph on server",
+    updatedAt: "2026-07-09T08:25:00Z"
+  });
+  let graphRequestCount = 0;
+  let batchSaveCount = 0;
+  const batchSavePayloads: Array<Record<string, unknown>> = [];
+
+  await page.addInitScript((storedSession) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(storedSession));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      graphRequestCount += 1;
+      await route.fulfill({
+        contentType: "application/json",
+        body: success(graphRequestCount === 1 ? initialDetail : latestDetail)
+      });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-1/batch-save") {
+      batchSaveCount += 1;
+      const payload = route.request().postDataJSON() as Record<string, unknown>;
+      batchSavePayloads.push(payload);
+      if (batchSaveCount === 1) {
+        await route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: "graph_version_conflict",
+              message: "图谱已被其他窗口更新，请刷新当前图谱后再保存。"
+            }
+          })
+        });
+        return;
+      }
+
+      const requestDocument = payload.document as {
+        edges: unknown[];
+        graphId: string;
+        groups: unknown[];
+        metadata: Record<string, unknown>;
+        nodes: Array<Record<string, unknown>>;
+        schemaVersion: number;
+        theme: Record<string, unknown>;
+        version: number;
+        viewport: Record<string, unknown>;
+      };
+
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          ...latestDetail,
+          currentVersion: 6,
+          edgeCount: requestDocument.edges.length,
+          nodeCount: requestDocument.nodes.length,
+          updatedAt: "2026-07-09T08:28:00Z",
+          document: {
+            ...requestDocument,
+            version: 6
+          }
+        })
+      });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([initialDetail]) });
+      return;
+    }
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+
+  await expect(page.getByText("冲突图谱")).toBeVisible();
+  await page.getByTitle("新建概念节点").click();
+  await page.getByRole("button", { name: "保存" }).click();
+
+  await expect(page.getByLabel("图谱冲突辅助")).toBeVisible();
+  await page.getByRole("button", { name: "保留本地（当前未保存修改）：节点｜新增｜新概念" }).click();
+  await page.getByRole("button", { name: "应用已标记取舍到当前草稿" }).click();
+
+  await expect(page.getByText("已基于最新图谱生成合并草稿：保留本地 1 项，请确认后保存")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toBeVisible();
+  await expect(page.getByText("版本 5 · 1 节点 · 0 连线")).toBeVisible();
+  await expect(page.locator('[aria-label="图谱冲突辅助"]')).toHaveCount(0);
+
+  await page.getByRole("button", { name: "保存" }).click();
+
+  await expect(page.getByText("图谱已保存")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：已保存")).toBeVisible();
+  await expect(page.getByText("版本 6 · 1 节点 · 0 连线")).toBeVisible();
+  await expect
+    .poll(() => batchSavePayloads.length, { message: "expected rebased save payload to be captured" })
+    .toBe(2);
+  expect(batchSavePayloads[1]?.document).toMatchObject({
+    version: 5,
+    nodes: [expect.objectContaining({ title: "新概念" })]
+  });
+});
+
 test("graph workspace keeps version conflict handling reachable in a narrow viewport", async ({ page }) => {
   const initialDetail = buildGraphDetail({
     currentVersion: 4,
