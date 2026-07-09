@@ -1003,6 +1003,185 @@ test("graph workspace can batch-apply linked conflict suggestions, clear blocker
   });
 });
 
+test("graph workspace falls back unmarked conflict objects to the latest head when applying marked resolutions", async ({
+  page
+}) => {
+  const initialDetail = buildGraphDetail({
+    currentVersion: 4,
+    description: "未标记对象默认回退烟测",
+    document: {
+      graphId: "graph-1",
+      version: 4,
+      schemaVersion: 1,
+      viewport: { x: 140, y: 120, zoom: 1 },
+      nodes: [
+        {
+          id: "node-1",
+          type: "text",
+          title: "Graph root",
+          x: 140,
+          y: 120,
+          width: 220,
+          height: 132,
+          source: null,
+          metadata: {}
+        }
+      ],
+      edges: [
+        {
+          id: "edge-legacy",
+          kind: "curve",
+          sourceNodeId: "node-1",
+          targetNodeId: "node-1",
+          label: "旧关系",
+          metadata: {}
+        }
+      ],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 1,
+    nodeCount: 1,
+    title: "未标记冲突图谱",
+    updatedAt: "2026-07-09T08:40:00Z"
+  });
+  const latestDetail = buildGraphDetail({
+    currentVersion: 5,
+    description: "服务端已删除旧关系",
+    document: {
+      ...initialDetail.document,
+      version: 5,
+      edges: []
+    },
+    edgeCount: 0,
+    nodeCount: 1,
+    title: "最新图谱",
+    updatedAt: "2026-07-09T08:45:00Z"
+  });
+  let graphRequestCount = 0;
+  let batchSaveCount = 0;
+  const batchSavePayloads: Array<Record<string, unknown>> = [];
+
+  await page.addInitScript((storedSession) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(storedSession));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      graphRequestCount += 1;
+      await route.fulfill({
+        contentType: "application/json",
+        body: success(graphRequestCount === 1 ? initialDetail : latestDetail)
+      });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-1/batch-save") {
+      batchSaveCount += 1;
+      const payload = route.request().postDataJSON() as Record<string, unknown>;
+      batchSavePayloads.push(payload);
+      if (batchSaveCount === 1) {
+        await route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: "graph_version_conflict",
+              message: "图谱已被其他窗口更新，请刷新当前图谱后再保存。"
+            }
+          })
+        });
+        return;
+      }
+
+      const requestDocument = payload.document as {
+        edges: Array<Record<string, unknown>>;
+        graphId: string;
+        groups: Array<Record<string, unknown>>;
+        metadata: Record<string, unknown>;
+        nodes: Array<Record<string, unknown>>;
+        schemaVersion: number;
+        theme: Record<string, unknown>;
+        version: number;
+        viewport: Record<string, unknown>;
+      };
+
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          ...latestDetail,
+          currentVersion: 6,
+          edgeCount: requestDocument.edges.length,
+          nodeCount: requestDocument.nodes.length,
+          updatedAt: "2026-07-09T08:48:00Z",
+          document: {
+            ...requestDocument,
+            version: 6
+          }
+        })
+      });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([initialDetail]) });
+      return;
+    }
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+
+  await expect(page.getByText("未标记冲突图谱")).toBeVisible();
+  await expect(page.getByText("版本 4 · 1 节点 · 1 连线")).toBeVisible();
+  await page.getByTitle("新建概念节点").click();
+  await page.getByRole("button", { name: "保存" }).click();
+
+  await expect(page.getByLabel("图谱冲突辅助")).toBeVisible();
+  await expect(page.getByLabel("未标记对象提示")).toContainText("还有 3 个对象尚未标记取舍");
+  await page.getByRole("button", { name: "保留本地（当前未保存修改）：节点｜新增｜新概念" }).click();
+  await expect(page.getByLabel("未标记对象提示")).toContainText("还有 2 个对象尚未标记取舍");
+  await expect(page.getByLabel("取舍应用预检")).toContainText("另外 2 个未标记对象会默认沿用最新图谱版本");
+
+  await page.getByRole("button", { name: "应用已标记取舍到当前草稿" }).click();
+
+  await expect(page.getByText("已基于最新图谱生成合并草稿：保留本地 1 项，请确认后保存")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toBeVisible();
+  await expect(page.getByText("版本 5 · 2 节点 · 0 连线")).toBeVisible();
+  await expect(page.locator('[aria-label="图谱冲突辅助"]')).toHaveCount(0);
+
+  await page.getByRole("button", { name: "保存" }).click();
+
+  await expect(page.getByText("图谱已保存", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：已保存")).toBeVisible();
+  await expect(page.getByText("版本 6 · 2 节点 · 0 连线")).toBeVisible();
+  await expect
+    .poll(() => batchSavePayloads.length, { message: "expected unmarked-fallback save payload to be captured" })
+    .toBe(2);
+  expect(batchSavePayloads[1]?.document).toMatchObject({
+    version: 5,
+    nodes: [
+      expect.objectContaining({ title: "Graph root" }),
+      expect.objectContaining({ title: "新概念" })
+    ],
+    edges: []
+  });
+});
+
 test("graph workspace keeps version conflict handling reachable in a narrow viewport", async ({ page }) => {
   const initialDetail = buildGraphDetail({
     currentVersion: 4,

@@ -1,3 +1,23 @@
+## 2026-07-09 14:14:00 +08:00 | v1.1.0-alpha.156 | 扩充 WB-032 未标记对象默认回退后的固定入口 E2E
+### 任务内容
+
+- 继续沿 `WB-032` 扩固定验证入口，这次聚焦“只标记部分对象级取舍时，剩余未标记对象默认沿用最新版本”的真实浏览器路径。
+- 本轮目标是把“服务端已删除旧连线 + 本地新增节点 + 只标记本地新节点 -> 未标记对象按 latest head 默认回退 -> 再次保存”接进 `verify:graph-conflicts`，避免未标记默认回退这条主线只停留在页面级预检提示里。
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增 Playwright 用例覆盖真实 `graph_version_conflict` 后的未标记默认回退路径：先让服务端版本删除 `旧关系`，本地再新增 `新概念` 节点，只标记保留本地节点，随后应用已标记取舍并再次保存。
+- 这条新 E2E 会先锁定冲突卡片里的“还有 3 个对象尚未标记取舍”与“另外 2 个未标记对象会默认沿用最新图谱版本”提示，再捕获第二次 `batch-save` 请求，断言最终提交的是 rebased `document.version = 5`，并且保存结果符合默认回退合同：保留 `Graph root` 与 `新概念` 两个节点，同时移除未标记的 `旧关系` 连线。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，把这条新增固定入口路径补回 `WB-032` 的执行记录和图谱冲突回归矩阵。
+### 验证结果
+
+- RED：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace falls back unmarked conflict objects to the latest head when applying marked resolutions"`
+- GREEN：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace falls back unmarked conflict objects to the latest head when applying marked resolutions"`
+- `npm run verify:graph-conflicts`
+### 后续影响
+
+- `WB-032` 的固定入口现在已经开始覆盖“未标记对象默认沿用最新版本”的真实浏览器链路，后续如果继续扩 latest-head 多目标依赖、未标记对象示例文案或默认回退语义，可以直接沿这条 E2E 主线补充。
+- 这次没有修改冲突处理运行时语义，主要是把页面级已经存在的未标记默认回退预检与保存结果提升到了 Playwright 固定入口里，降低后续只靠局部测试兜底的风险。
+
 ## 2026-07-09 14:07:00 +08:00 | v1.1.0-alpha.155 | 扩充 WB-032 联动取舍建议清阻断后的固定入口 E2E
 ### 任务内容
 
