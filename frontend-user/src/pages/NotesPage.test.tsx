@@ -95,6 +95,24 @@ describe("NotesPage", () => {
         averageRating: 0,
         createdAt: "2026-06-02T12:00:00Z",
         updatedAt: "2026-06-02T12:00:00Z"
+      },
+      {
+        id: "material-2",
+        ownerUserId: "user-1",
+        ownerName: "Alice",
+        title: "线性代数",
+        description: "矩阵基础",
+        category: "course",
+        tags: ["math"],
+        coverFileId: "",
+        attachmentFileId: "file-2",
+        attachmentName: "linear.pdf",
+        attachmentMime: "application/pdf",
+        status: "approved",
+        favoritesCount: 0,
+        averageRating: 0,
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
       }
     ]);
     listDecksMock.mockResolvedValue([]);
@@ -139,5 +157,21 @@ describe("NotesPage", () => {
     await user.click(screen.getByRole("button", { name: "新建" }));
     expect(screen.getByText("新建草稿")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "创建笔记" }).length).toBeGreaterThan(0);
+  });
+
+  it("uses the shared select for note material source", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <NotesPage session={session} />
+      </MemoryRouter>
+    );
+
+    const select = await screen.findByLabelText("资料来源");
+    expect(select.tagName).toBe("SELECT");
+    expect(select.className).toContain("ds-select");
+
+    await user.selectOptions(select, "material-2");
+    expect(screen.getByLabelText("资料来源")).toHaveValue("material-2");
   });
 });

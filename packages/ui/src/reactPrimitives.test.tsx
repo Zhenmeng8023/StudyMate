@@ -2,7 +2,7 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { Button, DataState, Drawer, IconButton, Input, Inspector, Tag } from "./index";
+import { Button, DataState, Drawer, IconButton, Input, Inspector, Select, Tag } from "./index";
 
 describe("@studymate/ui react primitive contract", () => {
   it("renders the shared data state copy", () => {
@@ -95,5 +95,20 @@ describe("@studymate/ui react primitive contract", () => {
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(input.className).toContain("ds-input");
     expect(input.className).toContain("is-invalid");
+  });
+
+  it("renders a shared select with invalid state", () => {
+    render(
+      <Select aria-label="资料来源" invalid value="material-2" onChange={() => undefined}>
+        <option value="">暂不关联资料</option>
+        <option value="material-2">线性代数</option>
+      </Select>,
+    );
+
+    const select = screen.getByLabelText("资料来源");
+    expect(select.tagName).toBe("SELECT");
+    expect(select.getAttribute("aria-invalid")).toBe("true");
+    expect(select.className).toContain("ds-select");
+    expect(select.className).toContain("is-invalid");
   });
 });
