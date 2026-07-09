@@ -421,6 +421,7 @@ export interface SearchResultPayload {
 export interface SearchGroupPayload {
   type: SearchResultType;
   count: number;
+  returnedCount: number;
   results: SearchResultPayload[];
 }
 

@@ -15,11 +15,11 @@ type fakeIndexer struct {
 		limit    int
 		userID   string
 	}
-	results map[string][]searchdto.Result
+	results map[string]*SearchBatch
 	err     error
 }
 
-func (f *fakeIndexer) Search(itemType string, keyword string, limit int, userID string) ([]searchdto.Result, error) {
+func (f *fakeIndexer) Search(itemType string, keyword string, limit int, userID string) (*SearchBatch, error) {
 	f.calls = append(f.calls, struct {
 		itemType string
 		keyword  string
@@ -92,23 +92,29 @@ func TestSearchReturnsEmptyPayloadForBlankQuery(t *testing.T) {
 
 func TestSearchUsesIndexerAcrossRequestedGroups(t *testing.T) {
 	indexer := &fakeIndexer{
-		results: map[string][]searchdto.Result{
-			"note": {{
-				Type:    "note",
-				ID:      "note-1",
-				Title:   "Graph note",
-				Summary: "summary",
-				URL:     "/notes?selected=note-1",
-				Source:  "note",
-			}},
-			"graph": {{
-				Type:    "graph",
-				ID:      "graph-1",
-				Title:   "Knowledge graph",
-				Summary: "summary",
-				URL:     "/graph?graphId=graph-1",
-				Source:  "graph",
-			}},
+		results: map[string]*SearchBatch{
+			"note": {
+				TotalCount: 4,
+				Results: []searchdto.Result{{
+					Type:    "note",
+					ID:      "note-1",
+					Title:   "Graph note",
+					Summary: "summary",
+					URL:     "/notes?selected=note-1",
+					Source:  "note",
+				}},
+			},
+			"graph": {
+				TotalCount: 2,
+				Results: []searchdto.Result{{
+					Type:    "graph",
+					ID:      "graph-1",
+					Title:   "Knowledge graph",
+					Summary: "summary",
+					URL:     "/graph?graphId=graph-1",
+					Source:  "graph",
+				}},
+			},
 		},
 	}
 
@@ -117,8 +123,14 @@ func TestSearchUsesIndexerAcrossRequestedGroups(t *testing.T) {
 		t.Fatalf("expected grouped search to succeed, got error %v", err)
 	}
 
-	if payload.Query != "graph" || payload.Total != 2 || len(payload.Groups) != 2 {
+	if payload.Query != "graph" || payload.Total != 6 || len(payload.Groups) != 2 {
 		t.Fatalf("unexpected grouped search payload: %#v", payload)
+	}
+	if payload.Groups[0].Count != 4 || payload.Groups[0].ReturnedCount != 1 {
+		t.Fatalf("expected note group to expose total count and returned count, got %#v", payload.Groups[0])
+	}
+	if payload.Groups[1].Count != 2 || payload.Groups[1].ReturnedCount != 1 {
+		t.Fatalf("expected graph group to expose total count and returned count, got %#v", payload.Groups[1])
 	}
 
 	if len(indexer.calls) != 2 {
@@ -135,7 +147,7 @@ func TestSearchUsesIndexerAcrossRequestedGroups(t *testing.T) {
 }
 
 func TestSearchClampsLimitToMaximumPageSize(t *testing.T) {
-	indexer := &fakeIndexer{results: map[string][]searchdto.Result{}}
+	indexer := &fakeIndexer{results: map[string]*SearchBatch{}}
 
 	_, err := NewServiceWithIndexer(indexer).Search("graph", []string{"graph"}, 999, "user-7")
 	if err != nil {
@@ -150,7 +162,7 @@ func TestSearchClampsLimitToMaximumPageSize(t *testing.T) {
 }
 
 func TestSearchDefaultsToAllGroupsWhenTypesFilterMissing(t *testing.T) {
-	indexer := &fakeIndexer{results: map[string][]searchdto.Result{}}
+	indexer := &fakeIndexer{results: map[string]*SearchBatch{}}
 
 	payload, err := NewServiceWithIndexer(indexer).Search("graph", []string{""}, 8, "user-7")
 	if err != nil {

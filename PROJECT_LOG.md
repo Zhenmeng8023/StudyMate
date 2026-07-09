@@ -5015,3 +5015,26 @@
 
 - 后台用户治理现在不再只影响“下次登录 / 下次 refresh”；禁用用户后，现有 refresh token 会被撤销，运行中的受保护请求也会在中间件层按真实用户状态与角色重新校验。
 - 当前前后台共享会话层仍主要围绕 `401 refresh/replay/fail-logout`；对于请求阶段直接收到的 `403 user_disabled`，前端还没有统一清 session 并提示“账号已被禁用”的被动登出语义，后续更适合沿 `API-011 / ADM-011` 联动收口。
+## 2026-07-09 13:24:15 +08:00 | v1.1.0-alpha.153 | 推进 SE-020 搜索真实命中数与首批返回数分离
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进搜索产品化，但先收口最小安全切片，不直接一口气引入 cursor 或重做搜索页。
+- 本轮目标是把 `/api/v1/search` 的“真实命中总数”与“当前首批返回批次”显式拆开，避免用户端把当前批次分页误判为服务端真分页，也为后续 `SE-020` 的 cursor/offset 契约预留接口语义。
+
+### 实际变更
+
+- 更新 `backend/internal/modules/search/dto/search.go`、`service/service.go`、`service/indexer.go` 与相关测试：搜索 grouped payload 现已稳定返回 `count`、`returnedCount` 与 `results[]`，其中 `count` 表示真实命中总数，`returnedCount` 表示这次请求实际返回的首批数量，`total` 也同步改为所有分组真实命中总数之和。
+- 新增 / 更新 `backend/internal/modules/search/service/indexer_test.go`、`service_test.go` 与 `handler_test.go`，先用 RED 锁定“真实命中数大于返回批次数”时的行为，再在 GREEN 锁定 `SE-020` 这一小步的后端契约。
+- fallback indexer 不再把 `url` 与 `source` 通过 SQL `CONCAT(...)` 拼进查询结果，而是在 Go 层统一构造，减少数据库方言耦合，也让 sqlite 测试环境可以直接验证真实命中统计。
+- 更新 `frontend-user/src/api/types.ts`、`src/api/searchShare.test.ts`、`src/modules/search/SearchWorkspacePage.tsx` 与 `SearchWorkspacePage.test.tsx`，让用户端搜索页继续保留当前批次内分页，但当真实命中数大于首批返回数时，会明确显示“当前仅展示首批 X / Y 条结果。”。
+- 重写 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`，并同步更新 `README.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把这次切片标记为 `SE-020` 已启动但尚未完成服务端真分页。
+
+### 验证结果
+
+- `go test ./internal/modules/search/...`
+- `npm --workspace frontend-user run test -- src/api/searchShare.test.ts src/modules/search/SearchWorkspacePage.test.tsx`
+
+### 后续影响
+
+- 搜索契约现在终于把“真实命中总数”和“当前首批返回数组”分开表达，前端不再需要把 `count === results.length` 作为隐含前提；这为后续补 `cursor / nextCursor / sort / duration` 留出了明确扩展位。
+- 本轮仍未完成跨批次服务端分页、搜索耗时暴露、空结果建议和异步索引能力；下一步更适合继续沿 `SE-020 / WB-043 / WB-044` 推进，而不是在搜索页继续堆更多局部 UI 逻辑。

@@ -48,7 +48,7 @@
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
 | ADM-010 | IN_PROGRESS | 管理端 Vue Router 模块化与 URL 状态 | WB-040, FE-040 | `frontend-admin/src/app/`、`frontend-admin/src/features/`、`frontend-admin/src/pages/` | 当前已具备 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/graph`、`/admin/ai`、`/admin/system`、`/admin/audit` 等可刷新、可回退、可直达 URL，并已拆出登录视图、已登录壳层以及 dashboard / moderation / governance 首批模块视图；后续继续推进真正 page / feature 边界与更完整的治理路由。 |
 | ADM-011 | IN_PROGRESS | 后台治理动作化第一批 | ADM-010, WB-042 | admin modules + audit | 当前已落地五段真实治理切片并开始补强会话边界：举报支持 `resolve / dismiss`、写回 `handled_by / handled_at` 并进入审计链路；资料治理已切到真实 `/admin/materials` 列表，并可对资料执行 `approve / reject / hide`，其中已隐藏资料可直接恢复；AI 任务已支持 `retry / cancel` 状态动作与审计留痕；用户治理已支持 `disable / activate`，禁用时会撤销该用户仍有效的 refresh token，认证中间件会在请求时按数据库中的当前用户状态与角色做校验，且前端对运行中收到的 `403 user_disabled` 已能统一清 session 并回退登录页；图谱模板治理已切到真实 `/admin/diagram-templates` 列表，并可对模板执行 `publish / unpublish`，且会同步影响用户端 `/api/v1/diagram/templates` 可见性。后续继续补举报处理备注与更细粒度的资源权限边界。 |
-| SE-020 | TODO | MySQL fallback 搜索服务端分页与真实统计 | WB-014 | search service/handler/frontend search | `GET /search` 支持 cursor/limit/sort 或等价分页；每类结果有真实命中数、搜索耗时、排序语义、空结果建议和来源跳转契约。 |
+| SE-020 | IN_PROGRESS | MySQL fallback 搜索服务端分页与真实统计 | WB-014 | search service/handler/frontend search | `GET /search` 支持 cursor/limit/sort 或等价分页；每类结果有真实命中数、搜索耗时、排序语义、空结果建议和来源跳转契约。 |
 | WB-043 | TODO | SearchIndexer 升级与 Meilisearch 评估 | SE-020 | search module/config/deploy | 前端 API 不变；索引实现可替换，具备配置开关；明确是否进入 Meilisearch 的采用/不采用结论。 |
 | WB-044 | TODO | 搜索同步与失败恢复任务 | WB-043 | jobs/queue/search | 具备重建索引、失败重试、幂等与可观测字段。 |
 
@@ -63,6 +63,21 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：SE-020（真实命中数与首批返回数分离）
+- 执行日期：2026-07-09
+- 本轮完成：
+  - `backend/internal/modules/search/service/service_test.go`、`indexer_test.go`、`handler_test.go` 先补 RED/GREEN 回归，锁定 `/api/v1/search` 现在需要把“真实命中总数”和“当前首批返回数”分开表达，而不是继续把 `count` 当成 `results.length`。
+  - `backend/internal/modules/search/dto/search.go`、`service/service.go` 与 `service/indexer.go` 已把 grouped payload 扩到 `count + returnedCount + results[]` 语义，其中 `count` 为真实命中总数，`returnedCount` 为当前返回批次大小，`total` 也同步回到真实总命中数。
+  - fallback indexer 现已把 `url/source` 组装下沉到 Go 层，不再依赖 SQL 内联 `CONCAT(...)`；这让测试环境与后续索引实现更容易复用同一套结果构造逻辑。
+  - `frontend-user/src/modules/search/SearchWorkspacePage.tsx` 与 `SearchWorkspacePage.test.tsx` 已补页面级提示：当分组真实命中数大于首批返回数时，界面会明确显示“当前仅展示首批 X / Y 条结果。”，避免把当前批次分页误解成后端真分页。
+  - `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`、`README.md` 与本执行记录已同步更新为当前语义。
+- 已执行验证：
+  - `go test ./internal/modules/search/...`
+  - `npm --workspace frontend-user run test -- src/api/searchShare.test.ts src/modules/search/SearchWorkspacePage.test.tsx`
+- 风险与后续：
+  - 本轮只完成了 `SE-020` 的第一小步，后端仍未提供 cursor / offset / next token 等跨批次分页契约。
+  - 搜索耗时、排序元数据、空结果建议和可替换索引的产品化收口，仍需继续沿 `SE-020 / WB-043 / WB-044` 推进。
 
 ### 执行记录：ADM-011（用户会话即时失效与权限边界补强）
 - 执行日期：2026-07-09

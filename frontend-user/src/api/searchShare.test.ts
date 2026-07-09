@@ -37,6 +37,7 @@ describe("search and share API clients", () => {
         {
           type: "note",
           count: 1,
+          returnedCount: 1,
           results: [
             {
               type: "note",

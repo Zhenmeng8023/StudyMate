@@ -11,11 +11,11 @@ import {
 const searchGroupOrder: SearchResultType[] = ["material", "post", "note", "graph", "card"];
 
 const groupLabels: Record<SearchResultType, string> = {
-  material: "资料",
-  post: "社区",
-  note: "笔记",
-  graph: "图谱",
-  card: "卡片"
+  material: "\u8d44\u6599",
+  post: "\u793e\u533a",
+  note: "\u7b14\u8bb0",
+  graph: "\u56fe\u8c31",
+  card: "\u5361\u7247"
 };
 
 const searchFetchLimit = 12;
@@ -59,9 +59,19 @@ function emptySearchResponse(query: string): SearchResponsePayload {
     groups: searchGroupOrder.map((type) => ({
       type,
       count: 0,
+      returnedCount: 0,
       results: []
     }))
   };
+}
+
+function buildSearchCompleteMessage(payload: SearchResponsePayload): string {
+  const partialGroups = payload.groups.filter((group) => group.count > group.returnedCount && group.returnedCount > 0);
+  if (partialGroups.length === 0) {
+    return `\u641c\u7d22\u5b8c\u6210\uff0c\u5171 ${payload.total} \u6761\u7ed3\u679c\u3002`;
+  }
+
+  return `\u641c\u7d22\u5b8c\u6210\uff0c\u5171 ${payload.total} \u6761\u7ed3\u679c\u3002\u90e8\u5206\u5206\u7ec4\u5f53\u524d\u4ec5\u5c55\u793a\u9996\u6279\u5185\u5bb9\uff0c\u53ef\u7ee7\u7eed\u7f29\u5c0f\u5173\u952e\u8bcd\u6216\u5207\u6362\u7c7b\u578b\u67e5\u770b\u3002`;
 }
 
 export function SearchWorkspacePage(props: { session: AuthSession | null }) {
@@ -70,12 +80,12 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
   const { keyword, selectedTypes } = useSearchState();
   const [payload, setPayload] = useState<SearchResponsePayload>(() => emptySearchResponse(""));
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("输入关键词后开始搜索。");
+  const [message, setMessage] = useState("\u8f93\u5165\u5173\u952e\u8bcd\u540e\u5f00\u59cb\u641c\u7d22\u3002");
   const [groupPages, setGroupPages] = useState<Partial<Record<SearchResultType, number>>>({});
 
   const filterSummary = selectedTypes.length
     ? selectedTypes.map((type) => groupLabels[type]).join(" / ")
-    : "全部类型";
+    : "\u5168\u90e8\u7c7b\u578b";
 
   useEffect(() => {
     setGroupPages({});
@@ -88,16 +98,17 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
       if (!keyword) {
         setLoading(false);
         setPayload(emptySearchResponse(""));
-        setMessage("在顶部搜索框输入关键词并按回车。");
+        setMessage("\u5728\u9876\u90e8\u641c\u7d22\u6846\u8f93\u5165\u5173\u952e\u8bcd\u5e76\u6309\u56de\u8f66\u3002");
         return;
       }
 
       setLoading(true);
       setMessage(
         selectedTypes.length
-          ? `正在搜索 ${filterSummary} 结果。`
-          : "正在搜索资料、社区，以及你可访问的笔记、图谱和卡片。"
+          ? `\u6b63\u5728\u641c\u7d22 ${filterSummary} \u7ed3\u679c\u3002`
+          : "\u6b63\u5728\u641c\u7d22\u8d44\u6599\u3001\u793e\u533a\uff0c\u4ee5\u53ca\u4f60\u53ef\u8bbf\u95ee\u7684\u7b14\u8bb0\u3001\u56fe\u8c31\u548c\u5361\u7247\u3002"
       );
+
       try {
         const nextPayload = await searchAll(props.session, {
           query: keyword,
@@ -107,14 +118,16 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
         if (canceled) {
           return;
         }
+
         setPayload(nextPayload);
-        setMessage(`搜索完成，共 ${nextPayload.total} 条结果。`);
+        setMessage(buildSearchCompleteMessage(nextPayload));
       } catch (error) {
         if (canceled) {
           return;
         }
+
         setPayload(emptySearchResponse(keyword));
-        setMessage(error instanceof Error ? error.message : "搜索失败");
+        setMessage(error instanceof Error ? error.message : "\u641c\u7d22\u5931\u8d25");
       } finally {
         if (!canceled) {
           setLoading(false);
@@ -166,10 +179,10 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
     <>
       <header className="workspace-header">
         <div>
-          <p className="eyebrow">全站搜索</p>
-          <h1>{keyword ? `"${keyword}"` : "输入关键词开始搜索"}</h1>
+          <p className="eyebrow">\u5168\u7ad9\u641c\u7d22</p>
+          <h1>{keyword ? `"${keyword}"` : "\u8f93\u5165\u5173\u952e\u8bcd\u5f00\u59cb\u641c\u7d22"}</h1>
           <p className="header-copy">
-            按类型汇总资料、社区、笔记、图谱和卡片；登录后会包含你有权限访问的个人学习资产。
+            \u6309\u7c7b\u578b\u805a\u5408\u8d44\u6599\u3001\u793e\u533a\u3001\u7b14\u8bb0\u3001\u56fe\u8c31\u548c\u5361\u7247\uff1b\u767b\u5f55\u540e\u4f1a\u5305\u542b\u4f60\u6709\u6743\u9650\u8bbf\u95ee\u7684\u4e2a\u4eba\u5b66\u4e60\u8d44\u4ea7\u3002
           </p>
         </div>
       </header>
@@ -178,20 +191,20 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
         <section className="section-frame">
           <div className="section-frame-head">
             <div>
-              <p className="eyebrow">结果概览</p>
-              <h2>{loading ? "加载中" : `${payload.total} 条结果`}</h2>
+              <p className="eyebrow">\u7ed3\u679c\u6982\u89c8</p>
+              <h2>{loading ? "\u52a0\u8f7d\u4e2d" : `${payload.total} \u6761\u7ed3\u679c`}</h2>
             </div>
           </div>
           <p className="panel-copy">{message}</p>
           <div className="search-filter-rail">
-            <div aria-label="搜索类型筛选" className="chip-row" role="group">
+            <div aria-label="\u641c\u7d22\u7c7b\u578b\u7b5b\u9009" className="chip-row" role="group">
               <button
                 aria-pressed={selectedTypes.length === 0}
                 className={selectedTypes.length === 0 ? "filter-chip active" : "filter-chip"}
                 onClick={() => handleTypeFilter([])}
                 type="button"
               >
-                全部类型
+                \u5168\u90e8\u7c7b\u578b
               </button>
               {searchGroupOrder.map((type) => (
                 <button
@@ -206,7 +219,7 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
               ))}
             </div>
             <p className="panel-copy">
-              当前筛选：{filterSummary}。结果按内容类型分组，方便快速切换回对应学习场景。
+              \u5f53\u524d\u7b5b\u9009\uff1a{filterSummary}\u3002\u7ed3\u679c\u6309\u5185\u5bb9\u7c7b\u578b\u5206\u7ec4\uff0c\u65b9\u4fbf\u5feb\u901f\u5207\u6362\u56de\u5bf9\u5e94\u5b66\u4e60\u573a\u666f\u3002
             </p>
           </div>
         </section>
@@ -215,11 +228,13 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
           <section className="section-frame">
             <div className="section-frame-head">
               <div>
-                <p className="eyebrow">空结果</p>
-                <h2>当前筛选没有命中结果</h2>
+                <p className="eyebrow">\u7a7a\u7ed3\u679c</p>
+                <h2>\u5f53\u524d\u7b5b\u9009\u6ca1\u6709\u547d\u4e2d\u7ed3\u679c</h2>
               </div>
             </div>
-            <p className="panel-copy">可以尝试缩短关键词，或者切回“全部类型”重新搜索。</p>
+            <p className="panel-copy">
+              \u53ef\u4ee5\u5c1d\u8bd5\u7f29\u77ed\u5173\u952e\u8bcd\uff0c\u6216\u8005\u5207\u56de\u201c\u5168\u90e8\u7c7b\u578b\u201d\u91cd\u65b0\u641c\u7d22\u3002
+            </p>
           </section>
         ) : null}
 
@@ -248,6 +263,7 @@ function SearchGroupSection(props: {
   const totalPages = Math.max(1, Math.ceil(props.group.results.length / groupPageSize));
   const currentPage = Math.min(props.currentPage, totalPages);
   const visibleResults = props.group.results.slice((currentPage - 1) * groupPageSize, currentPage * groupPageSize);
+  const hasPartialBatch = props.group.count > props.group.returnedCount;
 
   return (
     <article className="section-frame slim">
@@ -257,6 +273,9 @@ function SearchGroupSection(props: {
           <h2>{props.group.count}</h2>
         </div>
       </div>
+      {hasPartialBatch ? (
+        <p className="panel-copy">{`\u5f53\u524d\u4ec5\u5c55\u793a\u9996\u6279 ${props.group.returnedCount} / ${props.group.count} \u6761\u7ed3\u679c\u3002`}</p>
+      ) : null}
       <div className="search-result-list">
         {visibleResults.map((item) => (
           <Link className="search-result-card" key={`${item.type}:${item.id}`} to={item.url}>
@@ -265,29 +284,29 @@ function SearchGroupSection(props: {
             <p>{item.summary}</p>
           </Link>
         ))}
-        {props.keyword && props.group.results.length === 0 ? <p className="panel-copy">暂无匹配结果。</p> : null}
+        {props.keyword && props.group.results.length === 0 ? <p className="panel-copy">\u6682\u65e0\u5339\u914d\u7ed3\u679c\u3002</p> : null}
       </div>
       {totalPages > 1 ? (
         <div className="search-pagination">
-          <p className="panel-copy">{`第 ${currentPage} / ${totalPages} 页`}</p>
+          <p className="panel-copy">{`\u7b2c ${currentPage} / ${totalPages} \u9875`}</p>
           <div className="search-pagination-controls">
             <button
-              aria-label={`${groupLabels[props.group.type]}上一页`}
+              aria-label={`${groupLabels[props.group.type]}\u4e0a\u4e00\u9875`}
               className="filter-chip"
               disabled={currentPage <= 1}
               onClick={() => props.onPageChange(props.group.type, Math.max(1, currentPage - 1))}
               type="button"
             >
-              上一页
+              \u4e0a\u4e00\u9875
             </button>
             <button
-              aria-label={`${groupLabels[props.group.type]}下一页`}
+              aria-label={`${groupLabels[props.group.type]}\u4e0b\u4e00\u9875`}
               className="filter-chip"
               disabled={currentPage >= totalPages}
               onClick={() => props.onPageChange(props.group.type, Math.min(totalPages, currentPage + 1))}
               type="button"
             >
-              下一页
+              \u4e0b\u4e00\u9875
             </button>
           </div>
         </div>

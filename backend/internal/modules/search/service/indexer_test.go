@@ -4,6 +4,9 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
 )
 
 func TestRankAndLimitSearchRowsPrioritizesTitleMatches(t *testing.T) {
@@ -99,6 +102,52 @@ func TestBuildSearchQueryScopesPrivateUserContent(t *testing.T) {
 	cardSpec := mustBuildSearchSpec(t, "card", "图谱", 20, "user-1")
 	if !strings.Contains(cardSpec.whereSQL, "owner_user_id = ? AND status = ?") {
 		t.Fatalf("expected card search to stay within owner active cards, got %#v", cardSpec)
+	}
+}
+
+func TestMySQLFallbackIndexerReportsTrueMatchCountBeyondReturnedBatch(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+
+	if err := db.Exec(`
+		CREATE TABLE materials (
+			id TEXT PRIMARY KEY,
+			title TEXT NOT NULL,
+			description TEXT NOT NULL,
+			category TEXT NOT NULL,
+			tags TEXT NOT NULL,
+			status TEXT NOT NULL,
+			updated_at DATETIME NOT NULL
+		)
+	`).Error; err != nil {
+		t.Fatalf("create materials table: %v", err)
+	}
+
+	for _, statement := range []string{
+		"INSERT INTO materials (id, title, description, category, tags, status, updated_at) VALUES ('material-1', '图谱入门', '第一条', 'graph', 'graph', 'approved', '2026-07-09T12:00:00Z')",
+		"INSERT INTO materials (id, title, description, category, tags, status, updated_at) VALUES ('material-2', '图谱进阶', '第二条', 'graph', 'graph', 'approved', '2026-07-09T11:00:00Z')",
+		"INSERT INTO materials (id, title, description, category, tags, status, updated_at) VALUES ('material-3', '图谱案例', '第三条', 'graph', 'graph', 'approved', '2026-07-09T10:00:00Z')",
+	} {
+		if err := db.Exec(statement).Error; err != nil {
+			t.Fatalf("seed materials: %v", err)
+		}
+	}
+
+	indexer := NewMySQLFallbackIndexer(db)
+	batch, err := indexer.Search("material", "图谱", 1, "")
+	if err != nil {
+		t.Fatalf("search materials: %v", err)
+	}
+	if batch.TotalCount != 3 {
+		t.Fatalf("expected true match count 3, got %#v", batch)
+	}
+	if len(batch.Results) != 1 {
+		t.Fatalf("expected returned batch size 1, got %#v", batch.Results)
+	}
+	if batch.Results[0].ID != "material-1" {
+		t.Fatalf("expected newest title match to stay first, got %#v", batch.Results)
 	}
 }
 

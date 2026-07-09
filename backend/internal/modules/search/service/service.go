@@ -44,15 +44,19 @@ func (s *Service) Search(query string, types []string, limit int, userID string)
 	groups := make([]searchdto.Group, 0, len(allowed))
 	total := 0
 	for _, itemType := range allowed {
-		results, err := s.indexer.Search(itemType, keyword, limit, userID)
+		batch, err := s.indexer.Search(itemType, keyword, limit, userID)
 		if err != nil {
 			return nil, err
 		}
-		total += len(results)
+		if batch == nil {
+			batch = &SearchBatch{}
+		}
+		total += batch.TotalCount
 		groups = append(groups, searchdto.Group{
-			Type:    itemType,
-			Count:   len(results),
-			Results: results,
+			Type:          itemType,
+			Count:         batch.TotalCount,
+			ReturnedCount: len(batch.Results),
+			Results:       batch.Results,
 		})
 	}
 

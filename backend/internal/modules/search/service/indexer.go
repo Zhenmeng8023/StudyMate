@@ -12,7 +12,12 @@ import (
 )
 
 type SearchIndexer interface {
-	Search(itemType string, keyword string, limit int, userID string) ([]searchdto.Result, error)
+	Search(itemType string, keyword string, limit int, userID string) (*SearchBatch, error)
+}
+
+type SearchBatch struct {
+	TotalCount int
+	Results    []searchdto.Result
 }
 
 type mysqlFallbackIndexer struct {
@@ -43,13 +48,18 @@ func NewMySQLFallbackIndexer(db *gorm.DB) SearchIndexer {
 	return &mysqlFallbackIndexer{db: db}
 }
 
-func (i *mysqlFallbackIndexer) Search(itemType string, keyword string, limit int, userID string) ([]searchdto.Result, error) {
+func (i *mysqlFallbackIndexer) Search(itemType string, keyword string, limit int, userID string) (*SearchBatch, error) {
 	query, shortCircuit, err := buildSearchQuery(i.db, itemType, keyword, limit, userID)
 	if err != nil {
 		return nil, err
 	}
 	if shortCircuit {
-		return []searchdto.Result{}, nil
+		return &SearchBatch{}, nil
+	}
+
+	totalCount, err := countSearchMatches(i.db, itemType, keyword, limit, userID)
+	if err != nil {
+		return nil, err
 	}
 
 	var rows []searchRow
@@ -65,11 +75,14 @@ func (i *mysqlFallbackIndexer) Search(itemType string, keyword string, limit int
 			ID:      row.ID,
 			Title:   row.Title,
 			Summary: normalizeSearchSummary(row.Summary),
-			URL:     row.URL,
-			Source:  row.Source,
+			URL:     buildSearchResultURL(itemType, row.ID),
+			Source:  buildSearchResultSource(itemType),
 		})
 	}
-	return results, nil
+	return &SearchBatch{
+		TotalCount: totalCount,
+		Results:    results,
+	}, nil
 }
 
 func buildSearchQuery(db *gorm.DB, itemType string, keyword string, limit int, userID string) (*gorm.DB, bool, error) {
@@ -89,6 +102,26 @@ func buildSearchQuery(db *gorm.DB, itemType string, keyword string, limit int, u
 		Limit(spec.limit), false, nil
 }
 
+func countSearchMatches(db *gorm.DB, itemType string, keyword string, limit int, userID string) (int, error) {
+	if db == nil {
+		return 0, apperrors.Internal("閹兼粎鍌ㄧ槐銏犵穿閺堫亪鍘ょ純?")
+	}
+
+	spec, shortCircuit, err := buildSearchQuerySpec(itemType, keyword, limit, userID)
+	if err != nil || shortCircuit {
+		return 0, err
+	}
+
+	var totalCount int64
+	if err := db.Table(spec.table).
+		Where(spec.whereSQL, spec.whereArgs...).
+		Count(&totalCount).Error; err != nil {
+		return 0, apperrors.Internal("閹兼粎鍌ㄦ径杈Е")
+	}
+
+	return int(totalCount), nil
+}
+
 func buildSearchQuerySpec(itemType string, keyword string, limit int, userID string) (*searchQuerySpec, bool, error) {
 	like := "%" + keyword + "%"
 	candidateLimit := limit * 4
@@ -103,7 +136,7 @@ func buildSearchQuerySpec(itemType string, keyword string, limit int, userID str
 	case "material":
 		return &searchQuerySpec{
 			table:     "materials",
-			selectSQL: "id, title, description AS summary, CONCAT('/materials?selected=', id) AS url, 'material' AS source",
+			selectSQL: "id, title, description AS summary",
 			whereSQL:  "status = ? AND (title LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ?)",
 			whereArgs: []any{"approved", like, like, like, like},
 			orderSQL:  "updated_at DESC",
@@ -112,7 +145,7 @@ func buildSearchQuerySpec(itemType string, keyword string, limit int, userID str
 	case "post":
 		return &searchQuerySpec{
 			table:     "posts",
-			selectSQL: "id, title, body AS summary, CONCAT('/community?selected=', id) AS url, 'community' AS source",
+			selectSQL: "id, title, body AS summary",
 			whereSQL:  "status = ? AND visibility = ? AND (title LIKE ? OR body LIKE ?)",
 			whereArgs: []any{"approved", "public", like, like},
 			orderSQL:  "updated_at DESC",
@@ -124,7 +157,7 @@ func buildSearchQuerySpec(itemType string, keyword string, limit int, userID str
 		}
 		return &searchQuerySpec{
 			table:     "notes",
-			selectSQL: "id, title, summary, CONCAT('/notes?selected=', id) AS url, 'note' AS source",
+			selectSQL: "id, title, summary",
 			whereSQL:  "owner_user_id = ? AND (title LIKE ? OR summary LIKE ? OR content LIKE ? OR folder_name LIKE ?)",
 			whereArgs: []any{userID, like, like, like, like},
 			orderSQL:  "updated_at DESC",
@@ -136,7 +169,7 @@ func buildSearchQuerySpec(itemType string, keyword string, limit int, userID str
 		}
 		return &searchQuerySpec{
 			table:     "graphs",
-			selectSQL: "id, title, description AS summary, CONCAT('/graph?graphId=', id) AS url, 'graph' AS source",
+			selectSQL: "id, title, description AS summary",
 			whereSQL:  "status = ? AND (owner_user_id = ? OR visibility = ?) AND (title LIKE ? OR description LIKE ?)",
 			whereArgs: []any{"active", userID, "public", like, like},
 			orderSQL:  "updated_at DESC",
@@ -148,7 +181,7 @@ func buildSearchQuerySpec(itemType string, keyword string, limit int, userID str
 		}
 		return &searchQuerySpec{
 			table:     "cards",
-			selectSQL: "id, front AS title, back AS summary, '/review' AS url, 'card' AS source",
+			selectSQL: "id, front AS title, back AS summary",
 			whereSQL:  "owner_user_id = ? AND status = ? AND (front LIKE ? OR back LIKE ?)",
 			whereArgs: []any{userID, "active", like, like},
 			orderSQL:  "updated_at DESC",
@@ -197,4 +230,28 @@ func normalizeSearchSummary(summary string) string {
 		return normalized
 	}
 	return string(runes[:157]) + "..."
+}
+
+func buildSearchResultURL(itemType string, id string) string {
+	switch itemType {
+	case "material":
+		return "/materials?selected=" + id
+	case "post":
+		return "/community?selected=" + id
+	case "note":
+		return "/notes?selected=" + id
+	case "graph":
+		return "/graph?graphId=" + id
+	case "card":
+		return "/review"
+	default:
+		return ""
+	}
+}
+
+func buildSearchResultSource(itemType string) string {
+	if itemType == "post" {
+		return "community"
+	}
+	return itemType
 }

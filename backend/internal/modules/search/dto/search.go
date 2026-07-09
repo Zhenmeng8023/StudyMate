@@ -10,9 +10,10 @@ type Result struct {
 }
 
 type Group struct {
-	Type    string   `json:"type"`
-	Count   int      `json:"count"`
-	Results []Result `json:"results"`
+	Type          string   `json:"type"`
+	Count         int      `json:"count"`
+	ReturnedCount int      `json:"returnedCount"`
+	Results       []Result `json:"results"`
 }
 
 type Response struct {

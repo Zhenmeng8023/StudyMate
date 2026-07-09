@@ -31,8 +31,9 @@ func (s *fakeSearchService) Search(query string, types []string, limit int, user
 		Query: query,
 		Total: 1,
 		Groups: []searchdto.Group{{
-			Type:  "note",
-			Count: 1,
+			Type:          "note",
+			Count:         1,
+			ReturnedCount: 1,
 			Results: []searchdto.Result{{
 				Type:    "note",
 				ID:      "note-1",
