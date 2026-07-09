@@ -86,6 +86,12 @@
 - 用户端 `WorkspaceHeader` 已改为直接复用这层共享 primitive，因此设置、资料、社区、仪表盘、AI 等当前走 `WorkspaceHeader` 的页面已经一起进入同一套头部契约。
 - 下一步更值得继续推进 `CommandBar`，并把搜索工作区、图谱工作区里仍直接写的 `workspace-header` / 搜索条骨架继续收口。
 
+### 2026-07-09 FE-041 共享 CommandBar 接入主站顶部骨架
+
+- `@studymate/ui` 已新增共享 `CommandBar`，先统一 `topbar`、breadcrumb、subtitle、搜索槽位与动作槽位这组顶部骨架语义。
+- 用户端 `app/chrome/CommandBar.tsx` 已改为直接复用这层共享骨架，主站壳层上的页面元信息、全局搜索、AI 草稿入口和用户菜单继续通过包装层注入。
+- 下一步更值得继续推进 `ConfirmDialog`，或者继续评估搜索工作区 / 图谱工作区里的专用操作条是否也值得沿同一路径共享化。
+
 ### 2026-07-08 FE / UI 验证收口更新
 
 - FE-010、FE-020、FE-030 与 UI-04 已在真实依赖环境完成类型检查、相关 Vitest、前后台构建与 4 条 Playwright smoke。

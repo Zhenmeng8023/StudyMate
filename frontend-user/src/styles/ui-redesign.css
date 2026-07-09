@@ -342,9 +342,16 @@ select:focus-visible {
   font-weight: 600;
 }
 
-.topbar-breadcrumb strong {
+.topbar-breadcrumb strong,
+.topbar-breadcrumb__title {
   color: var(--text-0);
   font-size: 13px;
+}
+
+.topbar-breadcrumb__title {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.2;
 }
 
 .topbar-subtitle {

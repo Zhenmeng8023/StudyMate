@@ -147,8 +147,8 @@ describe("@studymate/ui react primitive contract", () => {
     const header = heading.closest("header");
     expect(header).toBeTruthy();
     expect(header?.className).toContain("topbar");
-    expect(screen.getByText("学习空间")).toBeTruthy();
-    expect(screen.getByText("继续一项已开始的学习任务")).toBeTruthy();
+    expect(header?.textContent).toContain("学习空间");
+    expect(header?.textContent).toContain("继续一项已开始的学习任务");
     expect(screen.getByRole("search")).toBeTruthy();
     expect(screen.getByRole("button", { name: "退出登录" })).toBeTruthy();
   });

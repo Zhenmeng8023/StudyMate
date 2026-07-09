@@ -1,3 +1,27 @@
+## 2026-07-09 09:47:29 +08:00 | v1.1.0-alpha.140 | 推进 FE-041 共享 CommandBar 接入主站顶部骨架
+### 任务内容
+
+- 沿当前更高优先级的 `FE-041` 继续做一个最小、可测试的共享 primitive 收口，不偏离共享 UI 主线，也不回到单一冲突场景深挖。
+- 本轮目标是把主站壳层里重复出现的顶部 meta / 搜索 / 动作骨架抽成共享 `CommandBar`，同时保留现有页面元信息、全局搜索、AI 草稿入口和退出登录逻辑不变，而不是直接重写 `AppShell` 的行为。
+### 实际变更
+
+- 新增 `packages/ui/src/CommandBar.tsx`，补齐共享 `CommandBar` primitive，先统一 `topbar`、breadcrumb、subtitle、搜索槽位和动作槽位这组顶部骨架语义。
+- 更新 `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/CommandBar.tsx` 与 `frontend-user/src/design-system/primitives/index.ts`，补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/app/chrome/CommandBar.tsx`，把现有主站顶部条改为“页面元信息/搜索/用户动作包装器 + 共享骨架”两层结构；现有搜索提交流程、AI 草稿入口、设置入口和退出登录逻辑保持不变。
+- 更新 `packages/ui/src/reactPrimitives.test.tsx` 与新增 `frontend-user/src/design-system/primitives/CommandBar.test.tsx`、`frontend-user/src/app/chrome/CommandBar.test.tsx`，并复用 `frontend-user/src/app/layouts/AppShell.test.tsx`，先用 RED 锁定“共享 CommandBar 缺失 / 兼容出口缺失 / 主站顶部条仍未走共享实现”的缺口，再用 GREEN 锁定共享导出、包装接线与壳层搜索入口不回退。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 CommandBar 已落地并接入主站顶部骨架”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/CommandBar.test.tsx src/app/chrome/CommandBar.test.tsx src/app/layouts/AppShell.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/CommandBar.test.tsx src/app/chrome/CommandBar.test.tsx src/app/layouts/AppShell.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+### 后续影响
+
+- `@studymate/ui` 现在已经不只覆盖状态、抽屉、检查器、按钮、表单与页面头部，也开始承接主站顶部骨架；后续继续推进 `ConfirmDialog` 或后台筛选条时，页面骨架层的共享路径会更顺。
+- 当前这轮主要覆盖的是主站 `AppShell` 顶部条；图谱工作区里的专用 command bar 仍是另一套工具栏语义，后续是否继续共用需要结合那套操作条的专用程度再判断。
+
 ## 2026-07-09 09:38:52 +08:00 | v1.1.0-alpha.139 | 推进 FE-041 共享 PageHeader 接入工作区头部
 ### 任务内容
 
