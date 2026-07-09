@@ -2,6 +2,7 @@ import { FormEvent, useMemo } from "react";
 import { Bell, ChevronRight, Command, LogOut, Search, Sparkles, UserRound } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import type { AuthSession } from "../../api/client";
+import { IconButton } from "../../design-system/primitives";
 import type { AppLayoutMode } from "../layouts/layoutPolicy";
 
 type PageMeta = { crumb: string; title: string; subtitle?: string };
@@ -67,9 +68,9 @@ export function CommandBar(props: {
       <div className="topbar-actions">
         {props.mode !== "focus" ? (
           <>
-            <button aria-label="提醒" className="icon-button topbar-icon-button" title="提醒" type="button">
+            <IconButton aria-label="提醒" className="topbar-icon-button" title="提醒">
               <Bell size={17} />
-            </button>
+            </IconButton>
             <Link className="topbar-link topbar-ai-link" to={props.session ? "/ai" : "/login"}>
               <Sparkles size={16} />
               <span>AI 草稿</span>
@@ -86,9 +87,9 @@ export function CommandBar(props: {
               <span className="topbar-user__avatar">{props.session.user.displayName.slice(0, 1) || <UserRound size={14} />}</span>
               <span>{props.session.user.displayName}</span>
             </Link>
-            <button aria-label="退出登录" className="icon-button topbar-logout" onClick={props.onLogout} title="退出登录" type="button">
+            <IconButton aria-label="退出登录" className="topbar-logout" onClick={props.onLogout} title="退出登录">
               <LogOut size={16} />
-            </button>
+            </IconButton>
           </div>
         ) : (
           <Link className="primary-button" to="/login">登录</Link>

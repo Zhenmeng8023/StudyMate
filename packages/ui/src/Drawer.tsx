@@ -1,4 +1,5 @@
 import React, { type ReactNode } from "react";
+import { IconButton } from "./IconButton";
 
 export type DrawerProps = {
   children: ReactNode;
@@ -23,9 +24,9 @@ export function Drawer(props: DrawerProps) {
           {props.description ? <p>{props.description}</p> : null}
         </div>
         {props.onClose ? (
-          <button aria-label={`关闭${props.title}`} className="icon-button" onClick={props.onClose} type="button">
+          <IconButton aria-label={`关闭${props.title}`} onClick={props.onClose}>
             <span aria-hidden="true">×</span>
-          </button>
+          </IconButton>
         ) : null}
       </header>
       <div className="ds-drawer__body">{props.children}</div>

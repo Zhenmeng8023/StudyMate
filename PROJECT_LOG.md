@@ -4398,6 +4398,30 @@
 
 - 默认 CI 现在不再只在 release checklist 里“提醒要做 secret scan”，而是会直接执行 `npm run verify:secrets`；后续若有人把私钥、已知 Token 格式或明显的硬编码密钥赋值提交进仓库，会先在本地和 CI 被拦下。
 - 当前剩余的工程级 P0 质量门禁主要收敛为覆盖率硬门槛与覆盖率汇总治理；secret scan 这条线已经从“手工约定”转成“默认可执行基线”。
+## 2026-07-09 08:27:53 +08:00 | v1.1.0-alpha.138 | 推进 FE-041 共享 IconButton 与骨架接线
+### 任务内容
+
+- 继续沿“先补全局骨架、再做深单点”的节奏推进 `FE-041`，从上一轮的共享 `DataState / Drawer / Inspector` 再向前走一步，优先收口覆盖面很广的 `icon-button` 语义。
+- 本轮目标是在不重写页面业务的前提下，把共享 `IconButton` 落到 `@studymate/ui`，并先接到顶栏与图谱工作区这些骨架级主路径上。
+### 实际变更
+
+- 新增 `packages/ui/src/IconButton.tsx`，把 `icon-button` / `active` class 语义收口为共享 primitive，并默认将字符串 `title` 透传为 `aria-label`，避免图标按钮只靠 hover 文案暴露语义。
+- 更新 `packages/ui/src/index.ts` 与 `packages/ui/src/Drawer.tsx`，让共享包直接导出并复用 `IconButton`，共享层开始出现组件级组合关系。
+- 新增 `frontend-user/src/design-system/primitives/IconButton.tsx` 与对应测试，用户端 now 可沿用 design-system 入口消费共享实现，而不必直接散落引用包内路径。
+- 更新 `frontend-user/src/app/chrome/CommandBar.tsx`、`modules/graph/components/GraphWorkspaceCanvasChrome.tsx`、`GraphWorkspaceShell.tsx`，把顶栏提醒/登出、图谱资源与检查器开关、图谱工具栏高频图标动作统一接到共享 `IconButton`。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 的现状推进到“共享图标按钮已被多个骨架主路径真实消费”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/IconButton.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/index.test.ts packages/ui/src/reactPrimitives.test.tsx`
+- `npm --workspace frontend-user run test -- src/design-system/primitives/IconButton.test.tsx src/design-system/primitives/Drawer.test.tsx src/app/layouts/AppShell.test.tsx src/modules/graph/components/GraphWorkspaceCanvasChrome.test.tsx src/modules/graph/components/GraphWorkspaceShell.test.tsx`
+
+### 后续影响
+
+- `@studymate/ui` 现在已经不只是在共享“容器组件”和“状态语义”，也开始承接最常见的动作型 primitive；后续继续收口普通按钮、对话框和 page-level actions 时，路径会明显更顺。
+- 这轮仍然只先接了顶栏和图谱工作区骨架，阅读、笔记、复习页面里还存在若干直接写死的 `icon-button`；这些更适合继续沿同一共享出口逐步替换，而不是重新设计一套新按钮体系。
+
 ## 2026-07-09 08:20:50 +08:00 | v1.1.0-alpha.137 | 推进 FE-041 共享基础组件契约第一批落地
 ### 任务内容
 

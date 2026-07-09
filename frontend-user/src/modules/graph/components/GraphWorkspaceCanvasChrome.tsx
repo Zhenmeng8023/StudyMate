@@ -15,6 +15,7 @@ import {
   Sparkles
 } from "lucide-react";
 import type { GraphDetailPayload } from "../../../api/client";
+import { IconButton } from "../../../design-system/primitives";
 import type { GraphWorkspaceSaveState } from "../state/types";
 import type { GraphWorkspaceResourceTab } from "./GraphWorkspaceShell";
 
@@ -38,16 +39,14 @@ export function GraphWorkspaceCanvasCommandBar(props: {
   return (
     <header className="graph-canvas-commandbar" aria-label="图谱命令栏">
       <div className="graph-canvas-commandbar__leading">
-        <button
+        <IconButton
           aria-expanded={props.resourcesOpen}
           aria-label={props.resourcesOpen ? "关闭资源面板" : "打开资源面板"}
-          className="icon-button"
           onClick={props.onToggleResources}
           title={props.resourcesOpen ? "关闭资源面板" : "打开资源面板"}
-          type="button"
         >
           {props.resourcesOpen ? <PanelLeftClose size={17} /> : <PanelLeftOpen size={17} />}
-        </button>
+        </IconButton>
         <div className="graph-canvas-commandbar__title">
           <span>知识图谱</span>
           <strong title={graphTitle}>{graphTitle}</strong>
@@ -70,16 +69,14 @@ export function GraphWorkspaceCanvasCommandBar(props: {
         >
           {saveLabel}
         </button>
-        <button
+        <IconButton
           aria-expanded={props.inspectorOpen}
           aria-label={props.inspectorOpen ? "关闭检查器" : "打开检查器"}
-          className="icon-button"
           onClick={props.onToggleInspector}
           title={props.inspectorOpen ? "关闭检查器" : "打开检查器"}
-          type="button"
         >
           {props.inspectorOpen ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
-        </button>
+        </IconButton>
       </div>
     </header>
   );
@@ -167,9 +164,9 @@ export function GraphWorkspaceDrawerHeading(props: {
         <h2>{props.title}</h2>
         <span>{props.description}</span>
       </div>
-      <button aria-label={`关闭${props.title}`} className="icon-button" onClick={props.onClose} type="button">
+      <IconButton aria-label={`关闭${props.title}`} onClick={props.onClose}>
         <ChevronLeft size={16} />
-      </button>
+      </IconButton>
     </header>
   );
 }
@@ -186,9 +183,9 @@ export function GraphWorkspaceInspectorHeading(props: {
         <h2>{props.title}</h2>
         {props.hasConflict ? <span className="graph-inspector-conflict-hint"><Sparkles size={14} /> 检测到版本冲突</span> : null}
       </div>
-      <button aria-label="关闭检查器" className="icon-button" onClick={props.onClose} type="button">
+      <IconButton aria-label="关闭检查器" onClick={props.onClose}>
         <ChevronRight size={16} />
-      </button>
+      </IconButton>
     </header>
   );
 }

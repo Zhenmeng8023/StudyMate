@@ -23,6 +23,7 @@ import type {
   MaterialPayload,
   NotePayload
 } from "../../../api/client";
+import { IconButton } from "../../../design-system/primitives";
 import type { GraphWorkspaceSaveState } from "../state/types";
 import type { GraphNodeCreationType, GraphNodeTypeOption } from "../lib/graphNodeTypes";
 
@@ -210,63 +211,55 @@ export function GraphWorkspaceToolbar(props: {
             </option>
           ))}
         </select>
-        <button
+        <IconButton
           aria-label={`新建${props.quickNodeTypeLabel}节点`}
-          className="icon-button"
           disabled={!props.graphDetail}
           onClick={props.onCreateNode}
           title={`新建${props.quickNodeTypeLabel}节点`}
-          type="button"
         >
           <Plus size={16} />
-        </button>
-        <button
-          className="icon-button"
+        </IconButton>
+        <IconButton
           disabled={props.selectedNodeCount === 0}
           onClick={props.onCreateGroup}
           title="基于选中节点创建分组"
-          type="button"
         >
           <Layers3 size={16} />
-        </button>
+        </IconButton>
       </div>
 
       <div className="graph-toolbar-group">
-        <button className="icon-button" disabled={props.historyPastCount === 0} onClick={props.onUndo} title="撤销" type="button">
+        <IconButton disabled={props.historyPastCount === 0} onClick={props.onUndo} title="撤销">
           <Undo2 size={16} />
-        </button>
-        <button className="icon-button" disabled={props.historyFutureCount === 0} onClick={props.onRedo} title="重做" type="button">
+        </IconButton>
+        <IconButton disabled={props.historyFutureCount === 0} onClick={props.onRedo} title="重做">
           <Redo2 size={16} />
-        </button>
-        <button
-          className={props.isLinking ? "icon-button active" : "icon-button"}
+        </IconButton>
+        <IconButton
+          active={props.isLinking}
           disabled={props.selectedNodeCount !== 1}
           onClick={props.onToggleLinkMode}
           title="连接选中节点"
-          type="button"
         >
           <Link2 size={16} />
-        </button>
-        <button
-          className="icon-button"
+        </IconButton>
+        <IconButton
           disabled={props.selectedNodeCount === 0 && !props.hasSelectedEdge}
           onClick={props.onDeleteSelection}
           title="删除选中项"
-          type="button"
         >
           <Trash2 size={16} />
-        </button>
+        </IconButton>
       </div>
 
       <div className="graph-toolbar-group">
-        <button
-          className={props.showKeyboardGuide ? "icon-button active" : "icon-button"}
+        <IconButton
+          active={props.showKeyboardGuide}
           onClick={props.onToggleKeyboardGuide}
           title="快捷键说明"
-          type="button"
         >
           <Keyboard size={16} />
-        </button>
+        </IconButton>
         <label className="search-field narrow graph-search-field">
           <Search size={16} />
           <input
@@ -281,24 +274,24 @@ export function GraphWorkspaceToolbar(props: {
             value={props.graphSearch}
           />
         </label>
-        <button className="icon-button" disabled={!props.graphSearch.trim()} onClick={props.onLocateNode} title="搜索定位" type="button">
+        <IconButton disabled={!props.graphSearch.trim()} onClick={props.onLocateNode} title="搜索定位">
           <ScanSearch size={16} />
-        </button>
-        <button className="icon-button" disabled={!props.graphDetail} onClick={props.onExportPng} title="导出 PNG" type="button">
+        </IconButton>
+        <IconButton disabled={!props.graphDetail} onClick={props.onExportPng} title="导出 PNG">
           <Download size={16} />
-        </button>
-        <button className="icon-button" disabled={!props.graphDetail} onClick={props.onExportSvg} title="导出 SVG" type="button">
+        </IconButton>
+        <IconButton disabled={!props.graphDetail} onClick={props.onExportSvg} title="导出 SVG">
           <FileDown size={16} />
-        </button>
-        <button className="icon-button" disabled={!props.graphDetail} onClick={props.onExportJson} title="导出 StudyMate JSON" type="button">
+        </IconButton>
+        <IconButton disabled={!props.graphDetail} onClick={props.onExportJson} title="导出 StudyMate JSON">
           JSON
-        </button>
-        <button className="icon-button" disabled={!props.graphDetail} onClick={props.onZoomOut} title="缩小" type="button">
+        </IconButton>
+        <IconButton disabled={!props.graphDetail} onClick={props.onZoomOut} title="缩小">
           <ZoomOut size={16} />
-        </button>
-        <button className="icon-button" disabled={!props.graphDetail} onClick={props.onZoomIn} title="放大" type="button">
+        </IconButton>
+        <IconButton disabled={!props.graphDetail} onClick={props.onZoomIn} title="放大">
           <ZoomIn size={16} />
-        </button>
+        </IconButton>
       </div>
     </div>
   );
