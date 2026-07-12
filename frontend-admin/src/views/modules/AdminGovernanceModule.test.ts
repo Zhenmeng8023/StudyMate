@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminGovernanceModule from "./AdminGovernanceModule.vue";
 
 describe("AdminGovernanceModule", () => {
-  it("renders shared summary cards, records, and emits query, filter, and selection changes through the shared search toolbar", async () => {
+  it("renders shared summary cards, data card header, records, and emits query, filter, and selection changes", async () => {
     const wrapper = mount(AdminGovernanceModule, {
       props: {
         columns: ["id", "action", "status"],
@@ -35,6 +35,8 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.text()).toContain("audit-1");
     expect(wrapper.text()).toContain("moderation.approve");
     expect(wrapper.findAll('[data-admin-metric-card="true"]')).toHaveLength(1);
+    expect(wrapper.find('[data-admin-data-card-header="true"]').exists()).toBe(true);
+    expect(wrapper.get('[data-admin-data-card-header-title="true"]').text()).toContain("记录列表");
     expect(wrapper.find('[data-admin-search-toolbar="true"]').exists()).toBe(true);
     expect(wrapper.get('input[placeholder="搜索当前记录"]').classes()).toContain("ds-input");
     expect(wrapper.get('[data-admin-search-toolbar-meta="true"]').text()).toContain("1 / 1");
