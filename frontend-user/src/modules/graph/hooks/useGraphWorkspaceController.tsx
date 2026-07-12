@@ -31,7 +31,7 @@ import {
   previewGraphLayout,
   validateGraph
 } from "../../../api/client";
-import { ConfirmDialog } from "../../../design-system/primitives";
+import { ConfirmDialog, DataState } from "../../../design-system/primitives";
 import {
   getNodeEmphasis,
   getNodeTone,
@@ -184,6 +184,14 @@ import { useGraphViewportCamera } from "./useGraphViewportCamera";
 import { useGraphSelectionState } from "./useGraphSelectionState";
 import { useGraphDragState } from "./useGraphDragState";
 
+type GraphWorkspaceState =
+  | {
+      kind: "loading" | "error" | "stale";
+      title: string;
+      description: string;
+    }
+  | null;
+
 export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -203,6 +211,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [historyState, setHistoryState] = useState<GraphHistoryState>(createEmptyGraphHistoryState);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("正在加载图谱工作区...");
+  const [workspaceLoadError, setWorkspaceLoadError] = useState("");
   const [confirmDialogAction, setConfirmDialogAction] = useState<"reload-latest" | "delete-graph" | "">("");
   const [confirmDialogError, setConfirmDialogError] = useState("");
   const [reloadLatestSuggested, setReloadLatestSuggested] = useState(false);
@@ -864,6 +873,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
 
   async function loadGraphWorkspace() {
     setLoading(true);
+    setWorkspaceLoadError("");
     setWorkspaceStatusMessage("正在同步图谱、资料、笔记和模板...");
 
     try {
@@ -911,7 +921,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       const snapshotsLoaded = await loadSnapshots(resourceState.initialGraphId);
       setWorkspaceStatusMessage(buildLoadStatusMessage("loaded", snapshotsLoaded, recovered));
     } catch (error) {
-      setWorkspaceStatusMessage(error instanceof Error ? error.message : "加载图谱工作台失败");
+      const nextMessage = error instanceof Error ? error.message : "加载图谱工作台失败";
+      setWorkspaceLoadError(nextMessage);
+      setWorkspaceStatusMessage(nextMessage);
     } finally {
       setLoading(false);
     }
@@ -1938,6 +1950,34 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     }
   }, [hasConflict]);
 
+  const workspaceState: GraphWorkspaceState = loading && !graphDetail
+    ? {
+        kind: "loading",
+        title: "正在加载图谱工作台",
+        description: "正在同步图谱、资料、笔记和模板。"
+      }
+    : workspaceLoadError && graphDetail
+      ? {
+          kind: "stale",
+          title: "图谱工作台需要刷新",
+          description: workspaceLoadError
+        }
+      : workspaceLoadError
+        ? {
+            kind: "error",
+            title: "图谱工作台暂时不可用",
+            description: workspaceLoadError
+          }
+        : null;
+
+  const workspaceAction = workspaceState && (workspaceState.kind === "error" || workspaceState.kind === "stale")
+    ? (
+        <button className="secondary-button" onClick={() => void loadGraphWorkspace()} type="button">
+          重新加载
+        </button>
+      )
+    : undefined;
+
   return (
     <>
       <ConfirmDialog
@@ -1985,169 +2025,187 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       />
 
       <div className="graph-canvas-workspace__body">
-        {resourcePanelOpen ? (
-          <aside className="graph-resource-drawer" aria-label="图谱资源面板">
-            <GraphWorkspaceDrawerHeading
-              description="在图谱、来源资料和模板之间切换。"
-              onClose={() => setResourcePanelOpen(false)}
-              title="资源"
-            />
-            <GraphWorkspaceResourceTabs activeTab={resourceTab} onChange={handleResourceTabChange} />
-            <div className="graph-resource-drawer__body">
-              <GraphWorkspaceSourceRail
-                activeTab={resourceTab}
-                diagramTemplates={diagramTemplates}
-                graphDetail={graphDetail}
-                graphs={graphs}
-                materials={visibleMaterials}
-                notes={visibleNotes}
-                onAddMaterialNode={addMaterialNode}
-                onAddNoteNode={addNoteNode}
-                onApplyTemplate={applyTemplate}
-                onOpenGraph={(graphId) => void openGraph(graphId)}
-              />
-            </div>
-          </aside>
-        ) : null}
-
-        <section className="graph-canvas-stage-panel" aria-label="图谱画布">
-          <GraphWorkspaceToolbar
-            graphDetail={graphDetail}
-            graphSearch={graphSearch}
-            hasSelectedEdge={Boolean(selectedEdge)}
-            historyFutureCount={historyFuture.length}
-            historyPastCount={historyPast.length}
-            isLinking={Boolean(linkFromNodeId)}
-            nodeTypeOptions={graphNodeTypeOptions}
-            onCreateGroup={createGroupFromSelectedNode}
-            onCreateNode={() => createNode(quickNodeType)}
-            onDeleteSelection={deleteSelectedGraphItems}
-            onExportJson={graphImportExport.exportJson}
-            onExportPng={() => void graphImportExport.exportPng()}
-            onExportSvg={graphImportExport.exportSvg}
-            onLocateNode={handleLocateNode}
-            onQuickNodeTypeChange={setQuickNodeType}
-            onRedo={redoCurrentGraph}
-            onSearchChange={setGraphSearch}
-            onToggleKeyboardGuide={() => setShowKeyboardGuide((current) => !current)}
-            onToggleLinkMode={() => setLinkFromNodeId((current) => (current ? "" : selectedNodeId))}
-            onUndo={undoCurrentGraph}
-            onZoomIn={() => graphViewport.zoomGraph(0.1, "已放大画布")}
-            onZoomOut={() => graphViewport.zoomGraph(-0.1, "已缩小画布")}
-            quickNodeType={quickNodeType}
-            quickNodeTypeLabel={quickNodeTypeLabel}
-            selectedNodeCount={selectedNodeIds.length}
-            showKeyboardGuide={showKeyboardGuide}
+        {workspaceState && workspaceState.kind !== "stale" ? (
+          <DataState
+            action={workspaceAction}
+            description={workspaceState.description}
+            kind={workspaceState.kind}
+            title={workspaceState.title}
           />
+        ) : (
+          <>
+            {workspaceState?.kind === "stale" ? (
+              <DataState
+                action={workspaceAction}
+                description={workspaceState.description}
+                kind={workspaceState.kind}
+                title={workspaceState.title}
+              />
+            ) : null}
 
-          <div className="graph-stage-shell graph-stage-shell--canvas">
-            <GraphStageStatus
-              alignmentHintLabels={alignmentHintLabels}
-              graphDetail={graphDetail}
-              loading={loading}
-              onStatusAction={hasConflict ? () => handleInspectorTabChange("conflict") : undefined}
-              selectedNodeCount={selectedNodeIds.length}
-              statusActionLabel={hasConflict ? "查看冲突处理" : undefined}
-              statusMessage={statusMessage}
-            />
+            {resourcePanelOpen ? (
+              <aside className="graph-resource-drawer" aria-label="图谱资源面板">
+                <GraphWorkspaceDrawerHeading
+                  description="在图谱、来源资料和模板之间切换。"
+                  onClose={() => setResourcePanelOpen(false)}
+                  title="资源"
+                />
+                <GraphWorkspaceResourceTabs activeTab={resourceTab} onChange={handleResourceTabChange} />
+                <div className="graph-resource-drawer__body">
+                  <GraphWorkspaceSourceRail
+                    activeTab={resourceTab}
+                    diagramTemplates={diagramTemplates}
+                    graphDetail={graphDetail}
+                    graphs={graphs}
+                    materials={visibleMaterials}
+                    notes={visibleNotes}
+                    onAddMaterialNode={addMaterialNode}
+                    onAddNoteNode={addNoteNode}
+                    onApplyTemplate={applyTemplate}
+                    onOpenGraph={(graphId) => void openGraph(graphId)}
+                  />
+                </div>
+              </aside>
+            ) : null}
 
-            <GraphStageCanvas
-              alignmentGuides={alignmentGuides}
-              document={document}
-              focusPreview={graphViewport.focusPreview}
-              graphDetail={graphDetail}
-              hiddenNodeIds={hiddenNodeIds}
-              linkFromNodeId={linkFromNodeId}
-              minimapViewport={graphViewport.minimapViewport}
-              nodeMap={nodeMap}
-              onCanvasContextMenu={(event) => openContextMenu(event)}
-              onCanvasPointerDown={handleCanvasPointerDown}
-              onEdgeContextMenu={(event, edge) => openContextMenu(event, { edgeId: edge.id })}
-              onEdgeSelect={(event, edge) => {
-                event.stopPropagation();
-                setSelectedEdgeId(edge.id);
-                clearNodeSelection();
-              }}
-              onNodeClick={(event, node) => handleNodeClick(node.id, event)}
-              onNodeContextMenu={(event, node) => openContextMenu(event, { nodeId: node.id })}
-              onNodePointerDown={handleNodePointerDown}
-              onToggleGroupCollapse={toggleGroupCollapse}
-              onWheel={graphViewport.handleWheel}
-              scale={minimapScale}
-              selectedEdgeId={selectedEdgeId}
-              selectedNodeIds={selectedNodeIds}
-              selectionBox={selectionBox}
-              stageHeight={stageHeight}
-              stageRef={stageRef}
-              stageWidth={stageWidth}
-              visibleNodes={visibleNodes}
-            >
-              {showKeyboardGuide ? <GraphKeyboardGuidePanel onClose={() => setShowKeyboardGuide(false)} /> : null}
-              {contextMenu ? (
-                <GraphContextMenuPanel
-                  contextMenu={contextMenu}
-                  hasSourceTarget={Boolean(contextMenuSourceBacklink)}
-                  isLinkStartSelected={linkFromNodeId === contextMenu.nodeId}
-                  onCreateCanvasMaterialNode={() => {
-                    createNode("material");
-                    closeContextMenu();
+            <section className="graph-canvas-stage-panel" aria-label="图谱画布">
+              <GraphWorkspaceToolbar
+                graphDetail={graphDetail}
+                graphSearch={graphSearch}
+                hasSelectedEdge={Boolean(selectedEdge)}
+                historyFutureCount={historyFuture.length}
+                historyPastCount={historyPast.length}
+                isLinking={Boolean(linkFromNodeId)}
+                nodeTypeOptions={graphNodeTypeOptions}
+                onCreateGroup={createGroupFromSelectedNode}
+                onCreateNode={() => createNode(quickNodeType)}
+                onDeleteSelection={deleteSelectedGraphItems}
+                onExportJson={graphImportExport.exportJson}
+                onExportPng={() => void graphImportExport.exportPng()}
+                onExportSvg={graphImportExport.exportSvg}
+                onLocateNode={handleLocateNode}
+                onQuickNodeTypeChange={setQuickNodeType}
+                onRedo={redoCurrentGraph}
+                onSearchChange={setGraphSearch}
+                onToggleKeyboardGuide={() => setShowKeyboardGuide((current) => !current)}
+                onToggleLinkMode={() => setLinkFromNodeId((current) => (current ? "" : selectedNodeId))}
+                onUndo={undoCurrentGraph}
+                onZoomIn={() => graphViewport.zoomGraph(0.1, "已放大画布")}
+                onZoomOut={() => graphViewport.zoomGraph(-0.1, "已缩小画布")}
+                quickNodeType={quickNodeType}
+                quickNodeTypeLabel={quickNodeTypeLabel}
+                selectedNodeCount={selectedNodeIds.length}
+                showKeyboardGuide={showKeyboardGuide}
+              />
+
+              <div className="graph-stage-shell graph-stage-shell--canvas">
+                <GraphStageStatus
+                  alignmentHintLabels={alignmentHintLabels}
+                  graphDetail={graphDetail}
+                  loading={loading}
+                  onStatusAction={hasConflict ? () => handleInspectorTabChange("conflict") : undefined}
+                  selectedNodeCount={selectedNodeIds.length}
+                  statusActionLabel={hasConflict ? "查看冲突处理" : undefined}
+                  statusMessage={statusMessage}
+                />
+
+                <GraphStageCanvas
+                  alignmentGuides={alignmentGuides}
+                  document={document}
+                  focusPreview={graphViewport.focusPreview}
+                  graphDetail={graphDetail}
+                  hiddenNodeIds={hiddenNodeIds}
+                  linkFromNodeId={linkFromNodeId}
+                  minimapViewport={graphViewport.minimapViewport}
+                  nodeMap={nodeMap}
+                  onCanvasContextMenu={(event) => openContextMenu(event)}
+                  onCanvasPointerDown={handleCanvasPointerDown}
+                  onEdgeContextMenu={(event, edge) => openContextMenu(event, { edgeId: edge.id })}
+                  onEdgeSelect={(event, edge) => {
+                    event.stopPropagation();
+                    setSelectedEdgeId(edge.id);
+                    clearNodeSelection();
                   }}
-                  onCreateCanvasNoteNode={() => {
-                    createNode("rich-note");
-                    closeContextMenu();
-                  }}
-                  onCreateCanvasTextNode={() => {
-                    createNode("text");
-                    closeContextMenu();
-                  }}
-                  onCreateGroup={() => {
-                    if (contextMenuNode) {
-                      createGroupForNode(contextMenuNode);
-                    }
-                    closeContextMenu();
-                  }}
-                  onDeleteEdge={() => {
-                    if (detailRef.current) {
-                      const result = deleteGraphWorkspaceSelection(detailRef.current.document, {
-                        linkFromNodeId,
-                        selectedEdgeId: contextMenu.edgeId || "",
-                        selectedNodeIds: []
-                      });
-                      applyWorkspaceMutation(result);
-                    }
-                    closeContextMenu();
-                  }}
-                  onDeleteNode={() => {
-                    const nodeId = contextMenu.nodeId || "";
-                    if (detailRef.current) {
-                      const result = deleteGraphWorkspaceNode(detailRef.current.document, nodeId, {
-                        linkFromNodeId,
-                        selectedNodeIds
-                      });
-                      applyWorkspaceMutation(result);
-                    }
-                    closeContextMenu();
-                  }}
-                  onDuplicateNode={() => {
-                    duplicateNode(contextMenu.nodeId || "");
-                    closeContextMenu();
-                  }}
-                  onExportPng={() => {
-                    void graphImportExport.exportPng();
-                    closeContextMenu();
-                  }}
-                  onFocusNode={() => {
-                    if (contextMenuNode) {
-                      graphViewport.focusNode(contextMenuNode);
-                    }
-                    closeContextMenu();
-                  }}
-                  onOpenSource={() => {
-                    if (contextMenuSourceBacklink) {
-                      navigate(contextMenuSourceBacklink.target);
-                    }
-                    closeContextMenu();
-                  }}
+                  onNodeClick={(event, node) => handleNodeClick(node.id, event)}
+                  onNodeContextMenu={(event, node) => openContextMenu(event, { nodeId: node.id })}
+                  onNodePointerDown={handleNodePointerDown}
+                  onToggleGroupCollapse={toggleGroupCollapse}
+                  onWheel={graphViewport.handleWheel}
+                  scale={minimapScale}
+                  selectedEdgeId={selectedEdgeId}
+                  selectedNodeIds={selectedNodeIds}
+                  selectionBox={selectionBox}
+                  stageHeight={stageHeight}
+                  stageRef={stageRef}
+                  stageWidth={stageWidth}
+                  visibleNodes={visibleNodes}
+                >
+                  {showKeyboardGuide ? <GraphKeyboardGuidePanel onClose={() => setShowKeyboardGuide(false)} /> : null}
+                  {contextMenu ? (
+                    <GraphContextMenuPanel
+                      contextMenu={contextMenu}
+                      hasSourceTarget={Boolean(contextMenuSourceBacklink)}
+                      isLinkStartSelected={linkFromNodeId === contextMenu.nodeId}
+                      onCreateCanvasMaterialNode={() => {
+                        createNode("material");
+                        closeContextMenu();
+                      }}
+                      onCreateCanvasNoteNode={() => {
+                        createNode("rich-note");
+                        closeContextMenu();
+                      }}
+                      onCreateCanvasTextNode={() => {
+                        createNode("text");
+                        closeContextMenu();
+                      }}
+                      onCreateGroup={() => {
+                        if (contextMenuNode) {
+                          createGroupForNode(contextMenuNode);
+                        }
+                        closeContextMenu();
+                      }}
+                      onDeleteEdge={() => {
+                        if (detailRef.current) {
+                          const result = deleteGraphWorkspaceSelection(detailRef.current.document, {
+                            linkFromNodeId,
+                            selectedEdgeId: contextMenu.edgeId || "",
+                            selectedNodeIds: []
+                          });
+                          applyWorkspaceMutation(result);
+                        }
+                        closeContextMenu();
+                      }}
+                      onDeleteNode={() => {
+                        const nodeId = contextMenu.nodeId || "";
+                        if (detailRef.current) {
+                          const result = deleteGraphWorkspaceNode(detailRef.current.document, nodeId, {
+                            linkFromNodeId,
+                            selectedNodeIds
+                          });
+                          applyWorkspaceMutation(result);
+                        }
+                        closeContextMenu();
+                      }}
+                      onDuplicateNode={() => {
+                        duplicateNode(contextMenu.nodeId || "");
+                        closeContextMenu();
+                      }}
+                      onExportPng={() => {
+                        void graphImportExport.exportPng();
+                        closeContextMenu();
+                      }}
+                      onFocusNode={() => {
+                        if (contextMenuNode) {
+                          graphViewport.focusNode(contextMenuNode);
+                        }
+                        closeContextMenu();
+                      }}
+                      onOpenSource={() => {
+                        if (contextMenuSourceBacklink) {
+                          navigate(contextMenuSourceBacklink.target);
+                        }
+                        closeContextMenu();
+                      }}
                   onToggleEdgeKind={() => {
                     mutateDocument((draft) => {
                       draft.edges = draft.edges.map((edge) =>
@@ -2374,6 +2432,8 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
             </div>
           </aside>
         ) : null}
+          </>
+        )}
       </div>
       </div>
     </>

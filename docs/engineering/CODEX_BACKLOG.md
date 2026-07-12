@@ -23,7 +23,7 @@
 | FE-010 | DONE | 多布局壳层与基础组件 | FE-000 | `frontend-user/src/app/`、`frontend-user/src/design-system/`、样式 | Standard / Studio / Canvas / Focus 路由布局可解析；Canvas 不挂全局 ContextPanel；基础组件与单测已添加，并已在 2026-07-08 跑通用户端 / 管理端类型检查、相关 Vitest、前后台构建与 Playwright 回归。 |
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
-| FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale / unauthorized / conflict` 的真实状态入口，用户端 `SearchWorkspacePage`、`DashboardPage`、`CommunityPage`、`MaterialsPage`、`ReviewWorkspacePage`、`NotesPage`、`ReaderPage`、`AiPage` 与 `SettingsPage` 已接入首批共享页面状态，其中首页已补上真实 `unauthorized / error` 入口，社区页、资料库、复习工作区、笔记工作区、阅读工作区、AI 工作台和设置页也都已补上真实 `error / stale / loading` 落点；后续继续补更多用户端页面与跨端状态落点。 |
+| FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale / unauthorized / conflict` 的真实状态入口，用户端 `SearchWorkspacePage`、`DashboardPage`、`CommunityPage`、`MaterialsPage`、`ReviewWorkspacePage`、`NotesPage`、`ReaderPage`、`AiPage`、`SettingsPage` 与 `GraphWorkspacePage` 已接入首批共享页面状态，其中首页已补上真实 `unauthorized / error` 入口，社区页、资料库、复习工作区、笔记工作区、阅读工作区、AI 工作台、设置页和图谱工作台也都已补上真实 `error / stale / loading` 落点；后续继续补更多用户端页面与跨端状态落点。 |
 | FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层，管理端也已新增 `AdminButton` / `AdminInput` Vue 适配层，并接入登录、壳层、dashboard、审核与治理模块，后续继续推进更多后台治理动作与跨端状态语义。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；请求阶段直接收到 `403 user_disabled` 时也会统一清 session 并给出禁用提示；补 HttpOnly Refresh Token 迁移说明。 |
@@ -646,6 +646,22 @@
 - 后续建议：
   - 这一步把设置页也接进了共享页面状态协议，用户端主学习闭环外层的基础页面语义又闭合了一段。
   - 后续更适合继续沿 `FE-040` 去补图谱页或更细粒度的 `unauthorized / conflict` 真入口，而不是在这一轮再扩散到新的产品域。
+
+### 执行记录：FE-040（用户端图谱工作台页面状态接线）
+- 执行日期：2026-07-13
+- 本轮完成：
+  - 先在 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 补 RED，锁定三个真实缺口：图谱工作台首屏没有共享 `loading`；首屏自举失败时没有共享 `error`；从共享错误态重试后也没有回到正常工作台上下文。
+  - `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 新增 `GraphWorkspaceState` 与 `workspaceLoadError`，把图谱工作台主入口接到共享页面状态协议：首屏读取中走 `loading`，首屏失败走 `error`，已有图谱内容时重新自举失败走 `stale`。
+  - 图谱工作台现在会在共享 `error / stale` 状态里提供统一的“重新加载”动作；首屏失败时不再继续渲染误导性的空画布，而是直接暴露共享 `DataState`。
+- 已执行验证：
+  - RED：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+  - GREEN：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+  - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm run build:user`
+- 后续建议：
+  - 这一步把图谱主工作台也接进了共享页面状态协议，用户端核心学习舞台的状态语义又闭合了一段。
+  - 图谱工作台更细粒度的资源切换、局部刷新以及 `unauthorized / conflict` 真页面入口仍未完全闭合；后续更适合继续沿图谱工作台或阅读检查器链路补这些剩余状态落点。
 
 ### 执行记录：FE-040（管理端 conflict 页面状态接线）
 - 执行日期：2026-07-13

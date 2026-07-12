@@ -1,3 +1,26 @@
+## 2026-07-13 05:01:30 +08:00 | v1.1.0-alpha.171 | 推进 FE-040 用户端图谱工作台页面状态接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新域，而是把用户端图谱工作台的首屏自举路径接到共享页面状态协议。
+- 目标是让 `GraphWorkspacePage` 不再把首屏加载中与首屏失败都伪装成“空画布 + 状态栏提示”，而是在首屏阶段明确进入共享 `loading / error`，并在已有图谱上下文时把重新自举失败提升为共享 `stale`。
+### 实际变更
+
+- 先在 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 补 RED，锁定三个真实缺口：图谱工作台首屏没有共享 `loading`；首屏自举失败时没有共享 `error`；从共享错误态重试后也没有回到正常工作台上下文。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `GraphWorkspaceState` 与 `workspaceLoadError`，把图谱工作台主入口接到共享页面状态协议：首屏读取中走 `loading`，首屏失败走 `error`，已有图谱内容时重新自举失败走 `stale`。
+- 图谱工作台现在会在共享 `error / stale` 状态里提供统一的“重新加载”动作；首屏失败时不再继续渲染误导性的空画布，而是直接暴露共享 `DataState`。
+- 既有冲突处理、保存、重载最新图谱、检查器与资源面板链路保持不变，本轮只收口主工作台入口状态语义，不扩大图谱控制器职责范围。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- `FE-040` 现在已经不只覆盖首页、搜索、资料、阅读、笔记、复习、AI、社区和设置页，图谱主工作台也接进了共享页面状态协议，用户端最核心的学习舞台又闭合了一段。
+- 图谱工作台更细粒度的资源切换、局部刷新以及 `unauthorized / conflict` 真页面入口仍未完全闭合；后续更适合继续沿图谱工作台或阅读检查器链路补这些剩余状态落点。
+
 ## 2026-07-13 04:54:30 +08:00 | v1.1.0-alpha.170 | 推进 FE-040 用户端设置页页面状态接线
 ### 任务内容
 
