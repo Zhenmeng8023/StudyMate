@@ -34,6 +34,7 @@ describe("AdminGovernanceModule", () => {
 
     expect(wrapper.text()).toContain("audit-1");
     expect(wrapper.text()).toContain("moderation.approve");
+    expect(wrapper.find('[data-admin-metric-grid="true"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-admin-metric-card="true"]')).toHaveLength(1);
     expect(wrapper.find('[data-admin-data-table="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-data-card-header="true"]').exists()).toBe(true);
