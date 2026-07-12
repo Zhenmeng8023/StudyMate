@@ -154,6 +154,59 @@ describe("AiPage", () => {
     expect(await screen.findByText("已把 1 张 AI 草稿写入复习系统。")).toBeInTheDocument();
   });
 
+  it("renders the shared error state when the ai workspace bootstrap fails", async () => {
+    listAiTasksMock.mockRejectedValueOnce(new Error("AI 工作台加载失败"));
+
+    render(
+      <MemoryRouter>
+        <AiPage session={session} />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole("heading", { level: 2, name: "AI 工作台暂时不可用" })).toBeInTheDocument();
+    expect(screen.getByText("AI 工作台加载失败")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重新加载" })).toBeInTheDocument();
+  });
+
+  it("keeps rendering the current drafts while surfacing a shared stale state after a commit refresh fails", async () => {
+    listAiDraftsMock.mockReset();
+    listAiDraftsMock
+      .mockResolvedValueOnce([
+        {
+          id: "draft-1",
+          taskId: "task-1",
+          draftType: "card_draft",
+          targetType: "deck",
+          targetId: "deck-1",
+          status: "pending",
+          sourceType: "annotation",
+          sourceId: "annotation-1",
+          sourceLabel: "AI source",
+          front: "AI card draft",
+          back: "AI card answer",
+          explanation: "from test",
+          createdAt: "2026-06-02T12:00:00Z",
+          updatedAt: "2026-06-02T12:00:00Z"
+        }
+      ])
+      .mockRejectedValueOnce(new Error("AI 草稿刷新失败"));
+
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AiPage session={session} />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("AI source")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "把 1 张待确认卡片草稿写入复习系统" }));
+
+    expect(await screen.findByRole("heading", { level: 2, name: "AI 工作台需要刷新" })).toBeInTheDocument();
+    expect(screen.getByText("AI 草稿刷新失败")).toBeInTheDocument();
+    expect(screen.getByText("AI card draft")).toBeInTheDocument();
+  });
+
   it("confirms selected graph change drafts into the target graph", async () => {
     const graphDetail = {
       id: "graph-1",
