@@ -1,3 +1,25 @@
+## 2026-07-13 04:19:30 +08:00 | v1.1.0-alpha.165 | 推进 FE-040 用户端笔记工作区 stale 页面状态接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新域，而是把用户端笔记工作区的刷新失败路径接到共享页面状态协议。
+- 目标是让 `NotesPage` 在首次加载失败时维持清晰的共享 `error` 状态，在已有笔记列表和编辑上下文时刷新失败进入共享 `stale`，避免用户刚保存完就被打回空白工作区。
+### 实际变更
+
+- 先在 `frontend-user/src/pages/NotesPage.test.tsx` 补 RED，复现“笔记保存后重新同步失败会清空列表、当前笔记退回新建草稿”的缺口，并补首屏 `error` 状态回归。
+- 更新 `frontend-user/src/pages/NotesPage.tsx`，新增 `NotesWorkspaceState` 与 `loadAll({ preserveExisting })` 模式，让笔记列表工作区开始真实消费共享 `loading / error / empty / stale` 页面状态协议。
+- 笔记创建、保存版本和恢复版本在成功提交后都会尝试保留旧内容刷新；如果刷新失败，左侧会渲染“笔记列表需要刷新”的共享 `stale` 状态，同时继续保留旧列表与当前编辑内容。
+- 删除笔记仍保持原来的严格刷新路径，不把“已删除但刷新失败”的情况误渲染成可继续编辑的旧笔记，避免语义混淆。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/NotesPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/NotesPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- `FE-040` 现在已经覆盖用户端搜索、资料库、复习工作区和笔记工作区，用户主学习闭环里的共享页面状态骨架更完整了。
+- 阅读页主舞台对 `getReaderState(...)` 失败仍偏向静默降级为空白阅读态，后续更适合继续沿 `ReaderPage` 把 `error / stale` 的真实入口补齐。
+
 ## 2026-07-13 04:13:30 +08:00 | v1.1.0-alpha.164 | 推进 FE-040 用户端复习工作区页面状态接线
 ### 任务内容
 

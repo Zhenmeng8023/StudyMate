@@ -30,6 +30,13 @@ import {
 } from "../app/appShared";
 
 type NoteInspectorTab = "source" | "history" | "review";
+type NotesWorkspaceState =
+  | {
+      kind: "loading" | "error" | "empty" | "stale";
+      title: string;
+      description: string;
+    }
+  | null;
 
 const noteInspectorTabs: Array<{ id: NoteInspectorTab; label: string }> = [
   { id: "source", label: "来源" },
@@ -59,7 +66,7 @@ export function NotesPage(props: { session: AuthSession }) {
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [activeInspectorTab, setActiveInspectorTab] = useState<NoteInspectorTab>("source");
 
-  async function loadAll(selected?: string) {
+  async function loadAll(options?: { selected?: string; preserveExisting?: boolean }) {
     setLoading(true);
     setLoadError("");
     try {
@@ -72,16 +79,21 @@ export function NotesPage(props: { session: AuthSession }) {
       setMaterials(materialItems);
       setDecks(deckItems);
       setSelectedDeckId((current) => current || deckItems[0]?.id || "");
-      const nextId = selected || searchParams.get("selected") || (materialFromQuery ? "" : noteItems[0]?.id || "");
+      const nextId = options?.selected || searchParams.get("selected") || (materialFromQuery ? "" : noteItems[0]?.id || "");
       setNoteId(nextId);
       if (!nextId && materialFromQuery) {
         setDraft(createNoteDraft(materialFromQuery));
       }
+      return true;
     } catch (error) {
-      setNotes([]);
-      setMaterials([]);
-      setDecks([]);
       setLoadError(error instanceof Error ? error.message : "加载笔记工作台失败。");
+      if (!options?.preserveExisting) {
+        setNotes([]);
+        setMaterials([]);
+        setDecks([]);
+        setNoteId("");
+      }
+      return false;
     } finally {
       setLoading(false);
     }
@@ -101,6 +113,42 @@ export function NotesPage(props: { session: AuthSession }) {
     () => materials.find((material) => material.id === (draft.materialId || selectedNote?.materialId || "")) ?? null,
     [draft.materialId, materials, selectedNote?.materialId]
   );
+  const notesState: NotesWorkspaceState = useMemo(() => {
+    if (loading && notes.length === 0) {
+      return {
+        kind: "loading",
+        title: "加载笔记中",
+        description: "正在读取你的笔记、资料和复习卡组。"
+      };
+    }
+
+    if (loadError && notes.length > 0) {
+      return {
+        kind: "stale",
+        title: "笔记列表需要刷新",
+        description: loadError
+      };
+    }
+
+    if (loadError) {
+      return {
+        kind: "error",
+        title: "笔记暂时不可用",
+        description: loadError
+      };
+    }
+
+    if (notes.length === 0) {
+      return {
+        kind: "empty",
+        title: "还没有笔记",
+        description: "新建第一条笔记，把阅读与想法沉淀成可继续组织的内容。"
+      };
+    }
+
+    return null;
+  }, [loadError, loading, notes.length]);
+  const showNoteList = notes.length > 0 && (!notesState || notesState.kind === "stale");
 
   useEffect(() => {
     if (!selectedNote) {
@@ -147,8 +195,8 @@ export function NotesPage(props: { session: AuthSession }) {
     setMessage("");
     try {
       const created = await createNote(props.session, draft);
-      await loadAll(created.id);
-      setMessage("笔记已创建。");
+      const refreshed = await loadAll({ selected: created.id, preserveExisting: true });
+      setMessage(refreshed ? "笔记已创建。" : "");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "创建笔记失败。");
     } finally {
@@ -169,8 +217,8 @@ export function NotesPage(props: { session: AuthSession }) {
         folderName: draft.folderName,
         tags: draft.tags
       });
-      await loadAll(selectedNote.id);
-      setMessage("笔记已保存，新版本已经记录。");
+      const refreshed = await loadAll({ selected: selectedNote.id, preserveExisting: true });
+      setMessage(refreshed ? "笔记已保存，新版本已经记录。" : "");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "保存笔记失败。");
     } finally {
@@ -210,8 +258,8 @@ export function NotesPage(props: { session: AuthSession }) {
     setBusy(`restore-${versionId}`);
     try {
       await restoreNoteVersion(props.session, selectedNote.id, versionId);
-      await loadAll(selectedNote.id);
-      setMessage("已恢复到所选版本。");
+      const refreshed = await loadAll({ selected: selectedNote.id, preserveExisting: true });
+      setMessage(refreshed ? "已恢复到所选版本。" : "");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "恢复版本失败。");
     } finally {
@@ -368,16 +416,19 @@ export function NotesPage(props: { session: AuthSession }) {
             <Plus size={16} /> 新建空白笔记
           </button>
           <div className="notes-list">
-            {loading ? (
-              <DataState description="正在读取你的笔记、资料和复习卡组。" kind="loading" title="加载笔记中" />
-            ) : loadError ? (
+            {notesState ? (
               <DataState
-                action={<button className="secondary-button" onClick={() => void loadAll()} type="button">重新加载</button>}
-                description={loadError}
-                kind="error"
-                title="笔记暂时不可用"
+                action={
+                  notesState.kind === "error" || notesState.kind === "stale"
+                    ? <button className="secondary-button" onClick={() => void loadAll({ preserveExisting: notesState.kind === "stale" })} type="button">重新加载</button>
+                    : undefined
+                }
+                description={notesState.description}
+                kind={notesState.kind}
+                title={notesState.title}
               />
-            ) : notes.length ? (
+            ) : null}
+            {showNoteList ? (
               notes.map((note) => {
                 const selected = selectedNote?.id === note.id;
                 return (
@@ -394,9 +445,7 @@ export function NotesPage(props: { session: AuthSession }) {
                   </button>
                 );
               })
-            ) : (
-              <DataState description="新建第一条笔记，把阅读与想法沉淀成可继续组织的内容。" kind="empty" title="还没有笔记" />
-            )}
+            ) : null}
           </div>
         </aside>
 
