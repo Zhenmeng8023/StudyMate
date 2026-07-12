@@ -13,7 +13,7 @@ import {
   subscribeSession
 } from "../api/sessionStore";
 import type { AdminAuthUser, AdminSessionPayload } from "../api/sessionStore";
-import AdminConfirmDialog from "../components/admin/AdminConfirmDialog.vue";
+import AdminConfirmStack from "../components/admin/AdminConfirmStack.vue";
 import AdminLoginPanel from "../components/admin/AdminLoginPanel.vue";
 import AdminShellFrame from "../components/admin/AdminShellFrame.vue";
 import { defaultAdminRouteKey, getAdminRoutePath, normalizeAdminRoutePath, parseAdminRoutePath } from "../router";
@@ -47,6 +47,20 @@ type ReportAction = "resolve" | "dismiss";
 type UserAction = "disable" | "activate";
 type AITaskAction = "retry" | "cancel";
 type TemplateAction = "publish" | "unpublish";
+type ConfirmDialogKey = "moderation" | "report" | "user" | "aiTask" | "template";
+type ConfirmDialogItem = {
+  key: ConfirmDialogKey;
+  cancelLabel?: string;
+  confirmDisabled?: boolean;
+  confirmLabel?: string;
+  confirmTone?: "default" | "danger";
+  confirming?: boolean;
+  confirmingLabel?: string;
+  description?: string;
+  errorMessage?: string;
+  isOpen: boolean;
+  title: string;
+};
 type FilterOption = {
   label: string;
   value: string;
@@ -264,6 +278,68 @@ const templateConfirmDescription = computed(() => {
 const templateConfirmLabel = computed(() => (pendingTemplateAction.value?.action === "publish" ? "确认发布" : "确认下架"));
 const templateConfirmingLabel = computed(() => (pendingTemplateAction.value?.action === "publish" ? "发布中..." : "下架中..."));
 const templateConfirmTone = computed(() => (pendingTemplateAction.value?.action === "publish" ? "default" : "danger"));
+const confirmDialogs = computed<ConfirmDialogItem[]>(() => [
+  {
+    key: "moderation" as const,
+    cancelLabel: "取消",
+    confirmLabel: moderationConfirmLabel.value,
+    confirmTone: moderationConfirmTone.value,
+    confirming: loading.value,
+    confirmingLabel: moderationConfirmingLabel.value,
+    description: moderationConfirmDescription.value,
+    errorMessage: moderationConfirmError.value,
+    isOpen: Boolean(pendingModerationAction.value),
+    title: moderationConfirmTitle.value
+  },
+  {
+    key: "report" as const,
+    cancelLabel: "取消",
+    confirmLabel: reportConfirmLabel.value,
+    confirmTone: reportConfirmTone.value,
+    confirming: loading.value,
+    confirmingLabel: reportConfirmingLabel.value,
+    description: reportConfirmDescription.value,
+    errorMessage: reportConfirmError.value,
+    isOpen: Boolean(pendingReportAction.value),
+    title: reportConfirmTitle.value
+  },
+  {
+    key: "aiTask" as const,
+    cancelLabel: "取消",
+    confirmLabel: aiTaskConfirmLabel.value,
+    confirmTone: aiTaskConfirmTone.value,
+    confirming: loading.value,
+    confirmingLabel: aiTaskConfirmingLabel.value,
+    description: aiTaskConfirmDescription.value,
+    errorMessage: aiTaskConfirmError.value,
+    isOpen: Boolean(pendingAITaskAction.value),
+    title: aiTaskConfirmTitle.value
+  },
+  {
+    key: "template" as const,
+    cancelLabel: "取消",
+    confirmLabel: templateConfirmLabel.value,
+    confirmTone: templateConfirmTone.value,
+    confirming: loading.value,
+    confirmingLabel: templateConfirmingLabel.value,
+    description: templateConfirmDescription.value,
+    errorMessage: templateConfirmError.value,
+    isOpen: Boolean(pendingTemplateAction.value),
+    title: templateConfirmTitle.value
+  },
+  {
+    key: "user" as const,
+    cancelLabel: "取消",
+    confirmLabel: userConfirmLabel.value,
+    confirmTone: userConfirmTone.value,
+    confirming: loading.value,
+    confirmingLabel: userConfirmingLabel.value,
+    description: userConfirmDescription.value,
+    errorMessage: userConfirmError.value,
+    isOpen: Boolean(pendingUserAction.value),
+    title: userConfirmTitle.value
+  }
+]);
 
 const navItems = computed<AdminNavItem[]>(() => [
   { key: "dashboard", label: "概览", icon: "▦", group: "总览" },
@@ -946,6 +1022,46 @@ async function confirmTemplateAction() {
   await applyTemplateAction(pending.record, pending.action);
 }
 
+function handleConfirmDialogCancel(key: ConfirmDialogKey) {
+  if (key === "moderation") {
+    closeModerationConfirm();
+    return;
+  }
+  if (key === "report") {
+    closeReportConfirm();
+    return;
+  }
+  if (key === "user") {
+    closeUserConfirm();
+    return;
+  }
+  if (key === "aiTask") {
+    closeAITaskConfirm();
+    return;
+  }
+  closeTemplateConfirm();
+}
+
+async function handleConfirmDialogConfirm(key: ConfirmDialogKey) {
+  if (key === "moderation") {
+    await confirmModerationAction();
+    return;
+  }
+  if (key === "report") {
+    await confirmReportAction();
+    return;
+  }
+  if (key === "user") {
+    await confirmUserAction();
+    return;
+  }
+  if (key === "aiTask") {
+    await confirmAITaskAction();
+    return;
+  }
+  await confirmTemplateAction();
+}
+
 function switchView(view: AdminView) {
   activeView.value = view;
   recordQuery.value = "";
@@ -1020,71 +1136,10 @@ function selectRecord(row: GovernanceRecord) {
 
 <template>
   <main>
-    <AdminConfirmDialog
-      cancel-label="取消"
-      :confirm-label="moderationConfirmLabel"
-      :confirm-tone="moderationConfirmTone"
-      :confirming="loading"
-      :confirming-label="moderationConfirmingLabel"
-      :description="moderationConfirmDescription"
-      :error-message="moderationConfirmError"
-      :is-open="Boolean(pendingModerationAction)"
-      :title="moderationConfirmTitle"
-      @cancel="closeModerationConfirm"
-      @confirm="confirmModerationAction"
-    />
-    <AdminConfirmDialog
-      cancel-label="取消"
-      :confirm-label="reportConfirmLabel"
-      :confirm-tone="reportConfirmTone"
-      :confirming="loading"
-      :confirming-label="reportConfirmingLabel"
-      :description="reportConfirmDescription"
-      :error-message="reportConfirmError"
-      :is-open="Boolean(pendingReportAction)"
-      :title="reportConfirmTitle"
-      @cancel="closeReportConfirm"
-      @confirm="confirmReportAction"
-    />
-    <AdminConfirmDialog
-      cancel-label="取消"
-      :confirm-label="aiTaskConfirmLabel"
-      :confirm-tone="aiTaskConfirmTone"
-      :confirming="loading"
-      :confirming-label="aiTaskConfirmingLabel"
-      :description="aiTaskConfirmDescription"
-      :error-message="aiTaskConfirmError"
-      :is-open="Boolean(pendingAITaskAction)"
-      :title="aiTaskConfirmTitle"
-      @cancel="closeAITaskConfirm"
-      @confirm="confirmAITaskAction"
-    />
-    <AdminConfirmDialog
-      cancel-label="取消"
-      :confirm-label="templateConfirmLabel"
-      :confirm-tone="templateConfirmTone"
-      :confirming="loading"
-      :confirming-label="templateConfirmingLabel"
-      :description="templateConfirmDescription"
-      :error-message="templateConfirmError"
-      :is-open="Boolean(pendingTemplateAction)"
-      :title="templateConfirmTitle"
-      @cancel="closeTemplateConfirm"
-      @confirm="confirmTemplateAction"
-    />
-
-    <AdminConfirmDialog
-      cancel-label="取消"
-      :confirm-label="userConfirmLabel"
-      :confirm-tone="userConfirmTone"
-      :confirming="loading"
-      :confirming-label="userConfirmingLabel"
-      :description="userConfirmDescription"
-      :error-message="userConfirmError"
-      :is-open="Boolean(pendingUserAction)"
-      :title="userConfirmTitle"
-      @cancel="closeUserConfirm"
-      @confirm="confirmUserAction"
+    <AdminConfirmStack
+      :dialogs="confirmDialogs"
+      @cancel="handleConfirmDialogCancel($event as ConfirmDialogKey)"
+      @confirm="handleConfirmDialogConfirm($event as ConfirmDialogKey)"
     />
 
     <AdminLoginPanel

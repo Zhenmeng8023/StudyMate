@@ -6165,3 +6165,25 @@
 
 - `FE-041` 现在不再只覆盖按钮、标签、页头、导航和动作区，审核列表里的内容摘要单元也开始走统一共享出口，后台列表骨架继续往可复用方向收口。
 - 这一轮仍然只先收口内容摘要最小契约；更复杂的列表行布局、批量治理工具条和治理详情内的富内容摘要还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
+## 2026-07-13 07:57:47 +08:00 | v1.1.0-alpha.198 | 推进 FE-041 管理端共享 ConfirmStack 确认弹层骨架接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理 `AdminWorkspaceView.vue` 里重复堆叠的五组治理确认弹层模板。
+- 目标是补一个 `AdminConfirmStack` Vue 适配层，并把审核、举报、用户、AI 任务、图谱模板这五条真实治理确认流切到统一弹层出口，让后台高风险操作的确认层不再在工作台模板里重复维护。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminConfirmStack.vue` 与 `AdminConfirmStack.test.ts`，收口后台确认弹层的共享宿主骨架，并统一承接 keyed confirm/cancel 事件回传。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，把五组内联 `AdminConfirmDialog` 模板替换为共享 `AdminConfirmStack`，同时保留现有审核、举报、用户、AI 任务、图谱模板确认流的标题、说明、危险态和提交流程。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，补上工作台在真实审核确认路径里已经通过共享确认弹层骨架渲染的断言。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminConfirmStack.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+
+### 后续影响
+
+- `FE-041` 现在继续沿后台治理确认骨架向上收口，五条真实高风险治理确认流开始共享统一的弹层出口。
+- 这次仍然只先收口了确认弹层宿主骨架；更进一步的确认文案策略、权限驱动禁用态和批量治理确认模型还没有统一，后续适合继续沿这条路径推进。
