@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AdminButton from "../../components/admin/AdminButton.vue";
+import AdminMetricCard from "../../components/admin/AdminMetricCard.vue";
 
 defineProps<{
   moderationItemsCount: number;
@@ -15,9 +16,13 @@ const emit = defineEmits<{
 
 <template>
   <section class="admin-metric-grid">
-    <article v-for="card in overviewCards" :key="card.label" class="metric-card">
-      <span>{{ card.label }}</span><strong>{{ card.value }}</strong><p>{{ card.helper }}</p>
-    </article>
+    <AdminMetricCard
+      v-for="card in overviewCards"
+      :key="card.label"
+      :helper="card.helper"
+      :label="card.label"
+      :value="card.value"
+    />
   </section>
   <section class="admin-dashboard-grid">
     <article class="admin-priority-card">

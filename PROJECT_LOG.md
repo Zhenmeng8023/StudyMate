@@ -5705,6 +5705,33 @@
 
 - `FE-040` 现在已经覆盖用户端搜索、资料库、阅读、笔记和复习五条主学习路径，主工作区的共享页面状态骨架更完整了。
 - 阅读工作区更细粒度的局部刷新、资源切换以及跨页 `unauthorized / conflict` 入口仍未闭合；后续更适合继续沿 `ReaderPage` 检查器链路或跨端共享列表继续补齐。
+## 2026-07-13 06:24:10 +08:00 | v1.1.0-alpha.182 | 推进 FE-041 管理端共享 MetricCard 摘要卡片接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全骨架、再深挖单点”方向推进 `FE-041`，这次不去加新的治理能力，而是继续清理后台 dashboard 和治理摘要区里重复出现的统计卡片骨架。
+- 目标是补一个 `AdminMetricCard` Vue 适配层，并把概览统计区与治理摘要区切到同一套共享摘要卡片契约。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminMetricCard.vue` 与 `AdminMetricCard.test.ts`，收口后台摘要卡片的 label、value 和 helper 语义。
+- 更新 `frontend-admin/src/views/modules/AdminDashboardModule.vue` 与 `AdminDashboardModule.test.ts`，把 overview cards 改为通过共享 `AdminMetricCard` 渲染。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 与 `AdminGovernanceModule.test.ts`，让治理摘要区也通过共享 `AdminMetricCard` 输出，同时保留现有搜索、筛选、列表与操作行为。
+- 工作区级回归继续通过 `frontend-admin/src/views/AdminWorkspaceView.test.ts` 验证，确保这轮共享卡片抽离没有带偏后台模块主路径。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端摘要卡片也已进入共享 MetricCard 适配层”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminMetricCard.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在不再只覆盖后台页头、顶部条、搜索工具栏和筛选下拉，概览统计区与治理摘要区的重复卡片骨架也开始走统一共享出口。
+- 这一轮仍然只先收口摘要卡片最小契约；priority/status 这类复合运营卡片和后台导航项还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
+
 ## 2026-07-13 06:18:40 +08:00 | v1.1.0-alpha.181 | 推进 FE-041 管理端壳层共享 CommandBar 适配层接线
 ### 任务内容
 

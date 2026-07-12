@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import AdminButton from "../../components/admin/AdminButton.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
+import AdminMetricCard from "../../components/admin/AdminMetricCard.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminSelect from "../../components/admin/AdminSelect.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
@@ -108,11 +109,13 @@ const showTable = computed(
 
 <template>
   <section v-if="summary" class="admin-metric-grid admin-metric-grid--summary">
-    <article v-for="(value, key) in summary" :key="key" class="metric-card">
-      <span>{{ formatFieldLabel(String(key)) }}</span>
-      <strong>{{ formatCell(value) }}</strong>
-      <p>AI 任务用量概览</p>
-    </article>
+    <AdminMetricCard
+      v-for="(value, key) in summary"
+      :key="key"
+      helper="AI 任务用量概览"
+      :label="formatFieldLabel(String(key))"
+      :value="formatCell(value)"
+    />
   </section>
 
   <AdminSearchToolbar
