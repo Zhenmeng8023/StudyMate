@@ -8,6 +8,7 @@ import {
   searchAll
 } from "../../api/client";
 import { DataState } from "../../design-system/primitives";
+import { WorkspaceHeader } from "../../app/appShared";
 
 const searchGroupOrder: SearchResultType[] = ["material", "post", "note", "graph", "card"];
 
@@ -214,15 +215,11 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
 
   return (
     <>
-      <header className="workspace-header">
-        <div>
-          <p className="eyebrow">\u5168\u7ad9\u641c\u7d22</p>
-          <h1>{keyword ? `"${keyword}"` : "\u8f93\u5165\u5173\u952e\u8bcd\u5f00\u59cb\u641c\u7d22"}</h1>
-          <p className="header-copy">
-            \u6309\u7c7b\u578b\u805a\u5408\u8d44\u6599\u3001\u793e\u533a\u3001\u7b14\u8bb0\u3001\u56fe\u8c31\u548c\u5361\u7247\uff1b\u767b\u5f55\u540e\u4f1a\u5305\u542b\u4f60\u6709\u6743\u9650\u8bbf\u95ee\u7684\u4e2a\u4eba\u5b66\u4e60\u8d44\u4ea7\u3002
-          </p>
-        </div>
-      </header>
+      <WorkspaceHeader
+        description="\u6309\u7c7b\u578b\u805a\u5408\u8d44\u6599\u3001\u793e\u533a\u3001\u7b14\u8bb0\u3001\u56fe\u8c31\u548c\u5361\u7247\uff1b\u767b\u5f55\u540e\u4f1a\u5305\u542b\u4f60\u6709\u6743\u9650\u8bbf\u95ee\u7684\u4e2a\u4eba\u5b66\u4e60\u8d44\u4ea7\u3002"
+        eyebrow="\u5168\u7ad9\u641c\u7d22"
+        title={keyword ? `"${keyword}"` : "\u8f93\u5165\u5173\u952e\u8bcd\u5f00\u59cb\u641c\u7d22"}
+      />
 
       <div className="search-workspace">
         <section className="section-frame">

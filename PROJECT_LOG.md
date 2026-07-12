@@ -1,3 +1,25 @@
+## 2026-07-13 05:30:41 +08:00 | v1.1.0-alpha.176 | 推进 FE-041 搜索工作区共享 PageHeader 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不去做新的业务能力，而是补搜索工作区还停留在本地 `workspace-header` 结构上的页头骨架分叉。
+- 目标是把 `SearchWorkspacePage` 切到共享 `WorkspaceHeader` / `PageHeader` 出口，让共享页头不再只覆盖主工作区页面。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`，把自写 `workspace-header` 结构替换成共享 `WorkspaceHeader`，保留原有标题、eyebrow 和说明文案。
+- 更新 `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx`，在保留搜索空态、加载态、错误态、筛选与分页回归的同时，新增 `workspace-header` 骨架断言，锁定搜索工作区确实走了共享页头出口。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 PageHeader 已覆盖主工作区页面与搜索工作区”。
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在又补上了搜索工作区这条真实入口的共享页头骨架，用户端剩余直接手写 `workspace-header` 的分支进一步减少。
+- 这一轮仍然只先收口了搜索工作区头部；图谱工作区头部仍有更复杂的保存状态和动作区，后续更适合继续沿那条分支收回共享页头出口。
+
 ## 2026-07-13 05:27:24 +08:00 | v1.1.0-alpha.175 | 推进 FE-041 复习工作区共享 Select 接线
 ### 任务内容
 
