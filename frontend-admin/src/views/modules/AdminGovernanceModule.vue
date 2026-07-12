@@ -4,6 +4,7 @@ import AdminButton from "../../components/admin/AdminButton.vue";
 import AdminDataCardHeader from "../../components/admin/AdminDataCardHeader.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
 import AdminMetricCard from "../../components/admin/AdminMetricCard.vue";
+import AdminRecordInspector from "../../components/admin/AdminRecordInspector.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminSelect from "../../components/admin/AdminSelect.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
@@ -102,6 +103,15 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
   }
 );
 
+const inspectorFields = computed(() =>
+  props.selectedRecord
+    ? Object.entries(props.selectedRecord).map(([key, value]) => ({
+        label: formatFieldLabel(String(key)),
+        value: formatCell(value)
+      }))
+    : []
+);
+
 const showState = computed(() => Boolean(props.dataState) || props.rows.length === 0);
 const showTable = computed(
   () => props.rows.length > 0 && (!props.dataState || props.dataState.kind === "stale" || props.dataState.kind === "conflict")
@@ -168,19 +178,12 @@ const showTable = computed(
       </div>
     </section>
 
-    <aside class="admin-record-inspector">
-      <header>
-        <p class="eyebrow">记录详情</p>
-        <h2>{{ selectedRecord ? getRecordTitle(selectedRecord) : "选择一条记录" }}</h2>
-      </header>
-      <dl v-if="selectedRecord">
-        <template v-for="(value, key) in selectedRecord" :key="String(key)">
-          <dt>{{ formatFieldLabel(String(key)) }}</dt>
-          <dd>{{ formatCell(value) }}</dd>
-        </template>
-      </dl>
-      <div v-else class="admin-inspector-empty">从左侧表格选择一条记录，查看完整字段。</div>
-      <div v-if="selectedRecord && actions.length" class="admin-record-inspector__actions">
+    <AdminRecordInspector
+      empty-text="从左侧表格选择一条记录，查看完整字段。"
+      :fields="inspectorFields"
+      :title="selectedRecord ? getRecordTitle(selectedRecord) : '选择一条记录'"
+    >
+      <template v-if="selectedRecord && actions.length" #actions>
         <AdminButton
           v-for="action in actions"
           :key="action.key"
@@ -190,7 +193,7 @@ const showTable = computed(
         >
           {{ action.label }}
         </AdminButton>
-      </div>
-    </aside>
+      </template>
+    </AdminRecordInspector>
   </section>
 </template>
