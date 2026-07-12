@@ -5966,3 +5966,27 @@
 
 - `FE-041` 现在不再只覆盖按钮、页头、导航、卡片和动作区，审核与治理模块的状态标签语义也开始走统一共享出口，后台列表语义进一步收口。
 - 这一轮仍然只先收口标签最小契约；角色、来源、批量筛选 chip 和更细粒度的状态色阶还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
+## 2026-07-13 07:10:40 +08:00 | v1.1.0-alpha.190 | 推进 FE-041 管理端共享 ContentCell 内容摘要单元接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩新的治理能力，而是继续清理后台审核列表里仍然内联手写的标题+摘要内容单元。
+- 目标是补一个 `AdminContentCell` Vue 适配层，并把审核列表里的内容摘要区切到统一共享出口，让后台列表单元开始从按钮、标签、动作区之外继续往内容骨架收口。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminContentCell.vue` 与 `AdminContentCell.test.ts`，收口后台列表内容摘要单元的 `title / summary` 最小契约。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminModerationModule.test.ts`，把审核列表里的标题+摘要单元切到共享 `AdminContentCell`，同时保留标签、筛选、动作区和状态语义。
+- 这一步没有继续扩大治理模块结构，而是先把后台列表里高频出现的内容摘要模式从模块模板中拿出来，作为后续资料治理、举报列表等列表化入口的共享起点。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminContentCell.test.ts src/views/modules/AdminModerationModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在不再只覆盖按钮、标签、页头、导航和动作区，审核列表里的内容摘要单元也开始走统一共享出口，后台列表骨架继续往可复用方向收口。
+- 这一轮仍然只先收口内容摘要最小契约；更复杂的列表行布局、批量治理工具条和治理详情内的富内容摘要还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。

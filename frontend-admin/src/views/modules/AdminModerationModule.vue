@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import AdminActionBar from "../../components/admin/AdminActionBar.vue";
+import AdminContentCell from "../../components/admin/AdminContentCell.vue";
 import AdminDataCardHeader from "../../components/admin/AdminDataCardHeader.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
@@ -114,13 +115,10 @@ function requestAction(actionKey: ModerationActionKey, item: ModerationItem) {
         <span>操作</span>
       </div>
       <article v-for="item in items" :key="item.id" class="admin-table__row" role="row">
-        <div class="admin-content-cell">
-          <strong>{{ item.title }}</strong>
-          <p>{{ item.summary }}</p>
-        </div>
+        <AdminContentCell :summary="item.summary" :title="item.title" />
         <span><AdminTag :label="item.type === 'post' ? '帖子' : '资料'" /></span>
         <span>{{ item.authorName }}</span>
-        <span>{{ new Date(item.createdAt).toLocaleString("zh-CN") }}</span>
+        <span>{{ new Date(item.createdAt).toLocaleString('zh-CN') }}</span>
         <span><AdminTag :label="item.status" tone="status" /></span>
         <AdminActionBar
           compact
