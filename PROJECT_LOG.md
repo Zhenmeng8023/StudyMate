@@ -5366,6 +5366,31 @@
 
 - `FE-040` 不再只在管理端闭环，用户端真实列表页也开始共用同一套页面状态语义；后续可以沿阅读、笔记、复习和更多跨端列表继续扩状态落点，而不是重新写散落的空态/错态文案。
 - 当前这轮优先补的是 `loading / error / empty / stale`；`unauthorized / conflict` 在用户端还没有大面积真实入口，后续更适合结合受保护工作区和带刷新/冲突决策的页面继续推进。
+## 2026-07-13 04:35:30 +08:00 | v1.1.0-alpha.167 | 推进 FE-040 用户端首页页面状态接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不回到更深的图谱或 AI 细节，而是先收口用户端首页 `DashboardPage` 的真实页面状态入口。
+- 目标是让首页资料区、社区区和个人笔记区不再把失败或权限边界静默伪装成空态，尤其把“未登录时个人笔记区”接成真实的共享 `unauthorized`。
+
+### 实际变更
+
+- 新增 `frontend-user/src/pages/DashboardPage.test.tsx`，先以 RED 锁定三个缺口：资料区首屏没有共享 `loading`；资料加载失败会静默退化成空态；未登录时个人笔记区仍显示“还没有个人笔记”，没有真实 `unauthorized` 回归保护。
+- 更新 `frontend-user/src/pages/DashboardPage.tsx`，按资料、社区、笔记三块数据源分别补了 section-level `DataState`：资料区和社区区现在具备共享 `loading / error / empty`，个人笔记区现在具备共享 `unauthorized / loading / error / empty`。
+- 首页的资料区与社区区失败时现在都会保留独立的“重新加载”入口，不再吞掉真实错误原因；个人笔记区在未登录时会明确提示“登录后查看个人笔记”，而不是继续把权限边界伪装成空态。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/DashboardPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/DashboardPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+
+### 后续影响
+
+- `FE-040` 现在已经从用户端搜索、资料、阅读、笔记、复习继续推进到了首页，用户端主工作台的共享页面状态协议更完整了，也补上了更通用的用户端 `unauthorized` 真实入口。
+- 社区页、设置页和 AI 工作台仍保留本地空态/错误态直出路径；后续更适合继续沿这些剩余页面补真实 `error / unauthorized / stale`，进一步收口用户端全局状态语义。
+
 ## 2026-07-13 04:31:20 +08:00 | v1.1.0-alpha.166 | 推进 FE-040 用户端阅读工作区页面状态接线
 ### 任务内容
 

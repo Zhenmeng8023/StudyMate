@@ -23,7 +23,7 @@
 | FE-010 | DONE | 多布局壳层与基础组件 | FE-000 | `frontend-user/src/app/`、`frontend-user/src/design-system/`、样式 | Standard / Studio / Canvas / Focus 路由布局可解析；Canvas 不挂全局 ContextPanel；基础组件与单测已添加，并已在 2026-07-08 跑通用户端 / 管理端类型检查、相关 Vitest、前后台构建与 Playwright 回归。 |
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
-| FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale / unauthorized / conflict` 的真实状态入口，用户端 `SearchWorkspacePage`、`MaterialsPage`、`ReviewWorkspacePage`、`NotesPage` 与 `ReaderPage` 已接入首批共享页面状态，其中资料库、复习工作区、笔记工作区与阅读工作区都已补上真实 `error / stale` 入口，刷新失败时会按场景保留旧内容并显式提示用户；后续继续补更多用户端页面与跨端状态落点。 |
+| FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale / unauthorized / conflict` 的真实状态入口，用户端 `SearchWorkspacePage`、`DashboardPage`、`MaterialsPage`、`ReviewWorkspacePage`、`NotesPage` 与 `ReaderPage` 已接入首批共享页面状态，其中首页已补上真实 `unauthorized / error` 入口，资料库、复习工作区、笔记工作区与阅读工作区也都已补上真实 `error / stale` 入口；后续继续补更多用户端页面与跨端状态落点。 |
 | FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层，管理端也已新增 `AdminButton` / `AdminInput` Vue 适配层，并接入登录、壳层、dashboard、审核与治理模块，后续继续推进更多后台治理动作与跨端状态语义。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；请求阶段直接收到 `403 user_disabled` 时也会统一清 session 并给出禁用提示；补 HttpOnly Refresh Token 迁移说明。 |
@@ -583,6 +583,21 @@
 - 后续建议：
   - 这一步把共享页面状态继续推进到了阅读工作区，用户端搜索、资料、阅读、笔记、复习五条主学习路径都已经具备首批真实 `error / stale` 入口。
   - 当前阅读工作区更细粒度的资源切换、批注列表局部刷新和跨页 `unauthorized / conflict` 入口仍未闭合；后续更适合继续沿 `ReaderPage` 检查器链路或跨端共享列表补这些剩余状态落点。
+
+### 执行记录：FE-040（用户端首页页面状态接线）
+- 执行日期：2026-07-13
+- 本轮完成：
+  - 先在 `frontend-user/src/pages/DashboardPage.test.tsx` 补 RED，锁定三个真实缺口：资料区首屏没有共享 `loading`；资料读取失败时会静默退化成空态；未登录时个人笔记区仍伪装成“还没有笔记”的空态，而不是显式进入共享 `unauthorized`。
+  - `frontend-user/src/pages/DashboardPage.tsx` 现已按资料、社区、笔记三块数据源分别补上 section-level `DataState` 接线：资料区和社区区补齐真实 `loading / error / empty`，个人笔记区补齐真实 `unauthorized / loading / error / empty`。
+  - 首页的未登录笔记区现在会明确提示“登录后查看个人笔记”，而不是继续把权限边界伪装成空态；资料区与社区区在失败时也会保留独立的重试入口，不再吞掉真实错误原因。
+- 已执行验证：
+  - RED：`npm --workspace frontend-user run test -- src/pages/DashboardPage.test.tsx`
+  - GREEN：`npm --workspace frontend-user run test -- src/pages/DashboardPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm run build:user`
+- 后续建议：
+  - 这一步把用户端首页也接进了共享页面状态协议，并补上了用户端更通用的 `unauthorized` 真实入口，有助于把首页从“静默空态拼装页”收口成更可解释的工作台。
+  - 当前社区页、设置页和 AI 工作台仍有本地空态/错误态直出路径；后续更适合继续沿这些剩余页面补共享 `error / unauthorized / stale`，把用户端状态协议进一步闭合。
 
 ### 执行记录：FE-040（管理端 conflict 页面状态接线）
 - 执行日期：2026-07-13
