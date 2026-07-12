@@ -1,6 +1,6 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createDeck,
   createDeckCard,
@@ -44,6 +44,10 @@ const getTodayReviewQueueMock = vi.mocked(getTodayReviewQueue);
 const reviewCardMock = vi.mocked(reviewCard);
 
 describe("ReviewWorkspacePage", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
     vi.mocked(createDeck).mockReset();
     vi.mocked(createDeckCard).mockReset();
@@ -147,5 +151,31 @@ describe("ReviewWorkspacePage", () => {
     });
     expect(await screen.findByText(/已记录复习，下次/)).toBeInTheDocument();
     expect(screen.getByText("今天的队列已经清空")).toBeInTheDocument();
+  });
+
+  it("renders the shared error state when the initial review workspace bootstrap fails", async () => {
+    listDecksMock.mockRejectedValueOnce(new Error("复习工作台加载失败"));
+    getTodayReviewQueueMock.mockRejectedValueOnce(new Error("复习工作台加载失败"));
+
+    render(<ReviewWorkspacePage session={session} />);
+
+    expect(await screen.findByRole("heading", { level: 2, name: "复习工作台暂时不可用" })).toBeInTheDocument();
+    expect(screen.getByText("复习工作台加载失败")).toBeInTheDocument();
+  });
+
+  it("keeps rendering the current card while surfacing a shared stale state after refresh fails", async () => {
+    const user = userEvent.setup();
+    render(<ReviewWorkspacePage session={session} />);
+
+    await expect(screen.findByText("什么是图谱？")).resolves.toBeInTheDocument();
+
+    listDecksMock.mockRejectedValueOnce(new Error("复习队列刷新失败"));
+    getTodayReviewQueueMock.mockRejectedValueOnce(new Error("复习队列刷新失败"));
+
+    await user.click(screen.getByRole("button", { name: /刷新/ }));
+
+    expect(await screen.findByRole("heading", { level: 2, name: "复习队列需要刷新" })).toBeInTheDocument();
+    expect(screen.getByText("复习队列刷新失败")).toBeInTheDocument();
+    expect(screen.getByText("什么是图谱？")).toBeInTheDocument();
   });
 });
