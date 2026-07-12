@@ -183,6 +183,39 @@ describe("GraphWorkspacePage persistence states", () => {
     validateGraphMock.mockResolvedValue({ issues: [] });
   });
 
+  it("renders the shared loading state while the graph workspace is bootstrapping", async () => {
+    listGraphsMock.mockReturnValue(new Promise(() => {}) as Promise<GraphSummaryPayload[]>);
+
+    renderWorkspace();
+
+    expect(await screen.findByRole("heading", { level: 2, name: "正在加载图谱工作台" })).toBeInTheDocument();
+  });
+
+  it("renders the shared error state when bootstrapping the graph workspace fails", async () => {
+    listGraphsMock.mockRejectedValueOnce(new Error("图谱工作台读取失败"));
+
+    renderWorkspace();
+
+    expect(await screen.findByRole("heading", { level: 2, name: "图谱工作台暂时不可用" })).toBeInTheDocument();
+    expect(screen.getByText("图谱工作台读取失败")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重新加载" })).toBeInTheDocument();
+  });
+
+  it("retries bootstrapping the graph workspace from the shared error state", async () => {
+    listGraphsMock
+      .mockRejectedValueOnce(new Error("第一次加载图谱工作台失败"))
+      .mockResolvedValueOnce([graphSummary]);
+
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    expect(await screen.findByRole("heading", { level: 2, name: "图谱工作台暂时不可用" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "重新加载" }));
+
+    await waitFor(() => expect(getCanvasSaveButton()).toBeInTheDocument());
+  });
+
   it("shows a failed save state when batch save rejects", async () => {
     const user = userEvent.setup();
     batchSaveGraphMock.mockRejectedValueOnce(new Error("保存服务暂不可用"));
