@@ -5,6 +5,7 @@ import AdminDataCardHeader from "../../components/admin/AdminDataCardHeader.vue"
 import AdminDataState from "../../components/admin/AdminDataState.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminSelect from "../../components/admin/AdminSelect.vue";
+import AdminTag from "../../components/admin/AdminTag.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
 type ModerationItem = {
@@ -117,10 +118,10 @@ function requestAction(actionKey: ModerationActionKey, item: ModerationItem) {
           <strong>{{ item.title }}</strong>
           <p>{{ item.summary }}</p>
         </div>
-        <span><i class="admin-type-badge">{{ item.type === "post" ? "帖子" : "资料" }}</i></span>
+        <span><AdminTag :label="item.type === 'post' ? '帖子' : '资料'" /></span>
         <span>{{ item.authorName }}</span>
         <span>{{ new Date(item.createdAt).toLocaleString("zh-CN") }}</span>
-        <span><i class="admin-status-badge">{{ item.status }}</i></span>
+        <span><AdminTag :label="item.status" tone="status" /></span>
         <AdminActionBar
           compact
           namespace="moderation"

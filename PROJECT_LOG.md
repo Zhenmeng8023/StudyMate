@@ -5940,3 +5940,29 @@
 
 - `FE-041` 现在不再只覆盖后台页头、顶部条、导航和卡片骨架，审核与治理模块的动作按钮组也开始走统一共享出口，后台治理主路径进一步收口。
 - 这一轮仍然只先收口动作区最小契约；批量治理工具条、权限驱动禁用态和更复杂的异步反馈还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
+## 2026-07-13 07:05:32 +08:00 | v1.1.0-alpha.189 | 推进 FE-041 管理端共享 Tag 状态标签接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩新的治理能力，而是继续清理后台模块里重复手写的类型/状态 badge 结构。
+- 目标是补一个 `AdminTag` Vue 适配层，并把审核列表与治理记录里的状态标签切到统一共享出口，让后台状态语义不再分散在各模块模板里各自维护。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminTag.vue` 与 `AdminTag.test.ts`，收口后台标签的 `label / tone` 最小契约，让 `neutral/status` 两种标签语义通过同一层 Vue 适配组件暴露。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminModerationModule.test.ts`，把审核表中的内容类型与状态标签切到共享 `AdminTag`，同时保留搜索、筛选和动作区行为。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 与 `AdminGovernanceModule.test.ts`，把治理表中的状态列切到共享 `AdminTag`，同时保留记录选择、详情展示和动作触发行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，把工作区级导航切换断言对齐到当前壳层真实使用的 `data-admin-nav-item-view` 钩子，避免回归测试继续依赖旧导航标记。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端审核类型/状态标签与治理记录状态标签也已进入共享 AdminTag 适配层”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminTag.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在不再只覆盖按钮、页头、导航、卡片和动作区，审核与治理模块的状态标签语义也开始走统一共享出口，后台列表语义进一步收口。
+- 这一轮仍然只先收口标签最小契约；角色、来源、批量筛选 chip 和更细粒度的状态色阶还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。

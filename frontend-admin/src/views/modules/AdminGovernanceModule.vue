@@ -7,6 +7,7 @@ import AdminMetricCard from "../../components/admin/AdminMetricCard.vue";
 import AdminRecordInspector from "../../components/admin/AdminRecordInspector.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminSelect from "../../components/admin/AdminSelect.vue";
+import AdminTag from "../../components/admin/AdminTag.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
 type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
@@ -89,6 +90,10 @@ function formatFieldLabel(key: string) {
 
 function getRecordTitle(row: GovernanceRecord) {
   return formatCell(row.title ?? row.name ?? row.originalName ?? row.username ?? row.action ?? row.id);
+}
+
+function isStatusColumn(column: string) {
+  return column === "status";
 }
 
 function requestAction(action: string) {
@@ -174,7 +179,10 @@ const showTable = computed(
           type="button"
           @click="emit('selectRecord', row)"
         >
-          <span v-for="column in columns" :key="column" :title="formatCell(row[column])">{{ formatCell(row[column]) }}</span>
+          <span v-for="column in columns" :key="column" :title="formatCell(row[column])">
+            <AdminTag v-if="isStatusColumn(column)" :label="formatCell(row[column])" tone="status" />
+            <template v-else>{{ formatCell(row[column]) }}</template>
+          </span>
         </button>
       </div>
     </section>
