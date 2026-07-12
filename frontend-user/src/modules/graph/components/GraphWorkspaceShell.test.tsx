@@ -88,6 +88,7 @@ describe("GraphWorkspaceShell components", () => {
 
     fireEvent.change(screen.getByLabelText("选择新建节点类型"), { target: { value: "pdf-anchor" } });
     expect(onQuickNodeTypeChange).toHaveBeenCalledWith("pdf-anchor");
+    expect(screen.getByLabelText("选择新建节点类型")).toHaveClass("ds-select");
     expect(screen.getByRole("option", { name: "工程图" })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("选择新建节点类型"), { target: { value: "diagram" } });

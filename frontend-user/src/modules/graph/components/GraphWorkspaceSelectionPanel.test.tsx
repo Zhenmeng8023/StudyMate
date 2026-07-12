@@ -117,6 +117,7 @@ describe("GraphWorkspaceSelectionPanel", () => {
 
     fireEvent.change(screen.getByLabelText("关系标签"), { target: { value: "前置" } });
     expect(props.onEdgeLabelChange).toHaveBeenLastCalledWith("前置");
+    expect(screen.getByLabelText("线条形态")).toHaveClass("ds-select");
     fireEvent.change(screen.getByLabelText("线条形态"), { target: { value: "curve" } });
     expect(props.onEdgeKindChange).toHaveBeenCalledWith("curve");
   });
@@ -162,6 +163,7 @@ describe("GraphWorkspaceSelectionPanel", () => {
 
     const modeSelect = screen.getByLabelText("ERD 模型 工程图类型");
     expect(modeSelect).toHaveValue("erd");
+    expect(modeSelect).toHaveClass("ds-select");
     expect(screen.getByRole("option", { name: "C4" })).toBeInTheDocument();
 
     fireEvent.change(modeSelect, { target: { value: "c4" } });

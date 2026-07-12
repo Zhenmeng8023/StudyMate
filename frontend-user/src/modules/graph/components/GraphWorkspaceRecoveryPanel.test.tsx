@@ -10,7 +10,7 @@ import { GraphWorkspaceRecoveryPanel } from "./GraphWorkspaceRecoveryPanel";
 const deck: DeckPayload = {
   id: "deck-1",
   ownerUserId: "user-1",
-  title: "期末复习",
+  title: "Deck 1",
   description: "",
   visibility: "private",
   cardCount: 0,
@@ -21,16 +21,16 @@ const deck: DeckPayload = {
 const cardDraft: GraphCardDraftPayload = {
   id: "draft-1",
   sourceNodeId: "node-1",
-  front: "什么是临界区？",
-  back: "一次只允许一个进程进入的共享资源访问区。",
-  explanation: "来自图谱节点"
+  front: "Question 1",
+  back: "Answer 1",
+  explanation: "From graph node"
 };
 
 const snapshot: GraphSnapshotPayload = {
   id: "snapshot-1",
   graphId: "graph-1",
   versionNumber: 3,
-  summary: "导入 Markdown 大纲",
+  summary: "Imported markdown outline",
   createdAt: "2026-06-05T00:00:00Z"
 };
 
@@ -60,16 +60,17 @@ describe("GraphWorkspaceRecoveryPanel", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /生成卡片草稿/ }));
+    fireEvent.click(screen.getByRole("button", { name: "生成卡片草稿" }));
     expect(onGenerateCards).toHaveBeenCalled();
+    expect(screen.getByRole("combobox")).toHaveClass("ds-select");
 
-    fireEvent.change(screen.getByDisplayValue("期末复习"), { target: { value: "" } });
+    fireEvent.change(screen.getByDisplayValue("Deck 1"), { target: { value: "" } });
     expect(onDraftDeckChange).toHaveBeenCalledWith("");
 
-    fireEvent.change(screen.getByDisplayValue("什么是临界区？"), { target: { value: "解释临界区" } });
-    expect(onDraftFieldChange).toHaveBeenCalledWith("draft-1", "front", "解释临界区");
+    fireEvent.change(screen.getByDisplayValue("Question 1"), { target: { value: "Question 2" } });
+    expect(onDraftFieldChange).toHaveBeenCalledWith("draft-1", "front", "Question 2");
 
-    fireEvent.click(screen.getByRole("button", { name: /确认写入卡组/ }));
+    fireEvent.click(screen.getByRole("button", { name: "确认写入卡组" }));
     expect(onCommitCardDrafts).toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "恢复" }));
@@ -93,7 +94,7 @@ describe("GraphWorkspaceRecoveryPanel", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: /生成卡片草稿/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "生成卡片草稿" })).toBeDisabled();
     expect(screen.getByText("卡组准备")).toBeInTheDocument();
   });
 });
