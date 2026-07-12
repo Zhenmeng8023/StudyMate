@@ -6,6 +6,7 @@ import type {
   GraphNodePayload,
   GraphNodeTone
 } from "../../../api/client";
+import { Select } from "../../../design-system/primitives";
 import {
   getNodeDetail,
   getNodeEmphasis,
@@ -332,7 +333,7 @@ function GraphSingleNodePanel(props: {
         <label key={field.field}>
           <span>{field.label}</span>
           {field.options ? (
-            <select
+            <Select
               aria-label={`${selectedNode.title} ${field.label}`}
               onChange={(event) => props.onNodeMetadataFieldChange(field.field, event.target.value)}
               value={getGraphNodeMetadataField(selectedNode, field.field)}
@@ -343,7 +344,7 @@ function GraphSingleNodePanel(props: {
                   {option.label}
                 </option>
               ))}
-            </select>
+            </Select>
           ) : (
             <input
               aria-label={`${selectedNode.title} ${field.label}`}
@@ -480,14 +481,14 @@ function GraphSelectedEdgePanel(props: {
       </label>
       <label>
         <span>线条形态</span>
-        <select
+        <Select
           aria-label="线条形态"
           onChange={(event) => props.onEdgeKindChange(event.target.value)}
           value={props.selectedEdge.kind || "straight"}
         >
           <option value="straight">直线</option>
           <option value="curve">曲线</option>
-        </select>
+        </Select>
       </label>
     </div>
   );

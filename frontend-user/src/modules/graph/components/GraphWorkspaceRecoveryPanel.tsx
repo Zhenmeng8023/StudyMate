@@ -4,6 +4,7 @@ import type {
   GraphCardDraftPayload,
   GraphSnapshotPayload
 } from "../../../api/client";
+import { Select } from "../../../design-system/primitives";
 
 export function GraphWorkspaceRecoveryPanel(props: {
   canGenerateCards: boolean;
@@ -39,14 +40,18 @@ export function GraphWorkspaceRecoveryPanel(props: {
           <div className="graph-form-stack">
             <label>
               <span>写入卡组</span>
-              <select onChange={(event) => props.onDraftDeckChange(event.target.value)} value={props.selectedDraftDeckId}>
+              <Select
+                aria-label="鍐欏叆鍗＄粍"
+                onChange={(event) => props.onDraftDeckChange(event.target.value)}
+                value={props.selectedDraftDeckId}
+              >
                 <option value="">请选择一个 deck</option>
                 {props.decks.map((deck) => (
                   <option key={deck.id} value={deck.id}>
                     {deck.title}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <button
               className="secondary-button"

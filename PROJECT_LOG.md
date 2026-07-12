@@ -1,3 +1,28 @@
+## 2026-07-13 05:14:39 +08:00 | v1.1.0-alpha.173 | 推进 FE-041 图谱工作区共享 Select 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不回到图谱控制器深层重构，而是挑一个覆盖面广、风险低的共享 primitive 缺口继续收口。
+- 目标是把图谱工作区里最常用的节点类型、结构化 metadata、边形态和写入 deck 选择器接到共享 `Select`，让共享 UI 契约继续从笔记/阅读表单扩展到图谱主工作台。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceShell.tsx`，把工具栏“新建节点类型”下拉切到共享 `Select`，保留现有 `graph-node-type-select` class、禁用态和 `onQuickNodeTypeChange(...)` 回调。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceSelectionPanel.tsx`，把单节点 metadata 选项字段和边形态选择器切到共享 `Select`，让工程图类型与边关系编辑不再停留在局部裸 `select`。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceRecoveryPanel.tsx`，把卡片草稿写入 deck 的选择器切到共享 `Select`，补齐图谱到复习闭环里的高频下拉语义。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceShell.test.tsx`、`GraphWorkspaceSelectionPanel.test.tsx` 与 `GraphWorkspaceRecoveryPanel.test.tsx`，锁定这些选择器现在都会暴露共享 `ds-select` 契约，而不只是保留原先的 change 行为。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 Select 已覆盖笔记、阅读与图谱工作区高频下拉”。
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceShell.test.tsx src/modules/graph/components/GraphWorkspaceSelectionPanel.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在不再只覆盖笔记/阅读表单，图谱工作区主路径里的高频下拉也开始消费共享 `Select`，这让后续继续收口更多图谱编辑表单和后台筛选器更顺。
+- 这一轮仍然只先覆盖了图谱工作区的 `select`；图谱页头骨架、更多 `input / textarea` 以及管理端 `Select` 适配层仍未统一，后续更适合继续沿这些重复点推进，而不是回到单一深层逻辑重构。
+
 ## 2026-07-13 05:06:30 +08:00 | v1.1.0-alpha.172 | 推进 FE-040 用户端分享页页面状态接线
 ### 任务内容
 

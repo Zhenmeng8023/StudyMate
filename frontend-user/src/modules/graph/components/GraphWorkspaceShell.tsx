@@ -23,7 +23,7 @@ import type {
   MaterialPayload,
   NotePayload
 } from "../../../api/client";
-import { Button, IconButton } from "../../../design-system/primitives";
+import { Button, IconButton, Select } from "../../../design-system/primitives";
 import type { GraphWorkspaceSaveState } from "../state/types";
 import type { GraphNodeCreationType, GraphNodeTypeOption } from "../lib/graphNodeTypes";
 
@@ -198,7 +198,7 @@ export function GraphWorkspaceToolbar(props: {
   return (
     <div className="graph-toolbar" aria-label="图谱工具栏">
       <div className="graph-toolbar-group">
-        <select
+        <Select
           aria-label="选择新建节点类型"
           className="graph-node-type-select"
           disabled={!props.graphDetail}
@@ -210,7 +210,7 @@ export function GraphWorkspaceToolbar(props: {
               {option.label}
             </option>
           ))}
-        </select>
+        </Select>
         <IconButton
           aria-label={`新建${props.quickNodeTypeLabel}节点`}
           disabled={!props.graphDetail}
