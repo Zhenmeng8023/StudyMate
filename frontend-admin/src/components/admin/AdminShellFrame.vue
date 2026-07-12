@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AdminButton from "./AdminButton.vue";
+import AdminPageHeader from "./AdminPageHeader.vue";
 
 type ShellNavItem = {
   key: string;
@@ -87,16 +88,11 @@ const emit = defineEmits<{
         </div>
       </header>
 
-      <section class="admin-page-heading">
-        <div>
-          <p class="eyebrow">{{ activeGroup }}</p>
-          <h1>{{ activeTitle }}</h1>
-          <p>{{ activeDescription }}</p>
-        </div>
-        <div class="admin-page-heading__actions">
-          <span v-if="countLabel" class="admin-count-chip">{{ countLabel }}</span>
-        </div>
-      </section>
+      <AdminPageHeader :description="activeDescription" :eyebrow="activeGroup" :title="activeTitle">
+        <template v-if="countLabel" #actions>
+          <span class="admin-count-chip">{{ countLabel }}</span>
+        </template>
+      </AdminPageHeader>
 
       <div class="admin-notice-stack">
         <p class="notice"><span>●</span>{{ notice }}</p>

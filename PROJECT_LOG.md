@@ -1,3 +1,28 @@
+## 2026-07-13 05:49:05 +08:00 | v1.1.0-alpha.178 | 推进 FE-041 管理端壳层共享 PageHeader 适配层接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不切到新的治理能力，而是继续清理管理端真实主路径里重复出现的页头骨架。
+- 目标是为后台壳层补一个 `AdminPageHeader` Vue 适配层，并把 `AdminShellFrame` 切到统一页头出口，让 dashboard、审核和治理视图先共享同一套头部契约。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminPageHeader.vue` 与 `AdminPageHeader.test.ts`，收口管理端 `eyebrow / title / description / actions` 页头骨架语义，并补 actions 插槽有无两种回归。
+- 更新 `frontend-admin/src/components/admin/AdminShellFrame.vue`，把后台主工作区的本地页头结构替换为 `AdminPageHeader`，同时保留计数 chip 作为 actions 插槽输出。
+- 更新 `frontend-admin/src/components/admin/AdminShellFrame.test.ts`，锁定后台壳层已经通过统一页头适配层渲染主标题和计数区，而不是只新增了一个未接线组件。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端也已具备共享 `AdminPageHeader` 适配层并接到壳层”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminPageHeader.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/modules/AdminModerationModule.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在不再只在用户端收口页头骨架，管理端壳层也开始走统一页头适配层，后续继续收口后台筛选条和模块工具栏的成本会更低。
+- 这一轮仍然只先覆盖了后台主页头；dashboard 卡片头部、治理筛选条和更多表格工具栏还没有进入统一契约，后续更适合继续沿这些高频骨架推进，而不是切去新域功能。
+
 ## 2026-07-13 05:42:49 +08:00 | v1.1.0-alpha.177 | 推进 FE-041 图谱工作区共享 PageHeader 接线
 ### 任务内容
 

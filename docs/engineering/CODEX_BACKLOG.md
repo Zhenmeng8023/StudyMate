@@ -24,7 +24,7 @@
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
 | FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale / unauthorized / conflict` 的真实状态入口，用户端 `SearchWorkspacePage`、`DashboardPage`、`CommunityPage`、`MaterialsPage`、`ReviewWorkspacePage`、`NotesPage`、`ReaderPage`、`AiPage`、`SettingsPage`、`GraphWorkspacePage` 与 `SharePage` 已接入首批共享页面状态，其中首页已补上真实 `unauthorized / error` 入口，社区页、资料库、复习工作区、笔记工作区、阅读工作区、AI 工作台、设置页、图谱工作台和分享页也都已补上真实 `error / stale / loading` 落点；后续继续补更多用户端页面与跨端状态落点。 |
-| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `Select` 已覆盖笔记页、阅读页、复习工作区、图谱工作区与 AI 草稿中心里的高频下拉，共享 `PageHeader` 已覆盖主工作区页面、搜索工作区与图谱工作区，共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层，管理端也已新增 `AdminButton` / `AdminInput` Vue 适配层，并接入登录、壳层、dashboard、审核与治理模块，后续继续推进更多后台治理动作与跨端状态语义。 |
+| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `Select` 已覆盖笔记页、阅读页、复习工作区、图谱工作区与 AI 草稿中心里的高频下拉，共享 `PageHeader` 已覆盖主工作区页面、搜索工作区与图谱工作区，共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层；管理端也已新增 `AdminButton` / `AdminInput` / `AdminPageHeader` Vue 适配层，并接入登录、壳层、dashboard、审核与治理模块，后续继续推进更多后台治理动作与跨端状态语义。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；请求阶段直接收到 `403 user_disabled` 时也会统一清 session 并给出禁用提示；补 HttpOnly Refresh Token 迁移说明。 |
 | DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
@@ -391,6 +391,21 @@
 - 风险与后续：
   - 当前图谱工作区头部虽然已经走共享 `PageHeader`，但保存状态与动作区仍是图谱页面自带组合；后续如果继续推进 `FE-041`，更适合评估是否把这类“状态徽标 + 危险动作 + 次级筛选”再抽成更高层骨架，而不是把所有差异都塞回 primitive。
   - 管理端页头和筛选条仍未直接消费这层契约；后续如需更深共享，应优先补后台治理页面的真实头部骨架。
+
+### 执行记录：FE-041（管理端壳层共享 PageHeader 适配层接线）
+- 执行日期：2026-07-13
+- 本轮完成：
+  - 新增 `frontend-admin/src/components/admin/AdminPageHeader.vue` 与 `AdminPageHeader.test.ts`，以 Vue 适配层收口管理端 `eyebrow / title / description / actions` 这组页头骨架语义，避免后台继续在壳层里手写同类结构。
+  - 更新 `frontend-admin/src/components/admin/AdminShellFrame.vue`，把后台主工作区页头替换为 `AdminPageHeader`，保留计数 chip 作为 actions 插槽输出，从而让 dashboard、审核、治理等视图一起进入统一页头出口。
+  - 补强 `frontend-admin/src/components/admin/AdminShellFrame.test.ts`，锁定后台壳层已经通过 `AdminPageHeader` 暴露统一页头契约，而不是只新增了一个未接线的适配组件。
+- 已执行验证：
+  - `npm --workspace frontend-admin run test -- src/components/admin/AdminPageHeader.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/modules/AdminModerationModule.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+  - `git diff --check`
+- 风险与后续：
+  - 当前管理端只先把壳层主页头收口到共享适配层，dashboard 卡片头部、治理列表筛选条和更多表格工具栏仍未统一。
+  - 后续继续沿 `FE-041` 推进时，更适合优先补管理端 `Select` / filter bar 一类真实高频骨架，而不是重新扩展新的治理域能力。
 
 ### 执行记录：FE-041（共享 Select 接入笔记与阅读表单）
 - 执行日期：2026-07-09
