@@ -5889,3 +5889,28 @@
 
 - `FE-041` 现在不再只停留在后台搜索框和页头骨架，审核/治理模块的高频状态筛选也开始走统一的共享 `Select` 与工具栏出口。
 - 这一轮仍然只先收口前端本地筛选；更复杂的组合筛选、后端分页/筛选参数和 URL 状态同步还没有进入统一契约，后续更适合沿 `ADM-010 / WB-041` 继续推进。
+## 2026-07-13 06:47:22 +08:00 | v1.1.0-alpha.187 | 推进 FE-041 管理端壳层共享 NavGroup 适配层接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩新的治理动作，而是继续清理后台壳层里仍然手写的导航分组骨架。
+- 目标是补一个 `AdminNavGroup` Vue 适配层，并把 `AdminShellFrame` 的分组标题与容器切到统一共享出口，让后台导航从“单个按钮共享”进一步推进到“分组骨架共享”。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminNavGroup.vue` 与 `AdminNavGroup.test.ts`，收口后台导航分组的 `title + slot` 最小契约，并补上共享标题与槽位内容回归。
+- 更新 `frontend-admin/src/components/admin/AdminShellFrame.vue` 与 `AdminShellFrame.test.ts`，把后台侧边导航分组改为通过共享 `AdminNavGroup` 渲染，同时保留现有导航项切换、刷新数据和退出后台行为。
+- 壳层测试现在会同时锁定 `AdminCommandBar`、`AdminPageHeader`、`AdminNavGroup` 与 `AdminNavItem` 的真实接线，避免这组共享适配层只停留在组件目录里未落到主路径。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端壳层导航分组也已进入共享 NavGroup 适配层”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminNavGroup.test.ts src/components/admin/AdminNavItem.test.ts src/components/admin/AdminShellFrame.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在不再只覆盖后台导航项、页头、顶部条和复合卡片，连侧边导航分组标题与容器也开始走统一共享出口，后台壳层骨架进一步收口。
+- 这一轮仍然只先收口导航分组最小契约；更复杂的分组折叠、权限驱动隐藏以及列表内容摘要单元还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。

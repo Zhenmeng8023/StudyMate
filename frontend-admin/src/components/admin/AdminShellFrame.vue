@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AdminButton from "./AdminButton.vue";
 import AdminCommandBar from "./AdminCommandBar.vue";
+import AdminNavGroup from "./AdminNavGroup.vue";
 import AdminNavItem from "./AdminNavItem.vue";
 import AdminPageHeader from "./AdminPageHeader.vue";
 
@@ -51,8 +52,11 @@ const emit = defineEmits<{
       </div>
 
       <nav class="admin-nav" aria-label="后台导航">
-        <section v-for="group in navGroups" :key="group.group" class="admin-nav__group">
-          <p>{{ group.group }}</p>
+        <AdminNavGroup
+          v-for="group in navGroups"
+          :key="group.group"
+          :title="group.group"
+        >
           <AdminNavItem
             v-for="item in group.items"
             :key="item.key"
@@ -63,7 +67,7 @@ const emit = defineEmits<{
             :view-key="item.key"
             @press="emit('switchView', $event)"
           />
-        </section>
+        </AdminNavGroup>
       </nav>
 
       <footer class="admin-sidebar__footer">
