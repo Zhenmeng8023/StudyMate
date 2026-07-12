@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import AdminButton from "../../components/admin/AdminButton.vue";
+import AdminActionBar from "../../components/admin/AdminActionBar.vue";
 import AdminDataCardHeader from "../../components/admin/AdminDataCardHeader.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
@@ -23,6 +23,8 @@ type FilterOption = {
   value: string;
 };
 
+type ModerationActionKey = "approve" | "reject" | "hide";
+
 const props = withDefaults(defineProps<{
   dataState?: AdminDataStatePayload | null;
   items: ModerationItem[];
@@ -39,8 +41,19 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   "update:query": [value: string];
   "update:statusFilter": [value: string];
-  requestAction: [payload: { action: "approve" | "reject" | "hide"; item: ModerationItem }];
+  requestAction: [payload: { action: ModerationActionKey; item: ModerationItem }];
 }>();
+
+const rowActions = [
+  { key: "approve", label: "通过", variant: "primary" as const },
+  { key: "reject", label: "驳回", tone: "danger" as const },
+  { key: "hide", label: "隐藏" }
+] satisfies Array<{
+  key: ModerationActionKey;
+  label: string;
+  tone?: "default" | "danger";
+  variant?: "primary" | "secondary" | "ghost";
+}>;
 
 const resolvedDataState = computed<AdminDataStatePayload>(() =>
   props.dataState ?? {
@@ -52,6 +65,10 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
 
 const showState = computed(() => Boolean(props.dataState) || props.items.length === 0);
 const showTable = computed(() => props.items.length > 0 && (!props.dataState || props.dataState.kind === "stale"));
+
+function requestAction(actionKey: ModerationActionKey, item: ModerationItem) {
+  emit("requestAction", { action: actionKey, item });
+}
 </script>
 
 <template>
@@ -104,21 +121,12 @@ const showTable = computed(() => props.items.length > 0 && (!props.dataState || 
         <span>{{ item.authorName }}</span>
         <span>{{ new Date(item.createdAt).toLocaleString("zh-CN") }}</span>
         <span><i class="admin-status-badge">{{ item.status }}</i></span>
-        <div class="admin-row-actions">
-          <AdminButton data-moderation-action="approve" variant="primary" @click="emit('requestAction', { action: 'approve', item })">
-            通过
-          </AdminButton>
-          <AdminButton
-            data-moderation-action="reject"
-            danger
-            @click="emit('requestAction', { action: 'reject', item })"
-          >
-            驳回
-          </AdminButton>
-          <AdminButton data-moderation-action="hide" @click="emit('requestAction', { action: 'hide', item })">
-            隐藏
-          </AdminButton>
-        </div>
+        <AdminActionBar
+          compact
+          namespace="moderation"
+          :actions="rowActions"
+          @press="requestAction($event as ModerationActionKey, item)"
+        />
       </article>
     </div>
   </section>

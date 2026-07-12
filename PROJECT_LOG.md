@@ -5914,3 +5914,29 @@
 
 - `FE-041` 现在不再只覆盖后台导航项、页头、顶部条和复合卡片，连侧边导航分组标题与容器也开始走统一共享出口，后台壳层骨架进一步收口。
 - 这一轮仍然只先收口导航分组最小契约；更复杂的分组折叠、权限驱动隐藏以及列表内容摘要单元还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
+## 2026-07-13 06:57:06 +08:00 | v1.1.0-alpha.188 | 推进 FE-041 管理端共享 ActionBar 动作区接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩新的治理域能力，而是继续清理后台模块里仍然重复手写的动作按钮组结构。
+- 目标是补一个 `AdminActionBar` Vue 适配层，并把审核行操作与治理详情动作都切到统一共享出口，让后台治理从“单个按钮共享”继续推进到“动作区骨架共享”。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminActionBar.vue` 与 `AdminActionBar.test.ts`，收口后台动作区的 `actions / variant / tone / press` 最小契约，并保留模块级 `data-*` 钩子，避免测试和页面行为退回各自维护。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminModerationModule.test.ts`，把审核行内的通过 / 驳回 / 隐藏操作切到共享 `AdminActionBar`，同时保留状态筛选、搜索和动作事件回传。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 与 `AdminGovernanceModule.test.ts`，把治理详情区动作切到共享 `AdminActionBar`，同时保留记录选择、详情展示和动作触发行为。
+- 这一步也顺手把审核与治理模块及对应测试收口到可读 UTF-8，减少后续继续推进共享骨架时被旧编码噪声拖慢。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端审核行操作与治理详情动作也已进入共享 ActionBar 适配层”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminActionBar.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在不再只覆盖后台页头、顶部条、导航和卡片骨架，审核与治理模块的动作按钮组也开始走统一共享出口，后台治理主路径进一步收口。
+- 这一轮仍然只先收口动作区最小契约；批量治理工具条、权限驱动禁用态和更复杂的异步反馈还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。

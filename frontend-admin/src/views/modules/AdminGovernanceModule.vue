@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import AdminButton from "../../components/admin/AdminButton.vue";
+import AdminActionBar from "../../components/admin/AdminActionBar.vue";
 import AdminDataCardHeader from "../../components/admin/AdminDataCardHeader.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
 import AdminMetricCard from "../../components/admin/AdminMetricCard.vue";
@@ -14,6 +14,7 @@ type GovernanceAction = {
   key: string;
   label: string;
   tone?: "default" | "danger";
+  variant?: "primary" | "secondary" | "ghost";
 };
 type FilterOption = {
   label: string;
@@ -184,15 +185,11 @@ const showTable = computed(
       :title="selectedRecord ? getRecordTitle(selectedRecord) : '选择一条记录'"
     >
       <template v-if="selectedRecord && actions.length" #actions>
-        <AdminButton
-          v-for="action in actions"
-          :key="action.key"
-          :danger="action.tone === 'danger'"
-          :data-governance-action="action.key"
-          @click="requestAction(action.key)"
-        >
-          {{ action.label }}
-        </AdminButton>
+        <AdminActionBar
+          namespace="governance"
+          :actions="actions"
+          @press="requestAction"
+        />
       </template>
     </AdminRecordInspector>
   </section>
