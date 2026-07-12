@@ -1,3 +1,28 @@
+## 2026-07-13 07:17:00 +08:00 | v1.1.0-alpha.191 | 推进 FE-041 管理端共享 RecordRow 记录行接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的治理域能力，而是继续清理管理端真实主路径里重复出现的记录行骨架。
+- 目标是补一个 `AdminRecordRow` Vue 适配层，并把治理模块的记录列表切到统一记录行出口，让状态标签、选中态和点击选择契约不再散落在页面内联模板里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminRecordRow.vue` 与 `AdminRecordRow.test.ts`，收口治理记录行的按钮骨架、状态标签渲染、空值格式化和 `press` 事件。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`，把治理记录列表从内联 `<button>` / `<span>` 结构替换为共享 `AdminRecordRow`，保留既有 `data-record-row`、选中态和记录选择事件。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.test.ts`，补上治理模块已经走共享 `AdminRecordRow` 适配层的断言，同时保持既有记录选择、状态标签和筛选行为回归。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminRecordRow.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续向管理端真实记录列表内部推进了一层，共享治理骨架不再只覆盖导航、操作栏、标签和内容摘要单元，也开始覆盖高频的记录行入口。
+- 这次仍然只先收口了治理记录列表；审核列表、更多后台表格视图以及更统一的表头/列定义契约还没有进入共享抽象，后续适合继续沿这些高频列表骨架推进。
+
 ## 2026-07-13 05:56:43 +08:00 | v1.1.0-alpha.179 | 推进 FE-041 管理端审核治理共享搜索工具栏接线
 ### 任务内容
 

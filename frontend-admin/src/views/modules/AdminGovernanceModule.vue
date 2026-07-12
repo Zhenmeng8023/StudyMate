@@ -4,10 +4,10 @@ import AdminActionBar from "../../components/admin/AdminActionBar.vue";
 import AdminDataCardHeader from "../../components/admin/AdminDataCardHeader.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
 import AdminMetricCard from "../../components/admin/AdminMetricCard.vue";
+import AdminRecordRow from "../../components/admin/AdminRecordRow.vue";
 import AdminRecordInspector from "../../components/admin/AdminRecordInspector.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminSelect from "../../components/admin/AdminSelect.vue";
-import AdminTag from "../../components/admin/AdminTag.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
 type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
@@ -92,10 +92,6 @@ function getRecordTitle(row: GovernanceRecord) {
   return formatCell(row.title ?? row.name ?? row.originalName ?? row.username ?? row.action ?? row.id);
 }
 
-function isStatusColumn(column: string) {
-  return column === "status";
-}
-
 function requestAction(action: string) {
   if (!props.selectedRecord) return;
   emit("requestAction", { action, record: props.selectedRecord });
@@ -171,19 +167,15 @@ const showTable = computed(
         <div class="admin-table__head" role="row">
           <span v-for="column in columns" :key="column">{{ formatFieldLabel(column) }}</span>
         </div>
-        <button
+        <AdminRecordRow
           v-for="(row, index) in rows"
           :key="index"
-          :class="selectedRecord === row ? 'admin-table__row is-selected' : 'admin-table__row'"
-          :data-record-row="String(row.id ?? index)"
-          type="button"
-          @click="emit('selectRecord', row)"
-        >
-          <span v-for="column in columns" :key="column" :title="formatCell(row[column])">
-            <AdminTag v-if="isStatusColumn(column)" :label="formatCell(row[column])" tone="status" />
-            <template v-else>{{ formatCell(row[column]) }}</template>
-          </span>
-        </button>
+          :columns="columns"
+          :row="row"
+          :row-key="String(row.id ?? index)"
+          :selected="selectedRecord === row"
+          @press="emit('selectRecord', $event)"
+        />
       </div>
     </section>
 
