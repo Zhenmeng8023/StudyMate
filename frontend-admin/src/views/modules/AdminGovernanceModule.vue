@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import AdminButton from "../../components/admin/AdminButton.vue";
+import AdminDataCardHeader from "../../components/admin/AdminDataCardHeader.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
 import AdminMetricCard from "../../components/admin/AdminMetricCard.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
@@ -140,12 +141,10 @@ const showTable = computed(
 
   <section class="admin-governance-layout">
     <section class="admin-data-card">
-      <header class="admin-data-card__head">
-        <div>
-          <h2>记录列表</h2>
-          <p>选择一条记录，在右侧查看完整字段和操作入口。</p>
-        </div>
-      </header>
+      <AdminDataCardHeader
+        description="选择一条记录，在右侧查看完整字段和操作入口。"
+        title="记录列表"
+      />
       <AdminDataState
         v-if="showState"
         :description="resolvedDataState.description"

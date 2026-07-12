@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import AdminButton from "../../components/admin/AdminButton.vue";
+import AdminDataCardHeader from "../../components/admin/AdminDataCardHeader.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminSelect from "../../components/admin/AdminSelect.vue";
@@ -75,12 +76,10 @@ const showTable = computed(() => props.items.length > 0 && (!props.dataState || 
   </AdminSearchToolbar>
 
   <section class="admin-data-card admin-moderation-table">
-    <header class="admin-data-card__head">
-      <div>
-        <h2>审核队列</h2>
-        <p>按内容类型、作者、状态和创建时间快速定位待处理项目。</p>
-      </div>
-    </header>
+    <AdminDataCardHeader
+      description="按内容类型、作者、状态和创建时间快速定位待处理项目。"
+      title="审核队列"
+    />
     <AdminDataState
       v-if="showState"
       :description="resolvedDataState.description"
