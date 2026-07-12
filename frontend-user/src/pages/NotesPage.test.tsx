@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -209,5 +209,42 @@ describe("NotesPage", () => {
     expect(deleteNoteMock).toHaveBeenCalledWith(session, "note-1");
     await expect(screen.findByText("笔记已删除")).resolves.toBeInTheDocument();
     confirmSpy.mockRestore();
+  });
+
+  it("renders the shared error state when the initial notes workspace bootstrap fails", async () => {
+    listNotesMock.mockRejectedValueOnce(new Error("笔记工作台加载失败"));
+    listMaterialsMock.mockRejectedValueOnce(new Error("笔记工作台加载失败"));
+    listDecksMock.mockRejectedValueOnce(new Error("笔记工作台加载失败"));
+
+    render(
+      <MemoryRouter>
+        <NotesPage session={session} />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole("heading", { level: 2, name: "笔记暂时不可用" })).toBeInTheDocument();
+    expect(screen.getByText("笔记工作台加载失败")).toBeInTheDocument();
+  });
+
+  it("keeps rendering the current note while surfacing a shared stale state after a save refresh fails", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <NotesPage session={session} />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("笔记标题")).toHaveValue("Binary Search Notes");
+    });
+
+    listNotesMock.mockRejectedValueOnce(new Error("笔记列表刷新失败"));
+
+    await user.click(screen.getByRole("button", { name: "保存版本" }));
+
+    expect(await screen.findByRole("heading", { level: 2, name: "笔记列表需要刷新" })).toBeInTheDocument();
+    expect(screen.getByText("笔记列表刷新失败")).toBeInTheDocument();
+    expect(screen.getByLabelText("笔记标题")).toHaveValue("Binary Search Notes");
+    expect(screen.getAllByText("Binary Search Notes").length).toBeGreaterThan(0);
   });
 });
