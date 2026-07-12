@@ -2,11 +2,11 @@
 import { computed } from "vue";
 import AdminActionBar from "../../components/admin/AdminActionBar.vue";
 import AdminDataTable from "../../components/admin/AdminDataTable.vue";
+import AdminFilterSelect from "../../components/admin/AdminFilterSelect.vue";
 import AdminMetricGrid from "../../components/admin/AdminMetricGrid.vue";
 import AdminRecordInspector from "../../components/admin/AdminRecordInspector.vue";
 import AdminRecordRow from "../../components/admin/AdminRecordRow.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
-import AdminSelect from "../../components/admin/AdminSelect.vue";
 import AdminTableHead from "../../components/admin/AdminTableHead.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
@@ -140,16 +140,12 @@ const showTable = computed(
     @update:query="emit('update:query', $event)"
   >
     <template v-if="statusOptions.length > 1" #filters>
-      <AdminSelect
-        class="admin-filter-select"
-        data-governance-status-filter="true"
+      <AdminFilterSelect
         :model-value="statusFilter"
+        :options="statusOptions"
+        test-attr="data-governance-status-filter"
         @update:model-value="emit('update:statusFilter', $event)"
-      >
-        <option v-for="option in statusOptions" :key="option.value" :value="option.value">
-          {{ option.label }}
-        </option>
-      </AdminSelect>
+      />
     </template>
   </AdminSearchToolbar>
 

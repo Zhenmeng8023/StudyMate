@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import AdminDataTable from "../../components/admin/AdminDataTable.vue";
+import AdminFilterSelect from "../../components/admin/AdminFilterSelect.vue";
 import AdminModerationRow from "../../components/admin/AdminModerationRow.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
-import AdminSelect from "../../components/admin/AdminSelect.vue";
 import AdminTableHead from "../../components/admin/AdminTableHead.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
@@ -80,16 +80,12 @@ function requestAction(actionKey: ModerationActionKey, item: ModerationItem) {
     @update:query="emit('update:query', $event)"
   >
     <template v-if="statusOptions.length > 1" #filters>
-      <AdminSelect
-        class="admin-filter-select"
-        data-moderation-status-filter="true"
+      <AdminFilterSelect
         :model-value="statusFilter"
+        :options="statusOptions"
+        test-attr="data-moderation-status-filter"
         @update:model-value="emit('update:statusFilter', $event)"
-      >
-        <option v-for="option in statusOptions" :key="option.value" :value="option.value">
-          {{ option.label }}
-        </option>
-      </AdminSelect>
+      />
     </template>
   </AdminSearchToolbar>
 

@@ -1,3 +1,28 @@
+## 2026-07-13 07:44:48 +08:00 | v1.1.0-alpha.196 | 推进 FE-041 管理端共享 FilterSelect 筛选下拉接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理审核模块与治理模块里重复出现的状态筛选下拉结构。
+- 目标是补一个 `AdminFilterSelect` Vue 适配层，并把审核模块与治理模块里重复的 `AdminSelect + option 列表 + 状态筛选钩子` 结构切到统一筛选下拉出口，让后台高频筛选入口不再各自维护相同模板。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminFilterSelect.vue` 与 `AdminFilterSelect.test.ts`，收口后台筛选下拉的共享骨架、选项渲染与值变更事件。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，把审核/治理模块里的内联状态筛选下拉替换为共享 `AdminFilterSelect`，同时保留各自已有的筛选字段和测试钩子。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `AdminGovernanceModule.test.ts`，补上两条真实模块路径已经通过共享筛选下拉渲染状态筛选入口的断言。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminFilterSelect.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续沿后台高频筛选骨架向上收口，审核模块与治理模块开始共享统一的状态筛选下拉出口。
+- 这次仍然只先收口了筛选下拉本身；更进一步的筛选条模型、条件分组语义和多条件 filter bar 契约还没有统一，后续适合继续沿这条路径推进。
+
 ## 2026-07-13 07:40:27 +08:00 | v1.1.0-alpha.195 | 推进 FE-041 管理端共享 MetricGrid 指标网格接线
 ### 任务内容
 
