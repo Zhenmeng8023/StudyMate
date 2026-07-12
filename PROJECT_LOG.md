@@ -5705,6 +5705,32 @@
 
 - `FE-040` 现在已经覆盖用户端搜索、资料库、阅读、笔记和复习五条主学习路径，主工作区的共享页面状态骨架更完整了。
 - 阅读工作区更细粒度的局部刷新、资源切换以及跨页 `unauthorized / conflict` 入口仍未闭合；后续更适合继续沿 `ReaderPage` 检查器链路或跨端共享列表继续补齐。
+## 2026-07-13 06:18:40 +08:00 | v1.1.0-alpha.181 | 推进 FE-041 管理端壳层共享 CommandBar 适配层接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全骨架、再深挖单点”方向推进 `FE-041`，这次不扩新的治理动作，而是继续清理后台全局壳层里仍然手写的顶部条骨架。
+- 目标是补一个 `AdminCommandBar` Vue 适配层，并把 `AdminShellFrame` 的 breadcrumb、同步状态和刷新动作切到同一套共享出口。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminCommandBar.vue` 与 `AdminCommandBar.test.ts`，收口后台顶部条的 breadcrumb、状态与 actions 插槽契约。
+- 更新 `frontend-admin/src/components/admin/AdminShellFrame.vue`，把壳层顶部条从内联结构替换为 `AdminCommandBar`，保留现有“运营中心 / 当前模块 / 数据已连接或同步中 / 刷新数据”语义。
+- 更新 `frontend-admin/src/components/admin/AdminShellFrame.test.ts`，锁定后台壳层已经真实通过共享 `AdminCommandBar` 接线，而不是只新增一个孤立组件。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端壳层顶部条也已进入共享 CommandBar 适配层”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminCommandBar.test.ts src/components/admin/AdminShellFrame.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在不再只覆盖后台页头、搜索工具栏和状态筛选，连壳层顶部条也开始走统一的共享骨架出口。
+- 这一轮仍然只先收口顶部条最小契约；导航项、metric card 和更复杂的后台快捷动作还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 推进。
+
 ## 2026-07-13 06:12:30 +08:00 | v1.1.0-alpha.180 | 推进 FE-041 管理端共享 Select 状态筛选接线
 ### 任务内容
 

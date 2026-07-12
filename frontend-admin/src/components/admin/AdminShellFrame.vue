@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AdminButton from "./AdminButton.vue";
+import AdminCommandBar from "./AdminCommandBar.vue";
 import AdminPageHeader from "./AdminPageHeader.vue";
 
 type ShellNavItem = {
@@ -80,13 +81,16 @@ const emit = defineEmits<{
     </aside>
 
     <section class="admin-main">
-      <header class="admin-topbar">
-        <div class="admin-topbar__crumb"><span>运营中心</span><i>•</i><strong>{{ activeTitle }}</strong></div>
-        <div class="admin-topbar__actions">
-          <span class="admin-sync-state" :class="loading ? 'is-loading' : ''"><i />{{ loading ? "同步中" : "数据已连接" }}</span>
+      <AdminCommandBar
+        crumb="运营中心"
+        :status-label="loading ? '同步中' : '数据已连接'"
+        :status-loading="loading"
+        :title="activeTitle"
+      >
+        <template #actions>
           <AdminButton data-admin-refresh="true" :disabled="loading" @click="emit('refresh')">刷新数据</AdminButton>
-        </div>
-      </header>
+        </template>
+      </AdminCommandBar>
 
       <AdminPageHeader :description="activeDescription" :eyebrow="activeGroup" :title="activeTitle">
         <template v-if="countLabel" #actions>
