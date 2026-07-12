@@ -107,10 +107,11 @@ describe("SearchWorkspacePage", () => {
   });
 
   it("shows the empty prompt when no query is provided", () => {
-    renderPage("/search");
+    const { container } = renderPage("/search");
 
     expect(screen.getByRole("heading", { level: 1, name: "\u8f93\u5165\u5173\u952e\u8bcd\u5f00\u59cb\u641c\u7d22" })).toBeInTheDocument();
     expect(screen.getByText("\u5728\u9876\u90e8\u641c\u7d22\u6846\u8f93\u5165\u5173\u952e\u8bcd\u5e76\u6309\u56de\u8f66\u3002")).toBeInTheDocument();
+    expect(container.querySelector(".workspace-header")).not.toBeNull();
     expect(searchAllMock).not.toHaveBeenCalled();
   });
 
