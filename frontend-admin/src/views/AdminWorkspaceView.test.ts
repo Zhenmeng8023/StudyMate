@@ -77,7 +77,7 @@ describe("AdminWorkspaceView governance modules", () => {
     const wrapper = mount(AdminWorkspaceView);
     await flushPromises();
 
-    const usersButton = wrapper.find('[data-admin-view="users"]');
+    const usersButton = wrapper.find('[data-admin-nav-item-view="users"]');
     expect(usersButton.exists()).toBe(true);
     await usersButton.trigger("click");
     await flushPromises();
@@ -297,7 +297,7 @@ describe("AdminWorkspaceView governance modules", () => {
     const wrapper = mount(AdminWorkspaceView);
     await flushPromises();
 
-    await wrapper.get('[data-admin-view="moderation"]').trigger("click");
+    await wrapper.get('[data-admin-nav-item-view="moderation"]').trigger("click");
     await flushPromises();
 
     await wrapper.get('[data-moderation-action="reject"]').trigger("click");
@@ -395,7 +395,7 @@ describe("AdminWorkspaceView governance modules", () => {
     const wrapper = mount(AdminWorkspaceView);
     await flushPromises();
 
-    await wrapper.get('[data-admin-view="audit"]').trigger("click");
+    await wrapper.get('[data-admin-nav-item-view="audit"]').trigger("click");
     await flushPromises();
 
     expect(window.location.pathname).toBe("/admin/audit");

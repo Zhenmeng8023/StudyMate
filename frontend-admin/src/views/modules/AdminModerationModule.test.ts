@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminModerationModule from "./AdminModerationModule.vue";
 
 describe("AdminModerationModule", () => {
-  it("renders moderation rows through the shared search toolbar, data card header, status filter, and action bar", async () => {
+  it("renders moderation rows through the shared search toolbar, data card header, tag, status filter, and action bar", async () => {
     const wrapper = mount(AdminModerationModule, {
       props: {
         items: [
@@ -31,6 +31,9 @@ describe("AdminModerationModule", () => {
     expect(wrapper.text()).toContain("Pending Post");
     expect(wrapper.find('[data-admin-search-toolbar="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-data-card-header="true"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-admin-tag="true"]')).toHaveLength(2);
+    expect(wrapper.get('[data-admin-tag-tone="neutral"]').text()).toContain("帖子");
+    expect(wrapper.get('[data-admin-tag-tone="status"]').text()).toContain("pending");
     expect(wrapper.find('[data-admin-action-bar="true"]').exists()).toBe(true);
     expect(wrapper.get('[data-admin-data-card-header-title="true"]').text()).toContain("审核队列");
     expect(wrapper.get('input[placeholder="搜索标题、作者或状态"]').classes()).toContain("ds-input");

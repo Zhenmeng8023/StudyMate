@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminGovernanceModule from "./AdminGovernanceModule.vue";
 
 describe("AdminGovernanceModule", () => {
-  it("renders shared summary cards, data card header, inspector, records, and emits query, filter, and selection changes", async () => {
+  it("renders shared summary cards, data card header, inspector, records, status tags, and emits query, filter, and selection changes", async () => {
     const wrapper = mount(AdminGovernanceModule, {
       props: {
         columns: ["id", "action", "status"],
@@ -43,6 +43,7 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.get('input[placeholder="搜索当前记录"]').classes()).toContain("ds-input");
     expect(wrapper.get('[data-admin-search-toolbar-meta="true"]').text()).toContain("1 / 1");
     expect(wrapper.get('[data-governance-status-filter="true"]').classes()).toContain("ds-select");
+    expect(wrapper.get('[data-admin-tag-tone="status"]').text()).toContain("success");
 
     await wrapper.get('input[placeholder="搜索当前记录"]').setValue("success");
     expect(wrapper.emitted("update:query")?.[0]).toEqual(["success"]);
