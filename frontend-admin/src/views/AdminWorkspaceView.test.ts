@@ -951,4 +951,139 @@ describe("AdminWorkspaceView governance modules", () => {
     expect(wrapper.text()).toContain("alice");
     expect(wrapper.text()).toContain("治理记录刷新失败");
   });
+
+  it("surfaces an unauthorized moderation state and clears existing rows after a 403 refresh failure", async () => {
+    window.history.replaceState({}, "", "/admin/moderation");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const moderationItem = {
+      id: "post-1",
+      type: "post" as const,
+      title: "Pending Post",
+      summary: "Needs moderation review",
+      authorName: "Alice",
+      status: "pending",
+      createdAt: "2026-06-02T12:00:00Z",
+      updatedAt: "2026-06-02T12:00:00Z"
+    };
+
+    let moderationRequestCount = 0;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/moderation") {
+        moderationRequestCount += 1;
+        if (moderationRequestCount === 1) {
+          return apiPayload([moderationItem]);
+        }
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "admin_forbidden", message: "当前账号没有审核权限" } }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Pending Post");
+
+    await wrapper.get('button[data-admin-refresh="true"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("需要登录");
+    expect(wrapper.text()).toContain("暂无审核权限");
+    expect(wrapper.text()).toContain("当前账号没有审核权限");
+    expect(wrapper.text()).not.toContain("Pending Post");
+  });
+
+  it("surfaces an unauthorized governance state and clears existing rows after a 403 refresh failure", async () => {
+    window.history.replaceState({}, "", "/admin/users");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const userRow = {
+      id: "user-1",
+      username: "alice",
+      email: "alice@example.test",
+      role: "student",
+      status: "active"
+    };
+
+    let usersRequestCount = 0;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/users?limit=20") {
+        usersRequestCount += 1;
+        if (usersRequestCount === 1) {
+          return apiPayload([userRow]);
+        }
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "admin_forbidden", message: "当前账号没有用户治理权限" } }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("alice");
+
+    await wrapper.get('button[data-admin-refresh="true"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("需要登录");
+    expect(wrapper.text()).toContain("暂无治理权限");
+    expect(wrapper.text()).toContain("当前账号没有用户治理权限");
+    expect(wrapper.text()).not.toContain("alice");
+  });
 });

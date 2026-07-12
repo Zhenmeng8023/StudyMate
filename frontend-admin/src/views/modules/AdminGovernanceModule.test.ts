@@ -122,4 +122,33 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.text()).toContain("audit-1");
     expect(wrapper.find('[data-record-row="audit-1"]').exists()).toBe(true);
   });
+
+  it("hides governance rows when the shared unauthorized state is active", () => {
+    const wrapper = mount(AdminGovernanceModule, {
+      props: {
+        columns: ["id", "action", "status"],
+        dataState: {
+          kind: "unauthorized",
+          title: "暂无治理权限",
+          description: "当前账号没有查看这个治理模块的权限。"
+        },
+        emptyText: "暂无记录",
+        query: "",
+        rows: [
+          {
+            id: "audit-1",
+            action: "moderation.approve",
+            status: "success"
+          }
+        ],
+        selectedRecord: null,
+        summary: null
+      }
+    });
+
+    expect(wrapper.text()).toContain("需要登录");
+    expect(wrapper.text()).toContain("暂无治理权限");
+    expect(wrapper.text()).not.toContain("audit-1");
+    expect(wrapper.find('[data-record-row="audit-1"]').exists()).toBe(false);
+  });
 });

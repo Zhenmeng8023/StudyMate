@@ -86,4 +86,35 @@ describe("AdminModerationModule", () => {
     expect(wrapper.text()).toContain("Pending Post");
     expect(wrapper.find('[data-moderation-action="approve"]').exists()).toBe(true);
   });
+
+  it("hides moderation rows when the shared unauthorized state is active", () => {
+    const wrapper = mount(AdminModerationModule, {
+      props: {
+        dataState: {
+          kind: "unauthorized",
+          title: "暂无审核权限",
+          description: "当前账号没有查看审核队列的权限。"
+        },
+        items: [
+          {
+            id: "post-1",
+            type: "post",
+            title: "Pending Post",
+            summary: "Needs review",
+            authorName: "Alice",
+            status: "pending",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        ],
+        query: "",
+        totalCount: 1
+      }
+    });
+
+    expect(wrapper.text()).toContain("需要登录");
+    expect(wrapper.text()).toContain("暂无审核权限");
+    expect(wrapper.text()).not.toContain("Pending Post");
+    expect(wrapper.find('[data-moderation-action="approve"]').exists()).toBe(false);
+  });
 });
