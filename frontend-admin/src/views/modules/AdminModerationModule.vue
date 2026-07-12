@@ -3,6 +3,7 @@ import { computed } from "vue";
 import AdminButton from "../../components/admin/AdminButton.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
 import AdminInput from "../../components/admin/AdminInput.vue";
+import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
 type ModerationItem = {
@@ -41,7 +42,13 @@ const showTable = computed(() => props.items.length > 0 && (!props.dataState || 
 </script>
 
 <template>
-  <section class="admin-toolbar">
+  <AdminSearchToolbar
+    :count-label="`${items.length} / ${totalCount} 条`"
+    placeholder="搜索标题、作者或状态"
+    :query="query"
+    @update:query="emit('update:query', $event)"
+  />
+  <section v-if="false" class="admin-toolbar">
     <label class="admin-search">
       <span>⌕</span>
       <AdminInput

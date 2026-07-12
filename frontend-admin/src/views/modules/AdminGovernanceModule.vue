@@ -3,6 +3,7 @@ import { computed } from "vue";
 import AdminButton from "../../components/admin/AdminButton.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
 import AdminInput from "../../components/admin/AdminInput.vue";
+import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
 type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
@@ -98,7 +99,13 @@ const showTable = computed(
       <p>AI 任务用量概览</p>
     </article>
   </section>
-  <section class="admin-toolbar">
+  <AdminSearchToolbar
+    :count-label="`${rows.length} / ${totalCount ?? rows.length} 条`"
+    placeholder="搜索当前记录"
+    :query="query"
+    @update:query="emit('update:query', $event)"
+  />
+  <section v-if="false" class="admin-toolbar">
     <label class="admin-search">
       <span>⌕</span>
       <AdminInput

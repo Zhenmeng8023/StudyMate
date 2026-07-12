@@ -1,3 +1,29 @@
+## 2026-07-13 05:56:43 +08:00 | v1.1.0-alpha.179 | 推进 FE-041 管理端审核治理共享搜索工具栏接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的治理域能力，而是继续清理管理端真实主路径里重复出现的搜索工具栏骨架。
+- 目标是补一个 `AdminSearchToolbar` Vue 适配层，并把审核队列与治理记录这两条后台高频入口切到统一搜索条出口。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminSearchToolbar.vue` 与 `AdminSearchToolbar.test.ts`，收口后台搜索输入框和结果计数区这组工具栏语义。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，让审核和治理模块统一通过 `AdminSearchToolbar` 渲染搜索输入与计数元信息。
+- 重写 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `AdminGovernanceModule.test.ts`，锁定这两条真实治理路径已经通过共享搜索工具栏暴露 `ds-input`、计数区和查询事件，而不是继续直接依赖局部 DOM 拼装。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端也已具备共享 `AdminSearchToolbar` 适配层并接入审核/治理模块”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminSearchToolbar.test.ts src/components/admin/AdminPageHeader.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在不再只收口后台页头骨架，审核和治理模块也开始走统一搜索工具栏适配层，后续继续推进后台筛选条和表格工具栏时可以复用同一出口。
+- 这一轮仍然只先覆盖了搜索输入和计数区；筛选下拉、批量动作和更复杂的 filter bar 组合还没有进入统一契约，后续更适合继续沿这些高频治理骨架推进。
+
 ## 2026-07-13 05:49:05 +08:00 | v1.1.0-alpha.178 | 推进 FE-041 管理端壳层共享 PageHeader 适配层接线
 ### 任务内容
 
