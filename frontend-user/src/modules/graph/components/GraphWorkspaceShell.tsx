@@ -23,7 +23,7 @@ import type {
   MaterialPayload,
   NotePayload
 } from "../../../api/client";
-import { Button, IconButton, Select } from "../../../design-system/primitives";
+import { Button, IconButton, PageHeader, Select } from "../../../design-system/primitives";
 import type { GraphWorkspaceSaveState } from "../state/types";
 import type { GraphNodeCreationType, GraphNodeTypeOption } from "../lib/graphNodeTypes";
 
@@ -37,6 +37,30 @@ export function GraphWorkspaceHeader(props: {
   saveStateLabel: string;
   saving: boolean;
 }) {
+  return (
+    <PageHeader
+      actions={(
+        <>
+          <Button disabled={props.saving} onClick={props.onCreateGraph} variant="secondary">
+            <Plus size={16} />
+            鏂板缓鍥捐氨
+          </Button>
+          <Button disabled={!props.graphDetail || props.saving} onClick={props.onSave} variant="primary">
+            <Save size={16} />
+            {props.saving ? "淇濆瓨涓?.." : "淇濆瓨"}
+          </Button>
+          <span className={`graph-save-state ${props.saveState}`} aria-label={`鍥捐氨淇濆瓨鐘舵€侊細${props.saveStateLabel}`}>
+            {props.saveStateLabel}
+          </span>
+        </>
+      )}
+      description="鎶婅祫鏂欍€佺瑪璁板拰澶嶄範绾跨储鏀捐繘鍚屼竴寮犲彲杩芥函鐨勭煡璇嗙敾甯冦€?"
+      eyebrow="鍥捐氨鐢诲竷"
+      title="鎶婅祫鏂欍€佺瑪璁板拰澶嶄範绾跨储缁勭粐鍒板悓涓€寮犲涔犲湴鍥鹃噷"
+    />
+  );
+
+  /*
   return (
     <header className="workspace-header">
       <div>
@@ -61,6 +85,7 @@ export function GraphWorkspaceHeader(props: {
       </div>
     </header>
   );
+  */
 }
 
 export function GraphWorkspaceSourceRail(props: {

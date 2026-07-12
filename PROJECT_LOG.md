@@ -1,3 +1,28 @@
+## 2026-07-13 05:42:49 +08:00 | v1.1.0-alpha.177 | 推进 FE-041 图谱工作区共享 PageHeader 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不回到图谱控制器深层重构，而是继续清理真实主路径里仍然散落的本地页头骨架分叉。
+- 目标是把 `GraphWorkspaceHeader` 切到共享 `PageHeader` 出口，同时保留图谱工作区已有的“新建图谱 / 保存 / 保存状态”这一组动作语义。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceShell.tsx`，把图谱工作区头部从本地 `workspace-header` 结构替换为共享 `PageHeader`，保留既有按钮、禁用态和保存状态提示。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceShell.test.tsx`，改为直接 mock 共享 `PageHeader` 并补共享契约断言，锁定图谱工作区头部已经通过统一页头出口暴露 `eyebrow / title / description / actions`。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 PageHeader 已覆盖主工作区页面、搜索工作区与图谱工作区”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceShell.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在又补上了图谱工作区这条高频主路径里的共享页头骨架，用户端剩余直接手写 `workspace-header` 的分支进一步减少。
+- 这一轮仍然只先收口了图谱工作区头部；管理端页头、筛选条以及图谱头部里更高层的状态徽标组合仍未统一，后续更适合继续沿这些重复骨架推进，而不是回到单一深层逻辑重构。
+
 ## 2026-07-13 05:30:41 +08:00 | v1.1.0-alpha.176 | 推进 FE-041 搜索工作区共享 PageHeader 接线
 ### 任务内容
 
