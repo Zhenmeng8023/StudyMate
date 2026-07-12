@@ -1,3 +1,25 @@
+## 2026-07-13 05:22:29 +08:00 | v1.1.0-alpha.174 | 推进 FE-041 AI 草稿中心共享 Select 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不回到图谱控制器或后台治理深层逻辑，而是继续补一块覆盖面广、能提升全局一致性的共享表单 primitive 缺口。
+- 目标是把 `AiPage` 里来源筛选、状态筛选、写入目标 deck 和写入目标图谱这四个高频下拉接到共享 `Select`，让共享 UI 契约从阅读/笔记/图谱继续扩到 AI 草稿主工作台。
+### 实际变更
+
+- 更新 `frontend-user/src/pages/AiPage.tsx`，把来源筛选、状态筛选、写入目标 deck 与写入目标图谱四个原生下拉替换成共享 `Select`，同时保留既有 `select-field` class、筛选状态和提交回调。
+- 重写 `frontend-user/src/pages/AiPage.test.tsx`，把卡片草稿确认、图谱变更确认、首屏 error 和刷新 stale 的页面回归统一到稳定测试基线上。
+- 新增 AI 页面共享下拉断言，锁定四个 `combobox` 都同时暴露 `ds-select` 与既有 `select-field` 契约，而不是只停留在“行为还能选中”。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 Select 已覆盖笔记、阅读、图谱工作区与 AI 草稿中心”。
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在不再只覆盖阅读、笔记和图谱表单，AI 草稿中心里的高频筛选与目标选择器也开始消费共享 `Select`，后续继续收口更多跨页面表单语义会更顺。
+- 这一轮仍然只先收口了 AI 页的下拉；管理端筛选器、更多图谱页头/表单 primitive 以及更高层 helper 文案还没有统一，后续更适合继续沿这些重复点推进。
+
 ## 2026-07-13 05:14:39 +08:00 | v1.1.0-alpha.173 | 推进 FE-041 图谱工作区共享 Select 接线
 ### 任务内容
 

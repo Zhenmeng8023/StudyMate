@@ -20,7 +20,7 @@ import {
   listGraphs
 } from "../api/client";
 import { formatDate, MetricTile, SectionFrame, WorkspaceHeader } from "../app/appShared";
-import { DataState } from "../design-system/primitives";
+import { DataState, Select } from "../design-system/primitives";
 import {
   buildAiDraftWorkspacePath,
   buildCardInputsFromAiDrafts,
@@ -331,23 +331,23 @@ export function AiPage(props: { session: AuthSession }) {
                 <div className="ai-filter-grid">
                   <label>
                     <span>来源筛选</span>
-                    <select className="select-field" onChange={(event) => setSourceFilter(event.target.value)} value={sourceFilter}>
+                    <Select className="select-field" onChange={(event) => setSourceFilter(event.target.value)} value={sourceFilter}>
                       <option value="all">全部来源</option>
                       {sourceOptions.map((option) => (
                         <option key={option} value={option}>
                           {option}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </label>
                   <label>
                     <span>状态筛选</span>
-                    <select className="select-field" onChange={(event) => setStatusFilter(event.target.value)} value={statusFilter}>
+                    <Select className="select-field" onChange={(event) => setStatusFilter(event.target.value)} value={statusFilter}>
                       <option value="all">全部状态</option>
                       <option value="pending">待确认</option>
                       <option value="confirmed">已确认</option>
                       <option value="failed">失败</option>
-                    </select>
+                    </Select>
                   </label>
                 </div>
               </div>
@@ -357,7 +357,7 @@ export function AiPage(props: { session: AuthSession }) {
                   <div className="form-stack ai-panel-controls">
                     <label>
                       <span>写入目标 deck</span>
-                      <select
+                      <Select
                         className="select-field"
                         onChange={(event) => setSelectedDeckId(event.target.value)}
                         value={selectedDeckId}
@@ -367,7 +367,7 @@ export function AiPage(props: { session: AuthSession }) {
                             {deck.title} · {deck.cardCount} 张
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </label>
                     <div className="ai-panel-actions">
                       <button
@@ -395,7 +395,7 @@ export function AiPage(props: { session: AuthSession }) {
                   <div className="form-stack ai-panel-controls">
                     <label>
                       <span>写入目标图谱</span>
-                      <select
+                      <Select
                         className="select-field"
                         onChange={(event) => setSelectedGraphId(event.target.value)}
                         value={selectedGraphId}
@@ -405,7 +405,7 @@ export function AiPage(props: { session: AuthSession }) {
                             {graph.title} · {graph.nodeCount} 节点
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </label>
                     <div className="ai-panel-actions">
                       <button
