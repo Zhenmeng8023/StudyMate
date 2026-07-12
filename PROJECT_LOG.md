@@ -1,3 +1,27 @@
+## 2026-07-13 05:06:30 +08:00 | v1.1.0-alpha.172 | 推进 FE-040 用户端分享页页面状态接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新域，而是把用户端公开分享页的解析路径接到共享页面状态协议。
+- 目标是让 `SharePage` 不再把解析中的分享链接和失效分享链接都只用局部 `message` 直出，而是在首屏阶段明确进入共享 `loading / error`，并补上统一重试入口。
+### 实际变更
+
+- 新增 `frontend-user/src/pages/SharePage.test.tsx`，先以 RED 锁定三个真实缺口：分享页首屏没有共享 `loading`；分享链接解析失败时没有共享 `error`；从共享错误态重试后也没有回到正常只读预览上下文。
+- 更新 `frontend-user/src/pages/SharePage.tsx`，新增 `SharePreviewState` 与 `loadShare()`，把分享页主入口接到共享页面状态协议：首屏读取中走 `loading`，解析失败走 `error`，无内容时走兜底 `empty`。
+- 分享页现在会在共享 `error / empty` 状态里提供统一的“重新加载”动作；只有分享内容成功返回后，页面才显示只读预览卡片和“打开原始页面”入口。
+- 既有分享 API 契约保持不变，本轮只收口公开只读入口的页面状态语义，不改 `/api/v1/share/:token` 的数据结构。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/SharePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/SharePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-040` 现在除了受保护工作区，也把公开只读分享入口接进了共享页面状态协议，用户端剩余“只靠局部 message 直出”的页面又少了一块。
+- 用户端后续更适合继续沿图谱工作台、阅读检查器或受保护边界补更细粒度的 `unauthorized / conflict / stale` 真入口，而不是重新回到零散页面消息提示。
+
 ## 2026-07-13 05:01:30 +08:00 | v1.1.0-alpha.171 | 推进 FE-040 用户端图谱工作台页面状态接线
 ### 任务内容
 
