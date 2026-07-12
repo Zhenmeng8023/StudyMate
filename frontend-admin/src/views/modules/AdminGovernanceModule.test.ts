@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminGovernanceModule from "./AdminGovernanceModule.vue";
 
 describe("AdminGovernanceModule", () => {
-  it("renders shared summary cards, data card header, table head, inspector, record rows, status tags, and emits query, filter, and selection changes", async () => {
+  it("renders shared summary cards, data table, table head, inspector, record rows, status tags, and emits query, filter, and selection changes", async () => {
     const wrapper = mount(AdminGovernanceModule, {
       props: {
         columns: ["id", "action", "status"],
@@ -35,8 +35,10 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.text()).toContain("audit-1");
     expect(wrapper.text()).toContain("moderation.approve");
     expect(wrapper.findAll('[data-admin-metric-card="true"]')).toHaveLength(1);
+    expect(wrapper.find('[data-admin-data-table="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-data-card-header="true"]').exists()).toBe(true);
     expect(wrapper.get('[data-admin-data-card-header-title="true"]').text()).toContain("记录列表");
+    expect(wrapper.find('[data-admin-data-table-body="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-table-head="true"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-admin-table-head-cell="true"]')).toHaveLength(3);
     expect(wrapper.find('[data-admin-record-inspector="true"]').exists()).toBe(true);
