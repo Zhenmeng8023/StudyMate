@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminGovernanceModule from "./AdminGovernanceModule.vue";
 
 describe("AdminGovernanceModule", () => {
-  it("renders shared summary cards, filter select, data table, table head, inspector, record rows, status tags, and emits query, filter, and selection changes", async () => {
+  it("renders shared summary cards, filter bar, filter select, data table, table head, inspector, record rows, status tags, and emits query, filter, and selection changes", async () => {
     const wrapper = mount(AdminGovernanceModule, {
       props: {
         columns: ["id", "action", "status"],
@@ -36,6 +36,7 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.text()).toContain("moderation.approve");
     expect(wrapper.find('[data-admin-metric-grid="true"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-admin-metric-card="true"]')).toHaveLength(1);
+    expect(wrapper.find('[data-admin-filter-bar="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-filter-select="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-data-table="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-data-card-header="true"]').exists()).toBe(true);

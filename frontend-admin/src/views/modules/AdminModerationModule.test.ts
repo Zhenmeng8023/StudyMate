@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminModerationModule from "./AdminModerationModule.vue";
 
 describe("AdminModerationModule", () => {
-  it("renders moderation rows through the shared search toolbar, filter select, data table, table head, moderation row, tags, status filter, and action bar", async () => {
+  it("renders moderation rows through the shared filter bar, filter select, data table, table head, moderation row, tags, status filter, and action bar", async () => {
     const wrapper = mount(AdminModerationModule, {
       props: {
         items: [
@@ -29,6 +29,7 @@ describe("AdminModerationModule", () => {
     });
 
     expect(wrapper.text()).toContain("Pending Post");
+    expect(wrapper.find('[data-admin-filter-bar="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-search-toolbar="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-filter-select="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-data-table="true"]').exists()).toBe(true);
