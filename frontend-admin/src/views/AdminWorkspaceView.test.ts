@@ -303,6 +303,7 @@ describe("AdminWorkspaceView governance modules", () => {
     await wrapper.get('[data-moderation-action="reject"]').trigger("click");
 
     expect(confirmSpy).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-admin-confirm-stack="true"]').exists()).toBe(true);
     expect(wrapper.text()).toContain("确认驳回这条内容");
     expect(fetchMock).not.toHaveBeenCalledWith(
       rejectPath,
