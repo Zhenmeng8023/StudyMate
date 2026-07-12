@@ -1148,14 +1148,16 @@ describe("AdminWorkspaceView governance modules", () => {
 
     expect(wrapper.text()).toContain("待审帖子");
     expect(wrapper.text()).toContain("已通过资料");
-    expect(wrapper.findAll(".admin-table--moderation .admin-table__row")).toHaveLength(2);
+    expect(wrapper.findAll('[data-admin-moderation-row="true"]')).toHaveLength(2);
 
     await wrapper.get('[data-moderation-status-filter="true"]').setValue("pending");
     await flushPromises();
 
     expect(wrapper.text()).toContain("待审帖子");
     expect(wrapper.text()).not.toContain("已通过资料");
-    expect(wrapper.findAll(".admin-table--moderation .admin-table__row")).toHaveLength(1);
+    expect(wrapper.findAll('[data-admin-moderation-row="true"]')).toHaveLength(1);
+    expect(wrapper.find('[data-moderation-row="post-1"]').exists()).toBe(true);
+    expect(wrapper.find('[data-moderation-row="material-2"]').exists()).toBe(false);
     expect(wrapper.text()).toContain("1 / 2");
   });
 
