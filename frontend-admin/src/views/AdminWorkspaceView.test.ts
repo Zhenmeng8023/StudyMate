@@ -1086,4 +1086,95 @@ describe("AdminWorkspaceView governance modules", () => {
     expect(wrapper.text()).toContain("当前账号没有用户治理权限");
     expect(wrapper.text()).not.toContain("alice");
   });
+
+  it("surfaces a conflict governance state when an ai task action returns 409 and keeps the current rows visible", async () => {
+    window.history.replaceState({}, "", "/admin/ai");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const aiTaskRow = {
+      id: "task-1",
+      userId: "user-9",
+      taskType: "reader.generate_cards",
+      sourceType: "material",
+      sourceId: "material-1",
+      status: "failed",
+      model: "local-draft-engine",
+      inputTokens: 120,
+      outputTokens: 0,
+      errorMessage: "timeout"
+    };
+    const retryPath = "/api/v1/admin/ai/tasks/task-1/retry";
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/ai/tasks?limit=20") {
+        return apiPayload([aiTaskRow]);
+      }
+      if (path === "/api/v1/admin/ai/usage") {
+        return apiPayload({
+          totalTasks: 1,
+          completedTasks: 0,
+          failedTasks: 1,
+          totalInputTokens: 120,
+          totalOutputTokens: 0,
+          totalCostUnits: 0
+        });
+      }
+      if (path === retryPath) {
+        expect(init?.method).toBe("POST");
+        return new Response(
+          JSON.stringify({ success: false, error: { code: "invalid_ai_task_transition", message: "该任务已经不再处于可重试状态" } }),
+          { status: 409, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("reader.generate_cards");
+
+    await wrapper.get('[data-governance-action="retry"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-confirm-submit="true"]').trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      retryPath,
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer admin-token"
+        })
+      })
+    );
+    expect(wrapper.text()).toContain("存在冲突");
+    expect(wrapper.text()).toContain("治理动作存在冲突");
+    expect(wrapper.text()).toContain("该任务已经不再处于可重试状态");
+    expect(wrapper.text()).toContain("reader.generate_cards");
+  });
 });

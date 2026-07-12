@@ -123,6 +123,35 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.find('[data-record-row="audit-1"]').exists()).toBe(true);
   });
 
+  it("keeps rendering existing governance rows while surfacing the shared conflict state", () => {
+    const selectedRecord = {
+      id: "audit-1",
+      action: "moderation.approve",
+      status: "success"
+    };
+
+    const wrapper = mount(AdminGovernanceModule, {
+      props: {
+        columns: ["id", "action", "status"],
+        dataState: {
+          kind: "conflict",
+          title: "治理动作存在冲突",
+          description: "这条记录的状态已经被其他人更新，请先刷新后再决定下一步。"
+        },
+        emptyText: "暂无记录",
+        query: "",
+        rows: [selectedRecord],
+        selectedRecord,
+        summary: null
+      }
+    });
+
+    expect(wrapper.text()).toContain("存在冲突");
+    expect(wrapper.text()).toContain("治理动作存在冲突");
+    expect(wrapper.text()).toContain("audit-1");
+    expect(wrapper.find('[data-record-row="audit-1"]').exists()).toBe(true);
+  });
+
   it("hides governance rows when the shared unauthorized state is active", () => {
     const wrapper = mount(AdminGovernanceModule, {
       props: {
