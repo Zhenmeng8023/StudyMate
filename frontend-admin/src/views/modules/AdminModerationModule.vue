@@ -2,8 +2,8 @@
 import { computed } from "vue";
 import AdminButton from "../../components/admin/AdminButton.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
-import AdminInput from "../../components/admin/AdminInput.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
+import AdminSelect from "../../components/admin/AdminSelect.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
 type ModerationItem = {
@@ -17,15 +17,27 @@ type ModerationItem = {
   updatedAt: string;
 };
 
-const props = defineProps<{
+type FilterOption = {
+  label: string;
+  value: string;
+};
+
+const props = withDefaults(defineProps<{
   dataState?: AdminDataStatePayload | null;
   items: ModerationItem[];
   query: string;
+  statusFilter?: string;
+  statusOptions?: FilterOption[];
   totalCount: number;
-}>();
+}>(), {
+  dataState: null,
+  statusFilter: "all",
+  statusOptions: () => []
+});
 
 const emit = defineEmits<{
   "update:query": [value: string];
+  "update:statusFilter": [value: string];
   requestAction: [payload: { action: "approve" | "reject" | "hide"; item: ModerationItem }];
 }>();
 
@@ -33,7 +45,7 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
   props.dataState ?? {
     kind: "empty",
     title: "当前没有匹配的待审核内容",
-    description: "调整搜索条件，或刷新最新治理数据。"
+    description: "调整搜索或筛选条件，或刷新最新治理数据。"
   }
 );
 
@@ -47,23 +59,26 @@ const showTable = computed(() => props.items.length > 0 && (!props.dataState || 
     placeholder="搜索标题、作者或状态"
     :query="query"
     @update:query="emit('update:query', $event)"
-  />
-  <section v-if="false" class="admin-toolbar">
-    <label class="admin-search">
-      <span>⌕</span>
-      <AdminInput
-        :model-value="query"
-        placeholder="搜索标题、作者或状态"
-        @update:model-value="emit('update:query', $event)"
-      />
-    </label>
-    <div class="admin-toolbar__meta"><span>{{ items.length }} / {{ totalCount }} 条</span></div>
-  </section>
+  >
+    <template v-if="statusOptions.length > 1" #filters>
+      <AdminSelect
+        class="admin-filter-select"
+        data-moderation-status-filter="true"
+        :model-value="statusFilter"
+        @update:model-value="emit('update:statusFilter', $event)"
+      >
+        <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+          {{ option.label }}
+        </option>
+      </AdminSelect>
+    </template>
+  </AdminSearchToolbar>
+
   <section class="admin-data-card admin-moderation-table">
     <header class="admin-data-card__head">
       <div>
         <h2>审核队列</h2>
-        <p>按内容类型、作者和创建时间快速定位待处理项目。</p>
+        <p>按内容类型、作者、状态和创建时间快速定位待处理项目。</p>
       </div>
     </header>
     <AdminDataState

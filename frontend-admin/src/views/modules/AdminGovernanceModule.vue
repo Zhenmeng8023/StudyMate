@@ -2,8 +2,8 @@
 import { computed } from "vue";
 import AdminButton from "../../components/admin/AdminButton.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
-import AdminInput from "../../components/admin/AdminInput.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
+import AdminSelect from "../../components/admin/AdminSelect.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
 type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
@@ -12,8 +12,12 @@ type GovernanceAction = {
   label: string;
   tone?: "default" | "danger";
 };
+type FilterOption = {
+  label: string;
+  value: string;
+};
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   actions?: GovernanceAction[];
   columns: string[];
   dataState?: AdminDataStatePayload | null;
@@ -21,12 +25,23 @@ const props = defineProps<{
   query: string;
   rows: GovernanceRecord[];
   selectedRecord: GovernanceRecord | null;
+  statusFilter?: string;
+  statusOptions?: FilterOption[];
   summary: GovernanceRecord | null;
   totalCount?: number;
-}>();
+}>(), {
+  actions: () => [],
+  dataState: null,
+  selectedRecord: null,
+  statusFilter: "all",
+  statusOptions: () => [],
+  summary: null,
+  totalCount: undefined
+});
 
 const emit = defineEmits<{
   "update:query": [value: string];
+  "update:statusFilter": [value: string];
   requestAction: [payload: { action: string; record: GovernanceRecord }];
   selectRecord: [record: GovernanceRecord];
 }>();
@@ -81,7 +96,7 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
   props.dataState ?? {
     kind: "empty",
     title: props.emptyText,
-    description: "当前模块已接入真实 API，但没有可显示的数据。"
+    description: "当前模块已接入真实 API，但没有可展示的数据。"
   }
 );
 
@@ -99,29 +114,33 @@ const showTable = computed(
       <p>AI 任务用量概览</p>
     </article>
   </section>
+
   <AdminSearchToolbar
     :count-label="`${rows.length} / ${totalCount ?? rows.length} 条`"
     placeholder="搜索当前记录"
     :query="query"
     @update:query="emit('update:query', $event)"
-  />
-  <section v-if="false" class="admin-toolbar">
-    <label class="admin-search">
-      <span>⌕</span>
-      <AdminInput
-        :model-value="query"
-        placeholder="搜索当前记录"
-        @update:model-value="emit('update:query', $event)"
-      />
-    </label>
-    <div class="admin-toolbar__meta"><span>{{ rows.length }} / {{ totalCount ?? rows.length }} 条</span></div>
-  </section>
+  >
+    <template v-if="statusOptions.length > 1" #filters>
+      <AdminSelect
+        class="admin-filter-select"
+        data-governance-status-filter="true"
+        :model-value="statusFilter"
+        @update:model-value="emit('update:statusFilter', $event)"
+      >
+        <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+          {{ option.label }}
+        </option>
+      </AdminSelect>
+    </template>
+  </AdminSearchToolbar>
+
   <section class="admin-governance-layout">
     <section class="admin-data-card">
       <header class="admin-data-card__head">
         <div>
           <h2>记录列表</h2>
-          <p>选择一条记录，在右侧查看完整字段和值。</p>
+          <p>选择一条记录，在右侧查看完整字段和操作入口。</p>
         </div>
       </header>
       <AdminDataState
@@ -146,6 +165,7 @@ const showTable = computed(
         </button>
       </div>
     </section>
+
     <aside class="admin-record-inspector">
       <header>
         <p class="eyebrow">记录详情</p>
@@ -158,7 +178,7 @@ const showTable = computed(
         </template>
       </dl>
       <div v-else class="admin-inspector-empty">从左侧表格选择一条记录，查看完整字段。</div>
-      <div v-if="selectedRecord && actions?.length" class="admin-record-inspector__actions">
+      <div v-if="selectedRecord && actions.length" class="admin-record-inspector__actions">
         <AdminButton
           v-for="action in actions"
           :key="action.key"

@@ -47,6 +47,10 @@ type ReportAction = "resolve" | "dismiss";
 type UserAction = "disable" | "activate";
 type AITaskAction = "retry" | "cancel";
 type TemplateAction = "publish" | "unpublish";
+type FilterOption = {
+  label: string;
+  value: string;
+};
 type AdminNavItem = {
   key: AdminView;
   label: string;
@@ -74,6 +78,8 @@ const notice = ref("登录后会同步当前治理队列与运营数据。");
 const activeView = ref<AdminView>(resolveAdminViewFromLocation());
 const recordQuery = ref("");
 const moderationQuery = ref("");
+const moderationStatusFilter = ref("all");
+const governanceStatusFilter = ref("all");
 const pendingModerationAction = ref<{ action: ModerationAction; item: ModerationItem } | null>(null);
 const moderationConfirmError = ref("");
 const pendingReportAction = ref<{ action: ReportAction; record: GovernanceRecord } | null>(null);
@@ -387,18 +393,56 @@ governanceConfig.graph = {
 };
 
 const visibleModerationItems = computed(() => {
+  const statusFilter = moderationStatusFilter.value.trim().toLowerCase();
+  const items = statusFilter && statusFilter !== "all"
+    ? moderationItems.value.filter((item) => String(item.status ?? "").toLowerCase() === statusFilter)
+    : moderationItems.value;
   const query = moderationQuery.value.trim().toLowerCase();
-  if (!query) return moderationItems.value;
-  return moderationItems.value.filter((item) =>
+  if (!query) return items;
+  return items.filter((item) =>
     [item.title, item.summary, item.authorName, item.type, item.status].join(" ").toLowerCase().includes(query)
   );
 });
+const moderationStatusOptions = computed<FilterOption[]>(() => {
+  const statuses = Array.from(
+    new Set(
+      moderationItems.value
+        .map((item) => String(item.status ?? "").trim())
+        .filter(Boolean)
+    )
+  );
+
+  return [
+    { label: "全部状态", value: "all" },
+    ...statuses.map((status) => ({ label: status, value: status.toLowerCase() }))
+  ];
+});
 const visibleGovernanceRows = computed(() => {
+  const statusFilter = governanceStatusFilter.value.trim().toLowerCase();
+  const rows = statusFilter && statusFilter !== "all"
+    ? governanceRows.value.filter((row) => String(row.status ?? "").toLowerCase() === statusFilter)
+    : governanceRows.value;
   const query = recordQuery.value.trim().toLowerCase();
-  if (!query) return governanceRows.value;
-  return governanceRows.value.filter((row) =>
+  if (!query) return rows;
+  return rows.filter((row) =>
     Object.values(row).some((value) => formatCell(value).toLowerCase().includes(query))
   );
+});
+const governanceStatusOptions = computed<FilterOption[]>(() => {
+  const statuses = Array.from(
+    new Set(
+      governanceRows.value
+        .map((row) => String(row.status ?? "").trim())
+        .filter(Boolean)
+    )
+  );
+
+  return statuses.length
+    ? [
+        { label: "全部状态", value: "all" },
+        ...statuses.map((status) => ({ label: status, value: status.toLowerCase() }))
+      ]
+    : [{ label: "全部状态", value: "all" }];
 });
 const governanceColumns = computed(() => {
   const preferred = ["title", "taskType", "name", "originalName", "username", "email", "role", "status", "handledBy", "handledAt", "model", "errorMessage", "sourceType", "sourceId", "action", "createdAt", "updatedAt", "id"];
@@ -906,6 +950,8 @@ function switchView(view: AdminView) {
   activeView.value = view;
   recordQuery.value = "";
   moderationQuery.value = "";
+  moderationStatusFilter.value = "all";
+  governanceStatusFilter.value = "all";
   pendingModerationAction.value = null;
   moderationConfirmError.value = "";
   pendingReportAction.value = null;
@@ -933,6 +979,8 @@ function logout() {
   governanceSummary.value = null;
   governanceRowsView.value = null;
   selectedRecord.value = null;
+  moderationStatusFilter.value = "all";
+  governanceStatusFilter.value = "all";
   pendingModerationAction.value = null;
   moderationConfirmError.value = "";
   pendingReportAction.value = null;
@@ -1082,9 +1130,12 @@ function selectRecord(row: GovernanceRecord) {
         :data-state="moderationDataState"
         :items="visibleModerationItems"
         :query="moderationQuery"
+        :status-filter="moderationStatusFilter"
+        :status-options="moderationStatusOptions"
         :total-count="moderationItems.length"
         @request-action="requestModerationAction($event.item, $event.action)"
         @update:query="moderationQuery = $event"
+        @update:status-filter="moderationStatusFilter = $event"
       />
 
       <AdminGovernanceModule
@@ -1096,11 +1147,14 @@ function selectRecord(row: GovernanceRecord) {
         :query="recordQuery"
         :rows="visibleGovernanceRows"
         :selected-record="selectedRecord"
+        :status-filter="governanceStatusFilter"
+        :status-options="governanceStatusOptions"
         :summary="governanceSummary"
         :total-count="governanceRows.length"
         @request-action="requestGovernanceAction"
         @select-record="selectRecord"
         @update:query="recordQuery = $event"
+        @update:status-filter="governanceStatusFilter = $event"
       />
     </AdminShellFrame>
   </main>

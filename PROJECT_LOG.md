@@ -5705,3 +5705,29 @@
 
 - `FE-040` 现在已经覆盖用户端搜索、资料库、阅读、笔记和复习五条主学习路径，主工作区的共享页面状态骨架更完整了。
 - 阅读工作区更细粒度的局部刷新、资源切换以及跨页 `unauthorized / conflict` 入口仍未闭合；后续更适合继续沿 `ReaderPage` 检查器链路或跨端共享列表继续补齐。
+## 2026-07-13 06:12:30 +08:00 | v1.1.0-alpha.180 | 推进 FE-041 管理端共享 Select 状态筛选接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台治理域能力，而是把审核与治理模块里已经重复出现的状态下拉筛选收回共享层。
+- 目标是补一个 `AdminSelect` Vue 适配层，并把审核队列、治理记录列表和 `AdminWorkspaceView` 的本地派生筛选一起接到同一套共享契约。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminSelect.vue` 与 `AdminSelect.test.ts`，收口管理端共享下拉的 `ds-select`、`aria-invalid` 和 `update:modelValue` 语义。
+- 更新 `frontend-admin/src/components/admin/AdminSearchToolbar.vue`、`admin.css`，给后台共享搜索工具栏补上 `filters` 插槽和筛选位样式。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue`、`AdminGovernanceModule.vue` 及对应测试，让审核与治理模块统一通过共享 `AdminSelect` 暴露状态筛选。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue` 与 `AdminWorkspaceView.test.ts`，新增审核/治理本地 `statusFilter`、派生状态选项、切换视图时的筛选重置，以及两条工作区级状态筛选回归。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端共享 `AdminSelect` 已接入审核/治理状态筛选，并有工作区级回归保护”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminSelect.test.ts src/components/admin/AdminSearchToolbar.test.ts src/components/admin/AdminPageHeader.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在不再只停留在后台搜索框和页头骨架，审核/治理模块的高频状态筛选也开始走统一的共享 `Select` 与工具栏出口。
+- 这一轮仍然只先收口前端本地筛选；更复杂的组合筛选、后端分页/筛选参数和 URL 状态同步还没有进入统一契约，后续更适合沿 `ADM-010 / WB-041` 继续推进。

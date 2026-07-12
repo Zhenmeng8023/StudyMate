@@ -134,6 +134,9 @@ button:disabled { cursor: not-allowed; opacity: .58; }
 .admin-search { display: flex; align-items: center; gap: 9px; width: min(420px,100%); min-height: 38px; padding: 0 11px; border: 1px solid var(--admin-line); border-radius: 9px; color: #8993a4; background: #fff; }
 .admin-search:focus-within { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
 .admin-search input { flex: 1; min-width: 0; border: 0; outline: 0; color: var(--admin-text); background: transparent; }
+.admin-toolbar__filters { display: flex; align-items: center; gap: 10px; }
+.admin-toolbar__filters .ds-select,
+.admin-filter-select { min-height: 38px; min-width: 148px; padding: 0 11px; border-radius: 9px; color: var(--admin-text); background: #fff; }
 .admin-toolbar__meta { color: var(--admin-text-muted); font-size: 12px; font-weight: 650; }
 .admin-data-card { overflow: hidden; border: 1px solid var(--admin-line); border-radius: 14px; background: #fff; box-shadow: 0 2px 8px rgba(31,45,68,.035); }
 .admin-data-card__head { display: flex; justify-content: space-between; gap: 14px; padding: 18px 20px; border-bottom: 1px solid var(--admin-line); }

@@ -22,6 +22,9 @@ const emit = defineEmits<{
         @update:model-value="emit('update:query', $event)"
       />
     </label>
+    <div v-if="$slots.filters" class="admin-toolbar__filters" data-admin-search-toolbar-filters="true">
+      <slot name="filters" />
+    </div>
     <div class="admin-toolbar__meta" data-admin-search-toolbar-meta="true">
       <span>{{ countLabel }}</span>
     </div>
