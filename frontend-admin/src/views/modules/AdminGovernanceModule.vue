@@ -8,6 +8,7 @@ import AdminRecordRow from "../../components/admin/AdminRecordRow.vue";
 import AdminRecordInspector from "../../components/admin/AdminRecordInspector.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminSelect from "../../components/admin/AdminSelect.vue";
+import AdminTableHead from "../../components/admin/AdminTableHead.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
 type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
@@ -113,6 +114,7 @@ const inspectorFields = computed(() =>
       }))
     : []
 );
+const tableHeadColumns = computed(() => props.columns.map((column) => formatFieldLabel(column)));
 
 const showState = computed(() => Boolean(props.dataState) || props.rows.length === 0);
 const showTable = computed(
@@ -164,9 +166,7 @@ const showTable = computed(
         :title="resolvedDataState.title"
       />
       <div v-if="showTable" class="admin-table admin-table--records" role="table">
-        <div class="admin-table__head" role="row">
-          <span v-for="column in columns" :key="column">{{ formatFieldLabel(column) }}</span>
-        </div>
+        <AdminTableHead :columns="tableHeadColumns" />
         <AdminRecordRow
           v-for="(row, index) in rows"
           :key="index"

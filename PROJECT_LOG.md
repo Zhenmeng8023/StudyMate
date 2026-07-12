@@ -1,3 +1,28 @@
+## 2026-07-13 07:27:20 +08:00 | v1.1.0-alpha.193 | 推进 FE-041 管理端共享 TableHead 表头接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理审核与治理列表里重复出现的表头骨架。
+- 目标是补一个 `AdminTableHead` Vue 适配层，并把审核模块与治理模块的 `admin-table__head` 都切到统一表头出口，让列表列名骨架不再分散在多个模块模板里维护。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminTableHead.vue` 与 `AdminTableHead.test.ts`，收口后台表格表头的列名渲染顺序与共享标记。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，把审核/治理模块里的内联表头结构替换为共享 `AdminTableHead`，同时保留各自已有的列定义与列表布局。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `AdminGovernanceModule.test.ts`，补上两条真实模块路径已经通过共享表头适配层渲染列名的断言。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminTableHead.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续沿后台高频表格骨架向上提了一层，审核列表和治理列表除了行组件之外，也开始共享统一表头出口。
+- 这次仍然只先收口了表头；更完整的列表列定义、表体壳层和可复用数据表契约还没有统一，后续适合继续沿这条路径推进。
+
 ## 2026-07-13 07:23:02 +08:00 | v1.1.0-alpha.192 | 推进 FE-041 管理端共享 ModerationRow 审核行接线
 ### 任务内容
 

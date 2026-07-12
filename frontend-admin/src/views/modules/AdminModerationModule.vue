@@ -5,6 +5,7 @@ import AdminDataState from "../../components/admin/AdminDataState.vue";
 import AdminModerationRow from "../../components/admin/AdminModerationRow.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminSelect from "../../components/admin/AdminSelect.vue";
+import AdminTableHead from "../../components/admin/AdminTableHead.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
 type ModerationItem = {
@@ -65,6 +66,7 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
 
 const showState = computed(() => Boolean(props.dataState) || props.items.length === 0);
 const showTable = computed(() => props.items.length > 0 && (!props.dataState || props.dataState.kind === "stale"));
+const tableHeadColumns = ["内容", "类型", "作者", "提交时间", "状态", "操作"];
 
 function requestAction(actionKey: ModerationActionKey, item: ModerationItem) {
   emit("requestAction", { action: actionKey, item });
@@ -104,14 +106,7 @@ function requestAction(actionKey: ModerationActionKey, item: ModerationItem) {
       :title="resolvedDataState.title"
     />
     <div v-if="showTable" class="admin-table admin-table--moderation" role="table">
-      <div class="admin-table__head" role="row">
-        <span>内容</span>
-        <span>类型</span>
-        <span>作者</span>
-        <span>提交时间</span>
-        <span>状态</span>
-        <span>操作</span>
-      </div>
+      <AdminTableHead :columns="tableHeadColumns" />
       <AdminModerationRow
         v-for="item in items"
         :key="item.id"
