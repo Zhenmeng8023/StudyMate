@@ -5366,6 +5366,31 @@
 
 - `FE-040` 不再只在管理端闭环，用户端真实列表页也开始共用同一套页面状态语义；后续可以沿阅读、笔记、复习和更多跨端列表继续扩状态落点，而不是重新写散落的空态/错态文案。
 - 当前这轮优先补的是 `loading / error / empty / stale`；`unauthorized / conflict` 在用户端还没有大面积真实入口，后续更适合结合受保护工作区和带刷新/冲突决策的页面继续推进。
+## 2026-07-13 04:47:20 +08:00 | v1.1.0-alpha.169 | 推进 FE-040 用户端社区页页面状态接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次先收口用户端 `CommunityPage` 的真实页面状态入口。
+- 目标是让社区页不再把首屏失败或刷新失败静默伪装成“社区还没有公开分享”的空态，而是明确进入共享 `error / stale`，并在刷新失败时保留现有动态列表。
+
+### 实际变更
+
+- 新增 `frontend-user/src/pages/CommunityPage.test.tsx`，先以 RED 锁定三个缺口：社区页首屏没有共享 `loading`；首屏读取失败静默退化成空态；已有动态列表时刷新失败也没有共享 `stale` 且不会保留旧内容。
+- 更新 `frontend-user/src/pages/CommunityPage.tsx`，新增 `CommunityFeedState` 与 `loadPosts({ preserveExisting })`，把社区动态区接到共享 `loading / error / empty / stale` 页面状态协议。
+- 社区动态区现在补了真实的“刷新社区动态 / 重新加载”入口；当已有列表、再次刷新失败时，会渲染“社区动态需要刷新”的共享 `stale` 状态，同时继续保留旧动态列表，不再把用户打回误导性的空态。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/CommunityPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/CommunityPage.test.tsx src/pages/AiPage.test.tsx src/pages/DashboardPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+
+### 后续影响
+
+- `FE-040` 现在已经继续推进到社区浏览这条公共入口，用户端剩余“失败静默回空态”的页面又少了一块。
+- 设置页仍保留 profile 读取失败时静默无反馈的路径；后续更适合继续沿 `SettingsPage` 补共享 `loading / error`，进一步收口用户端全局状态语义。
+
 ## 2026-07-13 04:43:40 +08:00 | v1.1.0-alpha.168 | 推进 FE-040 用户端 AI 工作台页面状态接线
 ### 任务内容
 
