@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import AdminDataTable from "../../components/admin/AdminDataTable.vue";
-import AdminFilterSelect from "../../components/admin/AdminFilterSelect.vue";
+import AdminFilterBar from "../../components/admin/AdminFilterBar.vue";
 import AdminModerationRow from "../../components/admin/AdminModerationRow.vue";
-import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminTableHead from "../../components/admin/AdminTableHead.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
@@ -73,21 +72,16 @@ function requestAction(actionKey: ModerationActionKey, item: ModerationItem) {
 </script>
 
 <template>
-  <AdminSearchToolbar
+  <AdminFilterBar
     :count-label="`${items.length} / ${totalCount} 条`"
+    :filter-options="statusOptions"
+    filter-test-attr="data-moderation-status-filter"
+    :filter-value="statusFilter"
     placeholder="搜索标题、作者或状态"
     :query="query"
     @update:query="emit('update:query', $event)"
-  >
-    <template v-if="statusOptions.length > 1" #filters>
-      <AdminFilterSelect
-        :model-value="statusFilter"
-        :options="statusOptions"
-        test-attr="data-moderation-status-filter"
-        @update:model-value="emit('update:statusFilter', $event)"
-      />
-    </template>
-  </AdminSearchToolbar>
+    @update:filter-value="emit('update:statusFilter', $event)"
+  />
 
   <AdminDataTable
     card-class="admin-moderation-table"

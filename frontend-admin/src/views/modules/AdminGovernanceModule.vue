@@ -2,11 +2,10 @@
 import { computed } from "vue";
 import AdminActionBar from "../../components/admin/AdminActionBar.vue";
 import AdminDataTable from "../../components/admin/AdminDataTable.vue";
-import AdminFilterSelect from "../../components/admin/AdminFilterSelect.vue";
+import AdminFilterBar from "../../components/admin/AdminFilterBar.vue";
 import AdminMetricGrid from "../../components/admin/AdminMetricGrid.vue";
 import AdminRecordInspector from "../../components/admin/AdminRecordInspector.vue";
 import AdminRecordRow from "../../components/admin/AdminRecordRow.vue";
-import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminTableHead from "../../components/admin/AdminTableHead.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
@@ -133,21 +132,16 @@ const showTable = computed(
 <template>
   <AdminMetricGrid v-if="summaryCards.length" :cards="summaryCards" grid-class="admin-metric-grid--summary" />
 
-  <AdminSearchToolbar
+  <AdminFilterBar
     :count-label="`${rows.length} / ${totalCount ?? rows.length} 条`"
+    :filter-options="statusOptions"
+    filter-test-attr="data-governance-status-filter"
+    :filter-value="statusFilter"
     placeholder="搜索当前记录"
     :query="query"
     @update:query="emit('update:query', $event)"
-  >
-    <template v-if="statusOptions.length > 1" #filters>
-      <AdminFilterSelect
-        :model-value="statusFilter"
-        :options="statusOptions"
-        test-attr="data-governance-status-filter"
-        @update:model-value="emit('update:statusFilter', $event)"
-      />
-    </template>
-  </AdminSearchToolbar>
+    @update:filter-value="emit('update:statusFilter', $event)"
+  />
 
   <section class="admin-governance-layout">
     <AdminDataTable
