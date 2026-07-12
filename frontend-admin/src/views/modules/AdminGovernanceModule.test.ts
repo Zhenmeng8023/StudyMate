@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminGovernanceModule from "./AdminGovernanceModule.vue";
 
 describe("AdminGovernanceModule", () => {
-  it("renders shared summary cards, data card header, records, and emits query, filter, and selection changes", async () => {
+  it("renders shared summary cards, data card header, inspector, records, and emits query, filter, and selection changes", async () => {
     const wrapper = mount(AdminGovernanceModule, {
       props: {
         columns: ["id", "action", "status"],
@@ -37,6 +37,8 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.findAll('[data-admin-metric-card="true"]')).toHaveLength(1);
     expect(wrapper.find('[data-admin-data-card-header="true"]').exists()).toBe(true);
     expect(wrapper.get('[data-admin-data-card-header-title="true"]').text()).toContain("记录列表");
+    expect(wrapper.find('[data-admin-record-inspector="true"]').exists()).toBe(true);
+    expect(wrapper.get('[data-admin-record-inspector-title="true"]').text()).toContain("moderation.approve");
     expect(wrapper.find('[data-admin-search-toolbar="true"]').exists()).toBe(true);
     expect(wrapper.get('input[placeholder="搜索当前记录"]').classes()).toContain("ds-input");
     expect(wrapper.get('[data-admin-search-toolbar-meta="true"]').text()).toContain("1 / 1");
@@ -52,7 +54,7 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.emitted("selectRecord")?.[0]?.[0]).toMatchObject({ id: "audit-1" });
   });
 
-  it("renders governance actions for the selected record and emits action requests", async () => {
+  it("renders governance actions through the shared inspector and emits action requests", async () => {
     const selectedRecord = {
       id: "report-1",
       targetType: "post",
@@ -74,6 +76,7 @@ describe("AdminGovernanceModule", () => {
       }
     });
 
+    expect(wrapper.find('[data-admin-record-inspector-actions="true"]').exists()).toBe(true);
     expect(wrapper.get('[data-governance-action="resolve"]').text()).toContain("标记已处理");
     expect(wrapper.get('[data-governance-action="dismiss"]').text()).toContain("忽略举报");
     expect(wrapper.get('[data-governance-action="dismiss"]').classes()).toContain("danger");
@@ -161,6 +164,27 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.text()).toContain("治理动作存在冲突");
     expect(wrapper.text()).toContain("audit-1");
     expect(wrapper.find('[data-record-row="audit-1"]').exists()).toBe(true);
+  });
+
+  it("renders the shared empty inspector copy when no record is selected", () => {
+    const wrapper = mount(AdminGovernanceModule, {
+      props: {
+        columns: ["id", "action", "status"],
+        emptyText: "暂无记录",
+        query: "",
+        rows: [
+          {
+            id: "audit-1",
+            action: "moderation.approve",
+            status: "success"
+          }
+        ],
+        selectedRecord: null,
+        summary: null
+      }
+    });
+
+    expect(wrapper.get('[data-admin-record-inspector-empty="true"]').text()).toContain("从左侧表格选择一条记录");
   });
 
   it("hides governance rows when the shared unauthorized state is active", () => {
