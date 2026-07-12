@@ -1,17 +1,46 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BookOpen, Search, Upload } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import type { AuthSession, FilePayload, MaterialPayload } from "../api/client";
-import { createMaterial, listMaterials, rateMaterial, toggleMaterialFavorite, updateMaterial, uploadFile } from "../api/client";
-import { displayMaterialCategory, displayMaterialDescription, displayMaterialOwner, displayMaterialTags, displayMaterialTitle, formatDate, quickActions, SectionFrame, WorkspaceHeader } from "../app/appShared";
-import { Input, Tag } from "../design-system/primitives";
+import {
+  createMaterial,
+  listMaterials,
+  rateMaterial,
+  toggleMaterialFavorite,
+  updateMaterial,
+  uploadFile
+} from "../api/client";
+import {
+  displayMaterialCategory,
+  displayMaterialDescription,
+  displayMaterialOwner,
+  displayMaterialTags,
+  displayMaterialTitle,
+  formatDate,
+  quickActions,
+  SectionFrame,
+  WorkspaceHeader
+} from "../app/appShared";
+import { DataState, Input, Tag } from "../design-system/primitives";
+
+type MaterialsState =
+  | {
+      kind: "loading" | "error" | "empty" | "stale";
+      title: string;
+      description: string;
+    }
+  | null;
 
 export function MaterialsPage(props: { session: AuthSession | null }) {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
+  const [loadingMaterials, setLoadingMaterials] = useState(true);
+  const [loadErrorMessage, setLoadErrorMessage] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedFile, setUploadedFile] = useState<FilePayload | null>(null);
   const [draft, setDraft] = useState({
@@ -21,16 +50,35 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
     tags: "",
     attachmentFileId: ""
   });
-  const searchParams = new URLSearchParams(useLocation().search);
 
-  async function loadAll() {
-    const items = await listMaterials();
-    setMaterials(items);
-    setSelectedId((current) => current || searchParams.get("selected") || items[0]?.id || "");
+  async function loadAll(options?: { preserveExisting?: boolean }) {
+    setLoadingMaterials(true);
+    setLoadErrorMessage("");
+    try {
+      const items = await listMaterials();
+      setMaterials(items);
+      setSelectedId((current) => {
+        const preferred = current || searchParams.get("selected") || items[0]?.id || "";
+        return items.some((material) => material.id === preferred) ? preferred : items[0]?.id || "";
+      });
+      return true;
+    } catch (error) {
+      const nextMessage = error instanceof Error ? error.message : "读取资料列表失败，请稍后再试。";
+      setLoadErrorMessage(nextMessage);
+      if (!options?.preserveExisting) {
+        setMaterials([]);
+        setSelectedId("");
+      }
+      return false;
+    } finally {
+      setLoadingMaterials(false);
+    }
   }
 
   useEffect(() => {
-    void loadAll().catch(() => setMaterials([]));
+    void loadAll();
+    // 初次加载时 URL 只用于初始化选中项。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredMaterials = useMemo(() => {
@@ -53,32 +101,80 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
     filteredMaterials[0] ??
     null;
 
-  useEffect(() => {
-    if (selectedMaterial) {
-      setDraft({
-        title: displayMaterialTitle(selectedMaterial),
-        description:
-          displayMaterialDescription(selectedMaterial) === "这份资料的说明还没有整理好。"
-            ? ""
-            : displayMaterialDescription(selectedMaterial),
-        category: displayMaterialCategory(selectedMaterial) === "未分类" ? "" : displayMaterialCategory(selectedMaterial),
-        tags: displayMaterialTags(selectedMaterial).join(", "),
-        attachmentFileId: selectedMaterial.attachmentFileId
-      });
-      setUploadedFile(
-        selectedMaterial.attachmentFileId
-          ? {
-              id: selectedMaterial.attachmentFileId,
-              createdAt: selectedMaterial.createdAt,
-              mimeType: selectedMaterial.attachmentMime,
-              originalName: selectedMaterial.attachmentName,
-              ownerUserId: selectedMaterial.ownerUserId,
-              path: "",
-              size: 0
-            }
-          : null
-      );
+  const materialsState: MaterialsState = useMemo(() => {
+    if (loadingMaterials && materials.length === 0) {
+      return {
+        kind: "loading",
+        title: "正在同步资料库",
+        description: "请稍候，正在加载最新可浏览资料与当前筛选上下文。"
+      };
     }
+
+    if (loadErrorMessage && materials.length > 0) {
+      return {
+        kind: "stale",
+        title: "资料列表需要刷新",
+        description: loadErrorMessage
+      };
+    }
+
+    if (loadErrorMessage) {
+      return {
+        kind: "error",
+        title: "资料库暂时不可用",
+        description: loadErrorMessage
+      };
+    }
+
+    if (materials.length === 0) {
+      return {
+        kind: "empty",
+        title: "还没有可浏览的资料",
+        description: "先上传一份资料，或者等待新的公开材料进入资料库。"
+      };
+    }
+
+    if (search.trim() && filteredMaterials.length === 0) {
+      return {
+        kind: "empty",
+        title: "当前筛选没有命中资料",
+        description: "可以尝试缩短关键词，或切换到更宽的分类重新查看。"
+      };
+    }
+
+    return null;
+  }, [filteredMaterials.length, loadErrorMessage, loadingMaterials, materials.length, search]);
+
+  const showMaterialList = filteredMaterials.length > 0 && (!materialsState || materialsState.kind === "stale");
+  useEffect(() => {
+    if (!selectedMaterial) {
+      setUploadedFile(null);
+      return;
+    }
+
+    const resolvedDescription = displayMaterialDescription(selectedMaterial);
+    const resolvedCategory = displayMaterialCategory(selectedMaterial);
+
+    setDraft({
+      title: displayMaterialTitle(selectedMaterial),
+      description: resolvedDescription === "这份资料的说明还没有整理好。" ? "" : resolvedDescription,
+      category: resolvedCategory === "未分类" ? "" : resolvedCategory,
+      tags: displayMaterialTags(selectedMaterial).join(", "),
+      attachmentFileId: selectedMaterial.attachmentFileId
+    });
+    setUploadedFile(
+      selectedMaterial.attachmentFileId
+        ? {
+            id: selectedMaterial.attachmentFileId,
+            createdAt: selectedMaterial.createdAt,
+            mimeType: selectedMaterial.attachmentMime,
+            originalName: selectedMaterial.attachmentName,
+            ownerUserId: selectedMaterial.ownerUserId,
+            path: "",
+            size: 0
+          }
+        : null
+    );
   }, [selectedMaterial]);
 
   async function handleUpload() {
@@ -117,8 +213,8 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
         coverFileId: "",
         attachmentFileId: draft.attachmentFileId
       });
-      await loadAll();
-      setMessage("资料已提交审核。");
+      const refreshed = await loadAll({ preserveExisting: true });
+      setMessage(refreshed ? "资料已提交审核。" : "");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "创建资料失败。");
     } finally {
@@ -142,8 +238,8 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
         coverFileId: "",
         attachmentFileId: draft.attachmentFileId
       });
-      await loadAll();
-      setMessage("资料已更新。");
+      const refreshed = await loadAll({ preserveExisting: true });
+      setMessage(refreshed ? "资料已更新。" : "");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "更新资料失败。");
     } finally {
@@ -158,9 +254,11 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
     }
 
     setBusy("favorite");
+    setMessage("");
     try {
       await toggleMaterialFavorite(props.session, selectedMaterial.id);
-      await loadAll();
+      const refreshed = await loadAll({ preserveExisting: true });
+      setMessage(refreshed ? "资料收藏状态已更新。" : "");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "收藏失败。");
     } finally {
@@ -175,9 +273,11 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
     }
 
     setBusy(`rate-${score}`);
+    setMessage("");
     try {
       await rateMaterial(props.session, selectedMaterial.id, score);
-      await loadAll();
+      const refreshed = await loadAll({ preserveExisting: true });
+      setMessage(refreshed ? "资料评分已更新。" : "");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "评分失败。");
     } finally {
@@ -193,13 +293,14 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
             <label className="secondary-button">
               <Upload size={16} />
               选择附件
-              <Input
-                hidden
-                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-                type="file"
-              />
+              <Input hidden onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} type="file" />
             </label>
-            <button className="secondary-button" disabled={!props.session || !selectedFile || busy === "upload"} onClick={handleUpload} type="button">
+            <button
+              className="secondary-button"
+              disabled={!props.session || !selectedFile || busy === "upload"}
+              onClick={handleUpload}
+              type="button"
+            >
               {busy === "upload" ? "上传中..." : "上传附件"}
             </button>
             <button className="primary-button" disabled={!props.session || busy === "save"} onClick={handleCreate} type="button">
@@ -239,22 +340,27 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
         </SectionFrame>
 
         <SectionFrame slim subtitle="结果" title="资料列表">
-          <div className="list-stack">
-            {filteredMaterials.map((material) => (
-              <button
-                className={selectedMaterial?.id === material.id ? "list-row active" : "list-row"}
-                key={material.id}
-                onClick={() => setSelectedId(material.id)}
-                type="button"
-              >
-                <div>
-                  <strong>{displayMaterialTitle(material)}</strong>
-                  <p>{displayMaterialDescription(material)}</p>
-                </div>
-                <span>{displayMaterialCategory(material)}</span>
-              </button>
-            ))}
-          </div>
+          {materialsState ? (
+            <DataState description={materialsState.description} kind={materialsState.kind} title={materialsState.title} />
+          ) : null}
+          {showMaterialList ? (
+            <div className="list-stack">
+              {filteredMaterials.map((material) => (
+                <button
+                  className={selectedMaterial?.id === material.id ? "list-row active" : "list-row"}
+                  key={material.id}
+                  onClick={() => setSelectedId(material.id)}
+                  type="button"
+                >
+                  <div>
+                    <strong>{displayMaterialTitle(material)}</strong>
+                    <p>{displayMaterialDescription(material)}</p>
+                  </div>
+                  <span>{displayMaterialCategory(material)}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
         </SectionFrame>
 
         <SectionFrame
@@ -275,7 +381,9 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
                 <strong>{displayMaterialCategory(selectedMaterial)}</strong>
                 <span>作者：{displayMaterialOwner(selectedMaterial)}</span>
                 <span>创建于 {formatDate(selectedMaterial.createdAt)}</span>
-                <span>评分 {selectedMaterial.averageRating.toFixed(1)} / 收藏 {selectedMaterial.favoritesCount}</span>
+                <span>
+                  评分 {selectedMaterial.averageRating.toFixed(1)} / 收藏 {selectedMaterial.favoritesCount}
+                </span>
               </article>
 
               <div className="chip-row">
@@ -287,11 +395,23 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
               <p className="detail-copy">{displayMaterialDescription(selectedMaterial)}</p>
 
               <div className="detail-actions">
-                <button className="secondary-button" disabled={!props.session || busy === "favorite"} onClick={handleFavorite} type="button">
+                <button
+                  className="secondary-button"
+                  data-material-action="favorite"
+                  disabled={!props.session || busy === "favorite"}
+                  onClick={handleFavorite}
+                  type="button"
+                >
                   收藏资料
                 </button>
                 {[3, 4, 5].map((score) => (
-                  <button className="secondary-button" disabled={!props.session || busy === `rate-${score}`} key={score} onClick={() => handleRate(score)} type="button">
+                  <button
+                    className="secondary-button"
+                    disabled={!props.session || busy === `rate-${score}`}
+                    key={score}
+                    onClick={() => void handleRate(score)}
+                    type="button"
+                  >
                     {score} 分
                   </button>
                 ))}
@@ -330,7 +450,7 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
           ) : (
             <article className="placeholder-card">
               <strong>还没有可展示的资料</strong>
-              <p>先在左侧创建一份材料，或者等管理员通过待审核内容。</p>
+              <p>先在左侧创建一份材料，或者等待管理员通过待审核内容。</p>
             </article>
           )}
           {message ? <p className="muted-copy">{message}</p> : null}

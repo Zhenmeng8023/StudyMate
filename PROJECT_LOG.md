@@ -5297,3 +5297,29 @@
 
 - `FE-040` 在管理端已经把六类共享页面状态都接到了真实入口，后续可以更专注地把同样的协议铺到用户端列表页、工作区和跨端共享页面，而不是继续停留在管理端收口。
 - 当前 `conflict` 主要覆盖治理动作类 `409`；后续如果后端补更多读取型或批量治理型冲突入口，建议继续沿同一协议扩展，避免重新回退成泛化 `error` 或 `stale`。
+## 2026-07-13 04:03:30 +08:00 | v1.1.0-alpha.165 | 推进 FE-040 用户端搜索/资料库页面状态接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次把共享页面状态从管理端继续推进到用户端真实列表页。
+- 目标是让 `SearchWorkspacePage` 与 `MaterialsPage` 不再停留在自拼 message / placeholder，而是真正进入共享 `DataState` 协议，先补齐用户端最常见的 `loading / error / empty / stale` 入口。
+
+### 实际变更
+
+- 先在 `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx` 与 `frontend-user/src/pages/MaterialsPage.test.tsx` 补 RED，复现“搜索页和资料库页还没有共享状态骨架，资料库刷新失败时也不会保留旧列表并标记 stale”的缺口。
+- 更新 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`，把无关键词、请求进行中、搜索失败、筛选无命中这四种真实路径统一接到共享 `DataState`；搜索页在无有效结果时不再继续渲染整页零结果分组卡片。
+- 重写 `frontend-user/src/pages/MaterialsPage.tsx` 的加载状态编排，拆开“页面同步状态”和“操作结果提示”：首次同步走 `loading`，首次失败走 `error`，资料库为空或筛选无命中走 `empty`，收藏 / 评分 / 更新 / 新建后的二次同步失败则保留旧列表并显式进入 `stale`。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-040` 的当前落点扩展到“管理端六态 + 用户端搜索/资料库首批真实状态入口”，并登记这一轮执行记录。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx src/pages/MaterialsPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx src/pages/MaterialsPage.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-040` 不再只在管理端闭环，用户端真实列表页也开始共用同一套页面状态语义；后续可以沿阅读、笔记、复习和更多跨端列表继续扩状态落点，而不是重新写散落的空态/错态文案。
+- 当前这轮优先补的是 `loading / error / empty / stale`；`unauthorized / conflict` 在用户端还没有大面积真实入口，后续更适合结合受保护工作区和带刷新/冲突决策的页面继续推进。

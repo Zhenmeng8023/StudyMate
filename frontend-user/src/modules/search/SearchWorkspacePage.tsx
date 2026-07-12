@@ -7,6 +7,7 @@ import {
   SearchResultType,
   searchAll
 } from "../../api/client";
+import { DataState } from "../../design-system/primitives";
 
 const searchGroupOrder: SearchResultType[] = ["material", "post", "note", "graph", "card"];
 
@@ -80,6 +81,7 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
   const { keyword, selectedTypes } = useSearchState();
   const [payload, setPayload] = useState<SearchResponsePayload>(() => emptySearchResponse(""));
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [message, setMessage] = useState("\u8f93\u5165\u5173\u952e\u8bcd\u540e\u5f00\u59cb\u641c\u7d22\u3002");
   const [groupPages, setGroupPages] = useState<Partial<Record<SearchResultType, number>>>({});
 
@@ -97,17 +99,14 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
     async function runSearch() {
       if (!keyword) {
         setLoading(false);
+        setErrorMessage("");
         setPayload(emptySearchResponse(""));
         setMessage("\u5728\u9876\u90e8\u641c\u7d22\u6846\u8f93\u5165\u5173\u952e\u8bcd\u5e76\u6309\u56de\u8f66\u3002");
         return;
       }
 
       setLoading(true);
-      setMessage(
-        selectedTypes.length
-          ? `\u6b63\u5728\u641c\u7d22 ${filterSummary} \u7ed3\u679c\u3002`
-          : "\u6b63\u5728\u641c\u7d22\u8d44\u6599\u3001\u793e\u533a\uff0c\u4ee5\u53ca\u4f60\u53ef\u8bbf\u95ee\u7684\u7b14\u8bb0\u3001\u56fe\u8c31\u548c\u5361\u7247\u3002"
-      );
+      setErrorMessage("");
 
       try {
         const nextPayload = await searchAll(props.session, {
@@ -120,6 +119,7 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
         }
 
         setPayload(nextPayload);
+        setErrorMessage("");
         setMessage(buildSearchCompleteMessage(nextPayload));
       } catch (error) {
         if (canceled) {
@@ -127,7 +127,7 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
         }
 
         setPayload(emptySearchResponse(keyword));
-        setMessage(error instanceof Error ? error.message : "\u641c\u7d22\u5931\u8d25");
+        setErrorMessage(error instanceof Error ? error.message : "\u641c\u7d22\u5931\u8d25");
       } finally {
         if (!canceled) {
           setLoading(false);
@@ -142,6 +142,43 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
   }, [filterSummary, keyword, props.session, selectedTypes]);
 
   const groups = payload.groups.length ? payload.groups : emptySearchResponse(keyword).groups;
+  const searchState = useMemo(() => {
+    if (!keyword) {
+      return {
+        kind: "empty" as const,
+        title: "\u8f93\u5165\u5173\u952e\u8bcd\u5f00\u59cb\u641c\u7d22",
+        description: "\u5728\u9876\u90e8\u641c\u7d22\u6846\u8f93\u5165\u5173\u952e\u8bcd\u5e76\u6309\u56de\u8f66\u3002"
+      };
+    }
+
+    if (loading) {
+      return {
+        kind: "loading" as const,
+        title: selectedTypes.length ? `\u6b63\u5728\u641c\u7d22 ${filterSummary}` : "\u6b63\u5728\u641c\u7d22\u5168\u7ad9\u5185\u5bb9",
+        description: selectedTypes.length
+          ? `\u8bf7\u7a0d\u5019\uff0c\u6b63\u5728\u6309\u5f53\u524d\u7b5b\u9009\u805a\u5408 ${filterSummary} \u7ed3\u679c\u3002`
+          : "\u8bf7\u7a0d\u5019\uff0c\u6b63\u5728\u6309\u5f53\u524d\u5173\u952e\u8bcd\u805a\u5408\u53ef\u8bbf\u95ee\u7684\u5b66\u4e60\u8d44\u4ea7\u3002"
+      };
+    }
+
+    if (errorMessage) {
+      return {
+        kind: "error" as const,
+        title: "\u641c\u7d22\u6682\u65f6\u4e0d\u53ef\u7528",
+        description: errorMessage
+      };
+    }
+
+    if (payload.total === 0) {
+      return {
+        kind: "empty" as const,
+        title: "\u5f53\u524d\u7b5b\u9009\u6ca1\u6709\u547d\u4e2d\u7ed3\u679c",
+        description: "\u53ef\u4ee5\u5c1d\u8bd5\u7f29\u77ed\u5173\u952e\u8bcd\uff0c\u6216\u8005\u5207\u56de\u201c\u5168\u90e8\u7c7b\u578b\u201d\u91cd\u65b0\u641c\u7d22\u3002"
+      };
+    }
+
+    return null;
+  }, [errorMessage, filterSummary, keyword, loading, payload.total, selectedTypes.length]);
 
   function handleTypeFilter(nextTypes: SearchResultType[]) {
     const params = new URLSearchParams(location.search);
@@ -192,63 +229,57 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
           <div className="section-frame-head">
             <div>
               <p className="eyebrow">\u7ed3\u679c\u6982\u89c8</p>
-              <h2>{loading ? "\u52a0\u8f7d\u4e2d" : `${payload.total} \u6761\u7ed3\u679c`}</h2>
+              <h2>{searchState ? "\u641c\u7d22\u72b6\u6001" : `${payload.total} \u6761\u7ed3\u679c`}</h2>
             </div>
           </div>
-          <p className="panel-copy">{message}</p>
-          <div className="search-filter-rail">
-            <div aria-label="\u641c\u7d22\u7c7b\u578b\u7b5b\u9009" className="chip-row" role="group">
-              <button
-                aria-pressed={selectedTypes.length === 0}
-                className={selectedTypes.length === 0 ? "filter-chip active" : "filter-chip"}
-                onClick={() => handleTypeFilter([])}
-                type="button"
-              >
-                \u5168\u90e8\u7c7b\u578b
-              </button>
-              {searchGroupOrder.map((type) => (
+          {searchState ? (
+            <DataState description={searchState.description} kind={searchState.kind} title={searchState.title} />
+          ) : (
+            <p className="panel-copy">{message}</p>
+          )}
+          {keyword ? (
+            <div className="search-filter-rail">
+              <div aria-label="\u641c\u7d22\u7c7b\u578b\u7b5b\u9009" className="chip-row" role="group">
                 <button
-                  aria-pressed={selectedTypes.includes(type)}
-                  className={selectedTypes.includes(type) ? "filter-chip active" : "filter-chip"}
-                  key={type}
-                  onClick={() => handleTypeToggle(type)}
+                  aria-pressed={selectedTypes.length === 0}
+                  className={selectedTypes.length === 0 ? "filter-chip active" : "filter-chip"}
+                  onClick={() => handleTypeFilter([])}
                   type="button"
                 >
-                  {groupLabels[type]}
+                  \u5168\u90e8\u7c7b\u578b
                 </button>
-              ))}
+                {searchGroupOrder.map((type) => (
+                  <button
+                    aria-pressed={selectedTypes.includes(type)}
+                    className={selectedTypes.includes(type) ? "filter-chip active" : "filter-chip"}
+                    key={type}
+                    onClick={() => handleTypeToggle(type)}
+                    type="button"
+                  >
+                    {groupLabels[type]}
+                  </button>
+                ))}
+              </div>
+              <p className="panel-copy">
+                \u5f53\u524d\u7b5b\u9009\uff1a{filterSummary}\u3002\u7ed3\u679c\u6309\u5185\u5bb9\u7c7b\u578b\u5206\u7ec4\uff0c\u65b9\u4fbf\u5feb\u901f\u5207\u6362\u56de\u5bf9\u5e94\u5b66\u4e60\u573a\u666f\u3002
+              </p>
             </div>
-            <p className="panel-copy">
-              \u5f53\u524d\u7b5b\u9009\uff1a{filterSummary}\u3002\u7ed3\u679c\u6309\u5185\u5bb9\u7c7b\u578b\u5206\u7ec4\uff0c\u65b9\u4fbf\u5feb\u901f\u5207\u6362\u56de\u5bf9\u5e94\u5b66\u4e60\u573a\u666f\u3002
-            </p>
-          </div>
+          ) : null}
         </section>
 
-        {keyword && !loading && payload.total === 0 ? (
-          <section className="section-frame">
-            <div className="section-frame-head">
-              <div>
-                <p className="eyebrow">\u7a7a\u7ed3\u679c</p>
-                <h2>\u5f53\u524d\u7b5b\u9009\u6ca1\u6709\u547d\u4e2d\u7ed3\u679c</h2>
-              </div>
-            </div>
-            <p className="panel-copy">
-              \u53ef\u4ee5\u5c1d\u8bd5\u7f29\u77ed\u5173\u952e\u8bcd\uff0c\u6216\u8005\u5207\u56de\u201c\u5168\u90e8\u7c7b\u578b\u201d\u91cd\u65b0\u641c\u7d22\u3002
-            </p>
+        {!searchState ? (
+          <section className="search-section-grid">
+            {groups.map((group: SearchGroupPayload) => (
+              <SearchGroupSection
+                currentPage={groupPages[group.type] ?? 1}
+                group={group}
+                key={group.type}
+                keyword={keyword}
+                onPageChange={handleGroupPageChange}
+              />
+            ))}
           </section>
         ) : null}
-
-        <section className="search-section-grid">
-          {groups.map((group: SearchGroupPayload) => (
-            <SearchGroupSection
-              currentPage={groupPages[group.type] ?? 1}
-              group={group}
-              key={group.type}
-              keyword={keyword}
-              onPageChange={handleGroupPageChange}
-            />
-          ))}
-        </section>
       </div>
     </>
   );
