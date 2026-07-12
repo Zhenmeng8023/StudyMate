@@ -5366,6 +5366,32 @@
 
 - `FE-040` 不再只在管理端闭环，用户端真实列表页也开始共用同一套页面状态语义；后续可以沿阅读、笔记、复习和更多跨端列表继续扩状态落点，而不是重新写散落的空态/错态文案。
 - 当前这轮优先补的是 `loading / error / empty / stale`；`unauthorized / conflict` 在用户端还没有大面积真实入口，后续更适合结合受保护工作区和带刷新/冲突决策的页面继续推进。
+## 2026-07-13 04:43:40 +08:00 | v1.1.0-alpha.168 | 推进 FE-040 用户端 AI 工作台页面状态接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不回到更深的图谱内核，而是先收口用户端 `AiPage` 的真实页面状态入口。
+- 目标是让 AI 工作台在首屏自举失败时明确进入共享 `error`，并在确认卡片草稿 / 图谱变更后刷新失败时进入共享 `stale`，同时保留现有草稿和任务上下文，避免把用户直接打回空白工作台。
+
+### 实际变更
+
+- 在 `frontend-user/src/pages/AiPage.test.tsx` 先补 RED，复现两处真实缺口：AI 工作台首屏失败只有局部 message，没有共享 `error`；确认卡片草稿后如果重新同步失败，也没有共享 `stale` 提示与“保留旧草稿上下文”的断言。
+- 更新 `frontend-user/src/pages/AiPage.tsx`，新增 `AiWorkspaceState` 与 `loadAiWorkspace({ preserveExisting })`，把 AI 工作台主入口接到共享 `loading / error / stale` 页面状态协议。
+- 当前 AI 工作台在首屏失败时会明确渲染“AI 工作台暂时不可用”的共享 `error` 状态；当已有草稿 / 任务上下文、确认草稿成功后刷新失败时，会渲染“AI 工作台需要刷新”的共享 `stale` 状态，同时继续保留原有草稿、任务历史和目标卡组 / 图谱上下文。
+- 卡片草稿与图谱变更草稿的确认成功后都会优先尝试以 `preserveExisting: true` 刷新工作台；如果刷新失败，不再把用户打回空白页，也不再只留下孤立的操作结果 message。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx src/pages/DashboardPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+
+### 后续影响
+
+- `FE-040` 现在已经继续推进到 AI 辅助理解这条主学习主路径，用户端关键工作台的共享页面状态协议更完整了。
+- 社区页和设置页仍保留本地空态 / 错误态直出路径；后续更适合继续沿这些剩余页面补共享 `error / unauthorized`，进一步收口用户端全局状态语义。
+
 ## 2026-07-13 04:35:30 +08:00 | v1.1.0-alpha.167 | 推进 FE-040 用户端首页页面状态接线
 ### 任务内容
 
