@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminModerationModule from "./AdminModerationModule.vue";
 
 describe("AdminModerationModule", () => {
-  it("renders moderation rows, updates query, and emits requested actions", async () => {
+  it("renders moderation rows through the shared search toolbar and emits requested actions", async () => {
     const wrapper = mount(AdminModerationModule, {
       props: {
         items: [
@@ -24,7 +24,9 @@ describe("AdminModerationModule", () => {
     });
 
     expect(wrapper.text()).toContain("Pending Post");
+    expect(wrapper.find('[data-admin-search-toolbar="true"]').exists()).toBe(true);
     expect(wrapper.get('input[placeholder="搜索标题、作者或状态"]').classes()).toContain("ds-input");
+    expect(wrapper.get('[data-admin-search-toolbar-meta="true"]').text()).toContain("1 / 1");
     expect(wrapper.get('[data-moderation-action="reject"]').classes()).toContain("danger");
 
     await wrapper.get('input[placeholder="搜索标题、作者或状态"]').setValue("alice");
@@ -51,9 +53,8 @@ describe("AdminModerationModule", () => {
       }
     });
 
-    expect(wrapper.text()).toContain("加载中");
     expect(wrapper.text()).toContain("正在同步审核队列");
-    expect(wrapper.text()).not.toContain("当前没有匹配的待审核内容");
+    expect(wrapper.text()).toContain("请稍候，最新待审核内容和状态正在加载。");
   });
 
   it("keeps rendering existing moderation rows while surfacing the shared stale state", () => {
@@ -81,7 +82,6 @@ describe("AdminModerationModule", () => {
       }
     });
 
-    expect(wrapper.text()).toContain("需要刷新");
     expect(wrapper.text()).toContain("审核队列需要刷新");
     expect(wrapper.text()).toContain("Pending Post");
     expect(wrapper.find('[data-moderation-action="approve"]').exists()).toBe(true);
@@ -112,7 +112,6 @@ describe("AdminModerationModule", () => {
       }
     });
 
-    expect(wrapper.text()).toContain("需要登录");
     expect(wrapper.text()).toContain("暂无审核权限");
     expect(wrapper.text()).not.toContain("Pending Post");
     expect(wrapper.find('[data-moderation-action="approve"]').exists()).toBe(false);

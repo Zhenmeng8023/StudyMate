@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminGovernanceModule from "./AdminGovernanceModule.vue";
 
 describe("AdminGovernanceModule", () => {
-  it("renders summary cards, records, and emits query and selection changes", async () => {
+  it("renders summary cards, records, and emits query and selection changes through the shared search toolbar", async () => {
     const wrapper = mount(AdminGovernanceModule, {
       props: {
         columns: ["id", "action", "status"],
@@ -29,7 +29,9 @@ describe("AdminGovernanceModule", () => {
 
     expect(wrapper.text()).toContain("audit-1");
     expect(wrapper.text()).toContain("moderation.approve");
+    expect(wrapper.find('[data-admin-search-toolbar="true"]').exists()).toBe(true);
     expect(wrapper.get('input[placeholder="搜索当前记录"]').classes()).toContain("ds-input");
+    expect(wrapper.get('[data-admin-search-toolbar-meta="true"]').text()).toContain("1 / 1");
 
     await wrapper.get('input[placeholder="搜索当前记录"]').setValue("success");
     expect(wrapper.emitted("update:query")?.[0]).toEqual(["success"]);
@@ -89,9 +91,8 @@ describe("AdminGovernanceModule", () => {
       }
     });
 
-    expect(wrapper.text()).toContain("暂时不可用");
     expect(wrapper.text()).toContain("治理记录暂时不可用");
-    expect(wrapper.text()).not.toContain("当前模块已接入真实 API，但没有可显示的数据。");
+    expect(wrapper.text()).toContain("读取治理模块失败");
   });
 
   it("keeps rendering existing governance rows while surfacing the shared stale state", () => {
@@ -117,7 +118,6 @@ describe("AdminGovernanceModule", () => {
       }
     });
 
-    expect(wrapper.text()).toContain("需要刷新");
     expect(wrapper.text()).toContain("治理记录需要刷新");
     expect(wrapper.text()).toContain("audit-1");
     expect(wrapper.find('[data-record-row="audit-1"]').exists()).toBe(true);
@@ -146,7 +146,6 @@ describe("AdminGovernanceModule", () => {
       }
     });
 
-    expect(wrapper.text()).toContain("存在冲突");
     expect(wrapper.text()).toContain("治理动作存在冲突");
     expect(wrapper.text()).toContain("audit-1");
     expect(wrapper.find('[data-record-row="audit-1"]').exists()).toBe(true);
@@ -175,7 +174,6 @@ describe("AdminGovernanceModule", () => {
       }
     });
 
-    expect(wrapper.text()).toContain("需要登录");
     expect(wrapper.text()).toContain("暂无治理权限");
     expect(wrapper.text()).not.toContain("audit-1");
     expect(wrapper.find('[data-record-row="audit-1"]').exists()).toBe(false);
