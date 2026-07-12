@@ -24,7 +24,7 @@
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
 | FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale / unauthorized / conflict` 的真实状态入口，用户端 `SearchWorkspacePage`、`DashboardPage`、`CommunityPage`、`MaterialsPage`、`ReviewWorkspacePage`、`NotesPage`、`ReaderPage`、`AiPage`、`SettingsPage`、`GraphWorkspacePage` 与 `SharePage` 已接入首批共享页面状态，其中首页已补上真实 `unauthorized / error` 入口，社区页、资料库、复习工作区、笔记工作区、阅读工作区、AI 工作台、设置页、图谱工作台和分享页也都已补上真实 `error / stale / loading` 落点；后续继续补更多用户端页面与跨端状态落点。 |
-| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `Select` 已覆盖笔记页、阅读页、复习工作区、图谱工作区与 AI 草稿中心里的高频下拉，共享 `PageHeader` 已覆盖主工作区页面、搜索工作区与图谱工作区，共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层；管理端也已新增 `AdminButton` / `AdminInput` / `AdminSelect` / `AdminPageHeader` / `AdminSearchToolbar` / `AdminCommandBar` / `AdminMetricCard` / `AdminDataCardHeader` / `AdminRecordInspector` / `AdminNavItem` Vue 适配层，并接入登录、壳层、dashboard、审核与治理模块，其中审核/治理页已通过共享 `AdminSelect` 承载状态筛选，后台壳层顶部条已通过共享 `AdminCommandBar` 暴露统一 breadcrumb / 同步状态 / actions 契约，dashboard 与治理摘要区已通过共享 `AdminMetricCard` 收口重复卡片骨架，审核与治理模块的数据卡片标题区已通过共享 `AdminDataCardHeader` 暴露统一标题/说明骨架，治理记录详情区已通过共享 `AdminRecordInspector` 收口字段展示与动作区骨架，后台侧边导航项也已通过共享 `AdminNavItem` 收口 active / badge / icon / press 契约，后续继续推进更多后台治理动作与跨端状态语义。 |
+| FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `Select` 已覆盖笔记页、阅读页、复习工作区、图谱工作区与 AI 草稿中心里的高频下拉，共享 `PageHeader` 已覆盖主工作区页面、搜索工作区与图谱工作区，共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层；管理端也已新增 `AdminButton` / `AdminInput` / `AdminSelect` / `AdminPageHeader` / `AdminSearchToolbar` / `AdminCommandBar` / `AdminMetricCard` / `AdminDataCardHeader` / `AdminRecordInspector` / `AdminNavItem` / `AdminFeatureCard` Vue 适配层，并接入登录、壳层、dashboard、审核与治理模块，其中审核/治理页已通过共享 `AdminSelect` 承载状态筛选，后台壳层顶部条已通过共享 `AdminCommandBar` 暴露统一 breadcrumb / 同步状态 / actions 契约，dashboard 与治理摘要区已通过共享 `AdminMetricCard` 收口重复卡片骨架，审核与治理模块的数据卡片标题区已通过共享 `AdminDataCardHeader` 暴露统一标题/说明骨架，治理记录详情区已通过共享 `AdminRecordInspector` 收口字段展示与动作区骨架，后台侧边导航项已通过共享 `AdminNavItem` 收口 active / badge / icon / press 契约，dashboard 的 priority/status 复合运营卡片也已通过共享 `AdminFeatureCard` 收口骨架，后续继续推进更多后台治理动作与跨端状态语义。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；请求阶段直接收到 `403 user_disabled` 时也会统一清 session 并给出禁用提示；补 HttpOnly Refresh Token 迁移说明。 |
 | DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
@@ -63,6 +63,19 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：FE-041（管理端共享 FeatureCard 复合卡片接线）
+- 执行日期：2026-07-13
+- 本轮完成：
+  - 新增 `frontend-admin/src/components/admin/AdminFeatureCard.vue` 与 `AdminFeatureCard.test.ts`，以 Vue 适配层收口后台复合卡片的 eyebrow / title / description / actions / body 契约，避免 dashboard 继续内联 priority/status 两类运营卡片结构。
+  - 更新 `frontend-admin/src/views/modules/AdminDashboardModule.vue` 与 `AdminDashboardModule.test.ts`，把优先队列卡和审核概览卡切到共享 `AdminFeatureCard`，同时保留概览统计、入口按钮和计数语义。
+  - 这一步也把 dashboard 模块与测试收口到可读 UTF-8，减少后续继续推进共享骨架时被旧编码噪声拖慢。
+- 已执行验证：
+  - `npm --workspace frontend-admin run test -- src/components/admin/AdminFeatureCard.test.ts src/views/modules/AdminDashboardModule.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+- 风险与后续：
+  - 当前这轮先收口的是 dashboard 复合卡片最小契约，导航分组标题和更多后台运营卡片还没有一起纳入共享层。
+  - 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先补导航分组骨架或后台资料/审核列表里的内容摘要单元，而不是把 priority/status 卡片结构再写回模块页面。
 
 ### 执行记录：FE-041（管理端壳层共享 NavItem 适配层接线）
 - 执行日期：2026-07-13
