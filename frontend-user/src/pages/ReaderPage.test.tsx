@@ -245,4 +245,48 @@ describe("ReaderPage", () => {
 
     await expect(screen.findByText("initial-page-8")).resolves.toBeInTheDocument();
   });
+
+  it("renders the shared error state when the initial reader state bootstrap fails", async () => {
+    getReaderStateMock.mockRejectedValueOnce(new Error("阅读状态加载失败"));
+
+    render(
+      <MemoryRouter>
+        <ReaderPage session={session} />
+      </MemoryRouter>
+    );
+
+    expect((await screen.findAllByRole("heading", { level: 2, name: "阅读内容暂时不可用" })).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("阅读状态加载失败").length).toBeGreaterThan(0);
+  });
+
+  it("keeps rendering the current document while surfacing a shared stale state after annotation refresh fails", async () => {
+    const user = userEvent.setup();
+    getReaderStateMock
+      .mockResolvedValueOnce({
+        materialId: "material-1",
+        currentPage: 3,
+        totalPages: 10,
+        progressPercent: 30,
+        bookmarks: [1],
+        lastReadAt: "2026-06-02T12:00:00Z",
+        annotations: []
+      })
+      .mockRejectedValueOnce(new Error("阅读上下文刷新失败"));
+
+    render(
+      <MemoryRouter>
+        <ReaderPage session={session} />
+      </MemoryRouter>
+    );
+
+    await expect(screen.findByTestId("pdf-reader-pane")).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "mock-select-quote" }));
+    await user.type(screen.getByLabelText("批注内容"), "Useful note");
+    await user.click(screen.getByRole("button", { name: "保存批注" }));
+
+    expect(await screen.findByRole("heading", { level: 2, name: "阅读上下文需要刷新" })).toBeInTheDocument();
+    expect(screen.getByText("阅读上下文刷新失败")).toBeInTheDocument();
+    expect(screen.getByTestId("pdf-reader-pane")).toBeInTheDocument();
+    expect(screen.getByText("initial-page-3")).toBeInTheDocument();
+  });
 });
