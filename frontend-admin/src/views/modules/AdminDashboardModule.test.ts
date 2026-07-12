@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminDashboardModule from "./AdminDashboardModule.vue";
 
 describe("AdminDashboardModule", () => {
-  it("renders shared overview metric cards and emits open-moderation from the priority card", async () => {
+  it("renders shared overview metric cards and shared feature cards, then emits open-moderation", async () => {
     const wrapper = mount(AdminDashboardModule, {
       props: {
         overviewCards: [
@@ -19,6 +19,7 @@ describe("AdminDashboardModule", () => {
     expect(wrapper.text()).toContain("待处理");
     expect(wrapper.text()).toContain("用户规模");
     expect(wrapper.findAll('[data-admin-metric-card="true"]')).toHaveLength(2);
+    expect(wrapper.findAll('[data-admin-feature-card="true"]')).toHaveLength(2);
     expect(wrapper.text()).toContain("2");
     expect(wrapper.text()).toContain("1");
     expect(wrapper.get('[data-dashboard-action="open-moderation"]').classes()).toContain("primary-button");
