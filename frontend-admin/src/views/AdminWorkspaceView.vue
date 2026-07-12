@@ -68,6 +68,8 @@ const governanceRowsView = ref<Exclude<AdminView, "dashboard" | "moderation"> | 
 const selectedRecord = ref<GovernanceRecord | null>(null);
 const loading = ref(false);
 const errorMessage = ref("");
+const moderationErrorStatus = ref<number | null>(null);
+const governanceErrorStatus = ref<number | null>(null);
 const notice = ref("登录后会同步当前治理队列与运营数据。");
 const activeView = ref<AdminView>(resolveAdminViewFromLocation());
 const recordQuery = ref("");
@@ -300,6 +302,13 @@ const moderationDataState = computed<AdminDataStatePayload | null>(() => {
       description: "请稍候，最新待审核内容和状态正在载入。"
     };
   }
+  if (moderationErrorStatus.value === 403) {
+    return {
+      kind: "unauthorized",
+      title: "暂无审核权限",
+      description: errorMessage.value || "当前账号没有查看审核队列的权限。"
+    };
+  }
   if (errorMessage.value && moderationItems.value.length > 0) {
     return {
       kind: "stale",
@@ -323,6 +332,13 @@ const governanceDataState = computed<AdminDataStatePayload | null>(() => {
       kind: "loading",
       title: `正在同步${activeMeta.value.label}`,
       description: "请稍候，最新治理记录正在载入。"
+    };
+  }
+  if (governanceErrorStatus.value === 403) {
+    return {
+      kind: "unauthorized",
+      title: "暂无治理权限",
+      description: errorMessage.value || "当前账号没有查看这个治理模块的权限。"
     };
   }
   if (errorMessage.value && governanceRows.value.length > 0) {
@@ -392,6 +408,15 @@ const governanceColumns = computed(() => {
     })
     .slice(0, 7);
 });
+
+function getRequestErrorStatus(error: unknown) {
+  if (typeof error !== "object" || error === null || !("status" in error)) {
+    return null;
+  }
+
+  const status = (error as { status?: unknown }).status;
+  return typeof status === "number" ? status : null;
+}
 
 function resolveAdminViewFromLocation(): AdminView {
   if (typeof window === "undefined") return defaultAdminRouteKey;
@@ -519,8 +544,15 @@ async function loadModeration() {
   if (!session.value) return;
   loading.value = true;
   errorMessage.value = "";
+  moderationErrorStatus.value = null;
   try {
-    moderationItems.value = await get<ModerationItem[]>("/api/v1/admin/moderation");
+    moderationItems.value = await get<ModerationItem[]>("/api/v1/admin/moderation").catch((error) => {
+      moderationErrorStatus.value = getRequestErrorStatus(error);
+      if (moderationErrorStatus.value === 403) {
+        moderationItems.value = [];
+      }
+      throw error;
+    });
     notice.value = `当前共有 ${moderationItems.value.length} 条待处理内容。`;
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "读取审核队列失败";
@@ -534,6 +566,7 @@ async function loadGovernance(view: AdminView) {
   const preserveExistingRows = governanceRowsView.value === view && governanceRows.value.length > 0;
   loading.value = true;
   errorMessage.value = "";
+  governanceErrorStatus.value = null;
   if (!preserveExistingRows) {
     governanceRows.value = [];
     governanceSummary.value = null;
@@ -541,7 +574,16 @@ async function loadGovernance(view: AdminView) {
   }
   try {
     const config = governanceConfig[view];
-    governanceRows.value = await get<GovernanceRecord[]>(config.endpoint, config.query);
+    governanceRows.value = await get<GovernanceRecord[]>(config.endpoint, config.query).catch((error) => {
+      governanceErrorStatus.value = getRequestErrorStatus(error);
+      if (governanceErrorStatus.value === 403) {
+        governanceRows.value = [];
+        governanceSummary.value = null;
+        governanceRowsView.value = null;
+        selectedRecord.value = null;
+      }
+      throw error;
+    });
     governanceRowsView.value = view;
     selectedRecord.value = governanceRows.value[0] ?? null;
     if (view === "ai") {

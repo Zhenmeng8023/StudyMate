@@ -23,7 +23,7 @@
 | FE-010 | DONE | 多布局壳层与基础组件 | FE-000 | `frontend-user/src/app/`、`frontend-user/src/design-system/`、样式 | Standard / Studio / Canvas / Focus 路由布局可解析；Canvas 不挂全局 ContextPanel；基础组件与单测已添加，并已在 2026-07-08 跑通用户端 / 管理端类型检查、相关 Vitest、前后台构建与 Playwright 回归。 |
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
-| FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale` 的真实状态入口，后续继续补 `unauthorized / conflict` 与更多用户端页面。 |
+| FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale / unauthorized` 的真实状态入口，后续继续补 `conflict` 与更多用户端页面。 |
 | FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层，管理端也已新增 `AdminButton` / `AdminInput` Vue 适配层，并接入登录、壳层、dashboard、审核与治理模块，后续继续推进更多后台治理动作与跨端状态语义。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；请求阶段直接收到 `403 user_disabled` 时也会统一清 session 并给出禁用提示；补 HttpOnly Refresh Token 迁移说明。 |
@@ -519,6 +519,23 @@
 - 后续建议：
   - 这一步把 `stale` 从共享枚举推进到了管理端真实页面入口，但 `unauthorized / conflict` 仍主要停留在共享文案层，后续继续沿 `FE-040` 找更真实的工作台入口接线。
   - 管理端当前仍保留壳层 `notice/error` 与模块级 `DataState` 双通道提示；后续更适合在 `ADM-010` 拆 page / feature 边界时一起明确“顶部通知”与“内容态状态骨架”的职责边界。
+
+### 执行记录：FE-040（管理端 unauthorized 页面状态接线）
+- 执行日期：2026-07-13
+- 本轮完成：
+  - 先在 `frontend-admin/src/views/modules/AdminModerationModule.test.ts`、`AdminGovernanceModule.test.ts` 与 `AdminWorkspaceView.test.ts` 补 RED，锁定“403 权限失败时模块页仍只显示 error / stale，且会继续暴露旧表格”的缺口。
+  - `frontend-admin/src/views/AdminWorkspaceView.vue` 现已为审核队列与治理模块补充真实 `unauthorized` 状态入口：当工作台请求返回 `403` 时，会落成共享 `DataState` 的 `unauthorized` 语义，而不是继续退化成泛化错误态。
+  - 同一轮里还补了最小的数据清理策略：审核队列与治理模块在 `403` 时会清空旧列表、清理治理详情引用，避免已经失去权限的操作者继续看到旧数据。
+  - `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue` 现在只在“无状态 / stale”时保留旧表格；`loading / error / unauthorized / conflict` 都不会继续渲染原有记录区。
+- 已执行验证：
+  - RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+  - GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+- 后续建议：
+  - 这一步把 `unauthorized` 推进到了管理端真实页面入口，但 `conflict` 仍主要停留在共享语义与图谱专用路径，后续继续沿 `FE-040` 找跨端更通用的冲突态接线。
+  - 目前 `refreshProfile()` / `loadOverview()` 这类更靠近壳层的请求失败仍主要通过顶部 `notice/error` 暴露；后续更适合在 `ADM-010` 拆 page / feature 边界时进一步收口“壳层权限失败”和“内容区权限失败”的分工。
 
 ### 执行记录：FE-040（共享设计 token 单一来源起步）
 - 执行日期：2026-07-09

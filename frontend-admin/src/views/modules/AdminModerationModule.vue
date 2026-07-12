@@ -37,7 +37,7 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
 );
 
 const showState = computed(() => Boolean(props.dataState) || props.items.length === 0);
-const showTable = computed(() => props.items.length > 0 && props.dataState?.kind !== "loading" && props.dataState?.kind !== "error");
+const showTable = computed(() => props.items.length > 0 && (!props.dataState || props.dataState.kind === "stale"));
 </script>
 
 <template>

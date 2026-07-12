@@ -1,3 +1,26 @@
+## 2026-07-13 03:38:10 +08:00 | v1.1.0-alpha.163 | 推进 FE-040 管理端 unauthorized 页面状态接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不做新的治理动作，而是补管理端真实 `unauthorized` 页面状态入口。
+- 目标是让审核队列和治理模块在 `403` 权限失败时明确进入共享 `DataState` 的 `unauthorized` 语义，并且清掉不该继续暴露的旧表格 / 旧详情。
+### 实际变更
+
+- 先在 `frontend-admin/src/views/modules/AdminModerationModule.test.ts`、`AdminGovernanceModule.test.ts` 与 `AdminWorkspaceView.test.ts` 补 RED，复现“403 时模块页仍只显示 stale / error，且旧数据还会继续停留在页面上”的缺口。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，为审核队列与治理模块补齐真实 `403 -> unauthorized` 状态映射；当前请求返回 `403` 时，会转成共享 `DataState` 的 `unauthorized` 标签与权限说明。
+- 同时在 `AdminWorkspaceView.vue` 落了最小的数据清理策略：审核队列在 `403` 时清空已有条目，治理模块在 `403` 时清空 rows / summary / selectedRecord / view 绑定，避免权限收回后仍继续暴露旧内容。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，把“保留旧表格”的条件进一步收紧到 `stale` 专用路径；`loading / error / unauthorized / conflict` 都不再继续渲染记录区。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+### 后续影响
+
+- `FE-040` 在管理端已经不只覆盖 `loading / error / empty / stale`，`unauthorized` 也进入了真实工作台页面入口，状态协议更接近“可操作、可解释”的统一骨架。
+- `conflict` 仍主要停留在共享语义和图谱专用路径，后续继续推进 `FE-040` 时，更适合挑用户端图谱或跨端共享表单/列表里真正会出现冲突决策的入口继续接线。
+
 ## 2026-07-13 03:27:16 +08:00 | v1.1.0-alpha.162 | 推进 FE-040 管理端 stale 页面状态接线
 ### 任务内容
 
