@@ -37,6 +37,7 @@ describe("AdminShellFrame", () => {
     expect(wrapper.get('[data-test-slot="content"]').text()).toBe("content");
     expect(wrapper.find('[data-admin-command-bar="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-page-header="true"]').exists()).toBe(true);
+    expect(wrapper.find('[data-admin-nav-group="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-nav-item="true"]').exists()).toBe(true);
     expect(wrapper.get('[data-admin-page-header-actions="true"]').text()).toContain("1");
     expect(wrapper.get('button[data-admin-refresh="true"]').classes()).toContain("secondary-button");
