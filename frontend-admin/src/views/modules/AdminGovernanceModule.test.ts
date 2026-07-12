@@ -54,7 +54,7 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.emitted("selectRecord")?.[0]?.[0]).toMatchObject({ id: "audit-1" });
   });
 
-  it("renders governance actions through the shared inspector and emits action requests", async () => {
+  it("renders governance actions through the shared inspector and action bar, then emits action requests", async () => {
     const selectedRecord = {
       id: "report-1",
       targetType: "post",
@@ -77,6 +77,7 @@ describe("AdminGovernanceModule", () => {
     });
 
     expect(wrapper.find('[data-admin-record-inspector-actions="true"]').exists()).toBe(true);
+    expect(wrapper.find('[data-admin-action-bar="true"]').exists()).toBe(true);
     expect(wrapper.get('[data-governance-action="resolve"]').text()).toContain("标记已处理");
     expect(wrapper.get('[data-governance-action="dismiss"]').text()).toContain("忽略举报");
     expect(wrapper.get('[data-governance-action="dismiss"]').classes()).toContain("danger");
