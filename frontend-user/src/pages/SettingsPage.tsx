@@ -2,20 +2,43 @@ import { FormEvent, useEffect, useState } from "react";
 import type { AuthSession, ProfilePayload } from "../api/client";
 import { getProfile, updateProfile } from "../api/client";
 import { SectionFrame, WorkspaceHeader } from "../app/appShared";
+import { DataState } from "../design-system/primitives";
+
+type SettingsProfileState =
+  | {
+      kind: "loading" | "error" | "empty";
+      title: string;
+      description: string;
+    }
+  | null;
 
 export function SettingsPage(props: { session: AuthSession }) {
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [form, setForm] = useState({ displayName: "", email: "" });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [profileError, setProfileError] = useState("");
+
+  async function loadProfile() {
+    setLoadingProfile(true);
+    setProfileError("");
+    setMessage("");
+
+    try {
+      const payload = await getProfile(props.session);
+      setProfile(payload);
+      setForm({ displayName: payload.displayName, email: payload.email });
+    } catch (error) {
+      setProfile(null);
+      setProfileError(error instanceof Error ? error.message : "个人资料加载失败");
+    } finally {
+      setLoadingProfile(false);
+    }
+  }
 
   useEffect(() => {
-    void getProfile(props.session)
-      .then((payload) => {
-        setProfile(payload);
-        setForm({ displayName: payload.displayName, email: payload.email });
-      })
-      .catch(() => undefined);
+    void loadProfile();
   }, [props.session]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -33,6 +56,26 @@ export function SettingsPage(props: { session: AuthSession }) {
     }
   }
 
+  const profileState: SettingsProfileState = loadingProfile && !profile
+    ? {
+        kind: "loading",
+        title: "正在加载个人资料",
+        description: "正在读取你的账户基础信息与学习空间设置。"
+      }
+    : profileError
+      ? {
+          kind: "error",
+          title: "个人资料暂时不可用",
+          description: profileError
+        }
+      : profile
+        ? null
+        : {
+            kind: "empty",
+            title: "个人资料暂未初始化",
+            description: "账户基础信息还没有准备完成，请稍后重新加载。"
+          };
+
   return (
     <>
       <WorkspaceHeader
@@ -42,20 +85,44 @@ export function SettingsPage(props: { session: AuthSession }) {
       />
       <div className="settings-grid">
         <SectionFrame subtitle="个人资料" title={profile?.displayName || "账户信息"}>
-          <form className="form-stack" onSubmit={handleSubmit}>
-            <label>
-              <span>显示名称</span>
-              <input onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))} value={form.displayName} />
-            </label>
-            <label>
-              <span>邮箱</span>
-              <input onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} type="email" value={form.email} />
-            </label>
-            <button className="primary-button" disabled={busy} type="submit">
-              {busy ? "保存中..." : "保存设置"}
-            </button>
-          </form>
-          {message ? <p className="muted-copy">{message}</p> : null}
+          {profileState ? (
+            <DataState
+              action={
+                profileState.kind === "error" || profileState.kind === "empty" ? (
+                  <button className="secondary-button" onClick={() => void loadProfile()} type="button">
+                    重新加载
+                  </button>
+                ) : undefined
+              }
+              description={profileState.description}
+              kind={profileState.kind}
+              title={profileState.title}
+            />
+          ) : (
+            <>
+              <form className="form-stack" onSubmit={handleSubmit}>
+                <label>
+                  <span>显示名称</span>
+                  <input
+                    onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))}
+                    value={form.displayName}
+                  />
+                </label>
+                <label>
+                  <span>邮箱</span>
+                  <input
+                    onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                    type="email"
+                    value={form.email}
+                  />
+                </label>
+                <button className="primary-button" disabled={busy} type="submit">
+                  {busy ? "保存中..." : "保存设置"}
+                </button>
+              </form>
+              {message ? <p className="muted-copy">{message}</p> : null}
+            </>
+          )}
         </SectionFrame>
 
         <SectionFrame subtitle="账户状态" title="学习空间说明">

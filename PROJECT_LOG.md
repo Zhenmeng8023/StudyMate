@@ -1,3 +1,28 @@
+## 2026-07-13 04:54:30 +08:00 | v1.1.0-alpha.170 | 推进 FE-040 用户端设置页页面状态接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新域，而是把用户端设置页的 profile 读取路径接到共享页面状态协议。
+- 目标是让 `SettingsPage` 不再把 profile 自举失败静默吞掉，而是在首屏阶段明确进入共享 `loading / error`，并补上统一的重试入口。
+### 实际变更
+
+- 新增 `frontend-user/src/pages/SettingsPage.test.tsx`，先以 RED 锁定三个真实缺口：设置页首屏没有共享 `loading`；profile 读取失败时静默无反馈；从共享错误态重试后也没有回到正常表单上下文。
+- 更新 `frontend-user/src/pages/SettingsPage.tsx`，新增 `SettingsProfileState` 与 `loadProfile()`，把设置页资料区接到共享页面状态协议：首屏读取中走 `loading`，profile 读取失败走 `error`，无资料时走兜底 `empty`。
+- 设置页现在会在共享 `error / empty` 状态里提供统一的“重新加载”动作；当 profile 成功返回后，页面才渲染资料表单，避免空白输入框伪装成“已成功加载”的正常态。
+- 原有资料保存逻辑保持不变，仍沿用既有 `updateProfile(...)` API 和成功/失败反馈，不扩大这次工作包的契约范围。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/SettingsPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/SettingsPage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm --workspace frontend-user run test -- src/pages/SettingsPage.test.tsx src/pages/CommunityPage.test.tsx src/pages/AiPage.test.tsx src/pages/DashboardPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-040` 现在已经把用户端首页、社区、资料库、阅读、笔记、复习、AI 工作台和设置页都接进了共享页面状态协议，用户端剩余“失败静默吞掉”的入口继续减少。
+- 设置页的保存提交流程仍是局部 `message` 反馈，后续如果继续推进 `FE-040`，更适合补图谱页或更细粒度的 `unauthorized / conflict` 真入口，而不是在这一步扩散到新的产品域。
+
 ## 2026-07-13 04:19:30 +08:00 | v1.1.0-alpha.165 | 推进 FE-040 用户端笔记工作区 stale 页面状态接线
 ### 任务内容
 
