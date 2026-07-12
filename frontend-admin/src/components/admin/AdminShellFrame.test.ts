@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminShellFrame from "./AdminShellFrame.vue";
 
 describe("AdminShellFrame", () => {
-  it("renders shell metadata and emits navigation actions", async () => {
+  it("renders shell metadata and emits navigation actions through shared shell primitives", async () => {
     const wrapper = mount(AdminShellFrame, {
       props: {
         activeGroup: "治理",
@@ -16,7 +16,7 @@ describe("AdminShellFrame", () => {
         navGroups: [
           {
             group: "系统",
-            items: [{ key: "audit", label: "审计日志", icon: "•" }]
+            items: [{ key: "audit", label: "审计日志", icon: "◉" }]
           }
         ],
         notice: "已加载 1 条治理记录。",
@@ -37,11 +37,12 @@ describe("AdminShellFrame", () => {
     expect(wrapper.get('[data-test-slot="content"]').text()).toBe("content");
     expect(wrapper.find('[data-admin-command-bar="true"]').exists()).toBe(true);
     expect(wrapper.find('[data-admin-page-header="true"]').exists()).toBe(true);
+    expect(wrapper.find('[data-admin-nav-item="true"]').exists()).toBe(true);
     expect(wrapper.get('[data-admin-page-header-actions="true"]').text()).toContain("1");
     expect(wrapper.get('button[data-admin-refresh="true"]').classes()).toContain("secondary-button");
     expect(wrapper.get('button[data-admin-logout="true"]').classes()).toContain("ghost-button");
 
-    await wrapper.get('[data-admin-view="audit"]').trigger("click");
+    await wrapper.get('[data-admin-nav-item-view="audit"]').trigger("click");
     expect(wrapper.emitted("switchView")?.[0]).toEqual(["audit"]);
 
     await wrapper.get('button[data-admin-refresh="true"]').trigger("click");
