@@ -1,3 +1,25 @@
+## 2026-07-13 05:27:24 +08:00 | v1.1.0-alpha.175 | 推进 FE-041 复习工作区共享 Select 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次继续清理用户端还留在真实主路径上的裸下拉，而不是回头做更深的业务逻辑重构。
+- 目标是把复习工作区新建卡组表单里的“卡组可见性”切到共享 `Select`，补上共享下拉在学习闭环最后一段管理入口里的覆盖。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，把新建卡组表单里的“卡组可见性”原生下拉替换成共享 `Select`，保留既有表单状态与 `createDeck(...)` 提交逻辑。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，新增“打开管理面板 -> 新建卡组 -> 切换公开可见 -> 提交”的页面回归，并断言该 `combobox` 已暴露 `ds-select` 契约。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 Select 已覆盖笔记、阅读、复习工作区、图谱工作区与 AI 草稿中心”。
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在又补上了复习工作区这条真实学习主路径里的共享下拉，用户端剩余裸 `select` 进一步减少，后续统一表单语义会更顺。
+- 这一轮仍然只先收口了复习工作区的可见性下拉；管理端筛选器、搜索页/图谱页头骨架以及更多共享表单 primitive 还没统一，后续更适合继续沿这些重复模式推进。
+
 ## 2026-07-13 05:22:29 +08:00 | v1.1.0-alpha.174 | 推进 FE-041 AI 草稿中心共享 Select 接线
 ### 任务内容
 

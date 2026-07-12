@@ -12,7 +12,7 @@ import {
   listDecks,
   reviewCard
 } from "../../api/client";
-import { DataState } from "../../design-system/primitives";
+import { DataState, Select } from "../../design-system/primitives";
 
 type ReviewWorkspacePageProps = {
   session: AuthSession;
@@ -409,10 +409,10 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                 </label>
                 <label>
                   <span>可见性</span>
-                  <select aria-label="卡组可见性" onChange={(event) => setDeckForm((current) => ({ ...current, visibility: event.target.value as "private" | "public" }))} value={deckForm.visibility}>
+                  <Select aria-label="卡组可见性" onChange={(event) => setDeckForm((current) => ({ ...current, visibility: event.target.value as "private" | "public" }))} value={deckForm.visibility}>
                     <option value="private">仅自己可见</option>
                     <option value="public">公开</option>
-                  </select>
+                  </Select>
                 </label>
                 <button className="primary-button" disabled={busy || !deckForm.title.trim()} type="submit"><Layers3 size={16} /> 创建卡组</button>
               </form>
