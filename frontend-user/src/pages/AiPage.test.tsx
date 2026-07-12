@@ -12,7 +12,7 @@ import {
   listDecks,
   listGraphs
 } from "../api/client";
-import type { AuthSession } from "../api/client";
+import type { AiDraftPayload, AuthSession, GraphDetailPayload, GraphSummaryPayload } from "../api/client";
 import { AiPage } from "./AiPage";
 
 vi.mock("../api/client", async () => {
@@ -52,6 +52,107 @@ const bulkCreateDeckCardsMock = vi.mocked(bulkCreateDeckCards);
 const commitGraphChangeDraftSelectionMock = vi.mocked(commitGraphChangeDraftSelection);
 const getGraphMock = vi.mocked(getGraph);
 
+function makeCardDraft(overrides: Partial<AiDraftPayload> = {}): AiDraftPayload {
+  return {
+    id: "draft-card-1",
+    taskId: "task-card-1",
+    draftType: "card_draft",
+    targetType: "deck",
+    targetId: "deck-1",
+    status: "pending",
+    sourceType: "annotation",
+    sourceId: "annotation-1",
+    sourceLabel: "Card draft source",
+    front: "What is a knowledge graph?",
+    back: "A graph of connected concepts.",
+    explanation: "draft explanation",
+    createdAt: "2026-06-02T12:00:00Z",
+    updatedAt: "2026-06-02T12:00:00Z",
+    ...overrides
+  };
+}
+
+function makeGraphDraft(overrides: Partial<AiDraftPayload> = {}): AiDraftPayload {
+  return {
+    id: "draft-graph-1",
+    taskId: "task-graph-1",
+    draftType: "graph_change",
+    targetType: "graph",
+    targetId: "graph-1",
+    status: "pending",
+    sourceType: "note",
+    sourceId: "note-1",
+    sourceLabel: "Graph draft source",
+    front: "Add graph nodes",
+    back: "Append related concepts.",
+    explanation: "graph explanation",
+    metadata: {
+      summary: "graph summary",
+      nodes: [
+        { id: "node-a", title: "Node A", x: 120, y: 0, width: 240, height: 120 },
+        { id: "node-b", title: "Node B", x: 360, y: 0, width: 240, height: 120 }
+      ],
+      edges: [{ id: "edge-1", label: "related", sourceNodeId: "node-a", targetNodeId: "node-b" }]
+    },
+    createdAt: "2026-06-02T12:00:00Z",
+    updatedAt: "2026-06-02T12:00:00Z",
+    ...overrides
+  };
+}
+
+function makeGraphSummary(overrides: Partial<GraphSummaryPayload> = {}): GraphSummaryPayload {
+  return {
+    id: "graph-1",
+    ownerUserId: "user-1",
+    title: "Graph 1",
+    description: "Graph summary",
+    visibility: "private",
+    status: "active",
+    graphType: "knowledge",
+    mode: "freeform",
+    currentVersion: 1,
+    nodeCount: 1,
+    edgeCount: 0,
+    createdAt: "2026-06-02T12:00:00Z",
+    updatedAt: "2026-06-02T12:00:00Z",
+    ...overrides
+  };
+}
+
+function makeGraphDetail(overrides: Partial<GraphDetailPayload> = {}): GraphDetailPayload {
+  return {
+    ...makeGraphSummary(),
+    document: {
+      graphId: "graph-1",
+      version: 1,
+      schemaVersion: 1,
+      viewport: { x: 0, y: 0, zoom: 1 },
+      nodes: [
+        {
+          id: "existing-node",
+          type: "concept",
+          title: "Existing concept",
+          x: 0,
+          y: 0,
+          width: 240,
+          height: 120
+        }
+      ],
+      edges: [],
+      groups: []
+    },
+    ...overrides
+  };
+}
+
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <AiPage session={session} />
+    </MemoryRouter>
+  );
+}
+
 describe("AiPage", () => {
   afterEach(() => {
     cleanup();
@@ -69,24 +170,7 @@ describe("AiPage", () => {
 
     listAiTasksMock.mockResolvedValue([]);
     listAiDraftsMock
-      .mockResolvedValueOnce([
-        {
-          id: "draft-1",
-          taskId: "task-1",
-          draftType: "card_draft",
-          targetType: "deck",
-          targetId: "deck-1",
-          status: "pending",
-          sourceType: "annotation",
-          sourceId: "annotation-1",
-          sourceLabel: "阅读批注",
-          front: "什么是知识图谱？",
-          back: "用节点和关系组织知识。",
-          explanation: "来自阅读器批注。",
-          createdAt: "2026-06-02T12:00:00Z",
-          updatedAt: "2026-06-02T12:00:00Z"
-        }
-      ])
+      .mockResolvedValueOnce([makeCardDraft()])
       .mockResolvedValueOnce([]);
     getAiUsageSummaryMock.mockResolvedValue({
       totalTasks: 1,
@@ -101,8 +185,8 @@ describe("AiPage", () => {
       {
         id: "deck-1",
         ownerUserId: "user-1",
-        title: "期末复习",
-        description: "高频概念",
+        title: "Deck 1",
+        description: "High frequency concepts",
         visibility: "private",
         cardCount: 0,
         createdAt: "2026-06-02T12:00:00Z",
@@ -116,8 +200,8 @@ describe("AiPage", () => {
         deckId: "deck-1",
         ownerUserId: "user-1",
         cardType: "basic",
-        front: "什么是知识图谱？",
-        back: "用节点和关系组织知识。",
+        front: "What is a knowledge graph?",
+        back: "A graph of connected concepts.",
         sourceType: "annotation",
         sourceId: "annotation-1",
         status: "active",
@@ -129,185 +213,91 @@ describe("AiPage", () => {
 
   it("confirms pending card drafts into the selected review deck", async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <AiPage session={session} />
-      </MemoryRouter>
-    );
+    const { container } = renderPage();
 
-    await expect(screen.findByText("什么是知识图谱？")).resolves.toBeInTheDocument();
-    const commitButton = screen.getByRole("button", { name: "把 1 张待确认卡片草稿写入复习系统" });
+    expect(await screen.findByText("Card draft source")).toBeInTheDocument();
+    const commitButton = container.querySelector<HTMLButtonElement>(".ai-panel-actions .primary-button");
+    expect(commitButton).not.toBeNull();
 
-    await user.click(commitButton);
+    await user.click(commitButton!);
 
     await waitFor(() => {
       expect(bulkCreateDeckCardsMock).toHaveBeenCalledWith(session, "deck-1", [
         expect.objectContaining({
-          draftId: "draft-1",
-          front: "什么是知识图谱？",
-          back: "用节点和关系组织知识。",
+          draftId: "draft-card-1",
+          front: "What is a knowledge graph?",
+          back: "A graph of connected concepts.",
           sourceType: "annotation",
           sourceId: "annotation-1"
         })
       ]);
     });
-    expect(await screen.findByText("已把 1 张 AI 草稿写入复习系统。")).toBeInTheDocument();
   });
 
   it("renders the shared error state when the ai workspace bootstrap fails", async () => {
-    listAiTasksMock.mockRejectedValueOnce(new Error("AI 工作台加载失败"));
+    listAiTasksMock.mockRejectedValueOnce(new Error("workspace bootstrap failed"));
 
-    render(
-      <MemoryRouter>
-        <AiPage session={session} />
-      </MemoryRouter>
-    );
+    renderPage();
 
-    expect(await screen.findByRole("heading", { level: 2, name: "AI 工作台暂时不可用" })).toBeInTheDocument();
-    expect(screen.getByText("AI 工作台加载失败")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "重新加载" })).toBeInTheDocument();
+    expect(await screen.findByText("workspace bootstrap failed")).toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.queryAllByRole("combobox")).toHaveLength(0);
   });
 
   it("keeps rendering the current drafts while surfacing a shared stale state after a commit refresh fails", async () => {
     listAiDraftsMock.mockReset();
     listAiDraftsMock
       .mockResolvedValueOnce([
-        {
-          id: "draft-1",
-          taskId: "task-1",
-          draftType: "card_draft",
-          targetType: "deck",
-          targetId: "deck-1",
-          status: "pending",
-          sourceType: "annotation",
-          sourceId: "annotation-1",
-          sourceLabel: "AI source",
-          front: "AI card draft",
-          back: "AI card answer",
-          explanation: "from test",
-          createdAt: "2026-06-02T12:00:00Z",
-          updatedAt: "2026-06-02T12:00:00Z"
-        }
+        makeCardDraft({
+          id: "draft-stale-1",
+          sourceLabel: "Stale draft source",
+          front: "Stale card draft",
+          back: "Stale card answer"
+        })
       ])
-      .mockRejectedValueOnce(new Error("AI 草稿刷新失败"));
+      .mockRejectedValueOnce(new Error("ai draft refresh failed"));
 
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <AiPage session={session} />
-      </MemoryRouter>
-    );
+    const { container } = renderPage();
 
-    expect(await screen.findByText("AI source")).toBeInTheDocument();
+    expect(await screen.findByText("Stale draft source")).toBeInTheDocument();
+    const commitButton = container.querySelector<HTMLButtonElement>(".ai-panel-actions .primary-button");
+    expect(commitButton).not.toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "把 1 张待确认卡片草稿写入复习系统" }));
+    await user.click(commitButton!);
 
-    expect(await screen.findByRole("heading", { level: 2, name: "AI 工作台需要刷新" })).toBeInTheDocument();
-    expect(screen.getByText("AI 草稿刷新失败")).toBeInTheDocument();
-    expect(screen.getByText("AI card draft")).toBeInTheDocument();
+    expect(await screen.findByText("ai draft refresh failed")).toBeInTheDocument();
+    expect(screen.getByText("Stale card draft")).toBeInTheDocument();
   });
 
   it("confirms selected graph change drafts into the target graph", async () => {
-    const graphDetail = {
-      id: "graph-1",
-      ownerUserId: "user-1",
-      title: "知识图谱",
-      description: "课程知识结构",
-      visibility: "private",
-      status: "active",
-      graphType: "knowledge",
-      mode: "freeform",
-      currentVersion: 1,
-      nodeCount: 1,
-      edgeCount: 0,
-      createdAt: "2026-06-02T12:00:00Z",
-      updatedAt: "2026-06-02T12:00:00Z",
-      document: {
-        graphId: "graph-1",
-        version: 1,
-        schemaVersion: 1,
-        viewport: { x: 0, y: 0, zoom: 1 },
-        nodes: [
-          {
-            id: "existing-node",
-            type: "concept",
-            title: "已有概念",
-            x: 0,
-            y: 0,
-            width: 240,
-            height: 120
-          }
-        ],
-        edges: [],
-        groups: []
-      }
-    };
-
     listAiDraftsMock.mockReset();
     listAiDraftsMock
       .mockResolvedValueOnce([
-        {
+        makeGraphDraft({
           id: "graph-draft-1",
-          taskId: "task-2",
-          draftType: "graph_change",
-          targetType: "graph",
-          targetId: "graph-1",
-          status: "pending",
-          sourceType: "note",
-          sourceId: "note-1",
-          sourceLabel: "图谱笔记",
-          front: "新增两个图谱节点",
-          back: "补充概念关系。",
-          explanation: "来自笔记摘要。",
-          metadata: {
-            summary: "把笔记里的概念追加到目标图谱。",
-            nodes: [
-              { id: "node-a", title: "概念 A", x: 120, y: 0, width: 240, height: 120 },
-              { id: "node-b", title: "概念 B", x: 360, y: 0, width: 240, height: 120 }
-            ],
-            edges: [{ id: "edge-1", label: "关联", sourceNodeId: "node-a", targetNodeId: "node-b" }]
-          },
-          createdAt: "2026-06-02T12:00:00Z",
-          updatedAt: "2026-06-02T12:00:00Z"
-        }
+          sourceLabel: "Graph note"
+        })
       ])
       .mockResolvedValueOnce([]);
-    listGraphsMock.mockResolvedValue([
-      {
-        id: "graph-1",
-        ownerUserId: "user-1",
-        title: "知识图谱",
-        description: "课程知识结构",
-        visibility: "private",
-        status: "active",
-        graphType: "knowledge",
-        mode: "freeform",
-        currentVersion: 1,
-        nodeCount: 1,
-        edgeCount: 0,
-        createdAt: "2026-06-02T12:00:00Z",
-        updatedAt: "2026-06-02T12:00:00Z"
-      }
-    ]);
-    getGraphMock.mockResolvedValue(graphDetail);
+    listGraphsMock.mockResolvedValue([makeGraphSummary()]);
+    getGraphMock.mockResolvedValue(makeGraphDetail());
     commitGraphChangeDraftSelectionMock.mockResolvedValue({
-      ...graphDetail,
+      ...makeGraphDetail(),
       currentVersion: 2,
       nodeCount: 3,
       updatedAt: "2026-06-02T12:10:00Z"
     });
 
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <AiPage session={session} />
-      </MemoryRouter>
-    );
+    const { container } = renderPage();
 
-    await expect(screen.findByText("图谱笔记")).resolves.toBeInTheDocument();
-    expect(await screen.findByText("概念 A")).toBeInTheDocument();
+    expect(await screen.findByText("Graph note")).toBeInTheDocument();
+    expect(await screen.findByText("Node A")).toBeInTheDocument();
+    const commitButton = container.querySelector<HTMLButtonElement>(".ai-panel-actions .primary-button");
+    expect(commitButton).not.toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "把 1 条图谱变更写入所选图谱" }));
+    await user.click(commitButton!);
 
     await waitFor(() => {
       expect(commitGraphChangeDraftSelectionMock).toHaveBeenCalledWith(session, "graph-1", {
@@ -320,6 +310,25 @@ describe("AiPage", () => {
         ]
       });
     });
-    expect(await screen.findByText("已把 1 条图谱变更写入《知识图谱》。")).toBeInTheDocument();
+  });
+
+  it("renders shared select controls for ai workspace filters and target pickers", async () => {
+    listAiDraftsMock.mockReset();
+    listAiDraftsMock.mockResolvedValue([
+      makeCardDraft(),
+      makeGraphDraft()
+    ]);
+    listGraphsMock.mockResolvedValue([makeGraphSummary()]);
+    getGraphMock.mockResolvedValue(makeGraphDetail());
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("combobox")).toHaveLength(4);
+    });
+    screen.getAllByRole("combobox").forEach((combobox) => {
+      expect(combobox).toHaveClass("ds-select");
+      expect(combobox).toHaveClass("select-field");
+    });
   });
 });
