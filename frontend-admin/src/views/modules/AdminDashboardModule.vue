@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AdminButton from "../../components/admin/AdminButton.vue";
 import AdminFeatureCard from "../../components/admin/AdminFeatureCard.vue";
-import AdminMetricCard from "../../components/admin/AdminMetricCard.vue";
+import AdminMetricGrid from "../../components/admin/AdminMetricGrid.vue";
 
 defineProps<{
   moderationItemsCount: number;
@@ -16,15 +16,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="admin-metric-grid">
-    <AdminMetricCard
-      v-for="card in overviewCards"
-      :key="card.label"
-      :helper="card.helper"
-      :label="card.label"
-      :value="card.value"
-    />
-  </section>
+  <AdminMetricGrid :cards="overviewCards" />
   <section class="admin-dashboard-grid">
     <AdminFeatureCard
       description="审核队列中的资料和帖子会直接影响社区与资料库的公开可见性。"

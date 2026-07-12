@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import AdminActionBar from "../../components/admin/AdminActionBar.vue";
 import AdminDataTable from "../../components/admin/AdminDataTable.vue";
-import AdminMetricCard from "../../components/admin/AdminMetricCard.vue";
+import AdminMetricGrid from "../../components/admin/AdminMetricGrid.vue";
 import AdminRecordInspector from "../../components/admin/AdminRecordInspector.vue";
 import AdminRecordRow from "../../components/admin/AdminRecordRow.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
@@ -113,6 +113,15 @@ const inspectorFields = computed(() =>
       }))
     : []
 );
+const summaryCards = computed(() =>
+  props.summary
+    ? Object.entries(props.summary).map(([key, value]) => ({
+        helper: "AI 任务用量概览",
+        label: formatFieldLabel(String(key)),
+        value: formatCell(value)
+      }))
+    : []
+);
 const tableHeadColumns = computed(() => props.columns.map((column) => formatFieldLabel(column)));
 
 const showState = computed(() => Boolean(props.dataState) || props.rows.length === 0);
@@ -122,15 +131,7 @@ const showTable = computed(
 </script>
 
 <template>
-  <section v-if="summary" class="admin-metric-grid admin-metric-grid--summary">
-    <AdminMetricCard
-      v-for="(value, key) in summary"
-      :key="key"
-      helper="AI 任务用量概览"
-      :label="formatFieldLabel(String(key))"
-      :value="formatCell(value)"
-    />
-  </section>
+  <AdminMetricGrid v-if="summaryCards.length" :cards="summaryCards" grid-class="admin-metric-grid--summary" />
 
   <AdminSearchToolbar
     :count-label="`${rows.length} / ${totalCount ?? rows.length} 条`"

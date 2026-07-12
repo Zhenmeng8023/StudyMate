@@ -1,3 +1,28 @@
+## 2026-07-13 07:40:27 +08:00 | v1.1.0-alpha.195 | 推进 FE-041 管理端共享 MetricGrid 指标网格接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理 dashboard 与治理摘要区里重复出现的指标卡片网格结构。
+- 目标是补一个 `AdminMetricGrid` Vue 适配层，并把 dashboard 概览区与治理摘要区里重复的 `admin-metric-grid + AdminMetricCard` 结构切到统一网格出口，让后台高频概览卡片不再各自维护相同的指标网格模板。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminMetricGrid.vue` 与 `AdminMetricGrid.test.ts`，收口后台指标卡片网格的共享骨架，并统一承接 `AdminMetricCard` 列表渲染。
+- 更新 `frontend-admin/src/views/modules/AdminDashboardModule.vue` 与 `AdminGovernanceModule.vue`，把 dashboard 概览区和治理摘要区里的内联指标网格替换为共享 `AdminMetricGrid`，同时保留各自已有的指标内容与布局。
+- 更新 `frontend-admin/src/views/modules/AdminDashboardModule.test.ts` 与 `AdminGovernanceModule.test.ts`，补上两条真实模块路径已经通过共享指标网格渲染概览卡片的断言。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminMetricGrid.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续沿后台概览骨架向上收口，dashboard 与治理摘要区开始共享统一的指标网格出口。
+- 这次仍然只先收口了网格骨架；更进一步的指标数据模型、卡片分组语义和更多后台摘要区契约还没有统一，后续适合继续沿这条路径推进。
+
 ## 2026-07-13 07:35:28 +08:00 | v1.1.0-alpha.194 | 推进 FE-041 管理端共享 DataTable 表格壳层接线
 ### 任务内容
 
