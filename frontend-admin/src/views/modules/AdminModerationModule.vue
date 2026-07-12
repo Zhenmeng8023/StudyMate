@@ -35,6 +35,9 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
     description: "调整搜索条件，或刷新最新治理数据。"
   }
 );
+
+const showState = computed(() => Boolean(props.dataState) || props.items.length === 0);
+const showTable = computed(() => props.items.length > 0 && props.dataState?.kind !== "loading" && props.dataState?.kind !== "error");
 </script>
 
 <template>
@@ -57,12 +60,12 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
       </div>
     </header>
     <AdminDataState
-      v-if="dataState || !items.length"
+      v-if="showState"
       :description="resolvedDataState.description"
       :kind="resolvedDataState.kind"
       :title="resolvedDataState.title"
     />
-    <div v-else class="admin-table admin-table--moderation" role="table">
+    <div v-if="showTable" class="admin-table admin-table--moderation" role="table">
       <div class="admin-table__head" role="row">
         <span>内容</span>
         <span>类型</span>

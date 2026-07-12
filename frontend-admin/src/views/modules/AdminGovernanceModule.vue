@@ -83,6 +83,9 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
     description: "当前模块已接入真实 API，但没有可显示的数据。"
   }
 );
+
+const showState = computed(() => Boolean(props.dataState) || props.rows.length === 0);
+const showTable = computed(() => props.rows.length > 0 && props.dataState?.kind !== "loading" && props.dataState?.kind !== "error");
 </script>
 
 <template>
@@ -113,12 +116,12 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
         </div>
       </header>
       <AdminDataState
-        v-if="dataState || !rows.length"
+        v-if="showState"
         :description="resolvedDataState.description"
         :kind="resolvedDataState.kind"
         :title="resolvedDataState.title"
       />
-      <div v-else class="admin-table admin-table--records" role="table">
+      <div v-if="showTable" class="admin-table admin-table--records" role="table">
         <div class="admin-table__head" role="row">
           <span v-for="column in columns" :key="column">{{ formatFieldLabel(column) }}</span>
         </div>

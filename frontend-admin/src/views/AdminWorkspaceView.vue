@@ -64,6 +64,7 @@ const moderationItems = ref<ModerationItem[]>([]);
 const overview = ref<OverviewPayload | null>(null);
 const governanceRows = ref<GovernanceRecord[]>([]);
 const governanceSummary = ref<GovernanceRecord | null>(null);
+const governanceRowsView = ref<Exclude<AdminView, "dashboard" | "moderation"> | null>(null);
 const selectedRecord = ref<GovernanceRecord | null>(null);
 const loading = ref(false);
 const errorMessage = ref("");
@@ -299,6 +300,13 @@ const moderationDataState = computed<AdminDataStatePayload | null>(() => {
       description: "请稍候，最新待审核内容和状态正在载入。"
     };
   }
+  if (errorMessage.value && moderationItems.value.length > 0) {
+    return {
+      kind: "stale",
+      title: "审核队列需要刷新",
+      description: "当前显示的是上一次同步结果，请刷新后再继续处理。"
+    };
+  }
   if (errorMessage.value && moderationItems.value.length === 0) {
     return {
       kind: "error",
@@ -315,6 +323,13 @@ const governanceDataState = computed<AdminDataStatePayload | null>(() => {
       kind: "loading",
       title: `正在同步${activeMeta.value.label}`,
       description: "请稍候，最新治理记录正在载入。"
+    };
+  }
+  if (errorMessage.value && governanceRows.value.length > 0) {
+    return {
+      kind: "stale",
+      title: "治理记录需要刷新",
+      description: "当前显示的是上一次同步结果，请刷新后再继续判断。"
     };
   }
   if (errorMessage.value && governanceRows.value.length === 0) {
@@ -431,6 +446,7 @@ const unsubscribeSession = subscribeSession(() => {
     overview.value = null;
     governanceRows.value = [];
     governanceSummary.value = null;
+    governanceRowsView.value = null;
     selectedRecord.value = null;
     pendingModerationAction.value = null;
     moderationConfirmError.value = "";
@@ -515,17 +531,23 @@ async function loadModeration() {
 
 async function loadGovernance(view: AdminView) {
   if (!session.value || view === "dashboard" || view === "moderation") return;
+  const preserveExistingRows = governanceRowsView.value === view && governanceRows.value.length > 0;
   loading.value = true;
   errorMessage.value = "";
-  governanceRows.value = [];
-  governanceSummary.value = null;
-  selectedRecord.value = null;
+  if (!preserveExistingRows) {
+    governanceRows.value = [];
+    governanceSummary.value = null;
+    selectedRecord.value = null;
+  }
   try {
     const config = governanceConfig[view];
     governanceRows.value = await get<GovernanceRecord[]>(config.endpoint, config.query);
+    governanceRowsView.value = view;
     selectedRecord.value = governanceRows.value[0] ?? null;
     if (view === "ai") {
       governanceSummary.value = await get<GovernanceRecord>("/api/v1/admin/ai/usage");
+    } else {
+      governanceSummary.value = null;
     }
     notice.value = `已加载 ${governanceRows.value.length} 条治理记录。`;
   } catch (error) {
@@ -831,6 +853,7 @@ function logout() {
   overview.value = null;
   governanceRows.value = [];
   governanceSummary.value = null;
+  governanceRowsView.value = null;
   selectedRecord.value = null;
   pendingModerationAction.value = null;
   moderationConfirmError.value = "";

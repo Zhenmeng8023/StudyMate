@@ -1,3 +1,26 @@
+## 2026-07-13 03:27:16 +08:00 | v1.1.0-alpha.162 | 推进 FE-040 管理端 stale 页面状态接线
+### 任务内容
+
+- 延续 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向，本轮不回到更窄的治理动作，而是继续收口更高优先级的 `FE-040` 页面状态协议。
+- 目标是把共享 `DataState` 里的 `stale` 语义从枚举和样式推进到管理端真实页面入口：当模块已经有旧数据、但刷新再次失败时，要显式告诉操作者“当前看到的是陈旧数据”，且不能把旧表格直接吞掉。
+### 实际变更
+
+- 先在 `frontend-admin/src/views/modules/AdminModerationModule.test.ts`、`AdminGovernanceModule.test.ts` 与 `AdminWorkspaceView.test.ts` 补 RED，复现“刷新失败后既没有 shared stale state，也会丢掉已有列表”的缺口。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，为审核队列与治理模块补齐真实 `stale` 状态载荷；当同一路由下已有列表且 refresh 失败时，会分别生成“审核队列需要刷新”与“治理记录需要刷新”的共享状态文案。
+- 同时在 `AdminWorkspaceView.vue` 新增 `governanceRowsView` 跟踪，限制“保留旧表格”只发生在同一治理视图的刷新失败路径；跨模块切换失败时仍回到空列表 / error 状态，不混入上一个模块的数据。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，让模块页在 `stale` 时同时渲染 `AdminDataState` 和旧表格，而不是像 `loading / error` 一样直接替换内容区。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+### 后续影响
+
+- `FE-040` 现在不再只覆盖管理端的 `loading / error / empty`，`stale` 也已经落到真实列表刷新失败路径，页面状态协议更接近“真实可操作”的治理工作台。
+- `unauthorized / conflict` 仍主要停留在共享文案与局部提示层，后续继续沿 `FE-040` 推进时，更适合挑用户端图谱或后台会话边界中的真实入口，把这两类状态也接到页面骨架里。
+
 ## 2026-07-10 00:41:30 +08:00 | v1.1.0-alpha.161 | 收口 WB-032 图谱冲突可靠性验证
 ### 任务内容
 
