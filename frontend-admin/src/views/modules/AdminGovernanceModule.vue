@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import AdminActionBar from "../../components/admin/AdminActionBar.vue";
-import AdminDataCardHeader from "../../components/admin/AdminDataCardHeader.vue";
-import AdminDataState from "../../components/admin/AdminDataState.vue";
+import AdminDataTable from "../../components/admin/AdminDataTable.vue";
 import AdminMetricCard from "../../components/admin/AdminMetricCard.vue";
-import AdminRecordRow from "../../components/admin/AdminRecordRow.vue";
 import AdminRecordInspector from "../../components/admin/AdminRecordInspector.vue";
+import AdminRecordRow from "../../components/admin/AdminRecordRow.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminSelect from "../../components/admin/AdminSelect.vue";
 import AdminTableHead from "../../components/admin/AdminTableHead.vue";
@@ -154,30 +153,27 @@ const showTable = computed(
   </AdminSearchToolbar>
 
   <section class="admin-governance-layout">
-    <section class="admin-data-card">
-      <AdminDataCardHeader
-        description="选择一条记录，在右侧查看完整字段和操作入口。"
-        title="记录列表"
-      />
-      <AdminDataState
-        v-if="showState"
-        :description="resolvedDataState.description"
-        :kind="resolvedDataState.kind"
-        :title="resolvedDataState.title"
-      />
-      <div v-if="showTable" class="admin-table admin-table--records" role="table">
+    <AdminDataTable
+      :data-state="showState ? resolvedDataState : null"
+      description="选择一条记录，在右侧查看完整字段和操作入口。"
+      :show-table="showTable"
+      table-class="admin-table--records"
+      title="记录列表"
+    >
+      <template #head>
         <AdminTableHead :columns="tableHeadColumns" />
-        <AdminRecordRow
-          v-for="(row, index) in rows"
-          :key="index"
-          :columns="columns"
-          :row="row"
-          :row-key="String(row.id ?? index)"
-          :selected="selectedRecord === row"
-          @press="emit('selectRecord', $event)"
-        />
-      </div>
-    </section>
+      </template>
+
+      <AdminRecordRow
+        v-for="(row, index) in rows"
+        :key="index"
+        :columns="columns"
+        :row="row"
+        :row-key="String(row.id ?? index)"
+        :selected="selectedRecord === row"
+        @press="emit('selectRecord', $event)"
+      />
+    </AdminDataTable>
 
     <AdminRecordInspector
       empty-text="从左侧表格选择一条记录，查看完整字段。"

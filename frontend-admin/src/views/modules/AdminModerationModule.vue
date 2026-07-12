@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import AdminDataCardHeader from "../../components/admin/AdminDataCardHeader.vue";
-import AdminDataState from "../../components/admin/AdminDataState.vue";
+import AdminDataTable from "../../components/admin/AdminDataTable.vue";
 import AdminModerationRow from "../../components/admin/AdminModerationRow.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminSelect from "../../components/admin/AdminSelect.vue";
@@ -94,26 +93,24 @@ function requestAction(actionKey: ModerationActionKey, item: ModerationItem) {
     </template>
   </AdminSearchToolbar>
 
-  <section class="admin-data-card admin-moderation-table">
-    <AdminDataCardHeader
-      description="按内容类型、作者、状态和创建时间快速定位待处理项目。"
-      title="审核队列"
-    />
-    <AdminDataState
-      v-if="showState"
-      :description="resolvedDataState.description"
-      :kind="resolvedDataState.kind"
-      :title="resolvedDataState.title"
-    />
-    <div v-if="showTable" class="admin-table admin-table--moderation" role="table">
+  <AdminDataTable
+    card-class="admin-moderation-table"
+    :data-state="showState ? resolvedDataState : null"
+    description="按内容类型、作者、状态和创建时间快速定位待处理项目。"
+    :show-table="showTable"
+    table-class="admin-table--moderation"
+    title="审核队列"
+  >
+    <template #head>
       <AdminTableHead :columns="tableHeadColumns" />
-      <AdminModerationRow
-        v-for="item in items"
-        :key="item.id"
-        :actions="rowActions"
-        :item="item"
-        @press="requestAction($event.action, $event.item)"
-      />
-    </div>
-  </section>
+    </template>
+
+    <AdminModerationRow
+      v-for="item in items"
+      :key="item.id"
+      :actions="rowActions"
+      :item="item"
+      @press="requestAction($event.action, $event.item)"
+    />
+  </AdminDataTable>
 </template>

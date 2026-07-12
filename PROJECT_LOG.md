@@ -1,3 +1,28 @@
+## 2026-07-13 07:35:28 +08:00 | v1.1.0-alpha.194 | 推进 FE-041 管理端共享 DataTable 表格壳层接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理审核与治理模块里重复出现的表格卡片骨架。
+- 目标是补一个 `AdminDataTable` Vue 适配层，并把审核模块与治理模块里重复的 `DataCardHeader + DataState + admin-table` 结构切到统一表格壳层出口，让后台高频列表不再各自维护相同的卡片/状态/表格容器模板。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminDataTable.vue` 与 `AdminDataTable.test.ts`，收口后台表格卡片标题区、状态区和表格容器的共享骨架，并通过插槽承接表头和行内容。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，把审核/治理模块里的内联表格卡片结构替换为共享 `AdminDataTable`，同时保留各自已有的筛选条、表头、行组件和详情区。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `AdminGovernanceModule.test.ts`，补上两条真实模块路径已经通过共享表格壳层渲染列表骨架的断言。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminDataTable.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续沿后台高频列表骨架向上收口，审核和治理模块除了表头与行组件之外，也开始共享统一的表格卡片壳层。
+- 这次仍然只先收口了表格骨架；更进一步的列定义模型、空状态文案规范和更通用的数据表契约还没有统一，后续适合继续沿这条路径推进。
+
 ## 2026-07-13 07:27:20 +08:00 | v1.1.0-alpha.193 | 推进 FE-041 管理端共享 TableHead 表头接线
 ### 任务内容
 
