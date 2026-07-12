@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminGovernanceModule from "./AdminGovernanceModule.vue";
 
 describe("AdminGovernanceModule", () => {
-  it("renders summary cards, records, and emits query and selection changes through the shared search toolbar", async () => {
+  it("renders summary cards, records, and emits query, filter, and selection changes through the shared search toolbar", async () => {
     const wrapper = mount(AdminGovernanceModule, {
       props: {
         columns: ["id", "action", "status"],
@@ -21,6 +21,11 @@ describe("AdminGovernanceModule", () => {
           action: "moderation.approve",
           status: "success"
         },
+        statusFilter: "all",
+        statusOptions: [
+          { label: "全部状态", value: "all" },
+          { label: "成功", value: "success" }
+        ],
         summary: {
           total: 1
         }
@@ -32,9 +37,13 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.find('[data-admin-search-toolbar="true"]').exists()).toBe(true);
     expect(wrapper.get('input[placeholder="搜索当前记录"]').classes()).toContain("ds-input");
     expect(wrapper.get('[data-admin-search-toolbar-meta="true"]').text()).toContain("1 / 1");
+    expect(wrapper.get('[data-governance-status-filter="true"]').classes()).toContain("ds-select");
 
     await wrapper.get('input[placeholder="搜索当前记录"]').setValue("success");
     expect(wrapper.emitted("update:query")?.[0]).toEqual(["success"]);
+
+    await wrapper.get('[data-governance-status-filter="true"]').setValue("success");
+    expect(wrapper.emitted("update:statusFilter")?.[0]).toEqual(["success"]);
 
     await wrapper.get('[data-record-row="audit-1"]').trigger("click");
     expect(wrapper.emitted("selectRecord")?.[0]?.[0]).toMatchObject({ id: "audit-1" });

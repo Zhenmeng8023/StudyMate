@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import AdminModerationModule from "./AdminModerationModule.vue";
 
 describe("AdminModerationModule", () => {
-  it("renders moderation rows through the shared search toolbar and emits requested actions", async () => {
+  it("renders moderation rows through the shared search toolbar and status filter", async () => {
     const wrapper = mount(AdminModerationModule, {
       props: {
         items: [
@@ -19,6 +19,11 @@ describe("AdminModerationModule", () => {
           }
         ],
         query: "",
+        statusFilter: "all",
+        statusOptions: [
+          { label: "全部状态", value: "all" },
+          { label: "待处理", value: "pending" }
+        ],
         totalCount: 1
       }
     });
@@ -27,10 +32,14 @@ describe("AdminModerationModule", () => {
     expect(wrapper.find('[data-admin-search-toolbar="true"]').exists()).toBe(true);
     expect(wrapper.get('input[placeholder="搜索标题、作者或状态"]').classes()).toContain("ds-input");
     expect(wrapper.get('[data-admin-search-toolbar-meta="true"]').text()).toContain("1 / 1");
+    expect(wrapper.get('[data-moderation-status-filter="true"]').classes()).toContain("ds-select");
     expect(wrapper.get('[data-moderation-action="reject"]').classes()).toContain("danger");
 
     await wrapper.get('input[placeholder="搜索标题、作者或状态"]').setValue("alice");
     expect(wrapper.emitted("update:query")?.[0]).toEqual(["alice"]);
+
+    await wrapper.get('[data-moderation-status-filter="true"]').setValue("pending");
+    expect(wrapper.emitted("update:statusFilter")?.[0]).toEqual(["pending"]);
 
     await wrapper.get('[data-moderation-action="reject"]').trigger("click");
     expect(wrapper.emitted("requestAction")?.[0]?.[0]).toMatchObject({

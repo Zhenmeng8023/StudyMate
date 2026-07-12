@@ -1087,6 +1087,145 @@ describe("AdminWorkspaceView governance modules", () => {
     expect(wrapper.text()).not.toContain("alice");
   });
 
+  it("filters moderation rows locally by status through the shared select", async () => {
+    window.history.replaceState({}, "", "/admin/moderation");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/moderation") {
+        return apiPayload([
+          {
+            id: "post-1",
+            type: "post",
+            title: "待审帖子",
+            summary: "等待人工审核",
+            authorName: "Alice",
+            status: "pending",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          },
+          {
+            id: "material-2",
+            type: "material",
+            title: "已通过资料",
+            summary: "已经完成治理",
+            authorName: "Bob",
+            status: "approved",
+            createdAt: "2026-06-02T12:05:00Z",
+            updatedAt: "2026-06-02T12:05:00Z"
+          }
+        ]);
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("待审帖子");
+    expect(wrapper.text()).toContain("已通过资料");
+    expect(wrapper.findAll(".admin-table--moderation .admin-table__row")).toHaveLength(2);
+
+    await wrapper.get('[data-moderation-status-filter="true"]').setValue("pending");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("待审帖子");
+    expect(wrapper.text()).not.toContain("已通过资料");
+    expect(wrapper.findAll(".admin-table--moderation .admin-table__row")).toHaveLength(1);
+    expect(wrapper.text()).toContain("1 / 2");
+  });
+
+  it("filters governance rows locally by status through the shared select", async () => {
+    window.history.replaceState({}, "", "/admin/users");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/users?limit=20") {
+        return apiPayload([
+          {
+            id: "user-1",
+            username: "alice",
+            email: "alice@example.test",
+            role: "student",
+            status: "active"
+          },
+          {
+            id: "user-2",
+            username: "bob",
+            email: "bob@example.test",
+            role: "student",
+            status: "disabled"
+          }
+        ]);
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("alice");
+    expect(wrapper.text()).toContain("bob");
+    expect(wrapper.findAll("[data-record-row]")).toHaveLength(2);
+
+    await wrapper.get('[data-governance-status-filter="true"]').setValue("disabled");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("bob");
+    expect(wrapper.findAll("[data-record-row]")).toHaveLength(1);
+    expect(wrapper.find('[data-record-row="user-1"]').exists()).toBe(false);
+    expect(wrapper.find('[data-record-row="user-2"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain("1 / 2");
+  });
+
   it("surfaces a conflict governance state when an ai task action returns 409 and keeps the current rows visible", async () => {
     window.history.replaceState({}, "", "/admin/ai");
     window.localStorage.setItem(
