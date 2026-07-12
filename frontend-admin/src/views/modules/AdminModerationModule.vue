@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import AdminActionBar from "../../components/admin/AdminActionBar.vue";
-import AdminContentCell from "../../components/admin/AdminContentCell.vue";
 import AdminDataCardHeader from "../../components/admin/AdminDataCardHeader.vue";
 import AdminDataState from "../../components/admin/AdminDataState.vue";
+import AdminModerationRow from "../../components/admin/AdminModerationRow.vue";
 import AdminSearchToolbar from "../../components/admin/AdminSearchToolbar.vue";
 import AdminSelect from "../../components/admin/AdminSelect.vue";
-import AdminTag from "../../components/admin/AdminTag.vue";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
 type ModerationItem = {
@@ -114,19 +112,13 @@ function requestAction(actionKey: ModerationActionKey, item: ModerationItem) {
         <span>状态</span>
         <span>操作</span>
       </div>
-      <article v-for="item in items" :key="item.id" class="admin-table__row" role="row">
-        <AdminContentCell :summary="item.summary" :title="item.title" />
-        <span><AdminTag :label="item.type === 'post' ? '帖子' : '资料'" /></span>
-        <span>{{ item.authorName }}</span>
-        <span>{{ new Date(item.createdAt).toLocaleString('zh-CN') }}</span>
-        <span><AdminTag :label="item.status" tone="status" /></span>
-        <AdminActionBar
-          compact
-          namespace="moderation"
-          :actions="rowActions"
-          @press="requestAction($event as ModerationActionKey, item)"
-        />
-      </article>
+      <AdminModerationRow
+        v-for="item in items"
+        :key="item.id"
+        :actions="rowActions"
+        :item="item"
+        @press="requestAction($event.action, $event.item)"
+      />
     </div>
   </section>
 </template>

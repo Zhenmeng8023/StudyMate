@@ -1,3 +1,28 @@
+## 2026-07-13 07:23:02 +08:00 | v1.1.0-alpha.192 | 推进 FE-041 管理端共享 ModerationRow 审核行接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的治理能力，而是继续清理审核主路径里仍然保留的内联列表行结构。
+- 目标是补一个 `AdminModerationRow` Vue 适配层，并把审核模块的内容行切到统一行出口，让内容摘要、类型/状态标签、动作区和行级标记契约不再散落在页面模板里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminModerationRow.vue` 与 `AdminModerationRow.test.ts`，收口审核列表行的内容摘要、类型标签、状态标签、动作区与 `press` 事件。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue`，把审核模块里的内联 `<article>` 行结构替换为共享 `AdminModerationRow`，保留既有搜索、状态筛选和动作触发契约。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，补上审核模块和工作台已经走共享审核行适配层的断言，并让本地筛选回归切到新的行级标记。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminModerationRow.test.ts src/views/modules/AdminModerationModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从治理详情列表向审核主路径内部推进，共享后台骨架已同时覆盖治理记录行与审核内容行这两类高频列表入口。
+- 这次仍然只先收口了审核行本身；列表表头、列定义和更通用的数据表骨架还没有统一，后续适合继续沿这些高频结构推进，而不是跳去新的域功能。
+
 ## 2026-07-13 07:17:00 +08:00 | v1.1.0-alpha.191 | 推进 FE-041 管理端共享 RecordRow 记录行接线
 ### 任务内容
 
