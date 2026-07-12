@@ -85,7 +85,9 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
 );
 
 const showState = computed(() => Boolean(props.dataState) || props.rows.length === 0);
-const showTable = computed(() => props.rows.length > 0 && (!props.dataState || props.dataState.kind === "stale"));
+const showTable = computed(
+  () => props.rows.length > 0 && (!props.dataState || props.dataState.kind === "stale" || props.dataState.kind === "conflict")
+);
 </script>
 
 <template>

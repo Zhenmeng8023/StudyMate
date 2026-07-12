@@ -341,6 +341,13 @@ const governanceDataState = computed<AdminDataStatePayload | null>(() => {
       description: errorMessage.value || "当前账号没有查看这个治理模块的权限。"
     };
   }
+  if (governanceErrorStatus.value === 409) {
+    return {
+      kind: "conflict",
+      title: "治理动作存在冲突",
+      description: errorMessage.value || "这条记录的状态已经被其他人更新，请先刷新后再决定下一步。"
+    };
+  }
   if (errorMessage.value && governanceRows.value.length > 0) {
     return {
       kind: "stale",
@@ -604,6 +611,9 @@ async function applyModerationAction(item: ModerationItem, action: ModerationAct
   loading.value = true;
   errorMessage.value = "";
   moderationConfirmError.value = "";
+  if (activeView.value === "materials" && item.type === "material") {
+    governanceErrorStatus.value = null;
+  }
   try {
     const path = `/api/v1/admin/moderation/${item.type === "post" ? "posts" : "materials"}/${item.id}/${action}`;
     const data = await post<{ status: string }>(path, { reason: "" });
@@ -615,6 +625,12 @@ async function applyModerationAction(item: ModerationItem, action: ModerationAct
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新审核状态失败";
+    if (activeView.value === "materials" && item.type === "material") {
+      const status = getRequestErrorStatus(error);
+      if (status === 409) {
+        governanceErrorStatus.value = status;
+      }
+    }
     errorMessage.value = message;
     moderationConfirmError.value = message;
   } finally {
@@ -634,6 +650,7 @@ async function applyReportAction(record: GovernanceRecord, action: ReportAction)
   loading.value = true;
   errorMessage.value = "";
   reportConfirmError.value = "";
+  governanceErrorStatus.value = null;
   try {
     const data = await post<{ status: string }>(`/api/v1/admin/reports/${reportID}/${action}`, {});
     pendingReportAction.value = null;
@@ -641,6 +658,10 @@ async function applyReportAction(record: GovernanceRecord, action: ReportAction)
     await loadGovernance("community");
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新举报状态失败";
+    const status = getRequestErrorStatus(error);
+    if (status === 409) {
+      governanceErrorStatus.value = status;
+    }
     errorMessage.value = message;
     reportConfirmError.value = message;
   } finally {
@@ -660,6 +681,7 @@ async function applyUserAction(record: GovernanceRecord, action: UserAction) {
   loading.value = true;
   errorMessage.value = "";
   userConfirmError.value = "";
+  governanceErrorStatus.value = null;
   try {
     const data = await post<{ status: string }>(`/api/v1/admin/users/${userID}/${action}`, {});
     pendingUserAction.value = null;
@@ -667,6 +689,10 @@ async function applyUserAction(record: GovernanceRecord, action: UserAction) {
     await loadGovernance("users");
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新用户状态失败";
+    const status = getRequestErrorStatus(error);
+    if (status === 409) {
+      governanceErrorStatus.value = status;
+    }
     errorMessage.value = message;
     userConfirmError.value = message;
   } finally {
@@ -686,6 +712,7 @@ async function applyAITaskAction(record: GovernanceRecord, action: AITaskAction)
   loading.value = true;
   errorMessage.value = "";
   aiTaskConfirmError.value = "";
+  governanceErrorStatus.value = null;
   try {
     const data = await post<{ status: string }>(`/api/v1/admin/ai/tasks/${taskID}/${action}`, {});
     pendingAITaskAction.value = null;
@@ -693,6 +720,10 @@ async function applyAITaskAction(record: GovernanceRecord, action: AITaskAction)
     await loadGovernance("ai");
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新 AI 任务状态失败";
+    const status = getRequestErrorStatus(error);
+    if (status === 409) {
+      governanceErrorStatus.value = status;
+    }
     errorMessage.value = message;
     aiTaskConfirmError.value = message;
   } finally {
@@ -712,6 +743,7 @@ async function applyTemplateAction(record: GovernanceRecord, action: TemplateAct
   loading.value = true;
   errorMessage.value = "";
   templateConfirmError.value = "";
+  governanceErrorStatus.value = null;
   try {
     const data = await post<{ status: string }>(`/api/v1/admin/diagram-templates/${templateID}/${action}`, {});
     pendingTemplateAction.value = null;
@@ -719,6 +751,10 @@ async function applyTemplateAction(record: GovernanceRecord, action: TemplateAct
     await loadGovernance("graph");
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新图谱模板状态失败";
+    const status = getRequestErrorStatus(error);
+    if (status === 409) {
+      governanceErrorStatus.value = status;
+    }
     errorMessage.value = message;
     templateConfirmError.value = message;
   } finally {

@@ -5270,3 +5270,30 @@
 
 - 搜索契约现在终于把“真实命中总数”和“当前首批返回数组”分开表达，前端不再需要把 `count === results.length` 作为隐含前提；这为后续补 `cursor / nextCursor / sort / duration` 留出了明确扩展位。
 - 本轮仍未完成跨批次服务端分页、搜索耗时暴露、空结果建议和异步索引能力；下一步更适合继续沿 `SE-020 / WB-043 / WB-044` 推进，而不是在搜索页继续堆更多局部 UI 逻辑。
+## 2026-07-13 03:47:23 +08:00 | v1.1.0-alpha.164 | 推进 FE-040 管理端 conflict 页面状态接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新治理能力，而是补管理端真实 `conflict` 页面状态入口。
+- 目标是让管理端治理动作在命中后端 `409` 状态迁移冲突时，不再退化成泛化错误或 stale，而是明确进入共享 `DataState` 的 `conflict` 语义，并保留操作者当前查看的记录上下文。
+
+### 实际变更
+
+- 先在 `frontend-admin/src/views/modules/AdminGovernanceModule.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts` 补 RED，复现“AI 任务重试命中 `409 invalid_ai_task_transition` 后仍只显示 stale，且现有治理表格不会按 conflict 语义保留”的缺口。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，为资料治理、举报治理、用户治理、AI 任务治理与图谱模板治理动作统一补上 `409 -> conflict` 状态映射；新的治理动作开始前会清掉旧的 conflict 标记，动作失败命中 `409` 时则把状态回写到共享页面状态协议。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`，让治理模块在 `conflict` 时和 `stale` 一样同时渲染共享状态与现有表格，确保操作者还能看到冲突发生前的记录详情与可追溯上下文。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-040` 的管理端状态覆盖说明推进到 `loading / error / empty / stale / unauthorized / conflict` 六态闭合，并补登记这次执行记录。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-040` 在管理端已经把六类共享页面状态都接到了真实入口，后续可以更专注地把同样的协议铺到用户端列表页、工作区和跨端共享页面，而不是继续停留在管理端收口。
+- 当前 `conflict` 主要覆盖治理动作类 `409`；后续如果后端补更多读取型或批量治理型冲突入口，建议继续沿同一协议扩展，避免重新回退成泛化 `error` 或 `stale`。
