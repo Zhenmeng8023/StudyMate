@@ -178,4 +178,42 @@ describe("ReviewWorkspacePage", () => {
     expect(screen.getByText("复习队列刷新失败")).toBeInTheDocument();
     expect(screen.getByText("什么是图谱？")).toBeInTheDocument();
   });
+
+  it("uses the shared select when creating a deck from review management", async () => {
+    vi.mocked(createDeck).mockResolvedValueOnce({
+      id: "deck-2",
+      ownerUserId: "user-1",
+      title: "Public deck",
+      description: "Shared deck",
+      visibility: "public",
+      cardCount: 0,
+      createdAt: "2026-06-02T12:00:00Z",
+      updatedAt: "2026-06-02T12:00:00Z"
+    });
+
+    const user = userEvent.setup();
+    render(<ReviewWorkspacePage session={session} />);
+
+    await expect(screen.findByText("什么是图谱？")).resolves.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "打开卡组管理" }));
+    await user.click(screen.getByRole("button", { name: "新建" }));
+
+    const visibilitySelect = screen.getByRole("combobox");
+    expect(visibilitySelect).toHaveClass("ds-select");
+
+    await user.type(screen.getByLabelText("卡组标题"), "Public deck");
+    await user.selectOptions(visibilitySelect, "public");
+    await user.click(screen.getByRole("button", { name: /创建卡组/ }));
+
+    await waitFor(() => {
+      expect(vi.mocked(createDeck)).toHaveBeenCalledWith(
+        session,
+        expect.objectContaining({
+          title: "Public deck",
+          visibility: "public"
+        })
+      );
+    });
+  });
 });
