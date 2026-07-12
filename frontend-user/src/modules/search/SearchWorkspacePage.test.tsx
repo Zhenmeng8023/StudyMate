@@ -114,11 +114,21 @@ describe("SearchWorkspacePage", () => {
     expect(searchAllMock).not.toHaveBeenCalled();
   });
 
+  it("renders the shared loading state while a query is in flight", () => {
+    searchAllMock.mockImplementation(() => new Promise(() => undefined));
+
+    renderPage("/search?q=%E5%9B%BE%E8%B0%B1");
+
+    expect(screen.getByRole("heading", { level: 2, name: "\u6b63\u5728\u641c\u7d22\u5168\u7ad9\u5185\u5bb9" })).toBeInTheDocument();
+    expect(screen.getByText("\u8bf7\u7a0d\u5019\uff0c\u6b63\u5728\u6309\u5f53\u524d\u5173\u952e\u8bcd\u805a\u5408\u53ef\u8bbf\u95ee\u7684\u5b66\u4e60\u8d44\u4ea7\u3002")).toBeInTheDocument();
+  });
+
   it("shows the backend error message when search fails", async () => {
     searchAllMock.mockRejectedValueOnce(new Error("\u641c\u7d22\u670d\u52a1\u6682\u4e0d\u53ef\u7528"));
 
     renderPage("/search?q=%E5%9B%BE%E8%B0%B1");
 
+    await expect(screen.findByRole("heading", { level: 2, name: "\u641c\u7d22\u6682\u65f6\u4e0d\u53ef\u7528" })).resolves.toBeInTheDocument();
     await expect(screen.findByText("\u641c\u7d22\u670d\u52a1\u6682\u4e0d\u53ef\u7528")).resolves.toBeInTheDocument();
     expect(searchAllMock).toHaveBeenCalledWith(session, { query: "\u56fe\u8c31", limit: 12 });
   });
