@@ -1,3 +1,24 @@
+## 2026-07-13 04:13:30 +08:00 | v1.1.0-alpha.164 | 推进 FE-040 用户端复习工作区页面状态接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新的页面域，只补用户端复习工作区对共享页面状态协议的真实消费。
+- 目标是让 `ReviewWorkspacePage` 在首屏自举失败时进入共享 `error` 状态，在已有复习卡片的刷新失败时进入共享 `stale` 状态，同时不丢掉用户正在处理的卡片上下文。
+### 实际变更
+
+- 先在 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx` 补 RED，复现“首屏失败仍只显示 message + 空态、刷新失败不进入 stale”的缺口，并补 `cleanup()` 收口，避免前一条用例残留 DOM 污染这一组状态断言。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，新增 `ReviewWorkspaceState` 与 `workspaceErrorMessage` 判定，把复习工作区主舞台接到共享 `DataState` 协议。
+- 当前复习工作区在首次加载失败时会渲染“复习工作台暂时不可用”的共享 `error` 状态；当已有当前卡片、再次刷新失败时，会渲染“复习队列需要刷新”的共享 `stale` 状态，并继续保留当前卡片可见。
+- 空队列场景仍保留带“创建卡组”动作的共享 `empty` 状态，不改变既有复习管理入口与 API 契约。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/pages/MaterialsPage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+### 后续影响
+
+- `FE-040` 现在不只覆盖用户端搜索页和资料库页，复习工作区主舞台也已经开始真实消费共享 `loading / error / empty / stale` 页面状态协议。
+- 复习管理面板内部的卡组/卡片列表仍主要覆盖 `empty`，用户端更多页面的 `unauthorized / conflict` 入口也还没有闭合；后续更适合沿阅读页、笔记页和复习管理面板继续收口。
+
 ## 2026-07-13 03:38:10 +08:00 | v1.1.0-alpha.163 | 推进 FE-040 管理端 unauthorized 页面状态接线
 ### 任务内容
 

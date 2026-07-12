@@ -19,6 +19,13 @@ type ReviewWorkspacePageProps = {
 };
 
 type ReviewManagementTab = "decks" | "create" | "cards";
+type ReviewWorkspaceState =
+  | {
+      kind: "loading" | "error" | "empty" | "stale";
+      title: string;
+      description: string;
+    }
+  | null;
 
 const ratingOptions = [
   { value: "again", label: "重来", shortcut: "1", accessibilityLabel: "Again 重来" },
@@ -52,6 +59,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [showAnswer, setShowAnswer] = useState(false);
   const [shownAt, setShownAt] = useState(() => Date.now());
   const [message, setMessage] = useState("");
+  const [workspaceErrorMessage, setWorkspaceErrorMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [managementOpen, setManagementOpen] = useState(false);
@@ -73,6 +81,42 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     [decks, selectedDeckId]
   );
   const reviewedCount = completedCount;
+  const reviewState: ReviewWorkspaceState = useMemo(() => {
+    if (loading && queue.length === 0) {
+      return {
+        kind: "loading",
+        title: "准备复习队列",
+        description: "正在加载今日到期卡片与卡组信息。"
+      };
+    }
+
+    if (workspaceErrorMessage && queue.length > 0) {
+      return {
+        kind: "stale",
+        title: "复习队列需要刷新",
+        description: workspaceErrorMessage
+      };
+    }
+
+    if (workspaceErrorMessage) {
+      return {
+        kind: "error",
+        title: "复习工作台暂时不可用",
+        description: workspaceErrorMessage
+      };
+    }
+
+    if (!currentItem) {
+      return {
+        kind: "empty",
+        title: "今天的队列已经清空",
+        description: "今天没有需要处理的卡片。可以补充卡片，或从阅读、笔记和图谱继续生成草稿。"
+      };
+    }
+
+    return null;
+  }, [currentItem, loading, queue.length, workspaceErrorMessage]);
+  const showCurrentCard = currentItem && (!reviewState || reviewState.kind === "stale");
 
   useEffect(() => {
     void refreshAll();
@@ -132,6 +176,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     setBusy(true);
     setLoading(true);
     setMessage("");
+    setWorkspaceErrorMessage("");
     try {
       const [nextDecks, reviewQueue] = await Promise.all([
         listDecks(props.session),
@@ -143,7 +188,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       setQueue(reviewQueue.items);
       setSelectedDeckId((current) => current || nextDecks[0]?.id || "");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "加载复习工作台失败");
+      setWorkspaceErrorMessage(error instanceof Error ? error.message : "加载复习工作台失败");
     } finally {
       setBusy(false);
       setLoading(false);
@@ -257,9 +302,10 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
 
       <div className="review-focus__body">
         <main className="review-focus-stage" aria-label="复习卡片">
-          {loading ? (
-            <DataState description="正在加载今日到期卡片与卡组信息。" kind="loading" title="准备复习队列" />
-          ) : currentItem ? (
+          {reviewState && reviewState.kind !== "empty" ? (
+            <DataState description={reviewState.description} kind={reviewState.kind} title={reviewState.title} />
+          ) : null}
+          {showCurrentCard ? (
             <section className="review-focus-card-shell">
               <div className="review-focus-card-meta">
                 <span>{currentItem.deckTitle}</span>
@@ -297,14 +343,14 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                 </div>
               </div>
             </section>
-          ) : (
+          ) : reviewState?.kind === "empty" ? (
             <DataState
               action={<button className="primary-button" onClick={() => openManagement("create")} type="button"><Plus size={16} /> 创建卡组</button>}
-              description="今天没有需要处理的卡片。可以补充卡片，或从阅读、笔记和图谱继续生成草稿。"
-              kind="empty"
-              title="今天的队列已经清空"
+              description={reviewState.description}
+              kind={reviewState.kind}
+              title={reviewState.title}
             />
-          )}
+          ) : null}
         </main>
 
         <aside className="review-management-dock" aria-label="复习管理">

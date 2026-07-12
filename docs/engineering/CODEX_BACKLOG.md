@@ -23,7 +23,7 @@
 | FE-010 | DONE | 多布局壳层与基础组件 | FE-000 | `frontend-user/src/app/`、`frontend-user/src/design-system/`、样式 | Standard / Studio / Canvas / Focus 路由布局可解析；Canvas 不挂全局 ContextPanel；基础组件与单测已添加，并已在 2026-07-08 跑通用户端 / 管理端类型检查、相关 Vitest、前后台构建与 Playwright 回归。 |
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
-| FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale / unauthorized / conflict` 的真实状态入口，用户端 `SearchWorkspacePage`、`MaterialsPage` 已接入首批共享 `loading / error / empty` 状态，其中资料库刷新失败还会保留旧列表并显式进入 `stale`；后续继续补更多用户端页面与跨端状态落点。 |
+| FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale / unauthorized / conflict` 的真实状态入口，用户端 `SearchWorkspacePage`、`MaterialsPage` 与 `ReviewWorkspacePage` 已接入首批共享页面状态，其中资料库与复习工作区刷新失败都会保留旧内容并显式进入 `stale`；后续继续补更多用户端页面与跨端状态落点。 |
 | FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层，管理端也已新增 `AdminButton` / `AdminInput` Vue 适配层，并接入登录、壳层、dashboard、审核与治理模块，后续继续推进更多后台治理动作与跨端状态语义。 |
 | API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
 | API-011 | IN_PROGRESS | Token refresh 与统一会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；请求阶段直接收到 `403 user_disabled` 时也会统一清 session 并给出禁用提示；补 HttpOnly Refresh Token 迁移说明。 |
@@ -537,6 +537,21 @@
 - 后续建议：
   - 这一步把共享页面状态从管理端继续推进到了用户端真实列表页，但当前用户端还没有大面积覆盖 `unauthorized / conflict`；后续更适合沿 `ReviewWorkspacePage`、阅读页、笔记页和更多跨端列表继续补真实入口。
   - `MaterialsPage` 目前已经有最小 `stale` 语义，但搜索页还主要覆盖 `loading / error / empty`；如果后续补显式刷新或服务端分页，再继续评估搜索页是否也需要真实 `stale` 状态。
+
+### 执行记录：FE-040（用户端复习工作区页面状态接线）
+- 执行日期：2026-07-13
+- 本轮完成：
+  - 先在 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx` 补 RED，锁定“复习工作区首屏失败时仍只显示局部 message + 空队列空态、刷新失败时也不会进入共享 stale 状态”的真实缺口。
+  - 同一测试文件补了 `cleanup()` 收口，避免前一条复习工作区用例残留 DOM 干扰后续状态断言，让这一组页面状态回归在当前 Vitest 环境下稳定可复现。
+  - `frontend-user/src/modules/review/ReviewWorkspacePage.tsx` 新增 `ReviewWorkspaceState` 与 `workspaceErrorMessage` 判定，把复习工作区主舞台接到共享 `DataState` 协议：首屏失败进入 `error`，无卡片时进入 `empty`，已有当前卡片时刷新失败则进入 `stale`。
+  - 现在复习工作区在“已有卡片但刷新失败”的场景下，会显式渲染“复习队列需要刷新”的共享状态，同时保留当前卡片继续可见，避免用户在短暂刷新失败时直接丢失正在复习的上下文。
+- 已执行验证：
+  - RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+  - GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/pages/MaterialsPage.test.tsx`
+  - `npm --workspace frontend-user run typecheck`
+- 后续建议：
+  - 当前这一步只把共享页面状态推进到了复习工作区主舞台；复习管理面板内部的卡组/卡片列表仍主要覆盖 `empty`，还没有独立的 `error / stale / unauthorized / conflict` 分支。
+  - 用户端更完整的跨页状态协议仍未闭合，后续更适合沿阅读页、笔记页和更多共享列表继续补 `unauthorized / conflict` 的真实页面入口。
 
 ### 执行记录：FE-040（管理端 conflict 页面状态接线）
 - 执行日期：2026-07-13
