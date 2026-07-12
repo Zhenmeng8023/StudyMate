@@ -5366,3 +5366,27 @@
 
 - `FE-040` 不再只在管理端闭环，用户端真实列表页也开始共用同一套页面状态语义；后续可以沿阅读、笔记、复习和更多跨端列表继续扩状态落点，而不是重新写散落的空态/错态文案。
 - 当前这轮优先补的是 `loading / error / empty / stale`；`unauthorized / conflict` 在用户端还没有大面积真实入口，后续更适合结合受保护工作区和带刷新/冲突决策的页面继续推进。
+## 2026-07-13 04:31:20 +08:00 | v1.1.0-alpha.166 | 推进 FE-040 用户端阅读工作区页面状态接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新域，而是把用户端阅读工作区的真实失败路径接到共享页面状态协议。
+- 目标是让 `ReaderPage` 在首屏 `getReaderState(...)` 失败时明确进入共享 `error`，并在批注保存后的阅读上下文刷新失败时进入共享 `stale`，同时保留当前 PDF 与页码上下文，避免用户刚操作完成就被打回空白阅读区。
+
+### 实际变更
+
+- 先在 `frontend-user/src/pages/ReaderPage.test.tsx` 补 RED，复现两处真实缺口：阅读上下文首屏自举失败没有共享 `error` 回归保护；批注保存成功后如果重新同步失败，也没有共享 `stale` 提示与“保留旧内容”的断言。
+- 更新 `frontend-user/src/pages/ReaderPage.tsx`，新增 `ReaderWorkspaceState` 与 `refreshReaderState(material, { preserveExisting })`，把阅读工作区主舞台和右侧检查器一起接到共享 `loading / error / stale` 页面状态协议。
+- 当前阅读页在首屏失败时会明确渲染“阅读内容暂时不可用”的共享 `error` 状态；当已有阅读上下文、批注创建成功后刷新失败时，会渲染“阅读上下文需要刷新”的共享 `stale` 状态，同时继续保留当前 PDF、页码与批注上下文。
+- 批注删除仍保持严格刷新路径，不把“删除已提交但刷新失败”的场景误渲染成可继续编辑的旧批注，避免阅读上下文语义混淆。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/ReaderPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+
+### 后续影响
+
+- `FE-040` 现在已经覆盖用户端搜索、资料库、阅读、笔记和复习五条主学习路径，主工作区的共享页面状态骨架更完整了。
+- 阅读工作区更细粒度的局部刷新、资源切换以及跨页 `unauthorized / conflict` 入口仍未闭合；后续更适合继续沿 `ReaderPage` 检查器链路或跨端共享列表继续补齐。

@@ -24,6 +24,13 @@ import {
 } from "../app/appShared";
 
 type ReaderInspectorTab = "annotations" | "bookmarks" | "drafts";
+type ReaderWorkspaceState =
+  | {
+      kind: "loading" | "error" | "stale";
+      title: string;
+      description: string;
+    }
+  | null;
 
 const readerInspectorTabs: Array<{ id: ReaderInspectorTab; label: string }> = [
   { id: "annotations", label: "批注" },
@@ -47,6 +54,8 @@ export function ReaderPage(props: { session: AuthSession }) {
   const [message, setMessage] = useState("");
   const [loadingMaterials, setLoadingMaterials] = useState(true);
   const [materialsError, setMaterialsError] = useState("");
+  const [loadingReaderState, setLoadingReaderState] = useState(false);
+  const [readerStateError, setReaderStateError] = useState("");
   const [sourcesOpen, setSourcesOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [activeInspectorTab, setActiveInspectorTab] = useState<ReaderInspectorTab>("annotations");
@@ -84,35 +93,84 @@ export function ReaderPage(props: { session: AuthSession }) {
     () => materials.find((material) => material.id === selectedId) ?? null,
     [materials, selectedId]
   );
+  const readerWorkspaceState: ReaderWorkspaceState = useMemo(() => {
+    if (selectedMaterial && loadingReaderState && !readerState) {
+      return {
+        kind: "loading",
+        title: "准备阅读上下文",
+        description: "正在读取当前资料的页码、进度、书签和批注。"
+      };
+    }
+
+    if (readerStateError && readerState) {
+      return {
+        kind: "stale",
+        title: "阅读上下文需要刷新",
+        description: readerStateError
+      };
+    }
+
+    if (readerStateError) {
+      return {
+        kind: "error",
+        title: "阅读内容暂时不可用",
+        description: readerStateError
+      };
+    }
+
+    return null;
+  }, [loadingReaderState, readerState, readerStateError, selectedMaterial]);
+  const showReaderContent = Boolean(selectedMaterial && readerState && (!readerWorkspaceState || readerWorkspaceState.kind === "stale"));
+
+  async function refreshReaderState(material: MaterialPayload, options?: { preserveExisting?: boolean }) {
+    setLoadingReaderState(true);
+    setReaderStateError("");
+    if (!options?.preserveExisting) {
+      setReaderState(null);
+    }
+
+    try {
+      const state = await getReaderState(props.session, material.id);
+      setReaderState(applyRequestedReaderPage(state, requestedPage));
+      return true;
+    } catch (error) {
+      setReaderStateError(error instanceof Error ? error.message : "读取阅读状态失败。");
+      if (!options?.preserveExisting) {
+        setReaderState(null);
+      }
+      return false;
+    } finally {
+      setLoadingReaderState(false);
+    }
+  }
 
   useEffect(() => {
     if (!selectedMaterial) {
       setReaderState(null);
       setAnnotationDrafts([]);
+      setLoadingReaderState(false);
+      setReaderStateError("");
       return;
     }
 
     let cancelled = false;
+    setLoadingReaderState(true);
+    setReaderStateError("");
+    setReaderState(null);
     void getReaderState(props.session, selectedMaterial.id)
       .then((state) => {
-        if (!cancelled) setReaderState(applyRequestedReaderPage(state, requestedPage));
-      })
-      .catch(() => {
         if (!cancelled) {
-          setReaderState(
-            applyRequestedReaderPage(
-              {
-                materialId: selectedMaterial.id,
-                currentPage: 1,
-                totalPages: 0,
-                progressPercent: 0,
-                bookmarks: [],
-                lastReadAt: selectedMaterial.updatedAt,
-                annotations: []
-              },
-              requestedPage
-            )
-          );
+          setReaderState(applyRequestedReaderPage(state, requestedPage));
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setReaderStateError(error instanceof Error ? error.message : "读取阅读状态失败。");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingReaderState(false);
         }
       });
     setAnnotationDrafts([]);
@@ -175,10 +233,10 @@ export function ReaderPage(props: { session: AuthSession }) {
       });
       setSelection("");
       setAnnotationComment("");
-      setReaderState(await getReaderState(props.session, selectedMaterial.id));
+      const refreshed = await refreshReaderState(selectedMaterial, { preserveExisting: true });
       setActiveInspectorTab("annotations");
       setInspectorOpen(true);
-      setMessage("批注已保存。");
+      setMessage(refreshed ? "批注已保存。" : "");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "保存批注失败。");
     } finally {
@@ -192,7 +250,7 @@ export function ReaderPage(props: { session: AuthSession }) {
     setBusy(`annotation-${annotationId}`);
     try {
       await deleteReaderAnnotation(props.session, selectedMaterial.id, annotationId);
-      setReaderState(await getReaderState(props.session, selectedMaterial.id));
+      await refreshReaderState(selectedMaterial);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "删除批注失败。");
     } finally {
@@ -277,6 +335,8 @@ export function ReaderPage(props: { session: AuthSession }) {
   const fileUrl = selectedMaterial ? `/api/v1/materials/${selectedMaterial.id}/attachment` : "";
   const canUsePdf = selectedMaterial?.attachmentMime?.toLowerCase().includes("pdf") ?? false;
   const readerTitle = selectedMaterial ? displayMaterialTitle(selectedMaterial) : "选择一份资料开始阅读";
+  const activeReaderMaterial = showReaderContent ? selectedMaterial : null;
+  const activeReaderState = showReaderContent ? readerState : null;
 
   return (
     <section
@@ -386,40 +446,54 @@ export function ReaderPage(props: { session: AuthSession }) {
         </aside>
 
         <main className="reader-stage-shell" aria-label="阅读内容">
-          {selectedMaterial && readerState ? (
+          {readerWorkspaceState && readerWorkspaceState.kind !== "stale" ? (
+            <DataState
+              description={readerWorkspaceState.description}
+              kind={readerWorkspaceState.kind}
+              title={readerWorkspaceState.title}
+            />
+          ) : null}
+          {readerWorkspaceState?.kind === "stale" ? (
+            <DataState
+              description={readerWorkspaceState.description}
+              kind={readerWorkspaceState.kind}
+              title={readerWorkspaceState.title}
+            />
+          ) : null}
+          {activeReaderMaterial && activeReaderState ? (
             <div className="reader-stage-card">
               <div className="reader-stage-card__meta">
                 <div>
-                  <span>{selectedMaterial.attachmentName || "学习资料"}</span>
-                  <strong>{displayMaterialTitle(selectedMaterial)}</strong>
+                  <span>{activeReaderMaterial.attachmentName || "学习资料"}</span>
+                  <strong>{displayMaterialTitle(activeReaderMaterial)}</strong>
                 </div>
                 <div className="reader-stage-card__chips">
-                  <Tag>共 {readerState.totalPages || "待识别"} 页</Tag>
-                  <Tag tone="muted">上次阅读 {formatDate(readerState.lastReadAt)}</Tag>
+                  <Tag>共 {activeReaderState.totalPages || "待识别"} 页</Tag>
+                  <Tag tone="muted">上次阅读 {formatDate(activeReaderState.lastReadAt)}</Tag>
                 </div>
               </div>
               <div className="reader-stage reader-stage--studio">
                 {canUsePdf ? (
                   <PdfReaderPane
                     fileUrl={fileUrl}
-                    initialPage={readerState.currentPage}
-                    onPageChange={(page) => void persistProgress(page, readerState.totalPages || page).catch(() => undefined)}
+                    initialPage={activeReaderState.currentPage}
+                    onPageChange={(page) => void persistProgress(page, activeReaderState.totalPages || page).catch(() => undefined)}
                     onSelectionChange={setSelection}
-                    onTotalPagesChange={(pages) => void persistProgress(readerState.currentPage, pages).catch(() => undefined)}
+                    onTotalPagesChange={(pages) => void persistProgress(activeReaderState.currentPage, pages).catch(() => undefined)}
                   />
                 ) : (
-                  <iframe className="reader-embed" src={fileUrl} title={selectedMaterial.attachmentName} />
+                  <iframe className="reader-embed" src={fileUrl} title={activeReaderMaterial.attachmentName} />
                 )}
               </div>
             </div>
-          ) : (
+          ) : !selectedMaterial && !readerWorkspaceState ? (
             <DataState
               action={<button className="primary-button" onClick={() => setSourcesOpen(true)} type="button">打开资料面板</button>}
               description="从资料面板选择一份带附件的学习资料；PDF 会在当前工作区中打开。"
               kind="empty"
               title="选择一份资料开始阅读"
             />
-          )}
+          ) : null}
         </main>
 
         <aside className="studio-inspector reader-inspector" aria-label="阅读检查器">
@@ -451,9 +525,15 @@ export function ReaderPage(props: { session: AuthSession }) {
           </nav>
 
           <div className="studio-inspector__body reader-inspector__body">
-            {!selectedMaterial || !readerState ? (
+            {!selectedMaterial ? (
               <DataState description="选择资料后，这里会显示阅读期间产生的上下文。" kind="empty" title="等待阅读资料" />
-            ) : activeInspectorTab === "annotations" ? (
+            ) : readerWorkspaceState && readerWorkspaceState.kind !== "stale" ? (
+              <DataState
+                description={readerWorkspaceState.description}
+                kind={readerWorkspaceState.kind}
+                title={readerWorkspaceState.title}
+              />
+            ) : readerState ? activeInspectorTab === "annotations" ? (
               <div className="studio-panel-stack">
                 <section className="reader-annotation-composer">
                   <div className="reader-selection-preview">
@@ -591,7 +671,7 @@ export function ReaderPage(props: { session: AuthSession }) {
                   />
                 )}
               </div>
-            )}
+            ) : null}
           </div>
         </aside>
       </div>
