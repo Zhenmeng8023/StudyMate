@@ -554,6 +554,77 @@ describe("AdminWorkspaceView governance modules", () => {
     expect(wrapper.text()).toContain("audit-1");
   });
 
+  it("reloads the target module when browser popstate switches the admin path", async () => {
+    window.history.replaceState({}, "", "/admin/dashboard");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/overview") {
+        return apiPayload({
+          userCount: 12,
+          postCount: 4,
+          materialCount: 5,
+          graphCount: 6,
+          pendingModerationCount: 0
+        });
+      }
+      if (path === "/api/v1/admin/moderation") {
+        return apiPayload([]);
+      }
+      if (path === "/api/v1/admin/audit-logs?limit=20") {
+        return apiPayload([
+          {
+            id: "audit-1",
+            action: "moderation.approve",
+            status: "success"
+          }
+        ]);
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    window.history.pushState({}, "", "/admin/audit");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/audit-logs?limit=20",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer admin-token"
+        })
+      })
+    );
+    expect(wrapper.text()).toContain("audit-1");
+  });
+
   it("confirms report governance actions before posting report resolution", async () => {
     window.history.replaceState({}, "", "/admin/community");
     window.localStorage.setItem(
