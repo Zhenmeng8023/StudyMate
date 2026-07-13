@@ -42,10 +42,14 @@ import {
 } from "./adminViewMeta";
 import { buildAdminOverviewCards } from "./adminOverviewCards";
 import { resolveGovernanceDataState, resolveModerationDataState } from "./adminViewDataState";
-import { runAdminViewLoadRequest } from "./adminViewLoadRequest";
 import { getAdminRequestErrorMessage, getAdminRequestErrorStatus } from "./adminRequestError";
-import { runAdminViewReadRequest } from "./adminViewReadRequest";
 import { runAdminWorkspaceLoginBootstrap } from "./adminWorkspaceBootstrap";
+import {
+  runAdminWorkspaceGovernanceLoad,
+  runAdminWorkspaceModerationLoad,
+  runAdminWorkspaceOverviewLoad,
+  runAdminWorkspaceProfileRefresh
+} from "./adminWorkspaceDataLoad";
 import {
   buildGovernanceStatusOptions,
   buildModerationStatusOptions,
@@ -67,7 +71,6 @@ import {
   buildAdminWorkspaceSessionClearedPlan,
   buildAdminWorkspaceViewSwitchPlan
 } from "./adminWorkspaceLifecycle";
-import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import { runAdminWorkspaceViewLoad } from "./adminWorkspaceViewLoad";
 import { runAdminWorkspaceMountBootstrap } from "./adminWorkspaceMountBootstrap";
 import { runAdminWorkspacePopstate } from "./adminWorkspacePopstate";
@@ -92,8 +95,6 @@ import {
 import {
   getGovernanceModuleConfig,
   getGovernanceActions,
-  governanceModuleConfig,
-  isGovernanceModuleView,
   resolveGovernanceActionDispatch
 } from "./adminGovernanceConfig";
 import { resolveAdminModerationMutationMeta } from "./adminModerationMutationMeta";
@@ -422,102 +423,96 @@ async function login() {
 
 async function refreshProfile() {
   if (!session.value) return;
-  const result = await runAdminViewReadRequest({
+  await runAdminWorkspaceProfileRefresh({
     fallbackMessage: "读取管理员资料失败",
     readStatus: getAdminRequestErrorStatus,
-    request: () => get<AdminAuthUser>("/api/v1/admin/me")
+    request: () => get<AdminAuthUser>("/api/v1/admin/me"),
+    setError: (message) => {
+      errorMessage.value = message;
+    },
+    setProfile: (nextProfile) => {
+      profile.value = nextProfile;
+    }
   });
-  if (result.kind === "error") {
-    errorMessage.value = result.message;
-    return;
-  }
-  profile.value = result.data;
 }
 
 async function loadOverview() {
   if (!session.value) return;
-  const result = await runAdminViewReadRequest({
+  await runAdminWorkspaceOverviewLoad({
     fallbackMessage: "读取后台概览失败",
     readStatus: getAdminRequestErrorStatus,
-    request: () => get<OverviewPayload>("/api/v1/admin/overview")
+    request: () => get<OverviewPayload>("/api/v1/admin/overview"),
+    setError: (message) => {
+      errorMessage.value = message;
+    },
+    setOverview: (nextOverview) => {
+      overview.value = nextOverview;
+    }
   });
-  if (result.kind === "error") {
-    errorMessage.value = result.message;
-    return;
-  }
-  overview.value = result.data;
 }
 
 async function loadModeration() {
   if (!session.value) return;
-  loading.value = true;
-  errorMessage.value = "";
-  moderationErrorStatus.value = null;
-  try {
-    const result = await runAdminViewLoadRequest({
-      readStatus: getAdminRequestErrorStatus,
-      request: () => get<AdminWorkspaceModerationItem[]>("/api/v1/admin/moderation"),
-      onForbidden: () => {
-        moderationItems.value = [];
-      }
-    });
-    if (result.kind === "error") {
-      moderationErrorStatus.value = result.status;
-      throw result.error;
+  await runAdminWorkspaceModerationLoad({
+    fallbackMessage: "读取审核队列失败",
+    getLoadedNotice: getAdminModerationLoadedNotice,
+    readStatus: getAdminRequestErrorStatus,
+    request: () => get<AdminWorkspaceModerationItem[]>("/api/v1/admin/moderation"),
+    resolveErrorMessage: getAdminRequestErrorMessage,
+    setError: (message) => {
+      errorMessage.value = message;
+    },
+    setItems: (items) => {
+      moderationItems.value = items;
+    },
+    setLoading: (nextLoading) => {
+      loading.value = nextLoading;
+    },
+    setNotice: (nextNotice) => {
+      notice.value = nextNotice;
+    },
+    setStatus: (status) => {
+      moderationErrorStatus.value = status;
     }
-    moderationItems.value = result.data;
-    notice.value = getAdminModerationLoadedNotice(moderationItems.value.length);
-  } catch (error) {
-    errorMessage.value = getAdminRequestErrorMessage(error, "读取审核队列失败");
-  } finally {
-    loading.value = false;
-  }
+  });
 }
 
 async function loadGovernance(view: AdminView) {
-  if (!session.value || view === "dashboard" || view === "moderation") return;
-  const plan = resolveAdminViewLoadPlan(view);
-  if (plan.kind !== "governance") return;
-  const preserveExistingRows = shouldPreserveGovernanceRows(governanceRowsView.value, plan.view, governanceRows.value.length);
-  loading.value = true;
-  errorMessage.value = "";
-  governanceErrorStatus.value = null;
-  if (!preserveExistingRows) {
-    governanceRows.value = [];
-    governanceSummary.value = null;
-    selectedRecord.value = null;
-  }
-  try {
-    const config = getGovernanceModuleConfig(plan.view);
-    if (!config) return;
-    const result = await runAdminViewLoadRequest({
-      readStatus: getAdminRequestErrorStatus,
-      request: () => get<GovernanceRecord[]>(config.endpoint, config.query),
-      onForbidden: () => {
-        governanceRows.value = [];
-        governanceSummary.value = null;
-        governanceRowsView.value = null;
-        selectedRecord.value = null;
-      }
-    });
-    if (result.kind === "error") {
-      governanceErrorStatus.value = result.status;
-      throw result.error;
+  if (!session.value) return;
+  await runAdminWorkspaceGovernanceLoad(view, {
+    currentRows: governanceRows.value,
+    currentRowsView: governanceRowsView.value,
+    fallbackMessage: "读取治理模块失败",
+    getLoadedNotice: getAdminGovernanceLoadedNotice,
+    readStatus: getAdminRequestErrorStatus,
+    request: (path, query) => get<GovernanceRecord[]>(path, query),
+    requestSummary: (path) => get<GovernanceRecord>(path),
+    resolveErrorMessage: getAdminRequestErrorMessage,
+    setError: (message) => {
+      errorMessage.value = message;
+    },
+    setLoading: (nextLoading) => {
+      loading.value = nextLoading;
+    },
+    setNotice: (nextNotice) => {
+      notice.value = nextNotice;
+    },
+    setRows: (rows) => {
+      governanceRows.value = rows;
+    },
+    setRowsView: (nextView) => {
+      governanceRowsView.value = nextView;
+    },
+    setSelectedRecord: (record) => {
+      selectedRecord.value = record;
+    },
+    setStatus: (status) => {
+      governanceErrorStatus.value = status;
+    },
+    setSummary: (summary) => {
+      governanceSummary.value = summary;
     }
-    governanceRows.value = result.data;
-    governanceRowsView.value = plan.view;
-    selectedRecord.value = governanceRows.value[0] ?? null;
-    if (plan.summaryEndpoint) {
-      governanceSummary.value = await get<GovernanceRecord>(plan.summaryEndpoint);
-    } else {
-      governanceSummary.value = null;
-    }
-    notice.value = getAdminGovernanceLoadedNotice(governanceRows.value.length);
-  } catch (error) {
-    errorMessage.value = getAdminRequestErrorMessage(error, "读取治理模块失败");
-  } finally {
-    loading.value = false;
-  }
+  });
 }
 
 async function applyModerationAction(item: AdminWorkspaceModerationItem, action: ModerationAction) {
