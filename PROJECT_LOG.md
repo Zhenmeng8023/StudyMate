@@ -6555,3 +6555,27 @@
 
 - `FE-041` 现在继续从共享简单读取请求推进到共享 dashboard 元数据，仪表盘模块开始复用统一的 feature copy 和审核概览摘要出口。
 - 这次仍然只先收口了 dashboard 元数据 helper；更进一步的工作台级 loading/error/notice 协调仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 20:53:10 +08:00 | v1.1.0-alpha.215 | 推进 FE-041 管理端请求错误 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里反复出现的“从请求错误读取 status / message / fallback”逻辑。
+- 目标是补一个共享请求错误 helper，并让工作台的登录、加载和治理动作统一复用同一套错误状态与文案解析出口，减少页面层继续保留本地 `getRequestErrorStatus(...)` 和多处 `error instanceof Error ? ...` 分支。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminRequestError.ts` 与 `adminRequestError.test.ts`，收口请求错误的 `status` 读取和 `message / fallbackMessage` 解析，并锁定数字状态、非数字状态和 fallback message 行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，移除本地 `getRequestErrorStatus(...)`，让登录、审核加载、治理加载、审核动作和治理动作都改为消费共享 `getAdminRequestErrorStatus(...)`、`getAdminRequestErrorMessage(...)`。
+- 本轮不改请求协议、状态流、治理动作语义或路由结构，只把已稳定的错误解析语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminRequestError.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享 dashboard 元数据推进到共享请求错误解析，工作台里的 status/message fallback 逻辑开始复用统一出口。
+- 这次仍然只先收口了请求错误 helper；更进一步的工作台级 loading/error/notice 协调仍适合继续沿 `ADM-010 / ADM-011` 往前推进。

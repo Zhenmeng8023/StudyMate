@@ -43,6 +43,7 @@ import {
 import { buildAdminOverviewCards } from "./adminOverviewCards";
 import { resolveGovernanceDataState, resolveModerationDataState } from "./adminViewDataState";
 import { runAdminViewLoadRequest } from "./adminViewLoadRequest";
+import { getAdminRequestErrorMessage, getAdminRequestErrorStatus } from "./adminRequestError";
 import { runAdminViewReadRequest } from "./adminViewReadRequest";
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import {
@@ -346,15 +347,6 @@ function clearWorkspaceState(keys?: AdminWorkspaceResetKey[]) {
   resetAdminWorkspaceState(workspaceResetHandlers, keys);
 }
 
-function getRequestErrorStatus(error: unknown) {
-  if (typeof error !== "object" || error === null || !("status" in error)) {
-    return null;
-  }
-
-  const status = (error as { status?: unknown }).status;
-  return typeof status === "number" ? status : null;
-}
-
 function resolveAdminViewFromLocation(): AdminView {
   if (typeof window === "undefined") return defaultAdminRouteKey;
   return parseAdminRoutePath(window.location.pathname) ?? defaultAdminRouteKey;
@@ -438,7 +430,7 @@ async function login() {
     await refreshProfile();
     loadActiveView(activeView.value);
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : "管理员登录失败";
+    errorMessage.value = getAdminRequestErrorMessage(error, "管理员登录失败");
   } finally {
     loading.value = false;
   }
@@ -448,7 +440,7 @@ async function refreshProfile() {
   if (!session.value) return;
   const result = await runAdminViewReadRequest({
     fallbackMessage: "读取管理员资料失败",
-    readStatus: getRequestErrorStatus,
+    readStatus: getAdminRequestErrorStatus,
     request: () => get<AdminAuthUser>("/api/v1/admin/me")
   });
   if (result.kind === "error") {
@@ -462,7 +454,7 @@ async function loadOverview() {
   if (!session.value) return;
   const result = await runAdminViewReadRequest({
     fallbackMessage: "读取后台概览失败",
-    readStatus: getRequestErrorStatus,
+    readStatus: getAdminRequestErrorStatus,
     request: () => get<OverviewPayload>("/api/v1/admin/overview")
   });
   if (result.kind === "error") {
@@ -479,7 +471,7 @@ async function loadModeration() {
   moderationErrorStatus.value = null;
   try {
     const result = await runAdminViewLoadRequest({
-      readStatus: getRequestErrorStatus,
+      readStatus: getAdminRequestErrorStatus,
       request: () => get<ModerationItem[]>("/api/v1/admin/moderation"),
       onForbidden: () => {
         moderationItems.value = [];
@@ -492,7 +484,7 @@ async function loadModeration() {
     moderationItems.value = result.data;
     notice.value = `当前共有 ${moderationItems.value.length} 条待处理内容。`;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : "读取审核队列失败";
+    errorMessage.value = getAdminRequestErrorMessage(error, "读取审核队列失败");
   } finally {
     loading.value = false;
   }
@@ -515,7 +507,7 @@ async function loadGovernance(view: AdminView) {
     const config = getGovernanceModuleConfig(plan.view);
     if (!config) return;
     const result = await runAdminViewLoadRequest({
-      readStatus: getRequestErrorStatus,
+      readStatus: getAdminRequestErrorStatus,
       request: () => get<GovernanceRecord[]>(config.endpoint, config.query),
       onForbidden: () => {
         governanceRows.value = [];
@@ -538,7 +530,7 @@ async function loadGovernance(view: AdminView) {
     }
     notice.value = `已加载 ${governanceRows.value.length} 条治理记录。`;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : "读取治理模块失败";
+    errorMessage.value = getAdminRequestErrorMessage(error, "读取治理模块失败");
   } finally {
     loading.value = false;
   }
@@ -562,9 +554,9 @@ async function applyModerationAction(item: ModerationItem, action: ModerationAct
       await loadGovernance("materials");
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : "更新审核状态失败";
+    const message = getAdminRequestErrorMessage(error, "更新审核状态失败");
     if (activeView.value === "materials" && item.type === "material") {
-      const status = getRequestErrorStatus(error);
+      const status = getAdminRequestErrorStatus(error);
       if (status === 409) {
         governanceErrorStatus.value = status;
       }
@@ -600,8 +592,8 @@ async function applyGovernanceRecordAction(
     notice.value = mutation.successNotice.replace("{status}", data.status);
     await loadGovernance(mutation.reloadView);
   } catch (error) {
-    const message = error instanceof Error ? error.message : mutation.errorFallbackMessage;
-    const status = getRequestErrorStatus(error);
+    const message = getAdminRequestErrorMessage(error, mutation.errorFallbackMessage);
+    const status = getAdminRequestErrorStatus(error);
     if (status === 409) {
       governanceErrorStatus.value = status;
     }
