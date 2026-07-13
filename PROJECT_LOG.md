@@ -1,3 +1,25 @@
+## 2026-07-13 21:56:40 +08:00 | v1.1.0-alpha.220 | 推进 FE-041 管理端工作台生命周期 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里挂载自举、`popstate`、导航切换、会话失效回退和退出这几类稳定的工作台生命周期分支。
+- 目标是补一个共享 lifecycle helper，并让 reset/sync/load 计划都复用统一出口，减少工作台组件继续直接维护这些流程判断。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceLifecycle.ts` 与 `adminWorkspaceLifecycle.test.ts`，收口 `buildAdminWorkspaceMountPlan(...)`、`buildAdminWorkspacePopstatePlan(...)`、`buildAdminWorkspaceViewSwitchPlan(...)`、`buildAdminWorkspaceSessionClearedPlan(...)` 与 `buildAdminWorkspaceLogoutPlan(...)` 五个出口。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让挂载自举、`popstate`、导航切换、会话失效回退和退出路径都改为消费共享 lifecycle helper，而不是继续在工作台里手写 reset/sync/load 分支。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端工作台生命周期计划也已进入共享 helper 出口”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLifecycle.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享工作台路由定位推进到共享生命周期计划，挂载自举、导航切换和会话回退开始复用统一出口。
+- 这次仍然只先收口了生命周期 helper；更进一步的 bootstrap/load 请求编排仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-13 21:52:30 +08:00 | v1.1.0-alpha.219 | 推进 FE-041 管理端工作台路由定位 helper 接线
 ### 任务内容
 

@@ -58,6 +58,13 @@ import {
   resolveAdminWorkspaceLocationView,
   syncAdminWorkspaceLocation
 } from "./adminWorkspaceLocation";
+import {
+  buildAdminWorkspaceLogoutPlan,
+  buildAdminWorkspaceMountPlan,
+  buildAdminWorkspacePopstatePlan,
+  buildAdminWorkspaceSessionClearedPlan,
+  buildAdminWorkspaceViewSwitchPlan
+} from "./adminWorkspaceLifecycle";
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import {
   getAdminGovernanceLoadedNotice,
@@ -309,10 +316,14 @@ function loadActiveView(view: AdminView) {
 }
 
 function handleAdminPopstate() {
-  activeView.value = normalizeAdminWorkspaceLocation(window.location, window.history);
-  clearWorkspaceState(["queries"]);
-  if (session.value) {
-    loadActiveView(activeView.value);
+  const plan = buildAdminWorkspacePopstatePlan(
+    normalizeAdminWorkspaceLocation(window.location, window.history),
+    Boolean(session.value)
+  );
+  activeView.value = plan.nextView;
+  clearWorkspaceState(plan.resetKeys);
+  if (plan.shouldLoadView) {
+    loadActiveView(plan.nextView);
   }
 }
 
@@ -323,21 +334,32 @@ const unsubscribeSession = subscribeSession(() => {
   profile.value = nextSession?.user ?? null;
 
   if (!nextSession) {
-    clearWorkspaceState();
-    activeView.value = defaultAdminRouteKey;
-    syncAdminWorkspaceLocation(defaultAdminRouteKey, window.location, window.history, "replace");
-    errorMessage.value = "";
-    notice.value = getAdminSessionEndedNotice(getSessionInvalidationPrompt(sessionInvalidation.value, "admin"));
+    const plan = buildAdminWorkspaceSessionClearedPlan(
+      getAdminSessionEndedNotice(getSessionInvalidationPrompt(sessionInvalidation.value, "admin"))
+    );
+    clearWorkspaceState(plan.resetKeys);
+    activeView.value = plan.nextView;
+    syncAdminWorkspaceLocation(plan.nextView, window.location, window.history, plan.syncMode);
+    if (plan.clearError) {
+      errorMessage.value = "";
+    }
+    notice.value = plan.notice;
   }
 });
 
 onMounted(() => {
-  activeView.value = normalizeAdminWorkspaceLocation(window.location, window.history);
+  const plan = buildAdminWorkspaceMountPlan(
+    normalizeAdminWorkspaceLocation(window.location, window.history),
+    Boolean(session.value)
+  );
+  activeView.value = plan.nextView;
   window.addEventListener("popstate", handleAdminPopstate);
 
-  if (session.value) {
+  if (plan.shouldRefreshProfile) {
     void refreshProfile();
-    loadActiveView(activeView.value);
+  }
+  if (plan.shouldLoadView) {
+    loadActiveView(plan.nextView);
   }
 });
 
@@ -604,10 +626,13 @@ async function handleConfirmDialogConfirm(key: ConfirmDialogKey) {
 }
 
 function switchView(view: AdminView) {
-  activeView.value = view;
-  clearWorkspaceState(["queries", "filters", "confirmState"]);
-  syncAdminWorkspaceLocation(view, window.location, window.history);
-  loadActiveView(view);
+  const plan = buildAdminWorkspaceViewSwitchPlan(view);
+  activeView.value = plan.nextView;
+  clearWorkspaceState(plan.resetKeys);
+  syncAdminWorkspaceLocation(plan.nextView, window.location, window.history, plan.syncMode);
+  if (plan.shouldLoadView) {
+    loadActiveView(plan.nextView);
+  }
 }
 
 function refreshActiveView() {
@@ -615,15 +640,18 @@ function refreshActiveView() {
 }
 
 function logout() {
+  const plan = buildAdminWorkspaceLogoutPlan(getAdminLogoutNotice());
   session.value = null;
   profile.value = null;
-  clearWorkspaceState();
-  activeView.value = defaultAdminRouteKey;
-  syncAdminWorkspaceLocation(defaultAdminRouteKey, window.location, window.history, "replace");
-  sessionInvalidation.value = null;
-  clearSessionInvalidation();
+  clearWorkspaceState(plan.resetKeys);
+  activeView.value = plan.nextView;
+  syncAdminWorkspaceLocation(plan.nextView, window.location, window.history, plan.syncMode);
+  if (plan.clearSessionInvalidation) {
+    sessionInvalidation.value = null;
+    clearSessionInvalidation();
+  }
   persistSession(null);
-  notice.value = getAdminLogoutNotice();
+  notice.value = plan.notice;
 }
 
 async function get<T>(path: string, query?: { limit?: number }) {
