@@ -26,6 +26,7 @@ import {
   type ConfirmDialogKey
 } from "./adminConfirmDialogState";
 import { buildAdminWorkspaceConfirmDialogs } from "./adminWorkspaceConfirmDialogs";
+import { buildAdminWorkspaceLoginPanelEvents } from "./adminWorkspaceLoginPanelEvents";
 import { buildAdminWorkspaceLoginPanelProps } from "./adminWorkspaceLoginPanelProps";
 import { buildAdminWorkspaceModuleEvents } from "./adminWorkspaceModuleEvents";
 import { buildAdminWorkspaceModuleProps } from "./adminWorkspaceModuleProps";
@@ -207,6 +208,17 @@ const loginPanelProps = computed(() =>
     loginValue: form.login,
     notice: loginNotice.value,
     passwordValue: form.password
+  })
+);
+const loginPanelEvents = computed(() =>
+  buildAdminWorkspaceLoginPanelEvents({
+    login,
+    setLoginValue: (value) => {
+      form.login = value;
+    },
+    setPasswordValue: (value) => {
+      form.password = value;
+    }
   })
 );
 const activeDescription = computed(() => getAdminViewDescription(activeView.value, getGovernanceModuleConfig(activeView.value)?.description ?? ""));
@@ -796,9 +808,9 @@ function selectRecord(row: GovernanceRecord) {
       :login-prompt="loginPanelProps.loginPrompt"
       :login-value="loginPanelProps.loginValue"
       :password-value="loginPanelProps.passwordValue"
-      @submit="login"
-      @update:login-value="form.login = $event"
-      @update:password-value="form.password = $event"
+      @submit="loginPanelEvents.submit()"
+      @update:login-value="loginPanelEvents.updateLoginValue($event)"
+      @update:password-value="loginPanelEvents.updatePasswordValue($event)"
     />
 
     <AdminShellFrame
