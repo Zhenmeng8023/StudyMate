@@ -1,3 +1,28 @@
+## 2026-07-14 02:08:34 +08:00 | v1.1.0-alpha.238 | 推进 FE-041 管理端壳层 props 装配 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里传给 `AdminShellFrame` 的壳层 props 装配逻辑。
+- 目标是补一层共享 shell-props helper，让后台工作台壳层输入继续复用统一出口，而不是把这层模板级高频 props 绑定继续留在壳层组件里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceShellProps.ts` 与 `adminWorkspaceShellProps.test.ts`，收口 active view、描述、计数、nav groups、notice、loading、profile 等壳层 props 的装配。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `AdminShellFrame` 改为消费共享 `adminWorkspaceShellProps` helper，页面层只保留 state、computed 数据源与 helper 入参绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端壳层 props 也已进入共享 helper 出口”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceShellProps.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享模块事件装配链推进到共享壳层 props 装配链，后台工作台模板层里的高频输入绑定进一步变薄。
+- 这次仍然只先收口了 shell-props helper；更进一步的登录面板 props 或更完整的壳层 feature adapter，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-14 02:00:43 +08:00 | v1.1.0-alpha.237 | 推进 FE-041 管理端模块事件装配 helper 接线
 ### 任务内容
 

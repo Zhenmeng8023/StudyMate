@@ -28,6 +28,7 @@ import {
 import { buildAdminWorkspaceConfirmDialogs } from "./adminWorkspaceConfirmDialogs";
 import { buildAdminWorkspaceModuleEvents } from "./adminWorkspaceModuleEvents";
 import { buildAdminWorkspaceModuleProps } from "./adminWorkspaceModuleProps";
+import { buildAdminWorkspaceShellProps } from "./adminWorkspaceShellProps";
 import {
   buildAdminWorkspaceConfirmResetHandlers,
   buildAdminWorkspaceConfirmSubmitHandlers
@@ -199,6 +200,21 @@ const loginNotice = computed(() => {
 const activeDescription = computed(() => getAdminViewDescription(activeView.value, getGovernanceModuleConfig(activeView.value)?.description ?? ""));
 const activeCountLabel = computed(() =>
   getAdminActiveCountLabel(activeView.value, moderationItems.value.length, governanceRows.value.length)
+);
+const shellProps = computed(() =>
+  buildAdminWorkspaceShellProps({
+    activeDescription: activeDescription.value,
+    activeGroup: activeMeta.value.group,
+    activeTitle: activeMeta.value.label,
+    activeView: activeView.value,
+    countLabel: activeCountLabel.value,
+    errorMessage: errorMessage.value,
+    loading: loading.value,
+    navGroups: navGroups.value,
+    notice: notice.value,
+    profile: profile.value,
+    profileInitial: profileInitial.value
+  })
 );
 const moderationDataState = computed<AdminDataStatePayload | null>(() =>
   resolveModerationDataState({
@@ -768,17 +784,17 @@ function selectRecord(row: GovernanceRecord) {
 
     <AdminShellFrame
       v-else
-      :active-description="activeDescription"
-      :active-group="activeMeta.group"
-      :active-title="activeMeta.label"
-      :active-view="activeView"
-      :count-label="activeCountLabel"
-      :error-message="errorMessage"
-      :loading="loading"
-      :nav-groups="navGroups"
-      :notice="notice"
-      :profile="profile"
-      :profile-initial="profileInitial"
+      :active-description="shellProps.activeDescription"
+      :active-group="shellProps.activeGroup"
+      :active-title="shellProps.activeTitle"
+      :active-view="shellProps.activeView"
+      :count-label="shellProps.countLabel"
+      :error-message="shellProps.errorMessage"
+      :loading="shellProps.loading"
+      :nav-groups="shellProps.navGroups"
+      :notice="shellProps.notice"
+      :profile="shellProps.profile"
+      :profile-initial="shellProps.profileInitial"
       @logout="logout"
       @refresh="refreshActiveView"
       @switch-view="switchView($event as AdminView)"
