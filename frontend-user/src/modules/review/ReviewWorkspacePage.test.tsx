@@ -1,5 +1,6 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createDeck,
@@ -42,6 +43,14 @@ const listDecksMock = vi.mocked(listDecks);
 const listDeckCardsMock = vi.mocked(listDeckCards);
 const getTodayReviewQueueMock = vi.mocked(getTodayReviewQueue);
 const reviewCardMock = vi.mocked(reviewCard);
+
+function renderPage(path = "/review") {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <ReviewWorkspacePage session={session} />
+    </MemoryRouter>
+  );
+}
 
 describe("ReviewWorkspacePage", () => {
   afterEach(() => {
@@ -129,7 +138,7 @@ describe("ReviewWorkspacePage", () => {
 
   it("shows the due card and writes back a review rating", async () => {
     const user = userEvent.setup();
-    render(<ReviewWorkspacePage session={session} />);
+    renderPage();
 
     await expect(screen.findByText("什么是图谱？")).resolves.toBeInTheDocument();
     expect(screen.getByText("1 张仍待完成")).toBeInTheDocument();
@@ -157,7 +166,7 @@ describe("ReviewWorkspacePage", () => {
     listDecksMock.mockRejectedValueOnce(new Error("复习工作台加载失败"));
     getTodayReviewQueueMock.mockRejectedValueOnce(new Error("复习工作台加载失败"));
 
-    render(<ReviewWorkspacePage session={session} />);
+    renderPage();
 
     expect(await screen.findByRole("heading", { level: 2, name: "复习工作台暂时不可用" })).toBeInTheDocument();
     expect(screen.getByText("复习工作台加载失败")).toBeInTheDocument();
@@ -165,7 +174,7 @@ describe("ReviewWorkspacePage", () => {
 
   it("keeps rendering the current card while surfacing a shared stale state after refresh fails", async () => {
     const user = userEvent.setup();
-    render(<ReviewWorkspacePage session={session} />);
+    renderPage();
 
     await expect(screen.findByText("什么是图谱？")).resolves.toBeInTheDocument();
 
@@ -192,7 +201,7 @@ describe("ReviewWorkspacePage", () => {
     });
 
     const user = userEvent.setup();
-    render(<ReviewWorkspacePage session={session} />);
+    renderPage();
 
     await expect(screen.findByText("什么是图谱？")).resolves.toBeInTheDocument();
 
@@ -215,5 +224,90 @@ describe("ReviewWorkspacePage", () => {
         })
       );
     });
+  });
+
+  it("prioritizes the requested source card from the route query", async () => {
+    listDecksMock.mockResolvedValueOnce([
+      {
+        id: "deck-1",
+        ownerUserId: "user-1",
+        title: "鏈熸湯澶嶄範",
+        description: "楂橀姒傚康",
+        visibility: "private",
+        cardCount: 1,
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      },
+      {
+        id: "deck-2",
+        ownerUserId: "user-1",
+        title: "Source revisit",
+        description: "Focus a linked source card",
+        visibility: "private",
+        cardCount: 1,
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    ]);
+    getTodayReviewQueueMock.mockResolvedValueOnce({
+      dueCount: 2,
+      items: [
+        {
+          deckTitle: "鏈熸湯澶嶄範",
+          card: {
+            id: "card-1",
+            deckId: "deck-1",
+            ownerUserId: "user-1",
+            cardType: "basic",
+            front: "First queued card",
+            back: "First queued answer",
+            status: "active",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          },
+          schedule: {
+            cardId: "card-1",
+            userId: "user-1",
+            dueAt: "2026-06-02T12:00:00Z",
+            intervalDays: 0,
+            easeFactor: 2.5,
+            repetitionCount: 0,
+            lapseCount: 0,
+            state: "new",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        },
+        {
+          deckTitle: "Source revisit",
+          card: {
+            id: "card-2",
+            deckId: "deck-2",
+            ownerUserId: "user-1",
+            cardType: "basic",
+            front: "Requested source card",
+            back: "Focus the linked card first",
+            status: "active",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          },
+          schedule: {
+            cardId: "card-2",
+            userId: "user-1",
+            dueAt: "2026-06-02T12:00:00Z",
+            intervalDays: 0,
+            easeFactor: 2.5,
+            repetitionCount: 0,
+            lapseCount: 0,
+            state: "review",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        }
+      ]
+    });
+
+    renderPage("/review?card=card-2");
+
+    expect(await screen.findByText("Requested source card")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "鍏抽棴鍗＄粍绠＄悊" })).toBeInTheDocument();
   });
 });
