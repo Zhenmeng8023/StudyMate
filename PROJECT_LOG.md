@@ -6370,3 +6370,25 @@
 
 - `FE-041` 现在继续从共享确认状态推进到共享工作台状态，工作台里的 query/filter/数据区/reset 逻辑开始复用统一的 workspace key 路由。
 - 这次仍然只先收口工作台状态 helper；更进一步的模块级 feature 边界和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 19:12:10 +08:00 | v1.1.0-alpha.207 | 推进 FE-041 管理端共享治理提交元数据 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `report / user / aiTask / template` 四组治理提交的 endpoint、缺参报错、成功 notice 和 fallback 错误元数据。
+- 目标是补一层共享治理提交元数据 helper，并让工作台直接复用统一的 mutation meta 生成逻辑，减少页面层在四组治理提交函数上的重复字符串和 reload 语义维护。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminGovernanceMutationMeta.ts` 与 `adminGovernanceMutationMeta.test.ts`，收口 `report / user / aiTask / template` 四类治理提交的路径前缀、缺参提示、成功 notice 模板、fallback 错误和 reload view 元数据，并锁定 `ready / invalid` 两类输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，新增通用 `applyGovernanceRecordAction(...)`，让四组治理提交复用统一的 mutation meta，而不是继续各自内联维护 `id / path / notice / error / reload` 语义。
+- 本轮不改 moderation 审核提交链路，不改治理动作确认、URL 路由或模块加载协议，只把已稳定的治理提交元数据继续从工作台视图层下沉到共享 helper。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminGovernanceMutationMeta.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从共享工作台状态推进到共享治理提交元数据，四组治理提交函数开始复用统一的 mutation meta 出口。
+- 这次仍然只先收口治理提交元数据 helper；更进一步的 moderation 审核链路收口和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。

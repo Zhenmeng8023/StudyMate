@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import "../components/admin/admin.css";
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref, type Ref } from "vue";
 import type { ApiRequestInit } from "@studymate/api-client";
 import { getSessionInvalidationPrompt } from "@studymate/api-client";
 import { adminGet, adminPost } from "../api/client";
@@ -51,6 +51,7 @@ import {
   isGovernanceModuleView,
   resolveGovernanceActionDispatch
 } from "./adminGovernanceConfig";
+import { resolveGovernanceMutationMeta, type GovernanceMutationKey } from "./adminGovernanceMutationMeta";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
 import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
 import AdminModerationModule from "./modules/AdminModerationModule.vue";
@@ -617,128 +618,56 @@ async function applyModerationAction(item: ModerationItem, action: ModerationAct
   }
 }
 
-async function applyReportAction(record: GovernanceRecord, action: ReportAction) {
+async function applyGovernanceRecordAction(
+  key: GovernanceMutationKey,
+  record: GovernanceRecord,
+  action: string,
+  confirmError: Ref<string>
+) {
   if (!session.value) return;
 
-  const reportID = String(record.id ?? "");
-  if (!reportID) {
-    reportConfirmError.value = "举报标识缺失，无法提交处理结果。";
+  const mutation = resolveGovernanceMutationMeta(key, record, action);
+  if (mutation.kind === "invalid") {
+    confirmError.value = mutation.message;
     return;
   }
 
   loading.value = true;
   errorMessage.value = "";
-  reportConfirmError.value = "";
+  confirmError.value = "";
   governanceErrorStatus.value = null;
   try {
-    const data = await post<{ status: string }>(`/api/v1/admin/reports/${reportID}/${action}`, {});
-    pendingReportAction.value = null;
-    notice.value = `举报 ${reportID} 已更新为 ${data.status}。`;
-    await loadGovernance("community");
+    const data = await post<{ status: string }>(mutation.path, {});
+    runAdminConfirmDialogHandler(key, confirmResetHandlers);
+    notice.value = mutation.successNotice.replace("{status}", data.status);
+    await loadGovernance(mutation.reloadView);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "更新举报状态失败";
+    const message = error instanceof Error ? error.message : mutation.errorFallbackMessage;
     const status = getRequestErrorStatus(error);
     if (status === 409) {
       governanceErrorStatus.value = status;
     }
     errorMessage.value = message;
-    reportConfirmError.value = message;
+    confirmError.value = message;
   } finally {
     loading.value = false;
   }
+}
+
+async function applyReportAction(record: GovernanceRecord, action: ReportAction) {
+  await applyGovernanceRecordAction("report", record, action, reportConfirmError);
 }
 
 async function applyUserAction(record: GovernanceRecord, action: UserAction) {
-  if (!session.value) return;
-
-  const userID = String(record.id ?? "");
-  if (!userID) {
-    userConfirmError.value = "用户标识缺失，无法提交治理动作。";
-    return;
-  }
-
-  loading.value = true;
-  errorMessage.value = "";
-  userConfirmError.value = "";
-  governanceErrorStatus.value = null;
-  try {
-    const data = await post<{ status: string }>(`/api/v1/admin/users/${userID}/${action}`, {});
-    pendingUserAction.value = null;
-    notice.value = `用户 ${userID} 已更新为 ${data.status}。`;
-    await loadGovernance("users");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "更新用户状态失败";
-    const status = getRequestErrorStatus(error);
-    if (status === 409) {
-      governanceErrorStatus.value = status;
-    }
-    errorMessage.value = message;
-    userConfirmError.value = message;
-  } finally {
-    loading.value = false;
-  }
+  await applyGovernanceRecordAction("user", record, action, userConfirmError);
 }
 
 async function applyAITaskAction(record: GovernanceRecord, action: AITaskAction) {
-  if (!session.value) return;
-
-  const taskID = String(record.id ?? "");
-  if (!taskID) {
-    aiTaskConfirmError.value = "AI 任务标识缺失，无法提交治理动作。";
-    return;
-  }
-
-  loading.value = true;
-  errorMessage.value = "";
-  aiTaskConfirmError.value = "";
-  governanceErrorStatus.value = null;
-  try {
-    const data = await post<{ status: string }>(`/api/v1/admin/ai/tasks/${taskID}/${action}`, {});
-    pendingAITaskAction.value = null;
-    notice.value = `AI 任务 ${taskID} 已更新为 ${data.status}。`;
-    await loadGovernance("ai");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "更新 AI 任务状态失败";
-    const status = getRequestErrorStatus(error);
-    if (status === 409) {
-      governanceErrorStatus.value = status;
-    }
-    errorMessage.value = message;
-    aiTaskConfirmError.value = message;
-  } finally {
-    loading.value = false;
-  }
+  await applyGovernanceRecordAction("aiTask", record, action, aiTaskConfirmError);
 }
 
 async function applyTemplateAction(record: GovernanceRecord, action: TemplateAction) {
-  if (!session.value) return;
-
-  const templateID = String(record.id ?? "");
-  if (!templateID) {
-    templateConfirmError.value = "图谱模板标识缺失，无法提交治理动作。";
-    return;
-  }
-
-  loading.value = true;
-  errorMessage.value = "";
-  templateConfirmError.value = "";
-  governanceErrorStatus.value = null;
-  try {
-    const data = await post<{ status: string }>(`/api/v1/admin/diagram-templates/${templateID}/${action}`, {});
-    pendingTemplateAction.value = null;
-    notice.value = `图谱模板 ${templateID} 已更新为 ${data.status}。`;
-    await loadGovernance("graph");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "更新图谱模板状态失败";
-    const status = getRequestErrorStatus(error);
-    if (status === 409) {
-      governanceErrorStatus.value = status;
-    }
-    errorMessage.value = message;
-    templateConfirmError.value = message;
-  } finally {
-    loading.value = false;
-  }
+  await applyGovernanceRecordAction("template", record, action, templateConfirmError);
 }
 
 function requestModerationAction(item: ModerationItem, action: ModerationAction) {
