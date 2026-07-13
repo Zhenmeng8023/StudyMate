@@ -683,6 +683,53 @@
   line-height: 1.7;
 }
 
+.review-source-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid rgba(41, 88, 70, 0.12);
+  border-radius: 14px;
+  background: rgba(240, 247, 242, 0.82);
+}
+
+.review-source-summary span {
+  color: var(--text-1);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.review-source-summary--compact {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  align-items: flex-start;
+}
+
+.review-source-summary--compact span {
+  font-size: 12px;
+}
+
+.review-source-link {
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.review-source-link:hover {
+  text-decoration: underline;
+}
+
+.review-source-hint {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .review-focus-actions {
   justify-content: space-between;
 }

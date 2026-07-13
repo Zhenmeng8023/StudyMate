@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { BookOpenCheck, ChevronLeft, ChevronRight, Layers3, PanelRightClose, PanelRightOpen, Plus, RotateCcw, Sparkles } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   AuthSession,
   CardPayload,
@@ -14,6 +14,7 @@ import {
   reviewCard
 } from "../../api/client";
 import { DataState, Select } from "../../design-system/primitives";
+import { buildReviewSourceBacklink, formatReviewSourceReference } from "./reviewSourceBacklinks";
 
 type ReviewWorkspacePageProps = {
   session: AuthSession;
@@ -60,6 +61,31 @@ function prioritizeRequestedQueueItem(items: ReviewQueueItemPayload[], cardId: s
   const [requested] = nextItems.splice(index, 1);
   nextItems.unshift(requested);
   return nextItems;
+}
+
+function ReviewSourceSummary(props: { card: Pick<CardPayload, "sourceType" | "sourceId">; compact?: boolean }) {
+  const sourceReference = formatReviewSourceReference(props.card);
+  if (!sourceReference) {
+    return null;
+  }
+
+  const backlink = buildReviewSourceBacklink(props.card);
+  const compact = props.compact ?? false;
+
+  return (
+    <div className={compact ? "review-source-summary review-source-summary--compact" : "review-source-summary"}>
+      <span>{`来源：${sourceReference}`}</span>
+      {backlink ? (
+        <Link className="review-source-link" to={backlink.target}>
+          {backlink.actionLabel}
+        </Link>
+      ) : (
+        <small className="review-source-hint">
+          {compact ? "当前来源暂不支持直达" : "当前来源还缺少直达上下文，可先回到对应工作台继续定位。"}
+        </small>
+      )}
+    </div>
+  );
 }
 
 export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
@@ -386,6 +412,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                 <span>预估下次：{formatRelativeInterval(currentItem.schedule.intervalDays)}</span>
                 <span>计划到期：{formatDateTime(currentItem.schedule.dueAt)}</span>
               </div>
+              <ReviewSourceSummary card={currentItem.card} />
               <div className="review-focus-actions">
                 <button className="secondary-button" disabled={busy} onClick={() => setShowAnswer((value) => !value)} type="button">
                   <Sparkles size={16} />
@@ -506,7 +533,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                       <article className={card.id === focusedManagedCardId ? "review-managed-card active" : "review-managed-card"} key={card.id}>
                         <strong>{card.front}</strong>
                         <p>{card.back}</p>
-                        {card.sourceType ? <small>来源：{card.sourceType}</small> : null}
+                        <ReviewSourceSummary card={card} compact />
                       </article>
                     ))}
                   </div>

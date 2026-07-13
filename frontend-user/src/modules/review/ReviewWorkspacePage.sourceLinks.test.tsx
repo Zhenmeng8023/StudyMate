@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getTodayReviewQueue, listDeckCards, listDecks, reviewCard } from "../../api/client";
@@ -116,6 +116,8 @@ describe("ReviewWorkspacePage source links", () => {
     const { container } = renderPage("/review?card=card-1");
 
     expect(await screen.findByText("Linked note card")).toBeInTheDocument();
-    expect(container.querySelectorAll('a[href="/notes?selected=note-1"]')).toHaveLength(2);
+    await waitFor(() => {
+      expect(container.querySelectorAll('a[href="/notes?selected=note-1"]')).toHaveLength(2);
+    });
   });
 });

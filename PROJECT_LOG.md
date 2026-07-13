@@ -7312,3 +7312,29 @@
 
 - `ANKI-030` 现在不再只有“来源查看”的静态诉求，图谱来源反链已经能把用户稳定带回复习工作区里的目标卡片或目标牌组，主学习闭环里的“图谱 -> 复习”链路完整了一段。
 - 这一步还没有补齐“复习 -> 来源正文/笔记/图谱节点”的反向回跳，也还没有实现撤销上一次评分、跳过/埋藏、暂停卡片等 Anki 会话能力；下一步更适合继续沿 `ANKI-030 / WB-033 / LC-010` 把来源回看与反馈回写补全，而不是回到零散页面微调。
+## 2026-07-14 03:00:47 +08:00 | v1.1.0-alpha.243 | 推进 LC-010 / ANKI-030 复习来源工作台回跳入口
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `LC-010 / ANKI-030`，这一轮不回到后台抽壳，而是继续把复习工作区里的真实来源回看入口补齐。
+- 目标是让用户在复习当前卡片时，不只知道这张卡“来自哪里”，而是能直接从复习界面跳回可定位的来源工作台，减少在资料、笔记、图谱、AI 与复习之间来回断链的情况。
+
+### 实际变更
+
+- 新增 `frontend-user/src/modules/review/reviewSourceBacklinks.ts`，复用图谱来源反链映射能力，统一把复习卡片的 `sourceType / sourceId` 解析成可展示的来源摘要与可直达工作台目标。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，为当前复习卡片和卡组卡片列表都接入来源摘要区；当来源是笔记、资料、卡片等可直接定位的类型时，复习页会显示回跳链接；当来源像批注这类仍缺少额外上下文时，则明确提示“暂不支持直达”，避免出现误导性假链接。
+- 新增 `frontend-user/src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`，覆盖 `/review?card=card-1` 场景下当前卡片与管理侧栏卡片列表的来源回跳链接渲染，锁定这条复习来源入口不再退化。
+- 更新 `frontend-user/src/styles/studio-workspaces.css`，补充复习来源摘要、紧凑态来源条和来源链接样式，让来源入口可见但不挤占主复习动作区域。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-030 / LC-010` 的说明推进到“复习页内的来源回看入口已接上”这一阶段。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `ANKI-030` 现在不仅支持“把来源卡片深链拉回复习页”，也支持从复习页继续回到笔记、资料和卡片等可直达来源工作台，主学习闭环里的“复习 -> 来源回看”又闭合了一段。
+- 这一轮仍未解决批注/PDF 锚点这类需要额外 `materialId` 上下文的来源直达，因为当前复习卡片 payload 只有 `sourceType / sourceId`；后续如果要把这类来源也真正打通，更适合继续沿 `ANKI-050 / LC-010` 给卡片补充更完整的 SourceLink 上下文字段，而不是在前端猜测来源路径。
