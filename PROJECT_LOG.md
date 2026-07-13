@@ -6187,3 +6187,28 @@
 
 - `FE-041` 现在继续沿后台治理确认骨架向上收口，五条真实高风险治理确认流开始共享统一的弹层出口。
 - 这次仍然只先收口了确认弹层宿主骨架；更进一步的确认文案策略、权限驱动禁用态和批量治理确认模型还没有统一，后续适合继续沿这条路径推进。
+
+## 2026-07-13 08:04:57 +08:00 | v1.1.0-alpha.199 | 推进 FE-041 管理端共享本地筛选 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理 `AdminWorkspaceView.vue` 里审核列表和治理列表各自维护的本地状态筛选、关键词筛选与状态选项生成逻辑。
+- 目标是补一层共享纯函数 helper，并把审核列表与治理列表的本地筛选规则切到统一出口，让后台列表页的查询与状态筛选不再在工作台里平行维护两套实现。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminModuleFilters.ts` 与 `adminModuleFilters.test.ts`，收口后台本地筛选与状态选项生成的共享纯函数，并锁定状态去重、筛选和关键词匹配行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，把审核列表与治理列表的本地筛选逻辑切到共享 helper，统一状态过滤、关键词过滤与状态下拉选项来源。
+- 保留现有模块页面与 URL / 会话 / 治理动作行为不变，只减少工作台大文件里的重复筛选实现。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminModuleFilters.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享 UI 骨架往共享页面逻辑收口，后台审核列表与治理列表开始复用统一的本地筛选 helper。
+- 这次仍然只先收口了筛选 helper；后续更适合继续把治理列定义、字段文案映射和动作元数据也提到统一配置层，而不是继续留在 `AdminWorkspaceView.vue` 里分散维护。

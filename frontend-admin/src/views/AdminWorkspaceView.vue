@@ -18,6 +18,7 @@ import AdminLoginPanel from "../components/admin/AdminLoginPanel.vue";
 import AdminShellFrame from "../components/admin/AdminShellFrame.vue";
 import { defaultAdminRouteKey, getAdminRoutePath, normalizeAdminRoutePath, parseAdminRoutePath } from "../router";
 import type { AdminRouteKey } from "../router";
+import { buildStatusFilterOptions, filterCollectionByStatusAndQuery, type AdminFilterOption } from "./adminModuleFilters";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
 import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
 import AdminModerationModule from "./modules/AdminModerationModule.vue";
@@ -61,10 +62,7 @@ type ConfirmDialogItem = {
   isOpen: boolean;
   title: string;
 };
-type FilterOption = {
-  label: string;
-  value: string;
-};
+type FilterOption = AdminFilterOption;
 type AdminNavItem = {
   key: AdminView;
   label: string;
@@ -468,18 +466,16 @@ governanceConfig.graph = {
   description: "管理图谱模板的发布状态与基础元数据。"
 };
 
-const visibleModerationItems = computed(() => {
-  const statusFilter = moderationStatusFilter.value.trim().toLowerCase();
-  const items = statusFilter && statusFilter !== "all"
-    ? moderationItems.value.filter((item) => String(item.status ?? "").toLowerCase() === statusFilter)
-    : moderationItems.value;
-  const query = moderationQuery.value.trim().toLowerCase();
-  if (!query) return items;
-  return items.filter((item) =>
-    [item.title, item.summary, item.authorName, item.type, item.status].join(" ").toLowerCase().includes(query)
-  );
-});
+const visibleModerationItems = computed(() =>
+  filterCollectionByStatusAndQuery(moderationItems.value, {
+    getStatus: (item) => item.status,
+    query: moderationQuery.value,
+    statusFilter: moderationStatusFilter.value,
+    toSearchText: (item) => [item.title, item.summary, item.authorName, item.type, item.status].join(" ")
+  })
+);
 const moderationStatusOptions = computed<FilterOption[]>(() => {
+  return buildStatusFilterOptions(moderationItems.value, (item) => item.status);
   const statuses = Array.from(
     new Set(
       moderationItems.value
@@ -493,18 +489,16 @@ const moderationStatusOptions = computed<FilterOption[]>(() => {
     ...statuses.map((status) => ({ label: status, value: status.toLowerCase() }))
   ];
 });
-const visibleGovernanceRows = computed(() => {
-  const statusFilter = governanceStatusFilter.value.trim().toLowerCase();
-  const rows = statusFilter && statusFilter !== "all"
-    ? governanceRows.value.filter((row) => String(row.status ?? "").toLowerCase() === statusFilter)
-    : governanceRows.value;
-  const query = recordQuery.value.trim().toLowerCase();
-  if (!query) return rows;
-  return rows.filter((row) =>
-    Object.values(row).some((value) => formatCell(value).toLowerCase().includes(query))
-  );
-});
+const visibleGovernanceRows = computed(() =>
+  filterCollectionByStatusAndQuery(governanceRows.value, {
+    getStatus: (row) => String(row.status ?? ""),
+    query: recordQuery.value,
+    statusFilter: governanceStatusFilter.value,
+    toSearchText: (row) => Object.values(row).map((value) => formatCell(value)).join(" ")
+  })
+);
 const governanceStatusOptions = computed<FilterOption[]>(() => {
+  return buildStatusFilterOptions(governanceRows.value, (row) => String(row.status ?? ""));
   const statuses = Array.from(
     new Set(
       governanceRows.value
