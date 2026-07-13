@@ -60,7 +60,7 @@ describe("adminWorkspaceMutationState", () => {
       "status:null",
       "post:/api/v1/admin/moderation/materials/material-1/approve",
       "reset",
-      "notice:「资料 A」已更新为 approved。",
+      "notice:“资料 A” 已更新为 approved。",
       "moderation",
       "overview",
       "governance:materials",
@@ -123,6 +123,7 @@ describe("adminWorkspaceMutationState", () => {
     await runAdminWorkspaceGovernanceAction("user", {}, "disable", {
       readStatus: () => null,
       request: async () => ({ status: "disabled" }),
+      reloadView: async () => {},
       resetDialog: vi.fn(),
       resolveErrorMessage: (error, fallbackMessage) =>
         error instanceof Error ? error.message : fallbackMessage,
@@ -144,6 +145,7 @@ describe("adminWorkspaceMutationState", () => {
     await runAdminWorkspaceGovernanceAction("report", { id: "report-1" }, "resolve", {
       readStatus: () => null,
       request: async () => ({ status: "resolved" }),
+      reloadView: async () => {},
       resetDialog: vi.fn(),
       resolveErrorMessage: (error, fallbackMessage) =>
         error instanceof Error ? error.message : fallbackMessage,
@@ -180,6 +182,7 @@ describe("adminWorkspaceMutationState", () => {
     await runAdminWorkspaceGovernanceAction("aiTask", { id: "task-1" }, "retry", {
       readStatus: () => 409,
       request: async () => ({ status: "retrying" }),
+      reloadView: async () => {},
       resetDialog: vi.fn(),
       resolveErrorMessage: (error, fallbackMessage) =>
         error instanceof Error ? error.message : fallbackMessage,

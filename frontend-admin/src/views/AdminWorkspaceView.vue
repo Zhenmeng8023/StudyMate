@@ -51,6 +51,10 @@ import {
   runAdminWorkspaceProfileRefresh
 } from "./adminWorkspaceDataLoad";
 import {
+  runAdminWorkspaceGovernanceAction,
+  runAdminWorkspaceModerationAction
+} from "./adminWorkspaceMutationState";
+import {
   buildGovernanceStatusOptions,
   buildModerationStatusOptions,
   filterGovernanceRows,
@@ -97,9 +101,7 @@ import {
   getGovernanceActions,
   resolveGovernanceActionDispatch
 } from "./adminGovernanceConfig";
-import { resolveAdminModerationMutationMeta } from "./adminModerationMutationMeta";
-import { runAdminGovernanceMutation } from "./adminGovernanceMutationFlow";
-import { resolveGovernanceMutationMeta, type GovernanceMutationKey } from "./adminGovernanceMutationMeta";
+import type { GovernanceMutationKey } from "./adminGovernanceMutationMeta";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
 import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
 import AdminModerationModule from "./modules/AdminModerationModule.vue";
@@ -517,32 +519,32 @@ async function loadGovernance(view: AdminView) {
 
 async function applyModerationAction(item: AdminWorkspaceModerationItem, action: ModerationAction) {
   if (!session.value) return;
-  const mutation = resolveAdminModerationMutationMeta(activeView.value, item, action);
-  loading.value = true;
-  errorMessage.value = "";
-  moderationConfirmError.value = "";
-  if (mutation.clearGovernanceConflictBeforeSubmit) {
-    governanceErrorStatus.value = null;
-  }
-  try {
-    const data = await post<{ status: string }>(mutation.path, { reason: "" });
-    pendingModerationAction.value = null;
-    notice.value = mutation.successNotice.replace("{status}", data.status);
-    await Promise.all([loadModeration(), loadOverview()]);
-    if (mutation.reloadGovernanceView) {
-      await loadGovernance(mutation.reloadGovernanceView);
-    }
-  } catch (error) {
-    const message = getAdminRequestErrorMessage(error, mutation.errorFallbackMessage);
-    const status = getAdminRequestErrorStatus(error);
-    if (mutation.reloadGovernanceView && status !== null && mutation.markGovernanceConflictOnStatus.includes(status)) {
+  await runAdminWorkspaceModerationAction(activeView.value, item, action, {
+    loadGovernance,
+    loadModeration,
+    loadOverview,
+    post: (path, body) => post<{ status: string }>(path, body),
+    readStatus: getAdminRequestErrorStatus,
+    resetDialog: () => {
+      pendingModerationAction.value = null;
+    },
+    resolveErrorMessage: getAdminRequestErrorMessage,
+    setConfirmError: (message) => {
+      moderationConfirmError.value = message;
+    },
+    setError: (message) => {
+      errorMessage.value = message;
+    },
+    setGovernanceStatus: (status) => {
       governanceErrorStatus.value = status;
+    },
+    setLoading: (nextLoading) => {
+      loading.value = nextLoading;
+    },
+    setNotice: (nextNotice) => {
+      notice.value = nextNotice;
     }
-    errorMessage.value = message;
-    moderationConfirmError.value = message;
-  } finally {
-    loading.value = false;
-  }
+  });
 }
 
 async function applyGovernanceRecordAction(
@@ -552,12 +554,7 @@ async function applyGovernanceRecordAction(
   confirmError: Ref<string>
 ) {
   if (!session.value) return;
-
-  loading.value = true;
-  errorMessage.value = "";
-  confirmError.value = "";
-  governanceErrorStatus.value = null;
-  const result = await runAdminGovernanceMutation(key, record, action, {
+  await runAdminWorkspaceGovernanceAction(key, record, action, {
     readStatus: getAdminRequestErrorStatus,
     reloadView: loadGovernance,
     request: (path) => post<{ status: string }>(path, {}),
@@ -565,27 +562,23 @@ async function applyGovernanceRecordAction(
       runAdminConfirmDialogHandler(dialogKey, confirmResetHandlers);
     },
     resolveErrorMessage: (error, fallbackMessage) =>
-      getAdminRequestErrorMessage(error, fallbackMessage)
+      getAdminRequestErrorMessage(error, fallbackMessage),
+    setConfirmError: (message) => {
+      confirmError.value = message;
+    },
+    setError: (message) => {
+      errorMessage.value = message;
+    },
+    setGovernanceStatus: (status) => {
+      governanceErrorStatus.value = status;
+    },
+    setLoading: (nextLoading) => {
+      loading.value = nextLoading;
+    },
+    setNotice: (nextNotice) => {
+      notice.value = nextNotice;
+    }
   });
-
-  if (result.kind === "invalid") {
-    loading.value = false;
-    confirmError.value = result.message;
-    return;
-  }
-
-  if (result.kind === "success") {
-    notice.value = result.notice;
-    loading.value = false;
-    return;
-  }
-
-  if (result.shouldMarkConflict && result.status !== null) {
-    governanceErrorStatus.value = result.status;
-  }
-  errorMessage.value = result.message;
-  confirmError.value = result.message;
-  loading.value = false;
 }
 
 async function applyReportAction(record: GovernanceRecord, action: ReportAction) {
