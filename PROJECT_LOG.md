@@ -1,3 +1,28 @@
+## 2026-07-14 01:49:58 +08:00 | v1.1.0-alpha.235 | 推进 FE-041 管理端确认弹层装配 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 5 组确认弹层的 copy 解析与 dialog metadata 装配逻辑。
+- 目标是补一层共享 confirm-dialog assembly helper，让后台工作台的确认文案与 dialog stack 继续复用统一出口，而不是把这层 computed / copy 编排继续留在壳层组件里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceConfirmDialogs.ts` 与 `adminWorkspaceConfirmDialogs.test.ts`，收口 moderation、report、aiTask、template、user 五组 pending state 到共享 dialog stack 的装配。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让确认弹层从直接维护 5 组 copy computed 与 `buildAdminConfirmDialogs(...)` 改为消费共享 `adminWorkspaceConfirmDialogs` helper，页面层只保留 pending state、error state 与 helper 入参绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端确认弹层 copy / dialog metadata 也已进入共享 helper 出口”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceConfirmDialogs.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享待确认动作打开链推进到共享确认弹层装配链，后台工作台壳层里的 confirm copy/computed 编排进一步变薄。
+- 这次仍然只先收口了 confirm-dialog assembly helper；更进一步的模块级 feature adapter 或模块 props 装配，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-14 01:43:00 +08:00 | v1.1.0-alpha.234 | 推进 FE-041 管理端待确认动作 helper 接线
 ### 任务内容
 

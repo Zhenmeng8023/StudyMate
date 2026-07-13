@@ -20,19 +20,12 @@ import { getGovernanceColumns, type GovernanceRecord } from "../components/admin
 import { defaultAdminRouteKey } from "../router";
 import type { AdminRouteKey } from "../router";
 import {
-  getAITaskConfirmCopy,
-  getModerationConfirmCopy,
-  getReportConfirmCopy,
-  getTemplateConfirmCopy,
-  getUserConfirmCopy
-} from "./adminActionConfirmCopy";
-import {
   resetAdminConfirmDialogState,
   runAdminConfirmDialogHandler,
   type ConfirmDialogHandlerMap,
   type ConfirmDialogKey
 } from "./adminConfirmDialogState";
-import { buildAdminConfirmDialogs, type AdminConfirmDialogItem } from "./adminConfirmDialogs";
+import { buildAdminWorkspaceConfirmDialogs } from "./adminWorkspaceConfirmDialogs";
 import {
   buildAdminWorkspaceConfirmResetHandlers,
   buildAdminWorkspaceConfirmSubmitHandlers
@@ -166,39 +159,29 @@ const moderationBuckets = computed(() => splitModerationItems(moderationItems.va
 const pendingPosts = computed(() => moderationBuckets.value.pendingPosts);
 const pendingMaterials = computed(() => moderationBuckets.value.pendingMaterials);
 const profileInitial = computed(() => profile.value?.displayName?.trim().slice(0, 1) || "A");
-const moderationConfirmCopy = computed(() => getModerationConfirmCopy(pendingModerationAction.value));
 const governanceActions = computed(() => getGovernanceActions(activeView.value, selectedRecord.value));
-const reportConfirmCopy = computed(() => getReportConfirmCopy(pendingReportAction.value));
-const userConfirmCopy = computed(() => getUserConfirmCopy(pendingUserAction.value));
-const aiTaskConfirmCopy = computed(() => getAITaskConfirmCopy(pendingAITaskAction.value));
-const templateConfirmCopy = computed(() => getTemplateConfirmCopy(pendingTemplateAction.value));
-const confirmDialogs = computed<AdminConfirmDialogItem[]>(() =>
-  buildAdminConfirmDialogs({
+const confirmDialogs = computed(() =>
+  buildAdminWorkspaceConfirmDialogs({
     loading: loading.value,
     moderation: {
-      copy: moderationConfirmCopy.value,
       errorMessage: moderationConfirmError.value,
-      isOpen: Boolean(pendingModerationAction.value)
+      pending: pendingModerationAction.value
     },
     report: {
-      copy: reportConfirmCopy.value,
       errorMessage: reportConfirmError.value,
-      isOpen: Boolean(pendingReportAction.value)
+      pending: pendingReportAction.value
     },
     aiTask: {
-      copy: aiTaskConfirmCopy.value,
       errorMessage: aiTaskConfirmError.value,
-      isOpen: Boolean(pendingAITaskAction.value)
+      pending: pendingAITaskAction.value
     },
     template: {
-      copy: templateConfirmCopy.value,
       errorMessage: templateConfirmError.value,
-      isOpen: Boolean(pendingTemplateAction.value)
+      pending: pendingTemplateAction.value
     },
     user: {
-      copy: userConfirmCopy.value,
       errorMessage: userConfirmError.value,
-      isOpen: Boolean(pendingUserAction.value)
+      pending: pendingUserAction.value
     }
   })
 );
