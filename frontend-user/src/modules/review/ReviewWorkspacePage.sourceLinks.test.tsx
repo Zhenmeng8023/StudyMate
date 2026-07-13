@@ -63,6 +63,27 @@ function buildCard(): CardPayload {
   };
 }
 
+function buildAnnotationCard(): CardPayload {
+  return {
+    id: "card-annotation-1",
+    deckId: "deck-1",
+    ownerUserId: "user-1",
+    cardType: "basic",
+    front: "Linked annotation card",
+    back: "Return to the reader annotation context",
+    sourceType: "annotation",
+    sourceId: "annotation-1",
+    sourceMetadata: {
+      materialId: "material-1",
+      annotationId: "annotation-1",
+      page: 12
+    },
+    status: "active",
+    createdAt: "2026-06-02T12:00:00Z",
+    updatedAt: "2026-06-02T12:00:00Z"
+  };
+}
+
 function buildQueue(card: CardPayload): ReviewQueuePayload {
   return {
     dueCount: 1,
@@ -118,6 +139,21 @@ describe("ReviewWorkspacePage source links", () => {
     expect(await screen.findByText("Linked note card")).toBeInTheDocument();
     await waitFor(() => {
       expect(container.querySelectorAll('a[href="/notes?selected=note-1"]')).toHaveLength(2);
+    });
+  });
+
+  it("renders annotation source links with reader page and annotation query context", async () => {
+    const deck = buildDeck();
+    const card = buildAnnotationCard();
+    listDecksMock.mockResolvedValue([deck]);
+    listDeckCardsMock.mockResolvedValue([card]);
+    getTodayReviewQueueMock.mockResolvedValue(buildQueue(card));
+
+    const { container } = renderPage("/review?card=card-annotation-1");
+
+    expect(await screen.findByText("Linked annotation card")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(container.querySelectorAll('a[href="/reader/material-1?page=12&annotation=annotation-1"]')).toHaveLength(2);
     });
   });
 });
