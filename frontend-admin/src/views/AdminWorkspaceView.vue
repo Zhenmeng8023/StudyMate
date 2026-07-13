@@ -40,6 +40,7 @@ import {
   groupAdminNavItems,
   type AdminNavItem
 } from "./adminViewMeta";
+import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import {
   resetAdminWorkspaceState,
   type AdminWorkspaceResetHandlers,
@@ -443,15 +444,16 @@ function normalizeAdminLocation() {
 }
 
 function loadActiveView(view: AdminView) {
-  if (view === "dashboard") {
+  const plan = resolveAdminViewLoadPlan(view);
+  if (plan.kind === "dashboard") {
     void Promise.all([loadOverview(), loadModeration()]);
     return;
   }
-  if (view === "moderation") {
+  if (plan.kind === "moderation") {
     void loadModeration();
     return;
   }
-  void loadGovernance(view);
+  void loadGovernance(plan.view);
 }
 
 function handleAdminPopstate() {
@@ -550,7 +552,9 @@ async function loadModeration() {
 
 async function loadGovernance(view: AdminView) {
   if (!session.value || view === "dashboard" || view === "moderation") return;
-  const preserveExistingRows = governanceRowsView.value === view && governanceRows.value.length > 0;
+  const plan = resolveAdminViewLoadPlan(view);
+  if (plan.kind !== "governance") return;
+  const preserveExistingRows = shouldPreserveGovernanceRows(governanceRowsView.value, plan.view, governanceRows.value.length);
   loading.value = true;
   errorMessage.value = "";
   governanceErrorStatus.value = null;
@@ -560,7 +564,7 @@ async function loadGovernance(view: AdminView) {
     selectedRecord.value = null;
   }
   try {
-    const config = governanceModuleConfig[view];
+    const config = governanceModuleConfig[plan.view];
     governanceRows.value = await get<GovernanceRecord[]>(config.endpoint, config.query).catch((error) => {
       governanceErrorStatus.value = getRequestErrorStatus(error);
       if (governanceErrorStatus.value === 403) {
@@ -571,10 +575,10 @@ async function loadGovernance(view: AdminView) {
       }
       throw error;
     });
-    governanceRowsView.value = view;
+    governanceRowsView.value = plan.view;
     selectedRecord.value = governanceRows.value[0] ?? null;
-    if (view === "ai") {
-      governanceSummary.value = await get<GovernanceRecord>("/api/v1/admin/ai/usage");
+    if (plan.summaryEndpoint) {
+      governanceSummary.value = await get<GovernanceRecord>(plan.summaryEndpoint);
     } else {
       governanceSummary.value = null;
     }

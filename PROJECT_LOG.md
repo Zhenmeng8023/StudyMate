@@ -6392,3 +6392,25 @@
 
 - `FE-041` 现在继续从共享工作台状态推进到共享治理提交元数据，四组治理提交函数开始复用统一的 mutation meta 出口。
 - 这次仍然只先收口治理提交元数据 helper；更进一步的 moderation 审核链路收口和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 19:19:40 +08:00 | v1.1.0-alpha.208 | 推进 FE-041 管理端共享加载元数据 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `dashboard / moderation / governance` 三类视图的加载分支、governance rows 保留判断和 AI summary 特例。
+- 目标是补一层共享加载元数据 helper，并让工作台直接复用统一的 load plan、summary endpoint 和 preserveRows 判断逻辑，减少页面层对视图加载计划的重复分支维护。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminViewLoadMeta.ts` 与 `adminViewLoadMeta.test.ts`，收口后台视图加载计划、AI summary endpoint 和 governance rows 保留判断，并锁定 `dashboard / moderation / governance` 三类 load plan 输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `loadActiveView(...)` 与 `loadGovernance(...)` 改为直接消费共享 `resolveAdminViewLoadPlan(...)` 和 `shouldPreserveGovernanceRows(...)`，不再在工作台里重复内联这些分支。
+- 本轮不改模块请求路径、治理动作、会话协议和 URL 路由，只把已稳定的加载协调元数据继续从工作台视图层下沉到共享 helper。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminViewLoadMeta.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从共享治理提交元数据推进到共享加载元数据，工作台里的视图加载计划和 AI summary 特例开始复用统一的 load plan 出口。
+- 这次仍然只先收口加载元数据 helper；更进一步的模块级 feature 边界和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
