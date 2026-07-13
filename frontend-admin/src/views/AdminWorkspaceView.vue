@@ -45,6 +45,7 @@ import { resolveGovernanceDataState, resolveModerationDataState } from "./adminV
 import { runAdminViewLoadRequest } from "./adminViewLoadRequest";
 import { getAdminRequestErrorMessage, getAdminRequestErrorStatus } from "./adminRequestError";
 import { runAdminViewReadRequest } from "./adminViewReadRequest";
+import { runAdminWorkspaceLoginBootstrap } from "./adminWorkspaceBootstrap";
 import {
   buildGovernanceStatusOptions,
   buildModerationStatusOptions,
@@ -369,11 +370,13 @@ async function login() {
   errorMessage.value = "";
   clearSessionInvalidation();
   try {
-    const data = await post<AdminSessionPayload>("/api/v1/admin/login", form);
-    persistSession(data);
+    await runAdminWorkspaceLoginBootstrap(activeView.value, {
+      authenticate: () => post<AdminSessionPayload>("/api/v1/admin/login", form),
+      loadActiveView,
+      persistSession,
+      refreshProfile
+    });
     notice.value = getAdminLoginSuccessNotice();
-    await refreshProfile();
-    loadActiveView(activeView.value);
   } catch (error) {
     errorMessage.value = getAdminRequestErrorMessage(error, "管理员登录失败");
   } finally {

@@ -1,3 +1,27 @@
+## 2026-07-13 22:08:40 +08:00 | v1.1.0-alpha.222 | 推进 FE-041 管理端工作台登录自举 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里登录成功后仍内联维护的 session 持久化、profile 刷新与当前 view 加载顺序。
+- 目标是补一层共享 bootstrap helper，并让后台登录成功后的最小自举链路复用统一出口，减少工作台组件继续手写这段稳定编排。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceBootstrap.ts` 与 `adminWorkspaceBootstrap.test.ts`，收口 `runAdminWorkspaceLoginBootstrap(...)` 出口，统一处理登录成功后的 session 持久化、profile 刷新与当前 view 加载顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `login()` 改为消费共享 `adminWorkspaceBootstrap` helper，而不是继续在组件里直接串联登录后的自举步骤。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，补一条后台登录成功后 dashboard 数据会完成自举加载的页面级回归。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端登录成功后的工作台自举也已进入共享 helper 出口”。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceBootstrap.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享视图加载编排推进到共享登录自举顺序，后台登录成功后的 session 持久化、profile 刷新与当前 view 加载开始复用统一出口。
+- 这次仍然只先收口了 login bootstrap helper；更进一步的 mount/read 协调与治理提交后的刷新编排仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-13 22:00:10 +08:00 | v1.1.0-alpha.221 | 推进 FE-041 管理端工作台加载编排 helper 接线
 ### 任务内容
 
