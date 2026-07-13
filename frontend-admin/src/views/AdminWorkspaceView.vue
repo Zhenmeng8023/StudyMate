@@ -76,6 +76,7 @@ import { runAdminWorkspaceLogin } from "./adminWorkspaceLogin";
 import { runAdminWorkspaceLogout } from "./adminWorkspaceLogout";
 import { runAdminWorkspaceSessionCleared } from "./adminWorkspaceSessionCleared";
 import { runAdminWorkspaceViewSwitch } from "./adminWorkspaceViewSwitch";
+import { runAdminGovernanceActionRequest } from "./adminGovernanceActionRequest";
 import {
   getAdminGovernanceLoadedNotice,
   getAdminLoginSuccessNotice,
@@ -615,44 +616,37 @@ function requestModerationAction(item: AdminWorkspaceModerationItem, action: Mod
 
 function requestGovernanceAction(payload: { action: string; record: GovernanceRecord }) {
   const dispatch = resolveGovernanceActionDispatch(activeView.value, payload);
-  switch (dispatch.kind) {
-    case "report":
-      reportConfirmError.value = "";
-      pendingReportAction.value = {
-        action: dispatch.action,
-        record: dispatch.record
-      };
-      return;
-    case "moderation":
-      requestModerationAction(dispatch.item, dispatch.action);
-      return;
-    case "user":
-      userConfirmError.value = "";
-      pendingUserAction.value = {
-        action: dispatch.action,
-        record: dispatch.record
-      };
-      return;
-    case "aiTask":
+  runAdminGovernanceActionRequest(dispatch, {
+    clearAITaskError: () => {
       aiTaskConfirmError.value = "";
-      pendingAITaskAction.value = {
-        action: dispatch.action,
-        record: dispatch.record
-      };
-      return;
-    case "template":
+    },
+    clearReportError: () => {
+      reportConfirmError.value = "";
+    },
+    clearTemplateError: () => {
       templateConfirmError.value = "";
-      pendingTemplateAction.value = {
-        action: dispatch.action,
-        record: dispatch.record
-      };
-      return;
-    case "invalid":
-      errorMessage.value = dispatch.message ?? "无法提交治理动作。";
-      return;
-    case "noop":
-      return;
-  }
+    },
+    clearUserError: () => {
+      userConfirmError.value = "";
+    },
+    invalidFallbackMessage: "无法提交治理动作。",
+    requestModerationAction,
+    setAITaskAction: (value) => {
+      pendingAITaskAction.value = value;
+    },
+    setError: (message) => {
+      errorMessage.value = message;
+    },
+    setReportAction: (value) => {
+      pendingReportAction.value = value;
+    },
+    setTemplateAction: (value) => {
+      pendingTemplateAction.value = value;
+    },
+    setUserAction: (value) => {
+      pendingUserAction.value = value;
+    }
+  });
 }
 
 function handleConfirmDialogCancel(key: ConfirmDialogKey) {

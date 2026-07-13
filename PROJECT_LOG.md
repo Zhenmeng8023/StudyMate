@@ -6958,3 +6958,25 @@
 
 - `FE-041` 现在继续从共享 `adminWorkspaceBootstrap` 推进到共享 `adminWorkspaceLogin` 执行壳层，管理端登录时的临时状态清理与提示同步也开始复用统一出口。
 - 这次仍然只先收口登录 execution helper；更进一步的 `loadActiveView(...)` 深层加载协调与确认弹层提交入口，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+## 2026-07-14 00:36:20 +08:00 | v1.1.0-alpha.232 | 推进 FE-041 管理端治理动作请求 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `requestGovernanceAction(...)` 这条仍直接维护 dispatch 分发、确认错误清理、pending action 打开与 invalid/noop 兜底的壳层执行口。
+- 目标是补一层共享 governance action request helper，让后台工作台在治理动作点击阶段也复用统一执行出口，而不是继续把这段稳定分发链留在组件层。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminGovernanceActionRequest.ts` 与 `adminGovernanceActionRequest.test.ts`，收口 `report / moderation / user / aiTask / template / invalid / noop` 七类 dispatch 的确认错误清理、pending action 打开、moderation 转交与错误兜底顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `requestGovernanceAction(...)` 改为先解析 `resolveGovernanceActionDispatch(...)`，再消费共享 `runAdminGovernanceActionRequest(...)` helper，而不是继续在组件里手写整段 switch 分发。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端治理动作请求分发也已进入共享 helper 出口”。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminGovernanceActionRequest.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享 `adminWorkspaceLogin` 推进到共享 `adminGovernanceActionRequest`，后台治理动作在进入确认弹层前的分发、错误清理与 invalid/noop 兜底也开始复用统一出口。
+- 这次仍然只先收口治理动作请求 execution helper；更进一步的 `loadModeration()` / `loadGovernance()` 壳层加载编排或确认弹层提交入口，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
