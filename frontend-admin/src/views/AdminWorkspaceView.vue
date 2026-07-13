@@ -34,6 +34,10 @@ import {
 } from "./adminConfirmDialogState";
 import { buildAdminConfirmDialogs, type AdminConfirmDialogItem } from "./adminConfirmDialogs";
 import {
+  buildAdminWorkspaceConfirmResetHandlers,
+  buildAdminWorkspaceConfirmSubmitHandlers
+} from "./adminWorkspaceConfirmState";
+import {
   buildAdminNavItems,
   getAdminActiveCountLabel,
   getAdminViewDescription,
@@ -242,56 +246,53 @@ const visibleGovernanceRows = computed(() => filterGovernanceRows(governanceRows
 const governanceStatusOptions = computed(() => buildGovernanceStatusOptions(governanceRows.value));
 const governanceColumns = computed(() => getGovernanceColumns(governanceRows.value));
 
-const confirmResetHandlers: ConfirmDialogHandlerMap<() => void> = {
-  moderation: () => {
-    pendingModerationAction.value = null;
-    moderationConfirmError.value = "";
-  },
-  report: () => {
-    pendingReportAction.value = null;
-    reportConfirmError.value = "";
-  },
-  user: () => {
-    pendingUserAction.value = null;
-    userConfirmError.value = "";
-  },
-  aiTask: () => {
-    pendingAITaskAction.value = null;
-    aiTaskConfirmError.value = "";
-  },
-  template: () => {
-    pendingTemplateAction.value = null;
-    templateConfirmError.value = "";
-  }
-};
+const confirmResetHandlers: ConfirmDialogHandlerMap<() => void> =
+  buildAdminWorkspaceConfirmResetHandlers({
+    setAITaskAction: (value) => {
+      pendingAITaskAction.value = value;
+    },
+    setAITaskError: (value) => {
+      aiTaskConfirmError.value = value;
+    },
+    setModerationAction: (value) => {
+      pendingModerationAction.value = value;
+    },
+    setModerationError: (value) => {
+      moderationConfirmError.value = value;
+    },
+    setReportAction: (value) => {
+      pendingReportAction.value = value;
+    },
+    setReportError: (value) => {
+      reportConfirmError.value = value;
+    },
+    setTemplateAction: (value) => {
+      pendingTemplateAction.value = value;
+    },
+    setTemplateError: (value) => {
+      templateConfirmError.value = value;
+    },
+    setUserAction: (value) => {
+      pendingUserAction.value = value;
+    },
+    setUserError: (value) => {
+      userConfirmError.value = value;
+    }
+  });
 
-const confirmSubmitHandlers: ConfirmDialogHandlerMap<() => Promise<void>> = {
-  moderation: async () => {
-    const pending = pendingModerationAction.value;
-    if (!pending) return;
-    await applyModerationAction(pending.item, pending.action);
-  },
-  report: async () => {
-    const pending = pendingReportAction.value;
-    if (!pending) return;
-    await applyReportAction(pending.record, pending.action);
-  },
-  user: async () => {
-    const pending = pendingUserAction.value;
-    if (!pending) return;
-    await applyUserAction(pending.record, pending.action);
-  },
-  aiTask: async () => {
-    const pending = pendingAITaskAction.value;
-    if (!pending) return;
-    await applyAITaskAction(pending.record, pending.action);
-  },
-  template: async () => {
-    const pending = pendingTemplateAction.value;
-    if (!pending) return;
-    await applyTemplateAction(pending.record, pending.action);
-  }
-};
+const confirmSubmitHandlers: ConfirmDialogHandlerMap<() => Promise<void>> =
+  buildAdminWorkspaceConfirmSubmitHandlers({
+    applyAITaskAction,
+    applyModerationAction,
+    applyReportAction,
+    applyTemplateAction,
+    applyUserAction,
+    readAITaskAction: () => pendingAITaskAction.value,
+    readModerationAction: () => pendingModerationAction.value,
+    readReportAction: () => pendingReportAction.value,
+    readTemplateAction: () => pendingTemplateAction.value,
+    readUserAction: () => pendingUserAction.value
+  });
 
 function clearPendingConfirmState() {
   resetAdminConfirmDialogState(confirmResetHandlers);

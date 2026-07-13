@@ -1,3 +1,28 @@
+## 2026-07-14 01:36:00 +08:00 | v1.1.0-alpha.233 | 推进 FE-041 管理端确认状态 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里确认弹层 reset/submit 映射表这段仍直接维护的壳层编排。
+- 目标是补一层共享 confirm-state helper，让后台工作台的确认弹层重置与按 key 提交流程继续复用统一出口，而不是把这组映射表继续留在壳层组件里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceConfirmState.ts` 与 `adminWorkspaceConfirmState.test.ts`，收口确认弹层的 reset/submit 映射表和 pending 为空时的 noop 逻辑。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `confirmResetHandlers` 与 `confirmSubmitHandlers` 改为消费共享 `adminWorkspaceConfirmState` helper，页面层只保留 pending state、error state 和真实动作函数。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端确认状态链也已进入共享 helper 出口”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceConfirmState.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享治理动作状态链推进到共享确认状态链，后台工作台壳层里的 confirm 编排进一步变薄。
+- 这次仍然只先收口了 confirm-state helper；更进一步的 pending action open state 与模块级 feature adapter，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-14 01:28:00 +08:00 | v1.1.0-alpha.232 | 推进 FE-041 管理端治理动作状态 helper 接线
 ### 任务内容
 

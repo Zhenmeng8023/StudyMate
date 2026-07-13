@@ -4,26 +4,37 @@ import {
   buildAdminWorkspaceConfirmSubmitHandlers
 } from "./adminWorkspaceConfirmState";
 import { resetAdminConfirmDialogState, runAdminConfirmDialogHandler } from "./adminConfirmDialogState";
+import type { GovernanceRecord } from "../components/admin/governanceRecord";
 
 describe("adminWorkspaceConfirmState", () => {
   it("builds reset handlers that clear every pending confirm state and error", () => {
-    let moderationPending: { action: "approve"; item: { id: string } } | null = {
+    let moderationPending:
+      | { action: "approve" | "reject" | "hide"; item: { id: string } }
+      | null = {
       action: "approve",
       item: { id: "post-1" }
     };
-    let reportPending: { action: "resolve"; record: { id: string } } | null = {
+    let reportPending:
+      | { action: "resolve" | "dismiss"; record: GovernanceRecord }
+      | null = {
       action: "resolve",
       record: { id: "report-1" }
     };
-    let userPending: { action: "disable"; record: { id: string } } | null = {
+    let userPending:
+      | { action: "disable" | "activate"; record: GovernanceRecord }
+      | null = {
       action: "disable",
       record: { id: "user-1" }
     };
-    let aiTaskPending: { action: "retry"; record: { id: string } } | null = {
+    let aiTaskPending:
+      | { action: "retry" | "cancel"; record: GovernanceRecord }
+      | null = {
       action: "retry",
       record: { id: "task-1" }
     };
-    let templatePending: { action: "publish"; record: { id: string } } | null = {
+    let templatePending:
+      | { action: "publish" | "unpublish"; record: GovernanceRecord }
+      | null = {
       action: "publish",
       record: { id: "template-1" }
     };
