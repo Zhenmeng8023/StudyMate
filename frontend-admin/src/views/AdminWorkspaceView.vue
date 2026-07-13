@@ -72,6 +72,7 @@ import { runAdminWorkspaceViewLoad } from "./adminWorkspaceViewLoad";
 import { runAdminWorkspaceMountBootstrap } from "./adminWorkspaceMountBootstrap";
 import { runAdminWorkspacePopstate } from "./adminWorkspacePopstate";
 import { runAdminWorkspaceRefresh } from "./adminWorkspaceRefresh";
+import { runAdminWorkspaceLogin } from "./adminWorkspaceLogin";
 import { runAdminWorkspaceLogout } from "./adminWorkspaceLogout";
 import { runAdminWorkspaceSessionCleared } from "./adminWorkspaceSessionCleared";
 import { runAdminWorkspaceViewSwitch } from "./adminWorkspaceViewSwitch";
@@ -391,22 +392,31 @@ onBeforeUnmount(() => {
 });
 
 async function login() {
-  loading.value = true;
-  errorMessage.value = "";
-  clearSessionInvalidation();
-  try {
-    await runAdminWorkspaceLoginBootstrap(activeView.value, {
-      authenticate: () => post<AdminSessionPayload>("/api/v1/admin/login", form),
-      loadActiveView,
-      persistSession,
-      refreshProfile
-    });
-    notice.value = getAdminLoginSuccessNotice();
-  } catch (error) {
-    errorMessage.value = getAdminRequestErrorMessage(error, "管理员登录失败");
-  } finally {
-    loading.value = false;
-  }
+  await runAdminWorkspaceLogin(activeView.value, {
+    bootstrap: (view) =>
+      runAdminWorkspaceLoginBootstrap(view, {
+        authenticate: () => post<AdminSessionPayload>("/api/v1/admin/login", form),
+        loadActiveView,
+        persistSession,
+        refreshProfile
+      }),
+    clearError: () => {
+      errorMessage.value = "";
+    },
+    clearSessionInvalidation,
+    fallbackMessage: "管理员登录失败",
+    getSuccessNotice: getAdminLoginSuccessNotice,
+    resolveErrorMessage: getAdminRequestErrorMessage,
+    setError: (message) => {
+      errorMessage.value = message;
+    },
+    setLoading: (nextLoading) => {
+      loading.value = nextLoading;
+    },
+    setNotice: (nextNotice) => {
+      notice.value = nextNotice;
+    }
+  });
 }
 
 async function refreshProfile() {

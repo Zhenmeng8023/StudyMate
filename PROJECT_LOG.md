@@ -6936,3 +6936,25 @@
 
 - `FE-041` 现在继续从共享确认弹层组装推进到共享工作台提示语义，登录、会话失效、列表加载和退出提示开始复用统一出口。
 - 这次仍然只先收口了工作台提示 helper；更进一步的工作台级 loading/error/notice 协调状态本身仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+## 2026-07-14 00:27:30 +08:00 | v1.1.0-alpha.231 | 推进 FE-041 管理端登录执行 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `login()` 这条仍直接维护 `loading / error / session invalidation 清理 / 成功提示` 的壳层执行口。
+- 目标是补一层共享 login execution helper，让后台工作台在管理员登录时也复用统一执行出口，而不是继续把这段稳定编排留在组件层。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceLogin.ts` 与 `adminWorkspaceLogin.test.ts`，收口登录时的 loading 开关、错误清理、session invalidation 清理、bootstrap 调度、成功提示与失败消息回填顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `login()` 改为消费共享 `runAdminWorkspaceLogin(...)` helper，同时继续复用既有 `runAdminWorkspaceLoginBootstrap(...)` 处理登录成功后的 session 持久化、profile 刷新与当前 view 加载。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端登录执行也已进入共享 helper 出口”。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLogin.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享 `adminWorkspaceBootstrap` 推进到共享 `adminWorkspaceLogin` 执行壳层，管理端登录时的临时状态清理与提示同步也开始复用统一出口。
+- 这次仍然只先收口登录 execution helper；更进一步的 `loadActiveView(...)` 深层加载协调与确认弹层提交入口，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
