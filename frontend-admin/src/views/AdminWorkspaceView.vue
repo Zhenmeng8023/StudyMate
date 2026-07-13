@@ -19,6 +19,13 @@ import AdminShellFrame from "../components/admin/AdminShellFrame.vue";
 import { formatGovernanceCell, getGovernanceColumns, type GovernanceRecord } from "../components/admin/governanceRecord";
 import { defaultAdminRouteKey, getAdminRoutePath, normalizeAdminRoutePath, parseAdminRoutePath } from "../router";
 import type { AdminRouteKey } from "../router";
+import {
+  getAITaskConfirmCopy,
+  getModerationConfirmCopy,
+  getReportConfirmCopy,
+  getTemplateConfirmCopy,
+  getUserConfirmCopy
+} from "./adminActionConfirmCopy";
 import { buildStatusFilterOptions, filterCollectionByStatusAndQuery, type AdminFilterOption } from "./adminModuleFilters";
 import {
   getGovernanceActions,
@@ -113,162 +120,72 @@ const loggedIn = computed(() => Boolean(session.value));
 const pendingPosts = computed(() => moderationItems.value.filter((item) => item.type === "post"));
 const pendingMaterials = computed(() => moderationItems.value.filter((item) => item.type === "material"));
 const profileInitial = computed(() => profile.value?.displayName?.trim().slice(0, 1) || "A");
-const moderationConfirmTitle = computed(() => {
-  const pending = pendingModerationAction.value;
-  if (!pending) return "";
-  if (pending.action === "approve") return pending.item.status === "hidden" ? "确认恢复这条资料" : "确认通过这条内容";
-  if (pending.action === "reject") return "确认驳回这条内容";
-  return "确认隐藏这条内容";
-});
-const moderationConfirmDescription = computed(() => {
-  const pending = pendingModerationAction.value;
-  if (!pending) return "";
-  if (pending.action === "approve") {
-    if (pending.item.status === "hidden") return `恢复后，“${pending.item.title}”会重新回到可见资料状态。`;
-    return `通过后，“${pending.item.title}”将按审核结果进入可见状态。`;
-  }
-  if (pending.action === "reject") return `驳回后，“${pending.item.title}”会退出当前待处理队列。`;
-  return `隐藏后，“${pending.item.title}”将不再继续对外展示。`;
-});
-const moderationConfirmLabel = computed(() => {
-  const pending = pendingModerationAction.value;
-  if (!pending) return "确认";
-  if (pending.action === "approve") return pending.item.status === "hidden" ? "确认恢复" : "确认通过";
-  if (pending.action === "reject") return "确认驳回";
-  return "确认隐藏";
-});
-const moderationConfirmingLabel = computed(() => {
-  const pending = pendingModerationAction.value;
-  if (!pending) return "处理中…";
-  if (pending.action === "approve") return pending.item.status === "hidden" ? "恢复中…" : "通过中…";
-  if (pending.action === "reject") return "驳回中…";
-  return "隐藏中…";
-});
-const moderationConfirmTone = computed(() => (pendingModerationAction.value?.action === "approve" ? "default" : "danger"));
+const moderationConfirmCopy = computed(() => getModerationConfirmCopy(pendingModerationAction.value));
 const governanceActions = computed(() => getGovernanceActions(activeView.value, selectedRecord.value));
-const reportConfirmTitle = computed(() => {
-  const pending = pendingReportAction.value;
-  if (!pending) return "";
-  if (pending.action === "resolve") return "确认标记这条举报已处理";
-  return "确认忽略这条举报";
-});
-const reportConfirmDescription = computed(() => {
-  const pending = pendingReportAction.value;
-  if (!pending) return "";
-  if (pending.action === "resolve") return "处理后，这条举报会退出待处理状态，并记录处理人和处理时间。";
-  return "忽略后，这条举报会标记为已忽略，并保留完整审计记录。";
-});
-const reportConfirmLabel = computed(() => (pendingReportAction.value?.action === "dismiss" ? "确认忽略" : "确认已处理"));
-const reportConfirmingLabel = computed(() => (pendingReportAction.value?.action === "dismiss" ? "忽略中..." : "处理中..."));
-const reportConfirmTone = computed(() => (pendingReportAction.value?.action === "dismiss" ? "danger" : "default"));
-const userConfirmTitle = computed(() => {
-  const pending = pendingUserAction.value;
-  if (!pending) return "";
-  return pending.action === "disable" ? "确认禁用这个用户" : "确认恢复这个用户";
-});
-const userConfirmDescription = computed(() => {
-  const pending = pendingUserAction.value;
-  if (!pending) return "";
-  const username = String(pending.record.username ?? pending.record.displayName ?? pending.record.id ?? "");
-  return pending.action === "disable"
-    ? `禁用后，${username} 将不能继续登录，后续 refresh 也会被拒绝。`
-    : `恢复后，${username} 可以重新登录并继续使用现有账号。`;
-});
-const userConfirmLabel = computed(() => (pendingUserAction.value?.action === "disable" ? "确认禁用" : "确认恢复"));
-const userConfirmingLabel = computed(() => (pendingUserAction.value?.action === "disable" ? "禁用中..." : "恢复中..."));
-const userConfirmTone = computed(() => (pendingUserAction.value?.action === "disable" ? "danger" : "default"));
-const aiTaskConfirmTitle = computed(() => {
-  const pending = pendingAITaskAction.value;
-  if (!pending) return "";
-  return pending.action === "retry" ? "确认重试这个 AI 任务" : "确认取消这个 AI 任务";
-});
-const aiTaskConfirmDescription = computed(() => {
-  const pending = pendingAITaskAction.value;
-  if (!pending) return "";
-  const taskID = String(pending.record.id ?? "");
-  return pending.action === "retry"
-    ? `重试后，任务 ${taskID} 会重新回到待处理状态，并清空当前失败信息。`
-    : `取消后，任务 ${taskID} 会退出待处理状态，并保留可追溯审计记录。`;
-});
-const aiTaskConfirmLabel = computed(() => (pendingAITaskAction.value?.action === "cancel" ? "确认取消" : "确认重试"));
-const aiTaskConfirmingLabel = computed(() => (pendingAITaskAction.value?.action === "cancel" ? "取消中..." : "重试中..."));
-const aiTaskConfirmTone = computed(() => (pendingAITaskAction.value?.action === "cancel" ? "danger" : "default"));
-const templateConfirmTitle = computed(() => {
-  const pending = pendingTemplateAction.value;
-  if (!pending) return "";
-  return pending.action === "publish" ? "确认发布这个图谱模板" : "确认下架这个图谱模板";
-});
-const templateConfirmDescription = computed(() => {
-  const pending = pendingTemplateAction.value;
-  if (!pending) return "";
-  const name = String(pending.record.name ?? pending.record.title ?? pending.record.id ?? "");
-  return pending.action === "publish"
-    ? `${name} 发布后会重新出现在用户端图谱模板列表中。`
-    : `${name} 下架后会从用户端图谱模板列表中隐藏，但保留后台治理记录。`;
-});
-const templateConfirmLabel = computed(() => (pendingTemplateAction.value?.action === "publish" ? "确认发布" : "确认下架"));
-const templateConfirmingLabel = computed(() => (pendingTemplateAction.value?.action === "publish" ? "发布中..." : "下架中..."));
-const templateConfirmTone = computed(() => (pendingTemplateAction.value?.action === "publish" ? "default" : "danger"));
+const reportConfirmCopy = computed(() => getReportConfirmCopy(pendingReportAction.value));
+const userConfirmCopy = computed(() => getUserConfirmCopy(pendingUserAction.value));
+const aiTaskConfirmCopy = computed(() => getAITaskConfirmCopy(pendingAITaskAction.value));
+const templateConfirmCopy = computed(() => getTemplateConfirmCopy(pendingTemplateAction.value));
 const confirmDialogs = computed<ConfirmDialogItem[]>(() => [
   {
     key: "moderation" as const,
     cancelLabel: "取消",
-    confirmLabel: moderationConfirmLabel.value,
-    confirmTone: moderationConfirmTone.value,
+    confirmLabel: moderationConfirmCopy.value.confirmLabel,
+    confirmTone: moderationConfirmCopy.value.confirmTone,
     confirming: loading.value,
-    confirmingLabel: moderationConfirmingLabel.value,
-    description: moderationConfirmDescription.value,
+    confirmingLabel: moderationConfirmCopy.value.confirmingLabel,
+    description: moderationConfirmCopy.value.description,
     errorMessage: moderationConfirmError.value,
     isOpen: Boolean(pendingModerationAction.value),
-    title: moderationConfirmTitle.value
+    title: moderationConfirmCopy.value.title
   },
   {
     key: "report" as const,
     cancelLabel: "取消",
-    confirmLabel: reportConfirmLabel.value,
-    confirmTone: reportConfirmTone.value,
+    confirmLabel: reportConfirmCopy.value.confirmLabel,
+    confirmTone: reportConfirmCopy.value.confirmTone,
     confirming: loading.value,
-    confirmingLabel: reportConfirmingLabel.value,
-    description: reportConfirmDescription.value,
+    confirmingLabel: reportConfirmCopy.value.confirmingLabel,
+    description: reportConfirmCopy.value.description,
     errorMessage: reportConfirmError.value,
     isOpen: Boolean(pendingReportAction.value),
-    title: reportConfirmTitle.value
+    title: reportConfirmCopy.value.title
   },
   {
     key: "aiTask" as const,
     cancelLabel: "取消",
-    confirmLabel: aiTaskConfirmLabel.value,
-    confirmTone: aiTaskConfirmTone.value,
+    confirmLabel: aiTaskConfirmCopy.value.confirmLabel,
+    confirmTone: aiTaskConfirmCopy.value.confirmTone,
     confirming: loading.value,
-    confirmingLabel: aiTaskConfirmingLabel.value,
-    description: aiTaskConfirmDescription.value,
+    confirmingLabel: aiTaskConfirmCopy.value.confirmingLabel,
+    description: aiTaskConfirmCopy.value.description,
     errorMessage: aiTaskConfirmError.value,
     isOpen: Boolean(pendingAITaskAction.value),
-    title: aiTaskConfirmTitle.value
+    title: aiTaskConfirmCopy.value.title
   },
   {
     key: "template" as const,
     cancelLabel: "取消",
-    confirmLabel: templateConfirmLabel.value,
-    confirmTone: templateConfirmTone.value,
+    confirmLabel: templateConfirmCopy.value.confirmLabel,
+    confirmTone: templateConfirmCopy.value.confirmTone,
     confirming: loading.value,
-    confirmingLabel: templateConfirmingLabel.value,
-    description: templateConfirmDescription.value,
+    confirmingLabel: templateConfirmCopy.value.confirmingLabel,
+    description: templateConfirmCopy.value.description,
     errorMessage: templateConfirmError.value,
     isOpen: Boolean(pendingTemplateAction.value),
-    title: templateConfirmTitle.value
+    title: templateConfirmCopy.value.title
   },
   {
     key: "user" as const,
     cancelLabel: "取消",
-    confirmLabel: userConfirmLabel.value,
-    confirmTone: userConfirmTone.value,
+    confirmLabel: userConfirmCopy.value.confirmLabel,
+    confirmTone: userConfirmCopy.value.confirmTone,
     confirming: loading.value,
-    confirmingLabel: userConfirmingLabel.value,
-    description: userConfirmDescription.value,
+    confirmingLabel: userConfirmCopy.value.confirmingLabel,
+    description: userConfirmCopy.value.description,
     errorMessage: userConfirmError.value,
     isOpen: Boolean(pendingUserAction.value),
-    title: userConfirmTitle.value
+    title: userConfirmCopy.value.title
   }
 ]);
 

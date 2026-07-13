@@ -6282,3 +6282,25 @@
 
 - `FE-041` 现在继续从共享治理配置推进到共享治理动作分发，工作台里围绕五个治理域的动作触发分支开始复用统一出口。
 - 这次仍然只先收口动作分发 helper；更进一步的治理详情文案、动作确认元数据归一和 page/feature 级拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 08:36:45 +08:00 | v1.1.0-alpha.203 | 推进 FE-041 管理端共享治理确认文案 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理能力，而是继续收口 `AdminWorkspaceView.vue` 里五组治理确认弹层的标题、说明和按钮文案元数据。
+- 目标是补一层共享治理确认文案 helper，并让工作台的确认弹层直接复用统一 copy 生成逻辑，减少页面层对 moderation、report、user、AI task、template 五条确认流的重复文案维护。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminActionConfirmCopy.ts` 与 `adminActionConfirmCopy.test.ts`，收口治理确认文案的纯函数 helper，并锁定 moderation、report、user、AI task、template 五类确认 copy 的标题、说明、按钮文案和危险态。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `AdminConfirmStack` 所消费的 dialog metadata 直接改为读取共享 `getModerationConfirmCopy(...)`、`getReportConfirmCopy(...)`、`getUserConfirmCopy(...)`、`getAITaskConfirmCopy(...)`、`getTemplateConfirmCopy(...)` 输出。
+- 本轮不改治理动作提交流程、API 路径、确认交互协议和 URL/session 行为，只把已稳定的确认文案语义从工作台视图中继续下沉到共享 helper 层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminActionConfirmCopy.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从共享治理动作分发推进到共享治理确认文案，后台治理确认流开始复用统一的 copy 生成出口。
+- 这次仍然只先收口确认文案 helper；更进一步的治理详情字段说明、动作可见性元数据和模块级 page/feature 拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
