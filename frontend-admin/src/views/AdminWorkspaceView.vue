@@ -70,6 +70,7 @@ import {
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import { runAdminWorkspaceViewLoad } from "./adminWorkspaceViewLoad";
 import { runAdminWorkspaceMountBootstrap } from "./adminWorkspaceMountBootstrap";
+import { runAdminWorkspacePopstate } from "./adminWorkspacePopstate";
 import { runAdminWorkspaceRefresh } from "./adminWorkspaceRefresh";
 import { runAdminWorkspaceLogout } from "./adminWorkspaceLogout";
 import { runAdminWorkspaceSessionCleared } from "./adminWorkspaceSessionCleared";
@@ -332,11 +333,13 @@ function handleAdminPopstate() {
     normalizeAdminWorkspaceLocation(window.location, window.history),
     Boolean(session.value)
   );
-  activeView.value = plan.nextView;
-  clearWorkspaceState(plan.resetKeys);
-  if (plan.shouldLoadView) {
-    loadActiveView(plan.nextView);
-  }
+  runAdminWorkspacePopstate(plan, {
+    clearWorkspaceState,
+    loadActiveView,
+    setActiveView: (view) => {
+      activeView.value = view;
+    }
+  });
 }
 
 const unsubscribeSession = subscribeSession(() => {

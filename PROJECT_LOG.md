@@ -1,3 +1,29 @@
+## 2026-07-14 00:17:34 +08:00 | v1.1.0-alpha.230 | 推进 FE-041 管理端 popstate 执行 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `handleAdminPopstate()` 这条浏览器后退/前进触发时仍直接维护查询重置、目标 view 应用与按需加载顺序的壳层入口。
+- 目标是补一层共享 popstate execution helper，让后台工作台在浏览器 `popstate` 切换到目标管理路径时，也复用统一出口，而不是继续把这条执行链留在组件层。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspacePopstate.ts` 与 `adminWorkspacePopstate.test.ts`，收口浏览器 `popstate` 触发时的查询重置、目标 view 应用与按需加载顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，补一条页面级回归，锁定浏览器路径通过 `popstate` 切到 `/admin/audit` 时会重新加载目标治理模块。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `handleAdminPopstate()` 改为消费共享 `runAdminWorkspacePopstate(...)` helper，而不是继续直接维护 reset / set view / load 的执行口。
+- 本轮不改 URL 解析协议、治理请求实现或 session 协议，只把已稳定的浏览器导航执行链继续从壳层组件下沉到共享 helper。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspacePopstate.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享 refresh execution 推进到共享 popstate execution，后台工作台在浏览器后退/前进切换路径时也开始复用统一出口。
+- 这次仍然只先收口了 popstate helper；更进一步的 `loadActiveView(...)` 与更深层加载协调器，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-14 00:12:04 +08:00 | v1.1.0-alpha.229 | 推进 FE-041 管理端刷新执行 helper 接线
 ### 任务内容
 
