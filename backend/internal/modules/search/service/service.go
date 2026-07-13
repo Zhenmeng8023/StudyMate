@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	searchdto "studymate/backend/internal/modules/search/dto"
 	"studymate/backend/internal/pkg/apperrors"
@@ -24,14 +25,21 @@ func NewServiceWithIndexer(indexer SearchIndexer) *Service {
 }
 
 func (s *Service) Search(query string, types []string, limit int, userID string) (*searchdto.Response, error) {
+	startedAt := time.Now()
 	keyword := strings.TrimSpace(query)
-	if keyword == "" {
-		return &searchdto.Response{Query: "", Groups: []searchdto.Group{}}, nil
+	normalizedLimit := limit
+	if normalizedLimit <= 0 {
+		normalizedLimit = 20
+	} else if normalizedLimit > 50 {
+		normalizedLimit = 50
 	}
-	if limit <= 0 {
-		limit = 20
-	} else if limit > 50 {
-		limit = 50
+	if keyword == "" {
+		return &searchdto.Response{
+			Query:     "",
+			Limit:     normalizedLimit,
+			ElapsedMs: 0,
+			Groups:    []searchdto.Group{},
+		}, nil
 	}
 	if s.indexer == nil {
 		return nil, apperrors.Internal("鎼滅储绱㈠紩鏈厤缃?")
@@ -44,7 +52,7 @@ func (s *Service) Search(query string, types []string, limit int, userID string)
 	groups := make([]searchdto.Group, 0, len(allowed))
 	total := 0
 	for _, itemType := range allowed {
-		batch, err := s.indexer.Search(itemType, keyword, limit, userID)
+		batch, err := s.indexer.Search(itemType, keyword, normalizedLimit, userID)
 		if err != nil {
 			return nil, err
 		}
@@ -61,9 +69,11 @@ func (s *Service) Search(query string, types []string, limit int, userID string)
 	}
 
 	return &searchdto.Response{
-		Query:  keyword,
-		Total:  total,
-		Groups: groups,
+		Query:     keyword,
+		Limit:     normalizedLimit,
+		ElapsedMs: time.Since(startedAt).Milliseconds(),
+		Total:     total,
+		Groups:    groups,
 	}, nil
 }
 

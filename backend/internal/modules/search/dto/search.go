@@ -17,7 +17,9 @@ type Group struct {
 }
 
 type Response struct {
-	Query  string  `json:"query"`
-	Total  int     `json:"total"`
-	Groups []Group `json:"groups"`
+	Query     string  `json:"query"`
+	Limit     int     `json:"limit"`
+	ElapsedMs int64   `json:"elapsedMs"`
+	Total     int     `json:"total"`
+	Groups    []Group `json:"groups"`
 }

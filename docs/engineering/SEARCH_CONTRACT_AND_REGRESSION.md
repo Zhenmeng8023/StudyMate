@@ -22,6 +22,8 @@
 - 当前固定返回 grouped payload，而不是 offset / page / cursor 分页结构。
 - `SearchResponsePayload`
   - `query`
+  - `limit`
+  - `elapsedMs`
   - `total`
   - `groups[]`
 - `SearchGroupPayload`
@@ -42,6 +44,8 @@
 | 字段 | 当前含义 |
 | --- | --- |
 | `total` | 本次搜索所有分组的真实命中总数之和。 |
+| `limit` | 本次请求归一化后的首批返回上限，当前前后端都把它当作“每组当前批次最多返回多少条”的契约。 |
+| `elapsedMs` | 后端本次聚合搜索耗时，供搜索页展示真实统计信息。 |
 | `groups[].count` | 该分组的真实命中总数，不再等同于当前返回数组长度。 |
 | `groups[].returnedCount` | 当前这次请求为该分组实际返回的首批结果数量。 |
 | `groups[].results.length` | 与 `returnedCount` 一致，代表前端当前拿到的批次数组长度。 |
@@ -85,6 +89,7 @@
 | 某组无结果 | 组内显示“暂无匹配结果” |
 | 有结果 | 渲染来源链接卡片，并保留 `item.url` 跳转 |
 | 命中数大于首批返回数 | 组内明确显示“当前仅展示首批 X / Y 条结果。” |
+| 有结果且请求成功 | 顶部概览文案显示真实总数、`elapsedMs` 与当前 `limit` 对应的首批边界。 |
 
 ### 2.3 分页边界
 

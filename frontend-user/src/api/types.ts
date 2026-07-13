@@ -427,6 +427,8 @@ export interface SearchGroupPayload {
 
 export interface SearchResponsePayload {
   query: string;
+  limit: number;
+  elapsedMs: number;
   total: number;
   groups: SearchGroupPayload[];
 }

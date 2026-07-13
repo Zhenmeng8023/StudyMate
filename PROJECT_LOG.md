@@ -6980,3 +6980,25 @@
 
 - `FE-041` 现在继续从共享 `adminWorkspaceLogin` 推进到共享 `adminGovernanceActionRequest`，后台治理动作在进入确认弹层前的分发、错误清理与 invalid/noop 兜底也开始复用统一出口。
 - 这次仍然只先收口治理动作请求 execution helper；更进一步的 `loadModeration()` / `loadGovernance()` 壳层加载编排或确认弹层提交入口，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+## 2026-07-14 00:47:10 +08:00 | v1.1.0-alpha.233 | 推进 SE-020 搜索统计信息透传与搜索页边界提示
+### 任务内容
+
+- 依据更新后的目标，把本轮重点从单点壳层收口切回更偏基础可用性的主站能力，选择继续推进 `SE-020`，先补搜索响应里的真实统计信息透传，而不是继续深挖单个管理端视图 helper。
+- 目标是让 `/api/v1/search` 在现有 grouped contract 不变的前提下，先显式透出归一化后的 `limit` 与真实 `elapsedMs`，并让搜索页把当前首批边界和耗时展示出来，为后续跨批次服务端分页留清晰契约。
+### 实际变更
+
+- 更新 `backend/internal/modules/search/dto/search.go` 与 `backend/internal/modules/search/service/service.go`，让搜索响应新增 `limit` / `elapsedMs`，并在 service 层统一透出归一化后的批次上限与搜索耗时。
+- 更新 `frontend-user/src/api/types.ts` 与 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`，让用户端搜索页消费这些统计字段，在成功态文案里明确显示“总结果数 + 耗时 + 当前每组首批上限”。
+- 更新 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`、`README.md` 与 `docs/engineering/CODEX_BACKLOG.md`，同步搜索响应字段、统计语义和当前批次边界说明。
+### 验证结果
+
+- `cd backend && go test ./internal/modules/search/service ./internal/modules/search/handler`
+- `npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `SE-020` 现在从“真实命中数 / 首批返回数分离”继续推进到“limit / elapsedMs` 透传与搜索页边界提示”，搜索结果页的统计信息更接近真实服务端契约，也为后续服务端 cursor / offset 分页留出了更稳定的文案与接口位置。
+- 这次仍然没有补跨批次服务端分页；下一步更适合继续沿 `SE-020` 增加 cursor/offset 或等价分页令牌，而不是在前端继续堆局部分页 UI。

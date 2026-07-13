@@ -57,6 +57,8 @@ function useSearchState() {
 function emptySearchResponse(query: string): SearchResponsePayload {
   return {
     query,
+    limit: searchFetchLimit,
+    elapsedMs: 0,
     total: 0,
     groups: searchGroupOrder.map((type) => ({
       type,
@@ -70,10 +72,10 @@ function emptySearchResponse(query: string): SearchResponsePayload {
 function buildSearchCompleteMessage(payload: SearchResponsePayload): string {
   const partialGroups = payload.groups.filter((group) => group.count > group.returnedCount && group.returnedCount > 0);
   if (partialGroups.length === 0) {
-    return `\u641c\u7d22\u5b8c\u6210\uff0c\u5171 ${payload.total} \u6761\u7ed3\u679c\u3002`;
+    return `\u641c\u7d22\u5b8c\u6210\uff0c\u5171 ${payload.total} \u6761\u7ed3\u679c\uff0c\u7528\u65f6 ${payload.elapsedMs}ms\u3002\u5f53\u524d\u6bcf\u4e2a\u5206\u7ec4\u9996\u6279\u6700\u591a\u5c55\u793a ${payload.limit} \u6761\u3002`;
   }
 
-  return `\u641c\u7d22\u5b8c\u6210\uff0c\u5171 ${payload.total} \u6761\u7ed3\u679c\u3002\u90e8\u5206\u5206\u7ec4\u5f53\u524d\u4ec5\u5c55\u793a\u9996\u6279\u5185\u5bb9\uff0c\u53ef\u7ee7\u7eed\u7f29\u5c0f\u5173\u952e\u8bcd\u6216\u5207\u6362\u7c7b\u578b\u67e5\u770b\u3002`;
+  return `\u641c\u7d22\u5b8c\u6210\uff0c\u5171 ${payload.total} \u6761\u7ed3\u679c\uff0c\u7528\u65f6 ${payload.elapsedMs}ms\u3002\u5f53\u524d\u6bcf\u4e2a\u5206\u7ec4\u9996\u6279\u6700\u591a\u5c55\u793a ${payload.limit} \u6761\uff0c\u90e8\u5206\u5206\u7ec4\u5f53\u524d\u4ec5\u8fd4\u56de\u9996\u6279\u7ed3\u679c\uff0c\u53ef\u7ee7\u7eed\u7f29\u5c0f\u5173\u952e\u8bcd\u6216\u5207\u6362\u7c7b\u578b\u67e5\u770b\u3002`;
 }
 
 export function SearchWorkspacePage(props: { session: AuthSession | null }) {
