@@ -1,3 +1,26 @@
+## 2026-07-13 22:15:50 +08:00 | v1.1.0-alpha.223 | 推进 FE-041 管理端审核动作元数据 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里审核动作提交后仍内联维护的 path 拼接、成功提示与资料治理特例分支。
+- 目标是补一层共享 moderation mutation helper，并让后台审核动作的最小提交元数据复用统一出口，减少工作台组件继续手写这段稳定分支。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminModerationMutationMeta.ts` 与 `adminModerationMutationMeta.test.ts`，收口 `resolveAdminModerationMutationMeta(...)` 出口，统一处理审核动作的 API path、成功提示、资料治理回刷与 409 conflict 特例。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `applyModerationAction(...)` 改为消费共享 `adminModerationMutationMeta` helper，而不是继续在组件里直接维护 path、notice 和资料治理特判。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端审核动作元数据也已进入共享 helper 出口”。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminModerationMutationMeta.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享登录自举顺序推进到共享审核动作元数据，后台审核动作的 path、成功提示与资料治理特例开始复用统一出口。
+- 这次仍然只先收口了 moderation mutation helper；更进一步的治理动作刷新编排与 mount/read 协调仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-13 22:08:40 +08:00 | v1.1.0-alpha.222 | 推进 FE-041 管理端工作台登录自举 helper 接线
 ### 任务内容
 

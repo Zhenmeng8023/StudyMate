@@ -87,6 +87,7 @@ import {
   isGovernanceModuleView,
   resolveGovernanceActionDispatch
 } from "./adminGovernanceConfig";
+import { resolveAdminModerationMutationMeta } from "./adminModerationMutationMeta";
 import { resolveGovernanceMutationMeta, type GovernanceMutationKey } from "./adminGovernanceMutationMeta";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
 import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
@@ -486,28 +487,26 @@ async function loadGovernance(view: AdminView) {
 
 async function applyModerationAction(item: AdminWorkspaceModerationItem, action: ModerationAction) {
   if (!session.value) return;
+  const mutation = resolveAdminModerationMutationMeta(activeView.value, item, action);
   loading.value = true;
   errorMessage.value = "";
   moderationConfirmError.value = "";
-  if (activeView.value === "materials" && item.type === "material") {
+  if (mutation.clearGovernanceConflictBeforeSubmit) {
     governanceErrorStatus.value = null;
   }
   try {
-    const path = `/api/v1/admin/moderation/${item.type === "post" ? "posts" : "materials"}/${item.id}/${action}`;
-    const data = await post<{ status: string }>(path, { reason: "" });
+    const data = await post<{ status: string }>(mutation.path, { reason: "" });
     pendingModerationAction.value = null;
-    notice.value = `“${item.title}” 已更新为 ${data.status}。`;
+    notice.value = mutation.successNotice.replace("{status}", data.status);
     await Promise.all([loadModeration(), loadOverview()]);
-    if (activeView.value === "materials" && item.type === "material") {
-      await loadGovernance("materials");
+    if (mutation.reloadGovernanceView) {
+      await loadGovernance(mutation.reloadGovernanceView);
     }
   } catch (error) {
-    const message = getAdminRequestErrorMessage(error, "更新审核状态失败");
-    if (activeView.value === "materials" && item.type === "material") {
-      const status = getAdminRequestErrorStatus(error);
-      if (status === 409) {
-        governanceErrorStatus.value = status;
-      }
+    const message = getAdminRequestErrorMessage(error, mutation.errorFallbackMessage);
+    const status = getAdminRequestErrorStatus(error);
+    if (mutation.reloadGovernanceView && status !== null && mutation.markGovernanceConflictOnStatus.includes(status)) {
+      governanceErrorStatus.value = status;
     }
     errorMessage.value = message;
     moderationConfirmError.value = message;
