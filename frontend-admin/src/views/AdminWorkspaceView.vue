@@ -70,6 +70,7 @@ import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminV
 import { runAdminWorkspaceViewLoad } from "./adminWorkspaceViewLoad";
 import { runAdminWorkspaceMountBootstrap } from "./adminWorkspaceMountBootstrap";
 import { runAdminWorkspaceSessionCleared } from "./adminWorkspaceSessionCleared";
+import { runAdminWorkspaceViewSwitch } from "./adminWorkspaceViewSwitch";
 import {
   getAdminGovernanceLoadedNotice,
   getAdminLoginSuccessNotice,
@@ -642,12 +643,16 @@ async function handleConfirmDialogConfirm(key: ConfirmDialogKey) {
 
 function switchView(view: AdminView) {
   const plan = buildAdminWorkspaceViewSwitchPlan(view);
-  activeView.value = plan.nextView;
-  clearWorkspaceState(plan.resetKeys);
-  syncAdminWorkspaceLocation(plan.nextView, window.location, window.history, plan.syncMode);
-  if (plan.shouldLoadView) {
-    loadActiveView(plan.nextView);
-  }
+  runAdminWorkspaceViewSwitch(plan, {
+    clearWorkspaceState,
+    loadActiveView,
+    setActiveView: (nextView) => {
+      activeView.value = nextView;
+    },
+    syncLocation: (nextView, syncMode) => {
+      syncAdminWorkspaceLocation(nextView, window.location, window.history, syncMode);
+    }
+  });
 }
 
 function refreshActiveView() {

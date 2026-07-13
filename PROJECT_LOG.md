@@ -1,3 +1,28 @@
+## 2026-07-13 23:55:37 +08:00 | v1.1.0-alpha.227 | 推进 FE-041 管理端视图切换执行 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `switchView(...)` 在导航切换时仍内联维护的工作台 reset、目标 view 应用、URL push 与按需加载顺序。
+- 目标是补一层共享 view-switch execution helper，并让后台工作台在导航切换时的最小执行链复用统一出口，减少组件继续手写这段稳定编排。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceViewSwitch.ts` 与 `adminWorkspaceViewSwitch.test.ts`，收口 `runAdminWorkspaceViewSwitch(...)` 出口，统一处理视图切换时的工作台 reset、目标 view 应用、URL push/replace 与按需加载顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `switchView(...)` 改为消费共享 `adminWorkspaceViewSwitch` helper，而不是继续在组件里内联这段执行链。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端视图切换执行也已进入共享 helper 出口”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceViewSwitch.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从 session-cleared execution 推进到共享 view-switch execution，后台工作台在导航切换时的 reset、URL push 和按需加载开始复用统一出口。
+- 这次仍然只先收口了 view-switch helper；更进一步的 `refreshActiveView()` 共享刷新计划，或 logout 分支的执行链，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-13 23:48:01 +08:00 | v1.1.0-alpha.226 | 推进 FE-041 管理端会话清空执行 helper 接线
 ### 任务内容
 
