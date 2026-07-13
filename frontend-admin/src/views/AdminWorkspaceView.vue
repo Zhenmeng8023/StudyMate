@@ -48,6 +48,13 @@ import { getAdminRequestErrorMessage, getAdminRequestErrorStatus } from "./admin
 import { runAdminViewReadRequest } from "./adminViewReadRequest";
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import {
+  getAdminGovernanceLoadedNotice,
+  getAdminLoginSuccessNotice,
+  getAdminLogoutNotice,
+  getAdminModerationLoadedNotice,
+  getAdminSessionEndedNotice
+} from "./adminWorkspaceNotice";
+import {
   resetAdminWorkspaceState,
   type AdminWorkspaceResetHandlers,
   type AdminWorkspaceResetKey
@@ -356,7 +363,7 @@ const unsubscribeSession = subscribeSession(() => {
     activeView.value = defaultAdminRouteKey;
     syncAdminLocation(defaultAdminRouteKey, "replace");
     errorMessage.value = "";
-    notice.value = getSessionInvalidationPrompt(sessionInvalidation.value, "admin") || "后台会话已失效，请重新登录。";
+    notice.value = getAdminSessionEndedNotice(getSessionInvalidationPrompt(sessionInvalidation.value, "admin"));
   }
 });
 
@@ -382,7 +389,7 @@ async function login() {
   try {
     const data = await post<AdminSessionPayload>("/api/v1/admin/login", form);
     persistSession(data);
-    notice.value = "已进入治理工作台，正在同步当前数据。";
+    notice.value = getAdminLoginSuccessNotice();
     await refreshProfile();
     loadActiveView(activeView.value);
   } catch (error) {
@@ -438,7 +445,7 @@ async function loadModeration() {
       throw result.error;
     }
     moderationItems.value = result.data;
-    notice.value = `当前共有 ${moderationItems.value.length} 条待处理内容。`;
+    notice.value = getAdminModerationLoadedNotice(moderationItems.value.length);
   } catch (error) {
     errorMessage.value = getAdminRequestErrorMessage(error, "读取审核队列失败");
   } finally {
@@ -484,7 +491,7 @@ async function loadGovernance(view: AdminView) {
     } else {
       governanceSummary.value = null;
     }
-    notice.value = `已加载 ${governanceRows.value.length} 条治理记录。`;
+    notice.value = getAdminGovernanceLoadedNotice(governanceRows.value.length);
   } catch (error) {
     errorMessage.value = getAdminRequestErrorMessage(error, "读取治理模块失败");
   } finally {
@@ -652,7 +659,7 @@ function logout() {
   sessionInvalidation.value = null;
   clearSessionInvalidation();
   persistSession(null);
-  notice.value = "后台会话已清空。";
+  notice.value = getAdminLogoutNotice();
 }
 
 async function get<T>(path: string, query?: { limit?: number }) {

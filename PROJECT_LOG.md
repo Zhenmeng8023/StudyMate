@@ -6603,3 +6603,27 @@
 
 - `FE-041` 现在继续从共享请求错误解析推进到共享确认弹层组装，工作台里的五组确认弹层 metadata 开始复用统一出口。
 - 这次仍然只先收口了确认弹层 helper；更进一步的工作台级 loading/error/notice 协调仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 21:01:10 +08:00 | v1.1.0-alpha.217 | 推进 FE-041 管理端工作台提示 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里分散维护的工作台提示文案。
+- 目标是补一个共享工作台提示 helper，并让登录成功、会话失效、审核/治理加载成功和退出提示都复用统一出口，减少页面层继续散落多处 notice 字符串。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceNotice.ts` 与 `adminWorkspaceNotice.test.ts`，收口工作台登录成功、会话失效 fallback、审核/治理加载成功和退出提示文案，并锁定 prompt 优先与默认 fallback 行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让登录、自举后的 session 清理、审核加载、治理加载和退出路径都改为消费共享 `adminWorkspaceNotice` helper，而不是继续内联分散字符串。
+- 本轮不改路由、状态流、治理动作协议或页面布局，只把已稳定的工作台提示语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceNotice.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享确认弹层组装推进到共享工作台提示语义，登录、会话失效、列表加载和退出提示开始复用统一出口。
+- 这次仍然只先收口了工作台提示 helper；更进一步的工作台级 loading/error/notice 协调状态本身仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
