@@ -6531,3 +6531,27 @@
 
 - `FE-041` 现在继续从共享治理模块配置推进到共享简单读取请求，工作台里的 profile/overview 读取路径开始复用统一的成功/失败结果出口。
 - 这次仍然只先收口了读取请求 helper；更进一步的 dashboard feature 元数据和页面级 loading/error/notice 协调仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 20:48:40 +08:00 | v1.1.0-alpha.214 | 推进 FE-041 管理端仪表盘元数据 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 dashboard 模块里仍内联维护的“优先队列 / 审核概览 / 审核压力”元数据和摘要规则。
+- 目标是补一个共享 dashboard 元数据 helper，并让 `AdminDashboardModule.vue` 直接复用统一的 feature copy 和审核概览摘要出口，减少模块层继续硬编码运营文案和压力状态规则。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminDashboardMeta.ts` 与 `adminDashboardMeta.test.ts`，收口 dashboard 主操作卡片文案、审核概览卡片标题，以及“待审帖子 / 待审资料 / 审核压力”的摘要规则，并锁定有待处理内容与空队列两类输出。
+- 更新 `frontend-admin/src/views/modules/AdminDashboardModule.vue`，让两个 `AdminFeatureCard` 的 copy 和审核概览列表都改为消费共享 `adminDashboardModerationFeature`、`adminDashboardSummaryFeature` 与 `buildAdminDashboardSummaryItems(...)`，不再在模块里内联维护相同语义。
+- 本轮不改 dashboard 布局、事件流或 overview 数据来源，只把已稳定的 dashboard 元数据语义继续从模块模板层下沉到共享 helper。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminDashboardMeta.test.ts src/views/modules/AdminDashboardModule.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享简单读取请求推进到共享 dashboard 元数据，仪表盘模块开始复用统一的 feature copy 和审核概览摘要出口。
+- 这次仍然只先收口了 dashboard 元数据 helper；更进一步的工作台级 loading/error/notice 协调仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
