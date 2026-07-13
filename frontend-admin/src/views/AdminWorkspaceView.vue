@@ -17,7 +17,7 @@ import AdminConfirmStack from "../components/admin/AdminConfirmStack.vue";
 import AdminLoginPanel from "../components/admin/AdminLoginPanel.vue";
 import AdminShellFrame from "../components/admin/AdminShellFrame.vue";
 import { getGovernanceColumns, type GovernanceRecord } from "../components/admin/governanceRecord";
-import { defaultAdminRouteKey, getAdminRoutePath, normalizeAdminRoutePath, parseAdminRoutePath } from "../router";
+import { defaultAdminRouteKey } from "../router";
 import type { AdminRouteKey } from "../router";
 import {
   getAITaskConfirmCopy,
@@ -53,6 +53,11 @@ import {
   splitModerationItems,
   type AdminWorkspaceModerationItem
 } from "./adminWorkspaceDerivedData";
+import {
+  normalizeAdminWorkspaceLocation,
+  resolveAdminWorkspaceLocationView,
+  syncAdminWorkspaceLocation
+} from "./adminWorkspaceLocation";
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import {
   getAdminGovernanceLoadedNotice,
@@ -108,7 +113,9 @@ const errorMessage = ref("");
 const moderationErrorStatus = ref<number | null>(null);
 const governanceErrorStatus = ref<number | null>(null);
 const notice = ref("登录后会同步当前治理队列与运营数据。");
-const activeView = ref<AdminView>(resolveAdminViewFromLocation());
+const activeView = ref<AdminView>(
+  resolveAdminWorkspaceLocationView(typeof window === "undefined" ? null : window.location)
+);
 const recordQuery = ref("");
 const moderationQuery = ref("");
 const moderationStatusFilter = ref("all");
@@ -288,27 +295,6 @@ function clearWorkspaceState(keys?: AdminWorkspaceResetKey[]) {
   resetAdminWorkspaceState(workspaceResetHandlers, keys);
 }
 
-function resolveAdminViewFromLocation(): AdminView {
-  if (typeof window === "undefined") return defaultAdminRouteKey;
-  return parseAdminRoutePath(window.location.pathname) ?? defaultAdminRouteKey;
-}
-
-function syncAdminLocation(view: AdminView, mode: "push" | "replace" = "push") {
-  if (typeof window === "undefined") return;
-  const nextPath = getAdminRoutePath(view);
-  if (window.location.pathname === nextPath) return;
-  window.history[mode === "replace" ? "replaceState" : "pushState"]({}, "", nextPath);
-}
-
-function normalizeAdminLocation() {
-  if (typeof window === "undefined") return defaultAdminRouteKey;
-  const normalizedPath = normalizeAdminRoutePath(window.location.pathname);
-  if (window.location.pathname !== normalizedPath) {
-    window.history.replaceState({}, "", normalizedPath);
-  }
-  return parseAdminRoutePath(normalizedPath) ?? defaultAdminRouteKey;
-}
-
 function loadActiveView(view: AdminView) {
   const plan = resolveAdminViewLoadPlan(view);
   if (plan.kind === "dashboard") {
@@ -323,7 +309,7 @@ function loadActiveView(view: AdminView) {
 }
 
 function handleAdminPopstate() {
-  activeView.value = normalizeAdminLocation();
+  activeView.value = normalizeAdminWorkspaceLocation(window.location, window.history);
   clearWorkspaceState(["queries"]);
   if (session.value) {
     loadActiveView(activeView.value);
@@ -339,14 +325,14 @@ const unsubscribeSession = subscribeSession(() => {
   if (!nextSession) {
     clearWorkspaceState();
     activeView.value = defaultAdminRouteKey;
-    syncAdminLocation(defaultAdminRouteKey, "replace");
+    syncAdminWorkspaceLocation(defaultAdminRouteKey, window.location, window.history, "replace");
     errorMessage.value = "";
     notice.value = getAdminSessionEndedNotice(getSessionInvalidationPrompt(sessionInvalidation.value, "admin"));
   }
 });
 
 onMounted(() => {
-  activeView.value = normalizeAdminLocation();
+  activeView.value = normalizeAdminWorkspaceLocation(window.location, window.history);
   window.addEventListener("popstate", handleAdminPopstate);
 
   if (session.value) {
@@ -620,7 +606,7 @@ async function handleConfirmDialogConfirm(key: ConfirmDialogKey) {
 function switchView(view: AdminView) {
   activeView.value = view;
   clearWorkspaceState(["queries", "filters", "confirmState"]);
-  syncAdminLocation(view);
+  syncAdminWorkspaceLocation(view, window.location, window.history);
   loadActiveView(view);
 }
 
@@ -633,7 +619,7 @@ function logout() {
   profile.value = null;
   clearWorkspaceState();
   activeView.value = defaultAdminRouteKey;
-  syncAdminLocation(defaultAdminRouteKey, "replace");
+  syncAdminWorkspaceLocation(defaultAdminRouteKey, window.location, window.history, "replace");
   sessionInvalidation.value = null;
   clearSessionInvalidation();
   persistSession(null);

@@ -1,3 +1,25 @@
+## 2026-07-13 21:52:30 +08:00 | v1.1.0-alpha.219 | 推进 FE-041 管理端工作台路由定位 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里与后台 URL 解析、路径归一化和导航切换历史同步相关的逻辑。
+- 目标是补一个共享路由定位 helper，并让工作台的初始化视图、非法路径修正、导航切换和会话失效回退都复用统一出口，减少页面层继续内联这些 URL 分支。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceLocation.ts` 与 `adminWorkspaceLocation.test.ts`，收口 `resolveAdminWorkspaceLocationView(...)`、`normalizeAdminWorkspaceLocation(...)` 与 `syncAdminWorkspaceLocation(...)` 三个出口。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `activeView` 初始化、`popstate` 回退、挂载时 URL 归一化、`switchView(...)` 导航切换，以及 session 失效/退出时的 `replace` 回退都改为消费共享 `adminWorkspaceLocation` helper。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端工作台 URL/视图同步也已进入共享 helper 出口”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLocation.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享派生数据逻辑推进到共享工作台路由定位，初始化视图、非法路径修正和导航历史同步开始复用统一出口。
+- 这次仍然只先收口了路由定位 helper；更进一步的 session/bootstrap 协调与数据加载编排仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-13 21:11:40 +08:00 | v1.1.0-alpha.218 | 推进 FE-041 管理端工作台派生数据 helper 接线
 ### 任务内容
 
