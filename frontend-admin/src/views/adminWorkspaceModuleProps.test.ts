@@ -105,14 +105,14 @@ describe("adminWorkspaceModuleProps", () => {
     });
 
     expect(props.governance).toEqual({
-      actions: [{ key: "disable", label: "禁用", tone: "danger" }],
+      actions: [{ key: "disable", label: "禁用用户", tone: "danger" }],
       columns: ["id", "username", "status"],
       dataState: {
         kind: "stale",
         title: "治理记录需要刷新",
         description: "当前显示的是上一轮同步结果。"
       },
-      emptyText: "暂无可治理的用户记录",
+      emptyText: "暂无用户记录。",
       query: "alice",
       rows: [selectedRecord],
       selectedRecord,

@@ -26,6 +26,7 @@ import {
   type ConfirmDialogKey
 } from "./adminConfirmDialogState";
 import { buildAdminWorkspaceConfirmDialogs } from "./adminWorkspaceConfirmDialogs";
+import { buildAdminWorkspaceModuleProps } from "./adminWorkspaceModuleProps";
 import {
   buildAdminWorkspaceConfirmResetHandlers,
   buildAdminWorkspaceConfirmSubmitHandlers
@@ -98,7 +99,6 @@ import {
 } from "./adminWorkspaceState";
 import {
   getGovernanceModuleConfig,
-  getGovernanceActions
 } from "./adminGovernanceConfig";
 import type { GovernanceMutationKey } from "./adminGovernanceMutationMeta";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
@@ -159,7 +159,6 @@ const moderationBuckets = computed(() => splitModerationItems(moderationItems.va
 const pendingPosts = computed(() => moderationBuckets.value.pendingPosts);
 const pendingMaterials = computed(() => moderationBuckets.value.pendingMaterials);
 const profileInitial = computed(() => profile.value?.displayName?.trim().slice(0, 1) || "A");
-const governanceActions = computed(() => getGovernanceActions(activeView.value, selectedRecord.value));
 const confirmDialogs = computed(() =>
   buildAdminWorkspaceConfirmDialogs({
     loading: loading.value,
@@ -222,6 +221,34 @@ const overviewCards = computed(() =>
   buildAdminOverviewCards({
     moderationItemsCount: moderationItems.value.length,
     overview: overview.value
+  })
+);
+const moduleProps = computed(() =>
+  buildAdminWorkspaceModuleProps({
+    activeView: activeView.value,
+    governance: {
+      dataState: governanceDataState.value,
+      query: recordQuery.value,
+      rows: visibleGovernanceRows.value,
+      selectedRecord: selectedRecord.value,
+      statusFilter: governanceStatusFilter.value,
+      statusOptions: governanceStatusOptions.value,
+      summary: governanceSummary.value,
+      totalCount: governanceRows.value.length
+    },
+    governanceColumns: governanceColumns.value,
+    moderation: {
+      dataState: moderationDataState.value,
+      items: visibleModerationItems.value,
+      query: moderationQuery.value,
+      statusFilter: moderationStatusFilter.value,
+      statusOptions: moderationStatusOptions.value,
+      totalCount: moderationItems.value.length
+    },
+    overviewCards: overviewCards.value,
+    pendingMaterialsCount: pendingMaterials.value.length,
+    pendingPostsCount: pendingPosts.value.length,
+    totalModerationCount: moderationItems.value.length
   })
 );
 
@@ -737,21 +764,21 @@ function selectRecord(row: GovernanceRecord) {
     >
       <AdminDashboardModule
         v-if="activeView === 'dashboard'"
-        :moderation-items-count="moderationItems.length"
-        :overview-cards="overviewCards"
-        :pending-materials-count="pendingMaterials.length"
-        :pending-posts-count="pendingPosts.length"
+        :moderation-items-count="moduleProps.dashboard.moderationItemsCount"
+        :overview-cards="moduleProps.dashboard.overviewCards"
+        :pending-materials-count="moduleProps.dashboard.pendingMaterialsCount"
+        :pending-posts-count="moduleProps.dashboard.pendingPostsCount"
         @open-moderation="switchView('moderation')"
       />
 
       <AdminModerationModule
         v-else-if="activeView === 'moderation'"
-        :data-state="moderationDataState"
-        :items="visibleModerationItems"
-        :query="moderationQuery"
-        :status-filter="moderationStatusFilter"
-        :status-options="moderationStatusOptions"
-        :total-count="moderationItems.length"
+        :data-state="moduleProps.moderation.dataState"
+        :items="moduleProps.moderation.items"
+        :query="moduleProps.moderation.query"
+        :status-filter="moduleProps.moderation.statusFilter"
+        :status-options="moduleProps.moderation.statusOptions"
+        :total-count="moduleProps.moderation.totalCount"
         @request-action="requestModerationAction($event.item, $event.action)"
         @update:query="moderationQuery = $event"
         @update:status-filter="moderationStatusFilter = $event"
@@ -759,17 +786,17 @@ function selectRecord(row: GovernanceRecord) {
 
       <AdminGovernanceModule
         v-else
-        :actions="governanceActions"
-        :columns="governanceColumns"
-        :data-state="governanceDataState"
-        :empty-text="getGovernanceModuleConfig(activeView)?.empty ?? ''"
-        :query="recordQuery"
-        :rows="visibleGovernanceRows"
-        :selected-record="selectedRecord"
-        :status-filter="governanceStatusFilter"
-        :status-options="governanceStatusOptions"
-        :summary="governanceSummary"
-        :total-count="governanceRows.length"
+        :actions="moduleProps.governance.actions"
+        :columns="moduleProps.governance.columns"
+        :data-state="moduleProps.governance.dataState"
+        :empty-text="moduleProps.governance.emptyText"
+        :query="moduleProps.governance.query"
+        :rows="moduleProps.governance.rows"
+        :selected-record="moduleProps.governance.selectedRecord"
+        :status-filter="moduleProps.governance.statusFilter"
+        :status-options="moduleProps.governance.statusOptions"
+        :summary="moduleProps.governance.summary"
+        :total-count="moduleProps.governance.totalCount"
         @request-action="requestGovernanceAction"
         @select-record="selectRecord"
         @update:query="recordQuery = $event"
