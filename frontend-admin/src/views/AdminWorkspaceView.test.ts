@@ -233,6 +233,92 @@ describe("AdminWorkspaceView governance modules", () => {
     expect(wrapper.text()).toContain("后台会话已失效，请重新登录后继续治理工作。");
   });
 
+  it("loads the dashboard data after a successful admin login", async () => {
+    window.history.replaceState({}, "", "/admin/dashboard");
+
+    const sessionPayload = {
+      accessToken: "admin-token",
+      refreshToken: "refresh-token",
+      accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+      user: {
+        id: "admin-1",
+        username: "operator",
+        email: "operator@example.test",
+        displayName: "Operator",
+        role: "admin"
+      }
+    };
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/login") {
+        expect(init?.method).toBe("POST");
+        return apiPayload(sessionPayload);
+      }
+      if (path === "/api/v1/admin/me") {
+        return apiPayload(sessionPayload.user);
+      }
+      if (path === "/api/v1/admin/overview") {
+        return apiPayload({
+          userCount: 12,
+          postCount: 4,
+          materialCount: 5,
+          graphCount: 6,
+          pendingModerationCount: 1
+        });
+      }
+      if (path === "/api/v1/admin/moderation") {
+        return apiPayload([
+          {
+            id: "post-1",
+            type: "post",
+            title: "Pending Post",
+            summary: "Needs moderation review",
+            authorName: "Alice",
+            status: "pending",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        ]);
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+
+    await wrapper.get('input[type="text"]').setValue("operator@example.test");
+    await wrapper.get('input[type="password"]').setValue("secret");
+    await wrapper.get("form").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/login",
+      expect.objectContaining({
+        method: "POST"
+      })
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/overview",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer admin-token"
+        })
+      })
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/moderation",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer admin-token"
+        })
+      })
+    );
+    expect(window.localStorage.getItem("studymate.admin.session")).toContain("admin-token");
+    expect(wrapper.text()).toContain("当前共有 1 条待处理内容");
+    expect(wrapper.text()).toContain("用户规模");
+    expect(window.location.pathname).toBe("/admin/dashboard");
+  });
+
   it("asks for confirmation before applying a moderation action", async () => {
     window.history.replaceState({}, "", "/admin/dashboard");
     window.localStorage.setItem(
