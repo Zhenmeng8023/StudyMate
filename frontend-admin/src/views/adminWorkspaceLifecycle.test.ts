@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildAdminWorkspaceRefreshPlan,
   buildAdminWorkspaceLogoutPlan,
   buildAdminWorkspaceMountPlan,
   buildAdminWorkspacePopstatePlan,
@@ -37,6 +38,11 @@ describe("adminWorkspaceLifecycle", () => {
   });
 
   it("builds switch, session-cleared and logout plans with shared reset semantics", () => {
+    expect(buildAdminWorkspaceRefreshPlan("moderation")).toEqual({
+      nextView: "moderation",
+      shouldLoadView: true
+    });
+
     expect(buildAdminWorkspaceViewSwitchPlan("ai")).toEqual({
       nextView: "ai",
       resetKeys: ["queries", "filters", "confirmState"],
