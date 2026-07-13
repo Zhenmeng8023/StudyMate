@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import AdminTag from "./AdminTag.vue";
-
-type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
+import { formatGovernanceCell, type GovernanceRecord } from "./governanceRecord";
 
 const props = defineProps<{
   columns: string[];
@@ -13,12 +12,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   press: [record: GovernanceRecord];
 }>();
-
-function formatCell(value: string | number | boolean | null | undefined) {
-  if (value === null || value === undefined || value === "") return "-";
-  if (typeof value === "boolean") return value ? "是" : "否";
-  return String(value);
-}
 
 function isStatusColumn(column: string) {
   return column === "status";
@@ -33,9 +26,9 @@ function isStatusColumn(column: string) {
     type="button"
     @click="emit('press', row)"
   >
-    <span v-for="column in columns" :key="column" :title="formatCell(row[column])">
-      <AdminTag v-if="isStatusColumn(column)" :label="formatCell(row[column])" tone="status" />
-      <template v-else>{{ formatCell(row[column]) }}</template>
+    <span v-for="column in columns" :key="column" :title="formatGovernanceCell(row[column])">
+      <AdminTag v-if="isStatusColumn(column)" :label="formatGovernanceCell(row[column])" tone="status" />
+      <template v-else>{{ formatGovernanceCell(row[column]) }}</template>
     </span>
   </button>
 </template>

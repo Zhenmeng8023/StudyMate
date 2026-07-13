@@ -16,6 +16,7 @@ import type { AdminAuthUser, AdminSessionPayload } from "../api/sessionStore";
 import AdminConfirmStack from "../components/admin/AdminConfirmStack.vue";
 import AdminLoginPanel from "../components/admin/AdminLoginPanel.vue";
 import AdminShellFrame from "../components/admin/AdminShellFrame.vue";
+import { formatGovernanceCell, getGovernanceColumns, type GovernanceRecord } from "../components/admin/governanceRecord";
 import { defaultAdminRouteKey, getAdminRoutePath, normalizeAdminRoutePath, parseAdminRoutePath } from "../router";
 import type { AdminRouteKey } from "../router";
 import { buildStatusFilterOptions, filterCollectionByStatusAndQuery, type AdminFilterOption } from "./adminModuleFilters";
@@ -70,7 +71,6 @@ type AdminNavItem = {
   group: "总览" | "治理" | "系统";
   badge?: string;
 };
-type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
 
 const form = reactive({ login: "", password: "" });
 const session = ref<AdminSessionPayload | null>(readStoredAdminSession());
@@ -494,7 +494,7 @@ const visibleGovernanceRows = computed(() =>
     getStatus: (row) => String(row.status ?? ""),
     query: recordQuery.value,
     statusFilter: governanceStatusFilter.value,
-    toSearchText: (row) => Object.values(row).map((value) => formatCell(value)).join(" ")
+    toSearchText: (row) => Object.values(row).map((value) => formatGovernanceCell(value)).join(" ")
   })
 );
 const governanceStatusOptions = computed<FilterOption[]>(() => {
@@ -514,21 +514,7 @@ const governanceStatusOptions = computed<FilterOption[]>(() => {
       ]
     : [{ label: "全部状态", value: "all" }];
 });
-const governanceColumns = computed(() => {
-  const preferred = ["title", "taskType", "name", "originalName", "username", "email", "role", "status", "handledBy", "handledAt", "model", "errorMessage", "sourceType", "sourceId", "action", "createdAt", "updatedAt", "id"];
-  const keys = new Set<string>();
-  governanceRows.value.forEach((row) => Object.keys(row).forEach((key) => keys.add(key)));
-  return Array.from(keys)
-    .sort((a, b) => {
-      const aIndex = preferred.indexOf(a);
-      const bIndex = preferred.indexOf(b);
-      if (aIndex === -1 && bIndex === -1) return a.localeCompare(b);
-      if (aIndex === -1) return 1;
-      if (bIndex === -1) return -1;
-      return aIndex - bIndex;
-    })
-    .slice(0, 7);
-});
+const governanceColumns = computed(() => getGovernanceColumns(governanceRows.value));
 
 function getRequestErrorStatus(error: unknown) {
   if (typeof error !== "object" || error === null || !("status" in error)) {
@@ -1115,12 +1101,6 @@ async function get<T>(path: string, query?: { limit?: number }) {
 
 async function post<T>(path: string, body: ApiRequestInit["body"]) {
   return adminPost<T>(path, body, session.value);
-}
-
-function formatCell(value: string | number | boolean | null | undefined) {
-  if (value === null || value === undefined || value === "") return "-";
-  if (typeof value === "boolean") return value ? "是" : "否";
-  return String(value);
 }
 
 function selectRecord(row: GovernanceRecord) {

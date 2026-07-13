@@ -6212,3 +6212,28 @@
 
 - `FE-041` 现在继续从共享 UI 骨架往共享页面逻辑收口，后台审核列表与治理列表开始复用统一的本地筛选 helper。
 - 这次仍然只先收口了筛选 helper；后续更适合继续把治理列定义、字段文案映射和动作元数据也提到统一配置层，而不是继续留在 `AdminWorkspaceView.vue` 里分散维护。
+
+## 2026-07-13 08:15:30 +08:00 | v1.1.0-alpha.200 | 推进 FE-041 管理端共享治理记录 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理治理记录在 `AdminGovernanceModule.vue`、`AdminRecordRow.vue` 和 `AdminWorkspaceView.vue` 里分散维护的字段格式化、字段标签、记录标题和列顺序逻辑。
+- 目标是补一层共享治理记录 helper，并把治理模块、记录行和工作台里的记录语义切到统一出口，让后台治理记录的展示规则不再在多个组件里重复维护。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/governanceRecord.ts` 与 `governanceRecord.test.ts`，收口治理记录的单元格格式化、字段标签、记录标题和列顺序规则。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`，改为复用共享治理记录 helper 渲染详情字段、摘要卡、表头标题和选中记录标题。
+- 更新 `frontend-admin/src/components/admin/AdminRecordRow.vue` 与 `frontend-admin/src/views/AdminWorkspaceView.vue`，把治理记录行展示、工作台筛选文本拼接和列顺序计算切到同一层 helper，减少工作台与列表组件的重复记录语义实现。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/components/admin/governanceRecord.test.ts src/components/admin/AdminRecordRow.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享 UI 骨架和页面 helper 往共享治理记录语义推进，治理模块、记录行和工作台开始复用统一的记录展示契约。
+- 这次仍然只先收口了记录 helper；后续更适合继续把 `governanceConfig`、治理动作元数据和资料记录到审核项的映射也提到统一配置层，而不是继续留在 `AdminWorkspaceView.vue` 里分散维护。

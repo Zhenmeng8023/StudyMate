@@ -7,15 +7,21 @@ import AdminMetricGrid from "../../components/admin/AdminMetricGrid.vue";
 import AdminRecordInspector from "../../components/admin/AdminRecordInspector.vue";
 import AdminRecordRow from "../../components/admin/AdminRecordRow.vue";
 import AdminTableHead from "../../components/admin/AdminTableHead.vue";
+import {
+  formatGovernanceCell,
+  formatGovernanceFieldLabel,
+  getGovernanceRecordTitle,
+  type GovernanceRecord
+} from "../../components/admin/governanceRecord";
 import type { AdminDataStatePayload } from "../../components/admin/dataState";
 
-type GovernanceRecord = Record<string, string | number | boolean | null | undefined>;
 type GovernanceAction = {
   key: string;
   label: string;
   tone?: "default" | "danger";
   variant?: "primary" | "secondary" | "ghost";
 };
+
 type FilterOption = {
   label: string;
   value: string;
@@ -50,47 +56,6 @@ const emit = defineEmits<{
   selectRecord: [record: GovernanceRecord];
 }>();
 
-function formatCell(value: string | number | boolean | null | undefined) {
-  if (value === null || value === undefined || value === "") return "-";
-  if (typeof value === "boolean") return value ? "是" : "否";
-  return String(value);
-}
-
-function formatFieldLabel(key: string) {
-  const labels: Record<string, string> = {
-    id: "标识",
-    title: "标题",
-    name: "名称",
-    originalName: "文件名",
-    username: "用户名",
-    email: "邮箱",
-    displayName: "显示名称",
-    role: "角色",
-    status: "状态",
-    action: "操作",
-    createdAt: "创建时间",
-    updatedAt: "更新时间",
-    ownerUserId: "归属用户",
-    reporterUserId: "举报用户",
-    handledBy: "处理人",
-    handledAt: "处理时间",
-    userId: "用户",
-    taskType: "任务类型",
-    sourceType: "来源类型",
-    sourceId: "来源标识",
-    errorMessage: "错误信息",
-    targetType: "目标类型",
-    targetId: "目标标识",
-    size: "文件大小",
-    mimeType: "文件类型"
-  };
-  return labels[key] ?? key.replace(/([A-Z])/g, " $1").trim();
-}
-
-function getRecordTitle(row: GovernanceRecord) {
-  return formatCell(row.title ?? row.name ?? row.originalName ?? row.username ?? row.action ?? row.id);
-}
-
 function requestAction(action: string) {
   if (!props.selectedRecord) return;
   emit("requestAction", { action, record: props.selectedRecord });
@@ -107,22 +72,23 @@ const resolvedDataState = computed<AdminDataStatePayload>(() =>
 const inspectorFields = computed(() =>
   props.selectedRecord
     ? Object.entries(props.selectedRecord).map(([key, value]) => ({
-        label: formatFieldLabel(String(key)),
-        value: formatCell(value)
+        label: formatGovernanceFieldLabel(String(key)),
+        value: formatGovernanceCell(value)
       }))
     : []
 );
+
 const summaryCards = computed(() =>
   props.summary
     ? Object.entries(props.summary).map(([key, value]) => ({
         helper: "AI 任务用量概览",
-        label: formatFieldLabel(String(key)),
-        value: formatCell(value)
+        label: formatGovernanceFieldLabel(String(key)),
+        value: formatGovernanceCell(value)
       }))
     : []
 );
-const tableHeadColumns = computed(() => props.columns.map((column) => formatFieldLabel(column)));
 
+const tableHeadColumns = computed(() => props.columns.map((column) => formatGovernanceFieldLabel(column)));
 const showState = computed(() => Boolean(props.dataState) || props.rows.length === 0);
 const showTable = computed(
   () => props.rows.length > 0 && (!props.dataState || props.dataState.kind === "stale" || props.dataState.kind === "conflict")
@@ -169,7 +135,7 @@ const showTable = computed(
     <AdminRecordInspector
       empty-text="从左侧表格选择一条记录，查看完整字段。"
       :fields="inspectorFields"
-      :title="selectedRecord ? getRecordTitle(selectedRecord) : '选择一条记录'"
+      :title="selectedRecord ? getGovernanceRecordTitle(selectedRecord) : '选择一条记录'"
     >
       <template v-if="selectedRecord && actions.length" #actions>
         <AdminActionBar
