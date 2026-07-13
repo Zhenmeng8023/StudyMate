@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getGovernanceModuleConfig,
   getGovernanceActions,
   governanceModuleConfig,
   isGovernanceModuleView,
@@ -13,6 +14,17 @@ describe("adminGovernanceConfig", () => {
     expect(isGovernanceModuleView("dashboard")).toBe(false);
     expect(governanceModuleConfig.graph.endpoint).toBe("/api/v1/admin/diagram-templates");
     expect(governanceModuleConfig.audit.query.limit).toBe(20);
+  });
+
+  it("resolves governance module config only for governance routes", () => {
+    expect(getGovernanceModuleConfig("dashboard")).toBeNull();
+    expect(getGovernanceModuleConfig("moderation")).toBeNull();
+    expect(getGovernanceModuleConfig("graph")).toEqual({
+      endpoint: "/api/v1/admin/diagram-templates",
+      query: { limit: 20 },
+      empty: "暂无图谱模板记录。",
+      description: "管理图谱模板的发布状态与基础元数据。"
+    });
   });
 
   it("derives governance actions from the shared view and record metadata", () => {
