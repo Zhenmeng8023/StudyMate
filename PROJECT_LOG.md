@@ -6414,3 +6414,26 @@
 
 - `FE-041` 现在继续从共享治理提交元数据推进到共享加载元数据，工作台里的视图加载计划和 AI summary 特例开始复用统一的 load plan 出口。
 - 这次仍然只先收口加载元数据 helper；更进一步的模块级 feature 边界和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 20:25:10 +08:00 | v1.1.0-alpha.209 | 推进 FE-041 管理端共享页面状态 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里审核队列与治理模块各自维护的 `loading / unauthorized / stale / conflict / error` 页面状态判定分支。
+- 目标是补一层共享页面状态 helper，并让工作台的审核态与治理态都直接复用统一的数据状态判定出口，减少页面层继续内联维护状态文案和分支。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminViewDataState.ts` 与 `adminViewDataState.test.ts`，收口管理端审核/治理数据区的页面状态判定纯函数，并锁定 `loading / unauthorized / stale / conflict / error` 五类输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `moderationDataState` 与 `governanceDataState` 改为直接消费共享 `resolveModerationDataState(...)`、`resolveGovernanceDataState(...)`，不再在工作台里平行维护两套状态分支。
+- 本轮不改请求路径、治理动作、会话协议和 URL 路由，只把已稳定的页面状态语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminViewDataState.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享加载元数据推进到共享页面状态判定，管理端审核和治理数据区开始复用统一的 `DataState` 分支出口。
+- 这次仍然只先收口页面状态 helper；更进一步的加载失败清理策略与页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。

@@ -40,6 +40,7 @@ import {
   groupAdminNavItems,
   type AdminNavItem
 } from "./adminViewMeta";
+import { resolveGovernanceDataState, resolveModerationDataState } from "./adminViewDataState";
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import {
   resetAdminWorkspaceState,
@@ -214,75 +215,23 @@ const activeDescription = computed(() =>
 const activeCountLabel = computed(() =>
   getAdminActiveCountLabel(activeView.value, moderationItems.value.length, governanceRows.value.length)
 );
-const moderationDataState = computed<AdminDataStatePayload | null>(() => {
-  if (loading.value && moderationItems.value.length === 0) {
-    return {
-      kind: "loading",
-      title: "正在同步审核队列",
-      description: "请稍候，最新待审核内容和状态正在载入。"
-    };
-  }
-  if (moderationErrorStatus.value === 403) {
-    return {
-      kind: "unauthorized",
-      title: "暂无审核权限",
-      description: errorMessage.value || "当前账号没有查看审核队列的权限。"
-    };
-  }
-  if (errorMessage.value && moderationItems.value.length > 0) {
-    return {
-      kind: "stale",
-      title: "审核队列需要刷新",
-      description: "当前显示的是上一次同步结果，请刷新后再继续处理。"
-    };
-  }
-  if (errorMessage.value && moderationItems.value.length === 0) {
-    return {
-      kind: "error",
-      title: "审核队列暂时不可用",
-      description: errorMessage.value
-    };
-  }
-  return null;
-});
+const moderationDataState = computed<AdminDataStatePayload | null>(() =>
+  resolveModerationDataState({
+    errorMessage: errorMessage.value,
+    errorStatus: moderationErrorStatus.value,
+    loading: loading.value,
+    rowCount: moderationItems.value.length
+  })
+);
 const governanceDataState = computed<AdminDataStatePayload | null>(() => {
   if (activeView.value === "dashboard" || activeView.value === "moderation") return null;
-  if (loading.value && governanceRows.value.length === 0) {
-    return {
-      kind: "loading",
-      title: `正在同步${activeMeta.value.label}`,
-      description: "请稍候，最新治理记录正在载入。"
-    };
-  }
-  if (governanceErrorStatus.value === 403) {
-    return {
-      kind: "unauthorized",
-      title: "暂无治理权限",
-      description: errorMessage.value || "当前账号没有查看这个治理模块的权限。"
-    };
-  }
-  if (governanceErrorStatus.value === 409) {
-    return {
-      kind: "conflict",
-      title: "治理动作存在冲突",
-      description: errorMessage.value || "这条记录的状态已经被其他人更新，请先刷新后再决定下一步。"
-    };
-  }
-  if (errorMessage.value && governanceRows.value.length > 0) {
-    return {
-      kind: "stale",
-      title: "治理记录需要刷新",
-      description: "当前显示的是上一次同步结果，请刷新后再继续判断。"
-    };
-  }
-  if (errorMessage.value && governanceRows.value.length === 0) {
-    return {
-      kind: "error",
-      title: `${activeMeta.value.label}暂时不可用`,
-      description: errorMessage.value
-    };
-  }
-  return null;
+  return resolveGovernanceDataState({
+    activeLabel: activeMeta.value.label,
+    errorMessage: errorMessage.value,
+    errorStatus: governanceErrorStatus.value,
+    loading: loading.value,
+    rowCount: governanceRows.value.length
+  });
 });
 const overviewCards = computed(() => [
   { label: "待处理", value: String(overview.value?.pendingModerationCount ?? moderationItems.value.length), helper: "需要审核或复核的公开内容" },
