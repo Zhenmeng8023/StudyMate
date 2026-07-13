@@ -12,7 +12,7 @@ import (
 )
 
 type SearchIndexer interface {
-	Search(itemType string, keyword string, limit int, userID string) (*SearchBatch, error)
+	Search(itemType string, keyword string, limit int, offset int, userID string) (*SearchBatch, error)
 }
 
 type SearchBatch struct {
@@ -48,8 +48,8 @@ func NewMySQLFallbackIndexer(db *gorm.DB) SearchIndexer {
 	return &mysqlFallbackIndexer{db: db}
 }
 
-func (i *mysqlFallbackIndexer) Search(itemType string, keyword string, limit int, userID string) (*SearchBatch, error) {
-	query, shortCircuit, err := buildSearchQuery(i.db, itemType, keyword, limit, userID)
+func (i *mysqlFallbackIndexer) Search(itemType string, keyword string, limit int, offset int, userID string) (*SearchBatch, error) {
+	query, shortCircuit, err := buildSearchQuery(i.db, itemType, keyword, limit, offset, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (i *mysqlFallbackIndexer) Search(itemType string, keyword string, limit int
 		return &SearchBatch{}, nil
 	}
 
-	totalCount, err := countSearchMatches(i.db, itemType, keyword, limit, userID)
+	totalCount, err := countSearchMatches(i.db, itemType, keyword, limit, offset, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (i *mysqlFallbackIndexer) Search(itemType string, keyword string, limit int
 		return nil, apperrors.Internal("鎼滅储澶辫触")
 	}
 
-	rows = rankAndLimitSearchRows(rows, keyword, limit)
+	rows = rankAndLimitSearchRows(rows, keyword, offset, limit)
 	results := make([]searchdto.Result, 0, len(rows))
 	for _, row := range rows {
 		results = append(results, searchdto.Result{
@@ -85,12 +85,12 @@ func (i *mysqlFallbackIndexer) Search(itemType string, keyword string, limit int
 	}, nil
 }
 
-func buildSearchQuery(db *gorm.DB, itemType string, keyword string, limit int, userID string) (*gorm.DB, bool, error) {
+func buildSearchQuery(db *gorm.DB, itemType string, keyword string, limit int, offset int, userID string) (*gorm.DB, bool, error) {
 	if db == nil {
 		return nil, false, apperrors.Internal("鎼滅储绱㈠紩鏈厤缃?")
 	}
 
-	spec, shortCircuit, err := buildSearchQuerySpec(itemType, keyword, limit, userID)
+	spec, shortCircuit, err := buildSearchQuerySpec(itemType, keyword, limit, offset, userID)
 	if err != nil || shortCircuit {
 		return nil, shortCircuit, err
 	}
@@ -102,12 +102,12 @@ func buildSearchQuery(db *gorm.DB, itemType string, keyword string, limit int, u
 		Limit(spec.limit), false, nil
 }
 
-func countSearchMatches(db *gorm.DB, itemType string, keyword string, limit int, userID string) (int, error) {
+func countSearchMatches(db *gorm.DB, itemType string, keyword string, limit int, offset int, userID string) (int, error) {
 	if db == nil {
 		return 0, apperrors.Internal("閹兼粎鍌ㄧ槐銏犵穿閺堫亪鍘ょ純?")
 	}
 
-	spec, shortCircuit, err := buildSearchQuerySpec(itemType, keyword, limit, userID)
+	spec, shortCircuit, err := buildSearchQuerySpec(itemType, keyword, limit, offset, userID)
 	if err != nil || shortCircuit {
 		return 0, err
 	}
@@ -122,11 +122,11 @@ func countSearchMatches(db *gorm.DB, itemType string, keyword string, limit int,
 	return int(totalCount), nil
 }
 
-func buildSearchQuerySpec(itemType string, keyword string, limit int, userID string) (*searchQuerySpec, bool, error) {
+func buildSearchQuerySpec(itemType string, keyword string, limit int, offset int, userID string) (*searchQuerySpec, bool, error) {
 	like := "%" + keyword + "%"
-	candidateLimit := limit * 4
-	if candidateLimit < limit {
-		candidateLimit = limit
+	candidateLimit := (offset + limit) * 4
+	if candidateLimit < offset+limit {
+		candidateLimit = offset + limit
 	}
 	if candidateLimit > 200 {
 		candidateLimit = 200
@@ -192,15 +192,25 @@ func buildSearchQuerySpec(itemType string, keyword string, limit int, userID str
 	}
 }
 
-func rankAndLimitSearchRows(rows []searchRow, keyword string, limit int) []searchRow {
+func rankAndLimitSearchRows(rows []searchRow, keyword string, offset int, limit int) []searchRow {
 	ranked := append([]searchRow(nil), rows...)
 	sort.SliceStable(ranked, func(left int, right int) bool {
 		return searchRowMatchRank(ranked[left], keyword) < searchRowMatchRank(ranked[right], keyword)
 	})
-	if limit > 0 && len(ranked) > limit {
-		return ranked[:limit]
+	if offset < 0 {
+		offset = 0
 	}
-	return ranked
+	if offset >= len(ranked) {
+		return []searchRow{}
+	}
+	if limit <= 0 {
+		return ranked[offset:]
+	}
+	end := offset + limit
+	if end > len(ranked) {
+		end = len(ranked)
+	}
+	return ranked[offset:end]
 }
 
 func searchRowMatchRank(row searchRow, keyword string) int {

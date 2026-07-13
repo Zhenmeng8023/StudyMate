@@ -141,11 +141,11 @@ func TestSearchUsesIndexerAcrossRequestedGroups(t *testing.T) {
 	if payload.Groups[1].Count != 2 || payload.Groups[1].ReturnedCount != 1 {
 		t.Fatalf("expected graph group to expose total count and returned count, got %#v", payload.Groups[1])
 	}
-	if payload.Groups[0].NextOffset != nil {
-		t.Fatalf("expected note group to report no nextOffset once all results were returned, got %#v", payload.Groups[0])
+	if payload.Groups[0].NextOffset == nil || *payload.Groups[0].NextOffset != 1 {
+		t.Fatalf("expected note group nextOffset 1 for a partial batch, got %#v", payload.Groups[0])
 	}
-	if payload.Groups[1].NextOffset != nil {
-		t.Fatalf("expected graph group to report no nextOffset once all results were returned, got %#v", payload.Groups[1])
+	if payload.Groups[1].NextOffset == nil || *payload.Groups[1].NextOffset != 1 {
+		t.Fatalf("expected graph group nextOffset 1 for a partial batch, got %#v", payload.Groups[1])
 	}
 
 	if len(indexer.calls) != 2 {

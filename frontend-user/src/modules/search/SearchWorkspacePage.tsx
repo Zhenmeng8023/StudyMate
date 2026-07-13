@@ -64,8 +64,54 @@ function emptySearchResponse(query: string): SearchResponsePayload {
       type,
       count: 0,
       returnedCount: 0,
+      nextOffset: null,
       results: []
     }))
+  };
+}
+
+function mergeSearchGroupResults(
+  currentPayload: SearchResponsePayload,
+  incomingPayload: SearchResponsePayload,
+  type: SearchResultType
+): SearchResponsePayload {
+  const incomingGroup = incomingPayload.groups.find((group) => group.type === type);
+  if (!incomingGroup) {
+    return currentPayload;
+  }
+
+  const mergedGroups = currentPayload.groups.map((group) => {
+    if (group.type !== type) {
+      return group;
+    }
+
+    const seen = new Set(group.results.map((item) => `${item.type}:${item.id}`));
+    const appendedResults = incomingGroup.results.filter((item) => {
+      const key = `${item.type}:${item.id}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+    const mergedResults = [...group.results, ...appendedResults];
+
+    return {
+      ...group,
+      count: incomingGroup.count,
+      returnedCount: mergedResults.length,
+      nextOffset: incomingGroup.nextOffset,
+      results: mergedResults
+    };
+  });
+
+  return {
+    ...currentPayload,
+    query: incomingPayload.query,
+    limit: incomingPayload.limit,
+    elapsedMs: incomingPayload.elapsedMs,
+    total: incomingPayload.total,
+    groups: mergedGroups
   };
 }
 
@@ -86,7 +132,9 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [message, setMessage] = useState("\u8f93\u5165\u5173\u952e\u8bcd\u540e\u5f00\u59cb\u641c\u7d22\u3002");
+  const [loadingMoreType, setLoadingMoreType] = useState<SearchResultType | null>(null);
   const [groupPages, setGroupPages] = useState<Partial<Record<SearchResultType, number>>>({});
+  const singleSelectedType = selectedTypes.length === 1 ? selectedTypes[0] : null;
 
   const filterSummary = selectedTypes.length
     ? selectedTypes.map((type) => groupLabels[type]).join(" / ")
@@ -94,6 +142,7 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
 
   useEffect(() => {
     setGroupPages({});
+    setLoadingMoreType(null);
   }, [keyword, selectedTypes]);
 
   useEffect(() => {
@@ -215,6 +264,31 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
     }));
   }
 
+  async function handleLoadMore(type: SearchResultType, nextOffset: number) {
+    if (!keyword || singleSelectedType !== type) {
+      return;
+    }
+
+    setLoadingMoreType(type);
+    try {
+      const nextPayload = await searchAll(props.session, {
+        query: keyword,
+        types: [type],
+        limit: searchFetchLimit,
+        offset: nextOffset
+      });
+      setPayload((currentPayload) => {
+        const mergedPayload = mergeSearchGroupResults(currentPayload, nextPayload, type);
+        setMessage(buildSearchCompleteMessage(mergedPayload));
+        return mergedPayload;
+      });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "\u52a0\u8f7d\u66f4\u591a\u7ed3\u679c\u5931\u8d25");
+    } finally {
+      setLoadingMoreType(null);
+    }
+  }
+
   return (
     <>
       <WorkspaceHeader
@@ -270,10 +344,13 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
           <section className="search-section-grid">
             {groups.map((group: SearchGroupPayload) => (
               <SearchGroupSection
+                canLoadMore={singleSelectedType === group.type}
                 currentPage={groupPages[group.type] ?? 1}
                 group={group}
+                isLoadingMore={loadingMoreType === group.type}
                 key={group.type}
                 keyword={keyword}
+                onLoadMore={handleLoadMore}
                 onPageChange={handleGroupPageChange}
               />
             ))}
@@ -285,8 +362,11 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
 }
 
 function SearchGroupSection(props: {
+  canLoadMore: boolean;
   group: SearchGroupPayload;
+  isLoadingMore: boolean;
   keyword: string;
+  onLoadMore: (type: SearchResultType, nextOffset: number) => void;
   currentPage: number;
   onPageChange: (type: SearchResultType, nextPage: number) => void;
 }) {
@@ -305,6 +385,18 @@ function SearchGroupSection(props: {
       </div>
       {hasPartialBatch ? (
         <p className="panel-copy">{`\u5f53\u524d\u4ec5\u5c55\u793a\u9996\u6279 ${props.group.returnedCount} / ${props.group.count} \u6761\u7ed3\u679c\u3002`}</p>
+      ) : null}
+      {props.canLoadMore && props.group.nextOffset !== null ? (
+        <button
+          className="filter-chip"
+          disabled={props.isLoadingMore}
+          onClick={() => props.onLoadMore(props.group.type, props.group.nextOffset as number)}
+          type="button"
+        >
+          {props.isLoadingMore
+            ? `\u6b63\u5728\u52a0\u8f7d${groupLabels[props.group.type]}\u66f4\u591a\u7ed3\u679c`
+            : `\u7ee7\u7eed\u52a0\u8f7d\u66f4\u591a${groupLabels[props.group.type]}\u7ed3\u679c`}
+        </button>
       ) : null}
       <div className="search-result-list">
         {visibleResults.map((item) => (

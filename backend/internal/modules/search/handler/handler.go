@@ -13,7 +13,7 @@ import (
 )
 
 type searchService interface {
-	Search(query string, types []string, limit int, userID string) (*searchdto.Response, error)
+	Search(query string, types []string, limit int, offset int, userID string) (*searchdto.Response, error)
 }
 
 type Handler struct {
@@ -29,12 +29,13 @@ var _ searchService = (*searchservice.Service)(nil)
 
 func (h *Handler) Search(ctx *gin.Context) {
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "20"))
+	offset, _ := strconv.Atoi(ctx.DefaultQuery("offset", "0"))
 	userID := h.optionalUserID(ctx)
 	var types []string
 	if rawTypes := strings.TrimSpace(ctx.Query("types")); rawTypes != "" {
 		types = strings.Split(rawTypes, ",")
 	}
-	payload, err := h.service.Search(ctx.Query("q"), types, limit, userID)
+	payload, err := h.service.Search(ctx.Query("q"), types, limit, offset, userID)
 	if err != nil {
 		response.Error(ctx, err)
 		return

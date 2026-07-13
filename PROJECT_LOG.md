@@ -7002,3 +7002,22 @@
 
 - `SE-020` 现在从“真实命中数 / 首批返回数分离”继续推进到“limit / elapsedMs` 透传与搜索页边界提示”，搜索结果页的统计信息更接近真实服务端契约，也为后续服务端 cursor / offset 分页留出了更稳定的文案与接口位置。
 - 这次仍然没有补跨批次服务端分页；下一步更适合继续沿 `SE-020` 增加 cursor/offset 或等价分页令牌，而不是在前端继续堆局部分页 UI。
+## 2026-07-14 01:00:34 +08:00 | v1.1.0-alpha.234 | 推进 SE-020 搜索 offset/nextOffset 跨批次续取
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `SE-020`，但保持“先把基础能力做通，再逐步细化”的节奏，这一轮不重做搜索页，而是补最小可用的跨批次续取契约。
+- 目标是让 `/api/v1/search` 在现有 grouped contract 下先支持 `offset` 请求与按组 `nextOffset` 返回，并让用户端在“单一类型筛选”场景下真的能继续加载下一批结果，而不是停留在只提示“当前仅展示首批结果”。
+### 实际变更
+
+- 更新 `backend/internal/modules/search/dto/search.go`、`service/service.go`、`service/indexer.go` 与 `handler.go`，让搜索接口新增 `offset` 查询参数，并在每组 payload 里返回 `nextOffset`；service 会统一归一化 `offset`，handler 负责透传，fallback indexer 会在排序后按 offset 做切片。
+- 更新 `backend/internal/modules/search/service/service_test.go`、`indexer_test.go`、`handler_test.go`，先补 RED 再补 GREEN，锁定 `offset` 透传、`nextOffset` 生成和组内续取语义不回退。
+- 更新 `frontend-user/src/api/search.ts`、`src/api/types.ts`、`src/api/searchShare.test.ts`、`src/modules/search/SearchWorkspacePage.tsx` 与 `SearchWorkspacePage.test.tsx`，让用户端搜索 API 支持 `offset`，搜索页在单一类型筛选且存在 `nextOffset` 时会显示“继续加载更多...”按钮，并把下一批结果追加到当前组里。
+- 更新 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `README.md`，把 `offset / nextOffset` 契约、单一类型续取边界和仍未完成的多分组真分页说明写回文档。
+### 验证结果
+
+- `cd backend && go test ./internal/modules/search/service ./internal/modules/search/handler`
+- `npm --workspace frontend-user run test -- src/api/searchShare.test.ts src/modules/search/SearchWorkspacePage.test.tsx`
+### 后续影响
+
+- `SE-020` 现在已经从“真实命中数 / 首批返回数分离 + 统计信息透传”继续推进到“单一类型可跨批次续取”的最小可用阶段，搜索页终于能基于后端契约继续拿下一批数据，而不是只做本地分页提示。
+- 这一步仍然没有把“全部类型”视图做成完整真分页；后续更适合继续沿 `SE-020 / WB-043 / WB-044` 补多分组分页编排、统一排序元数据和更强索引实现，而不是在前端继续堆局部技巧。

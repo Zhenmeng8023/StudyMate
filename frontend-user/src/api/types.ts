@@ -422,6 +422,7 @@ export interface SearchGroupPayload {
   type: SearchResultType;
   count: number;
   returnedCount: number;
+  nextOffset: number | null;
   results: SearchResultPayload[];
 }
 

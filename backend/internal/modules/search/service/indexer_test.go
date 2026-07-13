@@ -34,7 +34,7 @@ func TestRankAndLimitSearchRowsPrioritizesTitleMatches(t *testing.T) {
 		},
 	}
 
-	ranked := rankAndLimitSearchRows(rows, " 图谱 ", 2)
+	ranked := rankAndLimitSearchRows(rows, " 图谱 ", 0, 2)
 	if len(ranked) != 2 {
 		t.Fatalf("expected limit 2, got %#v", ranked)
 	}
@@ -60,7 +60,7 @@ func TestNormalizeSearchSummaryCollapsesWhitespaceAndTruncates(t *testing.T) {
 
 func TestBuildSearchQueryShortCircuitsRestrictedTypesWithoutUser(t *testing.T) {
 	for _, itemType := range []string{"note", "graph", "card"} {
-		spec, shortCircuit, err := buildSearchQuerySpec(itemType, "图谱", 20, "")
+		spec, shortCircuit, err := buildSearchQuerySpec(itemType, "图谱", 20, 0, "")
 		if err != nil {
 			t.Fatalf("expected %s to short circuit without error, got %v", itemType, err)
 		}
@@ -136,7 +136,7 @@ func TestMySQLFallbackIndexerReportsTrueMatchCountBeyondReturnedBatch(t *testing
 	}
 
 	indexer := NewMySQLFallbackIndexer(db)
-	batch, err := indexer.Search("material", "图谱", 1, "")
+	batch, err := indexer.Search("material", "图谱", 1, 0, "")
 	if err != nil {
 		t.Fatalf("search materials: %v", err)
 	}
@@ -154,7 +154,7 @@ func TestMySQLFallbackIndexerReportsTrueMatchCountBeyondReturnedBatch(t *testing
 func mustBuildSearchSpec(t *testing.T, itemType string, keyword string, limit int, userID string) *searchQuerySpec {
 	t.Helper()
 
-	spec, shortCircuit, err := buildSearchQuerySpec(itemType, keyword, limit, userID)
+	spec, shortCircuit, err := buildSearchQuerySpec(itemType, keyword, limit, 0, userID)
 	if err != nil {
 		t.Fatalf("build search query spec: %v", err)
 	}

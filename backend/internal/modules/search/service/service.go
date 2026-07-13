@@ -24,7 +24,7 @@ func NewServiceWithIndexer(indexer SearchIndexer) *Service {
 	return &Service{indexer: indexer}
 }
 
-func (s *Service) Search(query string, types []string, limit int, userID string) (*searchdto.Response, error) {
+func (s *Service) Search(query string, types []string, limit int, offset int, userID string) (*searchdto.Response, error) {
 	startedAt := time.Now()
 	keyword := strings.TrimSpace(query)
 	normalizedLimit := limit
@@ -32,6 +32,10 @@ func (s *Service) Search(query string, types []string, limit int, userID string)
 		normalizedLimit = 20
 	} else if normalizedLimit > 50 {
 		normalizedLimit = 50
+	}
+	normalizedOffset := offset
+	if normalizedOffset < 0 {
+		normalizedOffset = 0
 	}
 	if keyword == "" {
 		return &searchdto.Response{
@@ -52,18 +56,24 @@ func (s *Service) Search(query string, types []string, limit int, userID string)
 	groups := make([]searchdto.Group, 0, len(allowed))
 	total := 0
 	for _, itemType := range allowed {
-		batch, err := s.indexer.Search(itemType, keyword, normalizedLimit, userID)
+		batch, err := s.indexer.Search(itemType, keyword, normalizedLimit, normalizedOffset, userID)
 		if err != nil {
 			return nil, err
 		}
 		if batch == nil {
 			batch = &SearchBatch{}
 		}
+		var nextOffset *int
+		if batch.TotalCount > normalizedOffset+len(batch.Results) {
+			value := normalizedOffset + len(batch.Results)
+			nextOffset = &value
+		}
 		total += batch.TotalCount
 		groups = append(groups, searchdto.Group{
 			Type:          itemType,
 			Count:         batch.TotalCount,
 			ReturnedCount: len(batch.Results),
+			NextOffset:    nextOffset,
 			Results:       batch.Results,
 		})
 	}

@@ -18,7 +18,7 @@
 - `WB-031` 已完成图谱导出、缩略图与布局契约收口：新增 `docs/architecture/GRAPH_EXPORT_LAYOUT_CONTRACT.md`，把 JSON/SVG/PNG 导出边界、`thumbnailFileId` head 模型和 `POST /graphs/:id/layouts/preview` 来源泳道布局预览接口统一记录下来。
 - `WB-020` 已完成图谱文档契约收口：`GraphDocument` / `schemaVersion` / 兼容读取默认化现在分别在 `@studymate/graph-core` 与后端 graph DTO 中有显式单一来源，旧图谱 payload、空文档与快照恢复不再依赖分散硬编码。
 - 复习和 AI 已具备 SM-2 调度边界、Deck/Card 与 AI draft 基础闭环；`v1.1` 已开始补 Deck/Card、今日队列、复习回写、AI 草稿/用量/任务 API 合约测试、图谱变更草稿确认 API 合约测试、后端 card/AI handler 边界测试、ReviewWorkspace 页面回归测试、复习队列 Playwright smoke，以及 AI 卡片/图谱草稿确认页面测试。
-- 搜索、分享和后台治理已接入真实 API；`v1.1` 已补齐搜索契约、结果质量、权限矩阵和搜索页页面级回归，用户端搜索页现支持 URL 类型筛选、来源跳转，以及“真实命中数 + 首批返回数”分离后的当前批次内分页提示，并会展示后端透传的搜索耗时与当前首批边界；后续继续通过内部 `SearchIndexer` 抽象保留 MySQL fallback 默认实现，并沿 `SE-020` 继续补服务端真分页与搜索文档记录。
+- 搜索、分享和后台治理已接入真实 API；`v1.1` 已补齐搜索契约、结果质量、权限矩阵和搜索页页面级回归，用户端搜索页现支持 URL 类型筛选、来源跳转、“真实命中数 + 首批返回数”分离后的当前批次提示，以及单一类型筛选下基于 `offset / nextOffset` 的继续加载；后续继续通过内部 `SearchIndexer` 抽象保留 MySQL fallback 默认实现，并沿 `SE-020` 继续补更完整的服务端分页与搜索文档记录。
 - 阅读器/笔记收口继续按 TDD 推进：已补用户端 Reader API 合约测试、`ReaderPage` 书签与批注来源回归测试，以及后端 `reader/handler`、`reader/service` 的鉴权、请求体和来源选择边界测试。
 - `WB-002` 已完成第一轮配置安全收口：`JWT_SECRET` 与 `MYSQL_DSN` 不再回退到危险默认值，启动阶段会显式校验缺失项。
 - `WB-003` 已完成最小 CI 质量门禁补强：`gofmt` 检查、配置安全回归检查、Vitest、Playwright、Go test 与文档同步都已进入默认 `npm run ci`。
@@ -137,8 +137,8 @@ go test ./...
 ## v1.0.0 D 阶段补充
 
 - 复习调度保留 SM-2 默认算法，但通过后端 `Scheduler` 接口隔离，后续替换算法不需要改变公开 route contract。
-- 搜索入口为 `GET /api/v1/search?q=&types=&limit=`，返回包含 `query/limit/elapsedMs/total/groups[]` 的 grouped payload，其中结果项仍为 `type/id/title/summary/url/source`；省略 `types` 时默认搜索 `material/post/note/graph/card` 五组，未知类型返回 `400 invalid_search_type`，`limit` 缺省为 `20` 且最大为 `50`。
-- 用户端搜索页会把 `types` 同步到 URL，并在每组当前批次最多 `12` 条结果中按每页 `4` 条切换；这层分页只覆盖当前批次结果，不代表后端已提供 offset/page 契约。
+- 搜索入口为 `GET /api/v1/search?q=&types=&limit=&offset=`，返回包含 `query/limit/elapsedMs/total/groups[]` 的 grouped payload，其中每组还会显式给出 `count/returnedCount/nextOffset/results[]`；省略 `types` 时默认搜索 `material/post/note/graph/card` 五组，未知类型返回 `400 invalid_search_type`，`limit` 缺省为 `20` 且最大为 `50`，`offset` 缺省为 `0`。
+- 用户端搜索页会把 `types` 同步到 URL，并在每组当前已加载结果中按每页 `4` 条切换；当用户只筛选单一类型且该组返回 `nextOffset` 时，页面会继续带上 `offset` 请求下一批结果。全部类型视图仍以首批聚合结果为主，不代表后端已经具备统一的 offset/page 分页体验。
 - 搜索专项回归可直接执行 `npm run verify:search`；更完整的契约、权限矩阵和测试映射见 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`。
 - 图谱冲突专项回归可直接执行 `npm run verify:graph-conflicts`；当前冲突生命周期、工作区测试映射、图谱工作区桌面/窄屏 smoke、布局预览/导出状态、权限路径、真实 `graph_version_conflict` 路径和固定入口见 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`。
 - 未登录只搜公开资料和社区，登录后扩展到私有笔记、图谱和卡片；note / graph / card 在匿名请求下会直接短路为空结果，graph 仅返回 `active` 且“owner 或 public”的结果。`source` 字段当前表示来源域而不是底层存储引擎。fallback 组内结果按标题命中优先排序，长摘要会压缩为单行 160 字符内预览。后端 `search/service` 当前通过内部 `SearchIndexer` 抽象封装 MySQL fallback，为后续 Meilisearch adapter 预留边界但不改变 v1 路由契约。

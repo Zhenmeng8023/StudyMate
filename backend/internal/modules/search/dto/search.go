@@ -13,6 +13,7 @@ type Group struct {
 	Type          string   `json:"type"`
 	Count         int      `json:"count"`
 	ReturnedCount int      `json:"returnedCount"`
+	NextOffset    *int     `json:"nextOffset"`
 	Results       []Result `json:"results"`
 }
 
