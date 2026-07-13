@@ -32,6 +32,7 @@ import {
   type ConfirmDialogHandlerMap,
   type ConfirmDialogKey
 } from "./adminConfirmDialogState";
+import { buildAdminConfirmDialogs, type AdminConfirmDialogItem } from "./adminConfirmDialogs";
 import { buildStatusFilterOptions, filterCollectionByStatusAndQuery, type AdminFilterOption } from "./adminModuleFilters";
 import {
   buildAdminNavItems,
@@ -88,19 +89,6 @@ type ReportAction = "resolve" | "dismiss";
 type UserAction = "disable" | "activate";
 type AITaskAction = "retry" | "cancel";
 type TemplateAction = "publish" | "unpublish";
-type ConfirmDialogItem = {
-  key: ConfirmDialogKey;
-  cancelLabel?: string;
-  confirmDisabled?: boolean;
-  confirmLabel?: string;
-  confirmTone?: "default" | "danger";
-  confirming?: boolean;
-  confirmingLabel?: string;
-  description?: string;
-  errorMessage?: string;
-  isOpen: boolean;
-  title: string;
-};
 type FilterOption = AdminFilterOption;
 
 const form = reactive({ login: "", password: "" });
@@ -144,68 +132,36 @@ const reportConfirmCopy = computed(() => getReportConfirmCopy(pendingReportActio
 const userConfirmCopy = computed(() => getUserConfirmCopy(pendingUserAction.value));
 const aiTaskConfirmCopy = computed(() => getAITaskConfirmCopy(pendingAITaskAction.value));
 const templateConfirmCopy = computed(() => getTemplateConfirmCopy(pendingTemplateAction.value));
-const confirmDialogs = computed<ConfirmDialogItem[]>(() => [
-  {
-    key: "moderation" as const,
-    cancelLabel: "取消",
-    confirmLabel: moderationConfirmCopy.value.confirmLabel,
-    confirmTone: moderationConfirmCopy.value.confirmTone,
-    confirming: loading.value,
-    confirmingLabel: moderationConfirmCopy.value.confirmingLabel,
-    description: moderationConfirmCopy.value.description,
-    errorMessage: moderationConfirmError.value,
-    isOpen: Boolean(pendingModerationAction.value),
-    title: moderationConfirmCopy.value.title
-  },
-  {
-    key: "report" as const,
-    cancelLabel: "取消",
-    confirmLabel: reportConfirmCopy.value.confirmLabel,
-    confirmTone: reportConfirmCopy.value.confirmTone,
-    confirming: loading.value,
-    confirmingLabel: reportConfirmCopy.value.confirmingLabel,
-    description: reportConfirmCopy.value.description,
-    errorMessage: reportConfirmError.value,
-    isOpen: Boolean(pendingReportAction.value),
-    title: reportConfirmCopy.value.title
-  },
-  {
-    key: "aiTask" as const,
-    cancelLabel: "取消",
-    confirmLabel: aiTaskConfirmCopy.value.confirmLabel,
-    confirmTone: aiTaskConfirmCopy.value.confirmTone,
-    confirming: loading.value,
-    confirmingLabel: aiTaskConfirmCopy.value.confirmingLabel,
-    description: aiTaskConfirmCopy.value.description,
-    errorMessage: aiTaskConfirmError.value,
-    isOpen: Boolean(pendingAITaskAction.value),
-    title: aiTaskConfirmCopy.value.title
-  },
-  {
-    key: "template" as const,
-    cancelLabel: "取消",
-    confirmLabel: templateConfirmCopy.value.confirmLabel,
-    confirmTone: templateConfirmCopy.value.confirmTone,
-    confirming: loading.value,
-    confirmingLabel: templateConfirmCopy.value.confirmingLabel,
-    description: templateConfirmCopy.value.description,
-    errorMessage: templateConfirmError.value,
-    isOpen: Boolean(pendingTemplateAction.value),
-    title: templateConfirmCopy.value.title
-  },
-  {
-    key: "user" as const,
-    cancelLabel: "取消",
-    confirmLabel: userConfirmCopy.value.confirmLabel,
-    confirmTone: userConfirmCopy.value.confirmTone,
-    confirming: loading.value,
-    confirmingLabel: userConfirmCopy.value.confirmingLabel,
-    description: userConfirmCopy.value.description,
-    errorMessage: userConfirmError.value,
-    isOpen: Boolean(pendingUserAction.value),
-    title: userConfirmCopy.value.title
-  }
-]);
+const confirmDialogs = computed<AdminConfirmDialogItem[]>(() =>
+  buildAdminConfirmDialogs({
+    loading: loading.value,
+    moderation: {
+      copy: moderationConfirmCopy.value,
+      errorMessage: moderationConfirmError.value,
+      isOpen: Boolean(pendingModerationAction.value)
+    },
+    report: {
+      copy: reportConfirmCopy.value,
+      errorMessage: reportConfirmError.value,
+      isOpen: Boolean(pendingReportAction.value)
+    },
+    aiTask: {
+      copy: aiTaskConfirmCopy.value,
+      errorMessage: aiTaskConfirmError.value,
+      isOpen: Boolean(pendingAITaskAction.value)
+    },
+    template: {
+      copy: templateConfirmCopy.value,
+      errorMessage: templateConfirmError.value,
+      isOpen: Boolean(pendingTemplateAction.value)
+    },
+    user: {
+      copy: userConfirmCopy.value,
+      errorMessage: userConfirmError.value,
+      isOpen: Boolean(pendingUserAction.value)
+    }
+  })
+);
 
 const navItems = computed<AdminNavItem[]>(() => buildAdminNavItems(moderationItems.value.length));
 const navGroups = computed(() => groupAdminNavItems(navItems.value));
