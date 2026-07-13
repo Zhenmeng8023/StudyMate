@@ -69,6 +69,7 @@ import {
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import { runAdminWorkspaceViewLoad } from "./adminWorkspaceViewLoad";
 import { runAdminWorkspaceMountBootstrap } from "./adminWorkspaceMountBootstrap";
+import { runAdminWorkspaceLogout } from "./adminWorkspaceLogout";
 import { runAdminWorkspaceSessionCleared } from "./adminWorkspaceSessionCleared";
 import { runAdminWorkspaceViewSwitch } from "./adminWorkspaceViewSwitch";
 import {
@@ -111,6 +112,7 @@ type ReportAction = "resolve" | "dismiss";
 type UserAction = "disable" | "activate";
 type AITaskAction = "retry" | "cancel";
 type TemplateAction = "publish" | "unpublish";
+const initialAdminWorkspaceNotice = "登录后会同步当前治理队列与运营数据。";
 
 const form = reactive({ login: "", password: "" });
 const session = ref<AdminSessionPayload | null>(readStoredAdminSession());
@@ -126,7 +128,7 @@ const loading = ref(false);
 const errorMessage = ref("");
 const moderationErrorStatus = ref<number | null>(null);
 const governanceErrorStatus = ref<number | null>(null);
-const notice = ref("登录后会同步当前治理队列与运营数据。");
+const notice = ref(initialAdminWorkspaceNotice);
 const activeView = ref<AdminView>(
   resolveAdminWorkspaceLocationView(typeof window === "undefined" ? null : window.location)
 );
@@ -191,6 +193,12 @@ const navItems = computed<AdminNavItem[]>(() => buildAdminNavItems(moderationIte
 const navGroups = computed(() => groupAdminNavItems(navItems.value));
 const activeMeta = computed(() => navItems.value.find((item) => item.key === activeView.value) ?? navItems.value[0]);
 const loginPrompt = computed(() => getSessionInvalidationPrompt(sessionInvalidation.value, "admin"));
+const loginNotice = computed(() => {
+  if (loggedIn.value || loginPrompt.value || notice.value === initialAdminWorkspaceNotice) {
+    return "";
+  }
+  return notice.value;
+});
 const activeDescription = computed(() => getAdminViewDescription(activeView.value, getGovernanceModuleConfig(activeView.value)?.description ?? ""));
 const activeCountLabel = computed(() =>
   getAdminActiveCountLabel(activeView.value, moderationItems.value.length, governanceRows.value.length)
@@ -661,17 +669,29 @@ function refreshActiveView() {
 
 function logout() {
   const plan = buildAdminWorkspaceLogoutPlan(getAdminLogoutNotice());
-  session.value = null;
-  profile.value = null;
-  clearWorkspaceState(plan.resetKeys);
-  activeView.value = plan.nextView;
-  syncAdminWorkspaceLocation(plan.nextView, window.location, window.history, plan.syncMode);
-  if (plan.clearSessionInvalidation) {
-    sessionInvalidation.value = null;
-    clearSessionInvalidation();
-  }
-  persistSession(null);
-  notice.value = plan.notice;
+  runAdminWorkspaceLogout(plan, {
+    clearProfile: () => {
+      profile.value = null;
+    },
+    clearSessionInvalidation: () => {
+      sessionInvalidation.value = null;
+      clearSessionInvalidation();
+    },
+    clearSessionState: () => {
+      session.value = null;
+    },
+    clearWorkspaceState,
+    persistSession,
+    setActiveView: (view) => {
+      activeView.value = view;
+    },
+    setNotice: (nextNotice) => {
+      notice.value = nextNotice;
+    },
+    syncLocation: (view, syncMode) => {
+      syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
+    }
+  });
 }
 
 async function get<T>(path: string, query?: { limit?: number }) {
@@ -699,6 +719,7 @@ function selectRecord(row: GovernanceRecord) {
       v-if="!loggedIn"
       :error-message="errorMessage"
       :loading="loading"
+      :notice="loginNotice"
       :login-prompt="loginPrompt"
       :login-value="form.login"
       :password-value="form.password"

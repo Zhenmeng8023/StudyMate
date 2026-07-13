@@ -1,3 +1,29 @@
+## 2026-07-14 00:04:12 +08:00 | v1.1.0-alpha.228 | 推进 FE-041 管理端退出执行 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `logout()` 在退出时仍内联维护的 session/profile 清理、工作台 reset、默认 view 回退、无效化提示清空、持久化会话清除与退出提示同步。
+- 目标是补一层共享 logout execution helper，并让后台工作台在退出时的最小执行链复用统一出口，同时把“后台会话已清空。”提示稳定带回登录态视图。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceLogout.ts` 与 `adminWorkspaceLogout.test.ts`，收口 `runAdminWorkspaceLogout(...)` 出口，统一处理退出时的 session/profile 清理、工作台 reset、默认 view 回退、无效化提示清空、持久化会话清除与 notice 同步顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `logout()` 改为消费共享 `adminWorkspaceLogout` helper，并补上登录态 `notice` 透传逻辑，避免退出后提示丢失。
+- 更新 `frontend-admin/src/components/admin/AdminLoginPanel.vue` 与 `AdminLoginPanel.test.ts`，为登录态视图补充非错误型 notice 展示出口。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端退出执行也已进入共享 helper 出口”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLogout.test.ts src/views/AdminWorkspaceView.test.ts src/components/admin/AdminLoginPanel.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从 view-switch execution 推进到共享 logout execution，后台工作台在退出时的清理、回退和提示开始复用统一出口，登录态页面也不再丢失退出提示。
+- 这次仍然只先收口了 logout helper；更进一步的 `refreshActiveView()` 共享刷新计划，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-13 23:55:37 +08:00 | v1.1.0-alpha.227 | 推进 FE-041 管理端视图切换执行 helper 接线
 ### 任务内容
 

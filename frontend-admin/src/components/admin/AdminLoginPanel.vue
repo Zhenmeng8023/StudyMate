@@ -6,6 +6,7 @@ defineProps<{
   errorMessage: string;
   loading: boolean;
   loginPrompt: string;
+  notice: string;
   loginValue: string;
   passwordValue: string;
 }>();
@@ -49,6 +50,7 @@ const emit = defineEmits<{
             @update:model-value="emit('update:passwordValue', $event)"
           />
         </label>
+        <p v-if="notice" class="admin-login__notice">{{ notice }}</p>
         <p v-if="loginPrompt" class="error-text">{{ loginPrompt }}</p>
         <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
         <AdminButton :disabled="loading" type="submit" variant="primary">

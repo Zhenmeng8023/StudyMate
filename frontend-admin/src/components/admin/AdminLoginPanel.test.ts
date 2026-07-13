@@ -9,12 +9,14 @@ describe("AdminLoginPanel", () => {
         errorMessage: "登录失败",
         loading: false,
         loginPrompt: "后台会话已失效，请重新登录",
+        notice: "后台会话已清空。",
         loginValue: "",
         passwordValue: ""
       }
     });
 
     expect(wrapper.text()).toContain("进入管理后台");
+    expect(wrapper.text()).toContain("后台会话已清空。");
     expect(wrapper.text()).toContain("后台会话已失效，请重新登录");
     expect(wrapper.text()).toContain("登录失败");
     expect(wrapper.get('input[placeholder="用户名或邮箱"]').classes()).toContain("ds-input");
