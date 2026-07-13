@@ -6326,3 +6326,25 @@
 
 - `FE-041` 现在继续从共享治理确认文案推进到共享导航元数据，工作台顶部骨架开始复用统一的导航、分组和视图描述出口。
 - 这次仍然只先收口导航元数据 helper；更进一步的治理详情字段说明、模块级 feature 边界和确认/动作状态流拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 18:27:10 +08:00 | v1.1.0-alpha.205 | 推进 FE-041 管理端共享确认状态 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里 keyed confirm dialog 分发和重复确认状态重置逻辑。
+- 目标是补一层共享确认状态 helper，并让工作台直接复用统一的 confirm key 类型、keyed handler 路由和全量 reset 入口，减少页面层在 `handleConfirmDialogCancel / handleConfirmDialogConfirm / switchView / logout / session 清空` 上的重复分支。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminConfirmDialogState.ts` 与 `adminConfirmDialogState.test.ts`，收口后台确认弹层的共享 `ConfirmDialogKey`、keyed handler 路由和全量状态 reset helper，并锁定 key 顺序与 handler 分发行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 confirm dialog 的 cancel/confirm 分发改为消费共享 `runAdminConfirmDialogHandler(...)`，同时把确认状态清理合并到 `clearPendingConfirmState()` 并复用到 `switchView`、`logout` 和后台会话失效清空路径。
+- 本轮不改治理动作 API、确认文案、模块路由和加载行为，只把已稳定的确认状态分发与 reset 语义继续从工作台视图层下沉到共享 helper。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminConfirmDialogState.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从共享导航元数据推进到共享确认状态，工作台里的 confirm key 分发和批量清理开始复用统一出口。
+- 这次仍然只先收口确认状态 helper；更进一步的治理详情字段说明、模块级 feature 边界和页面级数据协调逻辑拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。

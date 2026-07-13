@@ -26,6 +26,12 @@ import {
   getTemplateConfirmCopy,
   getUserConfirmCopy
 } from "./adminActionConfirmCopy";
+import {
+  resetAdminConfirmDialogState,
+  runAdminConfirmDialogHandler,
+  type ConfirmDialogHandlerMap,
+  type ConfirmDialogKey
+} from "./adminConfirmDialogState";
 import { buildStatusFilterOptions, filterCollectionByStatusAndQuery, type AdminFilterOption } from "./adminModuleFilters";
 import {
   buildAdminNavItems,
@@ -69,7 +75,6 @@ type ReportAction = "resolve" | "dismiss";
 type UserAction = "disable" | "activate";
 type AITaskAction = "retry" | "cancel";
 type TemplateAction = "publish" | "unpublish";
-type ConfirmDialogKey = "moderation" | "report" | "user" | "aiTask" | "template";
 type ConfirmDialogItem = {
   key: ConfirmDialogKey;
   cancelLabel?: string;
@@ -318,6 +323,61 @@ const governanceStatusOptions = computed<FilterOption[]>(() => {
 });
 const governanceColumns = computed(() => getGovernanceColumns(governanceRows.value));
 
+const confirmResetHandlers: ConfirmDialogHandlerMap<() => void> = {
+  moderation: () => {
+    pendingModerationAction.value = null;
+    moderationConfirmError.value = "";
+  },
+  report: () => {
+    pendingReportAction.value = null;
+    reportConfirmError.value = "";
+  },
+  user: () => {
+    pendingUserAction.value = null;
+    userConfirmError.value = "";
+  },
+  aiTask: () => {
+    pendingAITaskAction.value = null;
+    aiTaskConfirmError.value = "";
+  },
+  template: () => {
+    pendingTemplateAction.value = null;
+    templateConfirmError.value = "";
+  }
+};
+
+const confirmSubmitHandlers: ConfirmDialogHandlerMap<() => Promise<void>> = {
+  moderation: async () => {
+    const pending = pendingModerationAction.value;
+    if (!pending) return;
+    await applyModerationAction(pending.item, pending.action);
+  },
+  report: async () => {
+    const pending = pendingReportAction.value;
+    if (!pending) return;
+    await applyReportAction(pending.record, pending.action);
+  },
+  user: async () => {
+    const pending = pendingUserAction.value;
+    if (!pending) return;
+    await applyUserAction(pending.record, pending.action);
+  },
+  aiTask: async () => {
+    const pending = pendingAITaskAction.value;
+    if (!pending) return;
+    await applyAITaskAction(pending.record, pending.action);
+  },
+  template: async () => {
+    const pending = pendingTemplateAction.value;
+    if (!pending) return;
+    await applyTemplateAction(pending.record, pending.action);
+  }
+};
+
+function clearPendingConfirmState() {
+  resetAdminConfirmDialogState(confirmResetHandlers);
+}
+
 function getRequestErrorStatus(error: unknown) {
   if (typeof error !== "object" || error === null || !("status" in error)) {
     return null;
@@ -382,16 +442,7 @@ const unsubscribeSession = subscribeSession(() => {
     governanceSummary.value = null;
     governanceRowsView.value = null;
     selectedRecord.value = null;
-    pendingModerationAction.value = null;
-    moderationConfirmError.value = "";
-    pendingReportAction.value = null;
-    reportConfirmError.value = "";
-    pendingUserAction.value = null;
-    userConfirmError.value = "";
-    pendingAITaskAction.value = null;
-    aiTaskConfirmError.value = "";
-    pendingTemplateAction.value = null;
-    templateConfirmError.value = "";
+    clearPendingConfirmState();
     activeView.value = defaultAdminRouteKey;
     syncAdminLocation(defaultAdminRouteKey, "replace");
     errorMessage.value = "";
@@ -711,104 +762,13 @@ function requestGovernanceAction(payload: { action: string; record: GovernanceRe
   }
 }
 
-function closeModerationConfirm() {
-  if (loading.value) return;
-  pendingModerationAction.value = null;
-  moderationConfirmError.value = "";
-}
-
-function closeReportConfirm() {
-  if (loading.value) return;
-  pendingReportAction.value = null;
-  reportConfirmError.value = "";
-}
-
-function closeUserConfirm() {
-  if (loading.value) return;
-  pendingUserAction.value = null;
-  userConfirmError.value = "";
-}
-
-function closeAITaskConfirm() {
-  if (loading.value) return;
-  pendingAITaskAction.value = null;
-  aiTaskConfirmError.value = "";
-}
-
-function closeTemplateConfirm() {
-  if (loading.value) return;
-  pendingTemplateAction.value = null;
-  templateConfirmError.value = "";
-}
-
-async function confirmModerationAction() {
-  const pending = pendingModerationAction.value;
-  if (!pending) return;
-  await applyModerationAction(pending.item, pending.action);
-}
-
-async function confirmReportAction() {
-  const pending = pendingReportAction.value;
-  if (!pending) return;
-  await applyReportAction(pending.record, pending.action);
-}
-
-async function confirmUserAction() {
-  const pending = pendingUserAction.value;
-  if (!pending) return;
-  await applyUserAction(pending.record, pending.action);
-}
-
-async function confirmAITaskAction() {
-  const pending = pendingAITaskAction.value;
-  if (!pending) return;
-  await applyAITaskAction(pending.record, pending.action);
-}
-
-async function confirmTemplateAction() {
-  const pending = pendingTemplateAction.value;
-  if (!pending) return;
-  await applyTemplateAction(pending.record, pending.action);
-}
-
 function handleConfirmDialogCancel(key: ConfirmDialogKey) {
-  if (key === "moderation") {
-    closeModerationConfirm();
-    return;
-  }
-  if (key === "report") {
-    closeReportConfirm();
-    return;
-  }
-  if (key === "user") {
-    closeUserConfirm();
-    return;
-  }
-  if (key === "aiTask") {
-    closeAITaskConfirm();
-    return;
-  }
-  closeTemplateConfirm();
+  if (loading.value) return;
+  runAdminConfirmDialogHandler(key, confirmResetHandlers);
 }
 
 async function handleConfirmDialogConfirm(key: ConfirmDialogKey) {
-  if (key === "moderation") {
-    await confirmModerationAction();
-    return;
-  }
-  if (key === "report") {
-    await confirmReportAction();
-    return;
-  }
-  if (key === "user") {
-    await confirmUserAction();
-    return;
-  }
-  if (key === "aiTask") {
-    await confirmAITaskAction();
-    return;
-  }
-  await confirmTemplateAction();
+  await runAdminConfirmDialogHandler(key, confirmSubmitHandlers);
 }
 
 function switchView(view: AdminView) {
@@ -817,16 +777,7 @@ function switchView(view: AdminView) {
   moderationQuery.value = "";
   moderationStatusFilter.value = "all";
   governanceStatusFilter.value = "all";
-  pendingModerationAction.value = null;
-  moderationConfirmError.value = "";
-  pendingReportAction.value = null;
-  reportConfirmError.value = "";
-  pendingUserAction.value = null;
-  userConfirmError.value = "";
-  pendingAITaskAction.value = null;
-  aiTaskConfirmError.value = "";
-  pendingTemplateAction.value = null;
-  templateConfirmError.value = "";
+  clearPendingConfirmState();
   syncAdminLocation(view);
   loadActiveView(view);
 }
@@ -846,16 +797,7 @@ function logout() {
   selectedRecord.value = null;
   moderationStatusFilter.value = "all";
   governanceStatusFilter.value = "all";
-  pendingModerationAction.value = null;
-  moderationConfirmError.value = "";
-  pendingReportAction.value = null;
-  reportConfirmError.value = "";
-  pendingUserAction.value = null;
-  userConfirmError.value = "";
-  pendingAITaskAction.value = null;
-  aiTaskConfirmError.value = "";
-  pendingTemplateAction.value = null;
-  templateConfirmError.value = "";
+  clearPendingConfirmState();
   activeView.value = defaultAdminRouteKey;
   syncAdminLocation(defaultAdminRouteKey, "replace");
   sessionInvalidation.value = null;

@@ -11,15 +11,15 @@ describe("adminConfirmDialogState", () => {
     const calls: ConfirmDialogKey[] = [];
 
     const result = await runAdminConfirmDialogHandler("aiTask", {
-      moderation: () => {
+      moderation: async () => {
         calls.push("moderation");
         return "moderation";
       },
-      report: () => {
+      report: async () => {
         calls.push("report");
         return "report";
       },
-      user: () => {
+      user: async () => {
         calls.push("user");
         return "user";
       },
@@ -27,7 +27,7 @@ describe("adminConfirmDialogState", () => {
         calls.push("aiTask");
         return "aiTask";
       },
-      template: () => {
+      template: async () => {
         calls.push("template");
         return "template";
       }
