@@ -6304,3 +6304,25 @@
 
 - `FE-041` 现在继续从共享治理动作分发推进到共享治理确认文案，后台治理确认流开始复用统一的 copy 生成出口。
 - 这次仍然只先收口确认文案 helper；更进一步的治理详情字段说明、动作可见性元数据和模块级 page/feature 拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 18:19:40 +08:00 | v1.1.0-alpha.204 | 推进 FE-041 管理端共享导航元数据 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里内联的导航项、分组顺序、顶部描述文案与计数字段元数据。
+- 目标是补一层共享导航元数据 helper，并让工作台直接复用统一的 nav item / group / description / count label 生成逻辑，减少页面层对模块骨架元数据的重复维护。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminViewMeta.ts` 与 `adminViewMeta.test.ts`，收口后台导航图标、分组、徽标、顶部描述和数量文案的共享 helper，并锁定分组顺序、审核徽标和不同视图的描述/计数输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `navItems`、`navGroups`、`activeDescription` 与 `activeCountLabel` 直接消费共享 `buildAdminNavItems(...)`、`groupAdminNavItems(...)`、`getAdminViewDescription(...)` 与 `getAdminActiveCountLabel(...)`。
+- 本轮不改 URL 路由、治理动作、会话流和模块内容展示，只把已经稳定的工作台顶部元数据继续从视图层下沉到共享 helper。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminViewMeta.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从共享治理确认文案推进到共享导航元数据，工作台顶部骨架开始复用统一的导航、分组和视图描述出口。
+- 这次仍然只先收口导航元数据 helper；更进一步的治理详情字段说明、模块级 feature 边界和确认/动作状态流拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。

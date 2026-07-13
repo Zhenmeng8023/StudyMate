@@ -28,6 +28,13 @@ import {
 } from "./adminActionConfirmCopy";
 import { buildStatusFilterOptions, filterCollectionByStatusAndQuery, type AdminFilterOption } from "./adminModuleFilters";
 import {
+  buildAdminNavItems,
+  getAdminActiveCountLabel,
+  getAdminViewDescription,
+  groupAdminNavItems,
+  type AdminNavItem
+} from "./adminViewMeta";
+import {
   getGovernanceActions,
   governanceModuleConfig,
   isGovernanceModuleView,
@@ -77,13 +84,6 @@ type ConfirmDialogItem = {
   title: string;
 };
 type FilterOption = AdminFilterOption;
-type AdminNavItem = {
-  key: AdminView;
-  label: string;
-  icon: string;
-  group: "总览" | "治理" | "系统";
-  badge?: string;
-};
 
 const form = reactive({ login: "", password: "" });
 const session = ref<AdminSessionPayload | null>(readStoredAdminSession());
@@ -189,41 +189,19 @@ const confirmDialogs = computed<ConfirmDialogItem[]>(() => [
   }
 ]);
 
-const navItems = computed<AdminNavItem[]>(() => [
-  { key: "dashboard", label: "概览", icon: "▦", group: "总览" },
-  { key: "moderation", label: "内容审核", icon: "✓", group: "治理", badge: moderationItems.value.length ? String(moderationItems.value.length) : "" },
-  { key: "materials", label: "资料治理", icon: "▤", group: "治理" },
-  { key: "community", label: "举报处理", icon: "⚑", group: "治理" },
-  { key: "users", label: "用户治理", icon: "◉", group: "治理" },
-  { key: "graph", label: "标签治理", icon: "◇", group: "治理" },
-  { key: "ai", label: "AI 任务", icon: "✦", group: "系统" },
-  { key: "system", label: "文件治理", icon: "▣", group: "系统" },
-  { key: "audit", label: "审计日志", icon: "≡", group: "系统" }
-]);
-const navGroups = computed(() => ["总览", "治理", "系统"].map((group) => ({
-  group: group as AdminNavItem["group"],
-  items: navItems.value.filter((item) => item.group === group)
-})));
+const navItems = computed<AdminNavItem[]>(() => buildAdminNavItems(moderationItems.value.length));
+const navGroups = computed(() => groupAdminNavItems(navItems.value));
 const activeMeta = computed(() => navItems.value.find((item) => item.key === activeView.value) ?? navItems.value[0]);
 const loginPrompt = computed(() => getSessionInvalidationPrompt(sessionInvalidation.value, "admin"));
-const activeDescription = computed(() => {
-  if (activeView.value === "dashboard") {
-    return "优先处理待审核内容，再查看用户、资料与图谱的总体变化。";
-  }
-  if (activeView.value === "moderation") {
-    return "快速判断内容风险与发布状态，所有操作都会保留可追溯线索。";
-  }
-  return isGovernanceModuleView(activeView.value) ? governanceModuleConfig[activeView.value].description : "";
-});
-const activeCountLabel = computed(() => {
-  if (activeView.value === "moderation") {
-    return `${moderationItems.value.length} 条待处理`;
-  }
-  if (activeView.value === "dashboard") {
-    return "";
-  }
-  return `${governanceRows.value.length} 条记录`;
-});
+const activeDescription = computed(() =>
+  getAdminViewDescription(
+    activeView.value,
+    isGovernanceModuleView(activeView.value) ? governanceModuleConfig[activeView.value].description : ""
+  )
+);
+const activeCountLabel = computed(() =>
+  getAdminActiveCountLabel(activeView.value, moderationItems.value.length, governanceRows.value.length)
+);
 const moderationDataState = computed<AdminDataStatePayload | null>(() => {
   if (loading.value && moderationItems.value.length === 0) {
     return {
