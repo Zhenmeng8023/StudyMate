@@ -85,7 +85,7 @@ func TestSearchReturnsEmptyPayloadForBlankQuery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected blank query to skip database, got error %v", err)
 	}
-	if payload.Query != "" || payload.Total != 0 || len(payload.Groups) != 0 {
+	if payload.Query != "" || payload.Total != 0 || len(payload.Groups) != 0 || payload.Limit != 20 || payload.ElapsedMs != 0 {
 		t.Fatalf("unexpected empty search payload: %#v", payload)
 	}
 }
@@ -125,6 +125,12 @@ func TestSearchUsesIndexerAcrossRequestedGroups(t *testing.T) {
 
 	if payload.Query != "graph" || payload.Total != 6 || len(payload.Groups) != 2 {
 		t.Fatalf("unexpected grouped search payload: %#v", payload)
+	}
+	if payload.Limit != 20 {
+		t.Fatalf("expected normalized limit 20, got %#v", payload)
+	}
+	if payload.ElapsedMs < 0 {
+		t.Fatalf("expected non-negative elapsed time, got %#v", payload)
 	}
 	if payload.Groups[0].Count != 4 || payload.Groups[0].ReturnedCount != 1 {
 		t.Fatalf("expected note group to expose total count and returned count, got %#v", payload.Groups[0])

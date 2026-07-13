@@ -44,6 +44,8 @@ function buildResponse(input?: Partial<Record<SearchResultType, SearchResultPayl
   const orderedTypes: SearchResultType[] = ["material", "post", "note", "graph", "card"];
   return {
     query: "\u56fe\u8c31",
+    limit: 12,
+    elapsedMs: 18,
     total: orderedTypes.reduce((sum, type) => sum + (input?.[type]?.length ?? 0), 0),
     groups: orderedTypes.map((type) => {
       const results = input?.[type] ?? [];
@@ -61,6 +63,8 @@ function buildResponseWithCounts(input: Partial<Record<SearchResultType, { count
   const orderedTypes: SearchResultType[] = ["material", "post", "note", "graph", "card"];
   return {
     query: "\u56fe\u8c31",
+    limit: 12,
+    elapsedMs: 18,
     total: orderedTypes.reduce((sum, type) => sum + (input[type]?.count ?? 0), 0),
     groups: orderedTypes.map((type) => {
       const group = input[type];
@@ -201,5 +205,15 @@ describe("SearchWorkspacePage", () => {
 
     await expect(screen.findByText("9")).resolves.toBeInTheDocument();
     expect(screen.getByText("\u5f53\u524d\u4ec5\u5c55\u793a\u9996\u6279 5 / 9 \u6761\u7ed3\u679c\u3002")).toBeInTheDocument();
+  });
+
+  it("shows the elapsed search time and current batch limit after a successful query", async () => {
+    searchAllMock.mockResolvedValue(buildResponse({ graph: [buildResult("graph", 1)] }));
+
+    renderPage("/search?q=%E5%9B%BE%E8%B0%B1");
+
+    await expect(
+      screen.findByText("\u641c\u7d22\u5b8c\u6210\uff0c\u5171 1 \u6761\u7ed3\u679c\uff0c\u7528\u65f6 18ms\u3002\u5f53\u524d\u6bcf\u4e2a\u5206\u7ec4\u9996\u6279\u6700\u591a\u5c55\u793a 12 \u6761\u3002")
+    ).resolves.toBeInTheDocument();
   });
 });

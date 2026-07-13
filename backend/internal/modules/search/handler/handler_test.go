@@ -28,8 +28,10 @@ func (s *fakeSearchService) Search(query string, types []string, limit int, user
 		return nil, s.err
 	}
 	return &searchdto.Response{
-		Query: query,
-		Total: 1,
+		Query:     query,
+		Limit:     limit,
+		ElapsedMs: 18,
+		Total:     1,
 		Groups: []searchdto.Group{{
 			Type:          "note",
 			Count:         1,
@@ -76,6 +78,13 @@ func TestSearchPassesQueryFiltersAndLimitToService(t *testing.T) {
 	}
 	if payload["success"] != true {
 		t.Fatalf("expected success envelope, got %#v", payload)
+	}
+	data := payload["data"].(map[string]any)
+	if data["limit"] != float64(7) {
+		t.Fatalf("expected response payload to expose normalized limit, got %#v", data)
+	}
+	if data["elapsedMs"] != float64(18) {
+		t.Fatalf("expected response payload to expose elapsedMs, got %#v", data)
 	}
 }
 
