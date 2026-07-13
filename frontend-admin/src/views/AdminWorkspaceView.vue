@@ -59,6 +59,10 @@ import {
   runAdminWorkspaceModerationAction
 } from "./adminWorkspaceMutationState";
 import {
+  requestAdminWorkspaceGovernanceAction,
+  requestAdminWorkspaceModerationAction
+} from "./adminWorkspacePendingAction";
+import {
   buildGovernanceStatusOptions,
   buildModerationStatusOptions,
   filterGovernanceRows,
@@ -87,7 +91,6 @@ import { runAdminWorkspaceLogin } from "./adminWorkspaceLogin";
 import { runAdminWorkspaceLogout } from "./adminWorkspaceLogout";
 import { runAdminWorkspaceSessionCleared } from "./adminWorkspaceSessionCleared";
 import { runAdminWorkspaceViewSwitch } from "./adminWorkspaceViewSwitch";
-import { runAdminGovernanceActionRequest } from "./adminGovernanceActionRequest";
 import {
   getAdminGovernanceLoadedNotice,
   getAdminLoginSuccessNotice,
@@ -102,8 +105,7 @@ import {
 } from "./adminWorkspaceState";
 import {
   getGovernanceModuleConfig,
-  getGovernanceActions,
-  resolveGovernanceActionDispatch
+  getGovernanceActions
 } from "./adminGovernanceConfig";
 import type { GovernanceMutationKey } from "./adminGovernanceMutationMeta";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
@@ -599,13 +601,18 @@ async function applyTemplateAction(record: GovernanceRecord, action: TemplateAct
 }
 
 function requestModerationAction(item: AdminWorkspaceModerationItem, action: ModerationAction) {
-  moderationConfirmError.value = "";
-  pendingModerationAction.value = { action, item };
+  requestAdminWorkspaceModerationAction(item, action, {
+    setModerationAction: (value) => {
+      pendingModerationAction.value = value;
+    },
+    setModerationError: (value) => {
+      moderationConfirmError.value = value;
+    }
+  });
 }
 
 function requestGovernanceAction(payload: { action: string; record: GovernanceRecord }) {
-  const dispatch = resolveGovernanceActionDispatch(activeView.value, payload);
-  runAdminGovernanceActionRequest(dispatch, {
+  requestAdminWorkspaceGovernanceAction(activeView.value, payload, {
     clearAITaskError: () => {
       aiTaskConfirmError.value = "";
     },

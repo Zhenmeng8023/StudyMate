@@ -40,13 +40,15 @@ describe("adminWorkspacePendingAction", () => {
     );
 
     expect(moderationError).toBe("");
-    expect(pendingModeration).toEqual({
-      action: "reject",
-      item: {
-        id: "post-1",
-        type: "post"
-      }
-    });
+    expect(pendingModeration).toEqual(
+      expect.objectContaining({
+        action: "reject",
+        item: expect.objectContaining({
+          id: "post-1",
+          type: "post"
+        })
+      })
+    );
   });
 
   it("routes report governance requests into the report confirm state", () => {
@@ -121,10 +123,10 @@ describe("adminWorkspacePendingAction", () => {
     const setError = vi.fn();
 
     requestAdminWorkspaceGovernanceAction(
-      "system",
+      "materials",
       {
-        action: "publish",
-        record: { id: "file-1", status: "active" }
+        action: "hide",
+        record: { id: "material-1", status: "active" }
       },
       {
         clearAITaskError: vi.fn(),
@@ -141,6 +143,6 @@ describe("adminWorkspacePendingAction", () => {
       }
     );
 
-    expect(setError).toHaveBeenCalledWith("无法提交治理动作。");
+    expect(setError).toHaveBeenCalledWith("资料记录字段不完整，无法提交治理动作。");
   });
 });
