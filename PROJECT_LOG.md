@@ -1,3 +1,26 @@
+## 2026-07-13 22:25:40 +08:00 | v1.1.0-alpha.225 | 推进 FE-041 管理端挂载自举 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里挂载时仍内联维护的目标 view 应用、profile 刷新与初始 view 加载顺序。
+- 目标是补一层共享 mount bootstrap helper，并让后台工作台挂载时的最小执行顺序复用统一出口，减少工作台组件继续手写这段稳定流程。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceMountBootstrap.ts` 与 `adminWorkspaceMountBootstrap.test.ts`，收口 `runAdminWorkspaceMountBootstrap(...)` 出口，统一处理挂载时的目标 view 应用、profile 刷新与初始 view 加载顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `onMounted()` 改为消费共享 `adminWorkspaceMountBootstrap` helper，而不是继续在组件里直接串联挂载时的自举执行步骤。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端挂载自举执行也已进入共享 helper 出口”。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceMountBootstrap.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享治理动作提交流程推进到共享挂载自举执行，后台工作台挂载时的目标 view 应用、profile 刷新与初始 view 加载顺序开始复用统一出口。
+- 这次仍然只先收口了 mount bootstrap helper；更进一步的 active view 刷新计划与 session 变更协同仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-13 22:21:20 +08:00 | v1.1.0-alpha.224 | 推进 FE-041 管理端治理动作提交流程 helper 接线
 ### 任务内容
 

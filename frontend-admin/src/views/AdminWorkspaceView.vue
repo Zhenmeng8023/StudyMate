@@ -68,6 +68,7 @@ import {
 } from "./adminWorkspaceLifecycle";
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import { runAdminWorkspaceViewLoad } from "./adminWorkspaceViewLoad";
+import { runAdminWorkspaceMountBootstrap } from "./adminWorkspaceMountBootstrap";
 import {
   getAdminGovernanceLoadedNotice,
   getAdminLoginSuccessNotice,
@@ -351,15 +352,14 @@ onMounted(() => {
     normalizeAdminWorkspaceLocation(window.location, window.history),
     Boolean(session.value)
   );
-  activeView.value = plan.nextView;
   window.addEventListener("popstate", handleAdminPopstate);
-
-  if (plan.shouldRefreshProfile) {
-    void refreshProfile();
-  }
-  if (plan.shouldLoadView) {
-    loadActiveView(plan.nextView);
-  }
+  runAdminWorkspaceMountBootstrap(plan, {
+    loadActiveView,
+    refreshProfile,
+    setActiveView: (view) => {
+      activeView.value = view;
+    }
+  });
 });
 
 onBeforeUnmount(() => {
