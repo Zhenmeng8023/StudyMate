@@ -1,3 +1,26 @@
+## 2026-07-13 22:21:20 +08:00 | v1.1.0-alpha.224 | 推进 FE-041 管理端治理动作提交流程 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里四组治理动作提交后仍内联维护的执行请求、dialog reset、治理视图回刷与 conflict 分支。
+- 目标是补一层共享 governance mutation flow helper，并让后台治理动作的最小提交编排复用统一出口，减少工作台组件继续手写这段稳定流程。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminGovernanceMutationFlow.ts` 与 `adminGovernanceMutationFlow.test.ts`，收口 `runAdminGovernanceMutation(...)` 出口，统一处理治理动作的提交请求、dialog reset、reload view 与 409 conflict 信号。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `applyGovernanceRecordAction(...)` 改为消费共享 `adminGovernanceMutationFlow` helper，而不是继续在组件里直接串联 mutation meta、提交请求和治理视图回刷。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端治理动作提交流程也已进入共享 helper 出口”。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminGovernanceMutationFlow.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享审核动作元数据推进到共享治理动作提交流程，后台治理动作的请求执行、dialog reset、治理视图回刷与 conflict 信号开始复用统一出口。
+- 这次仍然只先收口了 governance mutation flow helper；更进一步的 mount/read 协调与 active view 刷新计划仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-13 22:15:50 +08:00 | v1.1.0-alpha.223 | 推进 FE-041 管理端审核动作元数据 helper 接线
 ### 任务内容
 

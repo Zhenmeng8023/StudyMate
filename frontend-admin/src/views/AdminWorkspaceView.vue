@@ -88,6 +88,7 @@ import {
   resolveGovernanceActionDispatch
 } from "./adminGovernanceConfig";
 import { resolveAdminModerationMutationMeta } from "./adminModerationMutationMeta";
+import { runAdminGovernanceMutation } from "./adminGovernanceMutationFlow";
 import { resolveGovernanceMutationMeta, type GovernanceMutationKey } from "./adminGovernanceMutationMeta";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
 import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
@@ -523,32 +524,39 @@ async function applyGovernanceRecordAction(
 ) {
   if (!session.value) return;
 
-  const mutation = resolveGovernanceMutationMeta(key, record, action);
-  if (mutation.kind === "invalid") {
-    confirmError.value = mutation.message;
-    return;
-  }
-
   loading.value = true;
   errorMessage.value = "";
   confirmError.value = "";
   governanceErrorStatus.value = null;
-  try {
-    const data = await post<{ status: string }>(mutation.path, {});
-    runAdminConfirmDialogHandler(key, confirmResetHandlers);
-    notice.value = mutation.successNotice.replace("{status}", data.status);
-    await loadGovernance(mutation.reloadView);
-  } catch (error) {
-    const message = getAdminRequestErrorMessage(error, mutation.errorFallbackMessage);
-    const status = getAdminRequestErrorStatus(error);
-    if (status === 409) {
-      governanceErrorStatus.value = status;
-    }
-    errorMessage.value = message;
-    confirmError.value = message;
-  } finally {
+  const result = await runAdminGovernanceMutation(key, record, action, {
+    readStatus: getAdminRequestErrorStatus,
+    reloadView: loadGovernance,
+    request: (path) => post<{ status: string }>(path, {}),
+    resetDialog: (dialogKey) => {
+      runAdminConfirmDialogHandler(dialogKey, confirmResetHandlers);
+    },
+    resolveErrorMessage: (error, fallbackMessage) =>
+      getAdminRequestErrorMessage(error, fallbackMessage)
+  });
+
+  if (result.kind === "invalid") {
     loading.value = false;
+    confirmError.value = result.message;
+    return;
   }
+
+  if (result.kind === "success") {
+    notice.value = result.notice;
+    loading.value = false;
+    return;
+  }
+
+  if (result.shouldMarkConflict && result.status !== null) {
+    governanceErrorStatus.value = result.status;
+  }
+  errorMessage.value = result.message;
+  confirmError.value = result.message;
+  loading.value = false;
 }
 
 async function applyReportAction(record: GovernanceRecord, action: ReportAction) {
