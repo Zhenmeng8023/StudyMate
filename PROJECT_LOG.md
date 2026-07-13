@@ -1,3 +1,25 @@
+## 2026-07-13 22:00:10 +08:00 | v1.1.0-alpha.221 | 推进 FE-041 管理端工作台加载编排 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里 dashboard、moderation 和 governance 三类视图的加载编排分支。
+- 目标是补一个共享 view-load helper，并让 overview/moderation/governance 的调度复用统一出口，减少工作台组件继续直接维护这组加载分叉。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceViewLoad.ts` 与 `adminWorkspaceViewLoad.test.ts`，收口 `runAdminWorkspaceViewLoad(...)` 出口，统一处理 dashboard、moderation 和 governance 三类视图的加载调度。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `loadActiveView(...)` 改为消费共享 `adminWorkspaceViewLoad` helper，而不是继续在组件里内联 `Promise.all(...)` 和视图分支。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端视图级加载编排也已进入共享 helper 出口”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceViewLoad.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享生命周期计划推进到共享视图加载编排，dashboard、moderation 和 governance 的调度开始复用统一出口。
+- 这次仍然只先收口了 view-load helper；更进一步的 bootstrap/read 协调与登录/治理提交编排仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-13 21:56:40 +08:00 | v1.1.0-alpha.220 | 推进 FE-041 管理端工作台生命周期 helper 接线
 ### 任务内容
 

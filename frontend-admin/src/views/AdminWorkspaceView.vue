@@ -66,6 +66,7 @@ import {
   buildAdminWorkspaceViewSwitchPlan
 } from "./adminWorkspaceLifecycle";
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
+import { runAdminWorkspaceViewLoad } from "./adminWorkspaceViewLoad";
 import {
   getAdminGovernanceLoadedNotice,
   getAdminLoginSuccessNotice,
@@ -303,16 +304,11 @@ function clearWorkspaceState(keys?: AdminWorkspaceResetKey[]) {
 }
 
 function loadActiveView(view: AdminView) {
-  const plan = resolveAdminViewLoadPlan(view);
-  if (plan.kind === "dashboard") {
-    void Promise.all([loadOverview(), loadModeration()]);
-    return;
-  }
-  if (plan.kind === "moderation") {
-    void loadModeration();
-    return;
-  }
-  void loadGovernance(plan.view);
+  void runAdminWorkspaceViewLoad(view, {
+    loadGovernance,
+    loadModeration,
+    loadOverview
+  });
 }
 
 function handleAdminPopstate() {
