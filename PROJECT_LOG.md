@@ -7287,3 +7287,28 @@
 
 - `FE-041` 现在继续从共享壳层 props 装配链推进到共享壳层事件装配链，后台工作台模板层里的高频事件绑定进一步变薄。
 - 这次仍然只先收口了 `shell-events` helper；更进一步的登录面板 props 或更完整的壳层 feature adapter，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+## 2026-07-14 02:50:57 +08:00 | v1.1.0-alpha.242 | 推进 LC-010 / ANKI-030 复习来源卡片深链定位
+### 任务内容
+
+- 继续按照 `CODEX_MASTER_PROMPT.md` 的“先补齐主路径可用性，再继续深挖局部重构”方向推进用户端主学习闭环，这一轮不继续停留在后台工作台抽壳，而是回到更贴近真实学习路径的 `LC-010 / ANKI-030`。
+- 目标是补齐图谱来源卡片回跳到复习工作区后的最后一段断链：当图谱来源反链生成 `/review?card=<id>` 时，复习工作区需要真正识别该 query，优先定位对应卡片，并把用户带到可继续复习或先回看卡片内容的稳定入口。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，新增对 `location.search` 中 `card` 参数的消费逻辑，并补充 `prioritizeRequestedQueueItem(...)`，让复习工作区在目标卡片已位于今日队列中时优先把该卡片顶到当前复习位。
+- 当目标卡片不在今日队列、但仍存在于某个牌组中时，复习工作区现在会自动定位所属牌组、打开管理侧栏并切到“卡片”页签，同时给出“可先回看卡片内容，再继续复习”的反馈文案；若未找到卡片，则明确回退到今日复习队列并提示未命中。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，补上 `/review?card=card-2` 场景回归测试，验证来源卡片会优先成为当前复习卡片，且管理侧栏保持打开，避免图谱来源回跳再次退化为只会落到队列首卡。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-030` 与 `LC-010` 状态调整为 `IN_PROGRESS`，并同步记录“复习来源卡片深链定位”已打通这一阶段成果。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `ANKI-030` 现在不再只有“来源查看”的静态诉求，图谱来源反链已经能把用户稳定带回复习工作区里的目标卡片或目标牌组，主学习闭环里的“图谱 -> 复习”链路完整了一段。
+- 这一步还没有补齐“复习 -> 来源正文/笔记/图谱节点”的反向回跳，也还没有实现撤销上一次评分、跳过/埋藏、暂停卡片等 Anki 会话能力；下一步更适合继续沿 `ANKI-030 / WB-033 / LC-010` 把来源回看与反馈回写补全，而不是回到零散页面微调。

@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { BookOpenCheck, ChevronLeft, ChevronRight, Layers3, PanelRightClose, PanelRightOpen, Plus, RotateCcw, Sparkles } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import {
   AuthSession,
   CardPayload,
@@ -49,10 +50,25 @@ function formatRelativeInterval(days: number) {
   return `${days} 天后`;
 }
 
+function prioritizeRequestedQueueItem(items: ReviewQueueItemPayload[], cardId: string) {
+  const index = items.findIndex((item) => item.card.id === cardId);
+  if (index <= 0) {
+    return index === 0 ? items : null;
+  }
+
+  const nextItems = items.slice();
+  const [requested] = nextItems.splice(index, 1);
+  nextItems.unshift(requested);
+  return nextItems;
+}
+
 export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
+  const location = useLocation();
+  const requestedCardId = useMemo(() => new URLSearchParams(location.search).get("card")?.trim() || "", [location.search]);
   const [decks, setDecks] = useState<DeckPayload[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState<string>("");
   const [cards, setCards] = useState<CardPayload[]>([]);
+  const [focusedManagedCardId, setFocusedManagedCardId] = useState("");
   const [queue, setQueue] = useState<ReviewQueueItemPayload[]>([]);
   const [dueCount, setDueCount] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
@@ -121,8 +137,9 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   useEffect(() => {
     void refreshAll();
     // The session is stable for the lifetime of a protected route.
+    // Query parameters intentionally steer the current review focus.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [requestedCardId]);
 
   useEffect(() => {
     if (!selectedDeckId) {
@@ -182,11 +199,59 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         listDecks(props.session),
         getTodayReviewQueue(props.session)
       ]);
+      let nextQueue = reviewQueue.items;
+      let nextSelectedDeckId = "";
+      let nextDeckCards: CardPayload[] | null = null;
+      let nextManagementTab: ReviewManagementTab = "decks";
+      let nextManagementOpen = false;
+      let nextMessage = "";
+      let nextFocusedCardId = "";
+
+      if (requestedCardId) {
+        const prioritizedQueue = prioritizeRequestedQueueItem(reviewQueue.items, requestedCardId);
+        if (prioritizedQueue) {
+          nextQueue = prioritizedQueue;
+          nextSelectedDeckId = prioritizedQueue[0]?.card.deckId || "";
+          nextManagementTab = "cards";
+          nextManagementOpen = true;
+          nextMessage = "已定位来源卡片，可直接继续复习。";
+          nextFocusedCardId = requestedCardId;
+        } else {
+          for (const deck of nextDecks) {
+            const deckCards = await listDeckCards(props.session, deck.id);
+            if (deckCards.some((card) => card.id === requestedCardId)) {
+              nextSelectedDeckId = deck.id;
+              nextDeckCards = deckCards;
+              nextManagementTab = "cards";
+              nextManagementOpen = true;
+              nextMessage = "已定位来源卡片，可先回看卡片内容，再继续复习。";
+              nextFocusedCardId = requestedCardId;
+              break;
+            }
+          }
+
+          if (!nextFocusedCardId) {
+            nextMessage = "没有找到请求的来源卡片，已回到今日复习队列。";
+          }
+        }
+      }
+
       setDecks(nextDecks);
       setDueCount(reviewQueue.dueCount);
       setCompletedCount(0);
-      setQueue(reviewQueue.items);
-      setSelectedDeckId((current) => current || nextDecks[0]?.id || "");
+      setQueue(nextQueue);
+      setFocusedManagedCardId(nextFocusedCardId);
+      if (nextDeckCards) {
+        setCards(nextDeckCards);
+      }
+      if (nextManagementOpen) {
+        setManagementTab(nextManagementTab);
+        setManagementOpen(true);
+      }
+      if (nextMessage) {
+        setMessage(nextMessage);
+      }
+      setSelectedDeckId((current) => nextSelectedDeckId || current || nextDecks[0]?.id || "");
     } catch (error) {
       setWorkspaceErrorMessage(error instanceof Error ? error.message : "加载复习工作台失败");
     } finally {
@@ -438,7 +503,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                 {selectedDeckId && cards.length ? (
                   <div className="review-card-list">
                     {cards.map((card) => (
-                      <article className="review-managed-card" key={card.id}>
+                      <article className={card.id === focusedManagedCardId ? "review-managed-card active" : "review-managed-card"} key={card.id}>
                         <strong>{card.front}</strong>
                         <p>{card.back}</p>
                         {card.sourceType ? <small>来源：{card.sourceType}</small> : null}

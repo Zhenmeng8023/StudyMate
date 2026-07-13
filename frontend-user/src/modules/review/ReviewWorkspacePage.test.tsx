@@ -308,6 +308,6 @@ describe("ReviewWorkspacePage", () => {
     renderPage("/review?card=card-2");
 
     expect(await screen.findByText("Requested source card")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "鍏抽棴鍗＄粍绠＄悊" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "关闭卡组管理" })).toHaveLength(2);
   });
 });
