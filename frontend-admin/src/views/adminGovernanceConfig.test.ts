@@ -3,7 +3,8 @@ import {
   getGovernanceActions,
   governanceModuleConfig,
   isGovernanceModuleView,
-  mapGovernanceRecordToModerationItem
+  mapGovernanceRecordToModerationItem,
+  resolveGovernanceActionDispatch
 } from "./adminGovernanceConfig";
 
 describe("adminGovernanceConfig", () => {
@@ -50,5 +51,48 @@ describe("adminGovernanceConfig", () => {
     });
 
     expect(mapGovernanceRecordToModerationItem({ id: "", title: "missing id" })).toBeNull();
+  });
+
+  it("resolves governance action dispatch through the shared view switch", () => {
+    expect(
+      resolveGovernanceActionDispatch("community", {
+        action: "resolve",
+        record: { id: "report-1", status: "pending" }
+      })
+    ).toEqual({
+      kind: "report",
+      action: "resolve",
+      record: { id: "report-1", status: "pending" }
+    });
+
+    expect(
+      resolveGovernanceActionDispatch("materials", {
+        action: "hide",
+        record: { id: "material-1", title: "Linear Algebra", status: "approved" }
+      })
+    ).toEqual({
+      kind: "moderation",
+      action: "hide",
+      item: {
+        id: "material-1",
+        type: "material",
+        title: "Linear Algebra",
+        summary: "",
+        authorName: "",
+        status: "approved",
+        createdAt: "",
+        updatedAt: ""
+      }
+    });
+
+    expect(
+      resolveGovernanceActionDispatch("materials", {
+        action: "hide",
+        record: { id: "", title: "broken" }
+      })
+    ).toEqual({
+      kind: "invalid",
+      message: "资料记录字段不完整，无法提交治理动作。"
+    });
   });
 });
