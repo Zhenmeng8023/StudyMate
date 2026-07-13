@@ -63,12 +63,14 @@ import {
   buildAdminWorkspaceLogoutPlan,
   buildAdminWorkspaceMountPlan,
   buildAdminWorkspacePopstatePlan,
+  buildAdminWorkspaceRefreshPlan,
   buildAdminWorkspaceSessionClearedPlan,
   buildAdminWorkspaceViewSwitchPlan
 } from "./adminWorkspaceLifecycle";
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import { runAdminWorkspaceViewLoad } from "./adminWorkspaceViewLoad";
 import { runAdminWorkspaceMountBootstrap } from "./adminWorkspaceMountBootstrap";
+import { runAdminWorkspaceRefresh } from "./adminWorkspaceRefresh";
 import { runAdminWorkspaceLogout } from "./adminWorkspaceLogout";
 import { runAdminWorkspaceSessionCleared } from "./adminWorkspaceSessionCleared";
 import { runAdminWorkspaceViewSwitch } from "./adminWorkspaceViewSwitch";
@@ -664,7 +666,9 @@ function switchView(view: AdminView) {
 }
 
 function refreshActiveView() {
-  loadActiveView(activeView.value);
+  runAdminWorkspaceRefresh(buildAdminWorkspaceRefreshPlan(activeView.value), {
+    loadActiveView
+  });
 }
 
 function logout() {

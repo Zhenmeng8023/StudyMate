@@ -15,6 +15,8 @@ export type AdminWorkspaceMountPlan = AdminWorkspaceLoadPlan & {
   shouldRefreshProfile: boolean;
 };
 
+export type AdminWorkspaceRefreshPlan = AdminWorkspaceLoadPlan;
+
 export type AdminWorkspacePopstatePlan = AdminWorkspaceLoadPlan & {
   resetKeys: AdminWorkspaceResetKey[];
 };
@@ -46,6 +48,13 @@ export function buildAdminWorkspaceMountPlan(
     nextView: view,
     shouldLoadView: hasSession,
     shouldRefreshProfile: hasSession
+  };
+}
+
+export function buildAdminWorkspaceRefreshPlan(view: AdminRouteKey): AdminWorkspaceRefreshPlan {
+  return {
+    nextView: view,
+    shouldLoadView: true
   };
 }
 

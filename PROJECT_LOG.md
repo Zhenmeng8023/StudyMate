@@ -1,3 +1,29 @@
+## 2026-07-14 00:12:04 +08:00 | v1.1.0-alpha.229 | 推进 FE-041 管理端刷新执行 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `refreshActiveView()` 这条仍直接内联调用当前 active view 刷新的壳层入口。
+- 目标是补一层共享 refresh plan 与 refresh execution helper，让后台工作台从顶部“刷新数据”入口触发当前视图重载时，也复用统一出口，而不是继续把这段执行口留在组件层。
+
+### 实际变更
+
+- 更新 `frontend-admin/src/views/adminWorkspaceLifecycle.ts` 与 `adminWorkspaceLifecycle.test.ts`，新增共享 `buildAdminWorkspaceRefreshPlan(...)`，把当前 active view 的刷新计划纳入统一 lifecycle 出口。
+- 新增 `frontend-admin/src/views/adminWorkspaceRefresh.ts` 与 `adminWorkspaceRefresh.test.ts`，收口刷新时是否触发当前视图重载的最小执行链。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `refreshActiveView()` 改为消费共享 refresh plan 与 refresh helper，而不是继续直接调用 `loadActiveView(activeView.value)`。
+- 本轮不改审核/治理加载协议、URL 语义或 session 协议，只把已稳定的刷新壳层入口继续从组件层下沉到共享 helper。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLifecycle.test.ts src/views/adminWorkspaceRefresh.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享 logout execution 推进到共享 refresh plan / execution，后台工作台顶部“刷新数据”入口也开始复用统一出口。
+- 这次仍然只先收口了 refresh helper；更进一步的 `loadActiveView(...)` 协调器及其更深层加载实现，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-14 00:04:12 +08:00 | v1.1.0-alpha.228 | 推进 FE-041 管理端退出执行 helper 接线
 ### 任务内容
 
