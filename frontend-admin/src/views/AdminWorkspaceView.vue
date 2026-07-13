@@ -26,6 +26,7 @@ import {
   type ConfirmDialogKey
 } from "./adminConfirmDialogState";
 import { buildAdminWorkspaceConfirmDialogs } from "./adminWorkspaceConfirmDialogs";
+import { buildAdminWorkspaceModuleEvents } from "./adminWorkspaceModuleEvents";
 import { buildAdminWorkspaceModuleProps } from "./adminWorkspaceModuleProps";
 import {
   buildAdminWorkspaceConfirmResetHandlers,
@@ -249,6 +250,26 @@ const moduleProps = computed(() =>
     pendingMaterialsCount: pendingMaterials.value.length,
     pendingPostsCount: pendingPosts.value.length,
     totalModerationCount: moderationItems.value.length
+  })
+);
+const moduleEvents = computed(() =>
+  buildAdminWorkspaceModuleEvents({
+    requestGovernanceAction,
+    requestModerationAction,
+    selectRecord,
+    setGovernanceQuery: (value) => {
+      recordQuery.value = value;
+    },
+    setGovernanceStatusFilter: (value) => {
+      governanceStatusFilter.value = value;
+    },
+    setModerationQuery: (value) => {
+      moderationQuery.value = value;
+    },
+    setModerationStatusFilter: (value) => {
+      moderationStatusFilter.value = value;
+    },
+    switchView
   })
 );
 
@@ -768,7 +789,7 @@ function selectRecord(row: GovernanceRecord) {
         :overview-cards="moduleProps.dashboard.overviewCards"
         :pending-materials-count="moduleProps.dashboard.pendingMaterialsCount"
         :pending-posts-count="moduleProps.dashboard.pendingPostsCount"
-        @open-moderation="switchView('moderation')"
+        @open-moderation="moduleEvents.dashboard.openModeration()"
       />
 
       <AdminModerationModule
@@ -779,9 +800,9 @@ function selectRecord(row: GovernanceRecord) {
         :status-filter="moduleProps.moderation.statusFilter"
         :status-options="moduleProps.moderation.statusOptions"
         :total-count="moduleProps.moderation.totalCount"
-        @request-action="requestModerationAction($event.item, $event.action)"
-        @update:query="moderationQuery = $event"
-        @update:status-filter="moderationStatusFilter = $event"
+        @request-action="moduleEvents.moderation.requestAction($event)"
+        @update:query="moduleEvents.moderation.updateQuery($event)"
+        @update:status-filter="moduleEvents.moderation.updateStatusFilter($event)"
       />
 
       <AdminGovernanceModule
@@ -797,10 +818,10 @@ function selectRecord(row: GovernanceRecord) {
         :status-options="moduleProps.governance.statusOptions"
         :summary="moduleProps.governance.summary"
         :total-count="moduleProps.governance.totalCount"
-        @request-action="requestGovernanceAction"
-        @select-record="selectRecord"
-        @update:query="recordQuery = $event"
-        @update:status-filter="governanceStatusFilter = $event"
+        @request-action="moduleEvents.governance.requestAction($event)"
+        @select-record="moduleEvents.governance.selectRecord($event)"
+        @update:query="moduleEvents.governance.updateQuery($event)"
+        @update:status-filter="moduleEvents.governance.updateStatusFilter($event)"
       />
     </AdminShellFrame>
   </main>
