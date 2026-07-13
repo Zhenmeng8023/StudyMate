@@ -20,6 +20,11 @@ import { formatGovernanceCell, getGovernanceColumns, type GovernanceRecord } fro
 import { defaultAdminRouteKey, getAdminRoutePath, normalizeAdminRoutePath, parseAdminRoutePath } from "../router";
 import type { AdminRouteKey } from "../router";
 import { buildStatusFilterOptions, filterCollectionByStatusAndQuery, type AdminFilterOption } from "./adminModuleFilters";
+import {
+  governanceModuleConfig,
+  isGovernanceModuleView,
+  mapGovernanceRecordToModerationItem
+} from "./adminGovernanceConfig";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
 import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
 import AdminModerationModule from "./modules/AdminModerationModule.vue";
@@ -363,7 +368,7 @@ const activeDescription = computed(() => {
   if (activeView.value === "moderation") {
     return "快速判断内容风险与发布状态，所有操作都会保留可追溯线索。";
   }
-  return governanceConfig[activeView.value as keyof typeof governanceConfig]?.description ?? "";
+  return isGovernanceModuleView(activeView.value) ? governanceModuleConfig[activeView.value].description : "";
 });
 const activeCountLabel = computed(() => {
   if (activeView.value === "moderation") {
@@ -680,7 +685,7 @@ async function loadGovernance(view: AdminView) {
     selectedRecord.value = null;
   }
   try {
-    const config = governanceConfig[view];
+    const config = governanceModuleConfig[view];
     governanceRows.value = await get<GovernanceRecord[]>(config.endpoint, config.query).catch((error) => {
       governanceErrorStatus.value = getRequestErrorStatus(error);
       if (governanceErrorStatus.value === 403) {
@@ -882,7 +887,7 @@ function requestGovernanceAction(payload: { action: string; record: GovernanceRe
   if (activeView.value === "materials") {
     if (payload.action !== "approve" && payload.action !== "reject" && payload.action !== "hide") return;
 
-    const item = mapGovernanceRecordToMaterial(payload.record);
+    const item = mapGovernanceRecordToModerationItem(payload.record);
     if (!item) {
       errorMessage.value = "资料记录字段不完整，无法提交治理动作。";
       return;
@@ -1172,7 +1177,7 @@ function selectRecord(row: GovernanceRecord) {
         :actions="governanceActions"
         :columns="governanceColumns"
         :data-state="governanceDataState"
-        :empty-text="governanceConfig[activeView as keyof typeof governanceConfig].empty"
+        :empty-text="isGovernanceModuleView(activeView) ? governanceModuleConfig[activeView].empty : ''"
         :query="recordQuery"
         :rows="visibleGovernanceRows"
         :selected-record="selectedRecord"

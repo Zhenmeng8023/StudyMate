@@ -6237,3 +6237,26 @@
 
 - `FE-041` 现在继续从共享 UI 骨架和页面 helper 往共享治理记录语义推进，治理模块、记录行和工作台开始复用统一的记录展示契约。
 - 这次仍然只先收口了记录 helper；后续更适合继续把 `governanceConfig`、治理动作元数据和资料记录到审核项的映射也提到统一配置层，而不是继续留在 `AdminWorkspaceView.vue` 里分散维护。
+
+## 2026-07-13 08:22:01 +08:00 | v1.1.0-alpha.201 | 推进 FE-041 管理端共享治理配置 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理 `AdminWorkspaceView.vue` 里分散维护的治理模块配置、资料治理记录到审核项的映射，以及治理模块描述/空态来源。
+- 目标是补一层共享治理配置 helper，并把工作台里真实使用的治理模块 endpoint、空态文案、描述文案和资料治理映射切到统一出口，让工作台继续回到“协调器”角色。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminGovernanceConfig.ts` 与 `adminGovernanceConfig.test.ts`，收口治理模块配置、治理动作元数据判断、治理模块类型守卫，以及资料治理记录到审核项的桥接映射。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让治理模块加载、工作台描述文案、治理模块空态来源和资料治理动作映射切到共享治理配置 helper。
+- 这次保留了现有治理动作流、URL 状态和会话行为不变，只把工作台中已经稳定的治理配置语义继续提到共享层。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminGovernanceConfig.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享记录语义推进到共享治理配置语义，工作台开始复用统一的模块配置和资料治理桥接规则。
+- 这次仍然只先收口了治理配置 helper；工作台里针对各治理域的动作触发分发和部分历史内联配置仍未完全抽离，后续适合继续沿这条路径推进。
