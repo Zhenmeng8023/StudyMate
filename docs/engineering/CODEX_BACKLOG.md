@@ -39,10 +39,18 @@
 | WB-030 | DONE | 图谱 API 契约与生命周期整理 | WB-020 | graph routers/handlers/services/docs | graph/document/node/edge/group/snapshot 关系和版本策略清晰。 |
 | WB-031 | DONE | 图谱导出、缩略图与布局能力 | WB-030 | graph backend + frontend | 至少 JSON/SVG 导出；缩略图和布局有明确 API/任务模型。 |
 | WB-032 | DONE | 自动保存/快照/冲突处理可靠性 | WB-030, WB-021 | graph persistence | 保存可追溯、冲突可见、恢复安全；无静默覆盖，冲突导出物可携带人工合并清单、对象级明细与取舍草稿，并支持把已标记取舍显式应用为可保存合并草稿；预检阻断摘要优先展示可读对象原因。 |
-| WB-033 | TODO | 图谱-复习学习反馈闭环 | WB-030, FE-030 | graph/card/review | 复习结果可回写节点熟练度；卡片与来源节点可追溯；学习工作台能解释复习反馈如何影响图谱与后续学习。 |
+| ANKI-000 | TODO | Anki 式闪卡产品契约 | FE-030 | docs/engineering、docs/architecture、card/review domain | 明确 Deck、CardNote、NoteType、CardTemplate、GeneratedCard、Schedule、ReviewLog、Tag、SourceLink 的职责边界；确认哪些 Anki 能力进入 P1，哪些仅预研。 |
+| ANKI-010 | TODO | Note / Card 分离与模板生成 | ANKI-000 | backend card models/dto/service、frontend review types | 支持一条 CardNote 通过模板生成一张或多张 Card；首批模板覆盖 Basic、Basic Reverse、Cloze；旧 `front/back` 卡片有兼容读取或迁移策略。 |
+| ANKI-020 | TODO | Anki 式调度与队列模型 | ANKI-000 | card schedule service/repository/review API | 支持 new / learning / review / relearning / suspended / buried 状态、学习步进、每日新卡/复习上限、重新学习路径；继续保留 `again / hard / good / easy` 评分语义。 |
+| ANKI-030 | TODO | Anki 式复习会话体验 | ANKI-010, ANKI-020 | `frontend-user/src/modules/review/`、review API | 复习会话支持翻面、1-4 评分、撤销上一次评分、跳过/埋藏、暂停卡片、来源查看、下一次间隔预估和键盘路径；失败状态不丢当前会话上下文。 |
+| ANKI-040 | TODO | 卡片浏览器与批量管理 | ANKI-010, ANKI-020 | review/card browser UI + backend list/filter APIs | 支持按牌组、标签、状态、来源、到期时间筛选；支持批量暂停、恢复、移动牌组、加标签、删除；操作可确认并可审计/追溯。 |
+| ANKI-050 | TODO | 来源驱动制卡闭环 | ANKI-010, WB-030 | reader/note/graph/ai/card | 批注、笔记块、图谱节点、AI 草稿可生成 CardNote，再由模板生成 Cards；所有卡片保留 SourceLink 并能回跳原文、笔记或图谱节点。 |
+| ANKI-060 | TODO | 复习反馈回写学习图谱 | ANKI-020, ANKI-050 | graph/card/review/dashboard | 复习结果可回写图谱节点熟练度、笔记学习状态和工作台反馈；薄弱知识点可在图谱和学习工作台中解释。 |
+| ANKI-070 | TODO | 闪卡导入导出与 Anki 兼容预研 | ANKI-010 | card import/export docs/tools | 近期支持 CSV / JSON 导入导出；`.apkg` 兼容只输出技术预研和采用/不采用结论，不阻塞 P1 主线。 |
+| WB-033 | TODO | 图谱-复习学习反馈闭环 | ANKI-020, ANKI-050, WB-030 | graph/card/review | 基于 Anki 式 CardNote / Card / Schedule 模型串起图谱节点、卡片复习和学习反馈；卡片与来源节点可追溯，复习结果能回写节点熟练度。 |
 | WB-034 | TODO | 图谱 API 与工作区回归验证矩阵 | WB-032 | graph backend + frontend + e2e | 覆盖 create/save/restore/export/layout/conflict/权限路径；图谱工作区在桌面与窄屏至少有 smoke 回归，不再只依赖零散组件测试。 |
 | GPH-040 | TODO | 图谱工作区 store / commands / features 拆分 | WB-032, FE-020 | `frontend-user/src/modules/graph/`、`packages/graph-core` | `useGraphWorkspaceController` 不再继续承接新增业务；选中、相机、面板、保存、冲突等浏览器状态进入 store，新增节点/连线/分组/模板/恢复等用户意图进入 commands。 |
-| LC-010 | TODO | 主学习闭环演示路径收口 | WB-033, FE-030 | material/reader/note/graph/card/review/AI | “资料上传 -> PDF 阅读 -> 高亮批注 -> 摘录池 -> 笔记 -> 图谱节点草稿 -> 图谱关系整理 -> 卡片草稿 -> 今日复习”可端到端验收，来源回跳、草稿确认和失败状态清晰。 |
+| LC-010 | TODO | 主学习闭环演示路径收口 | WB-033, ANKI-030, FE-030 | material/reader/note/graph/card/review/AI | “资料上传 -> PDF 阅读 -> 高亮批注 -> 摘录池 -> 笔记块 -> CardNote -> 模板生成闪卡 -> Anki 式复习 -> 图谱熟练度回写”可端到端验收，来源回跳、草稿确认、失败状态和复习反馈清晰。 |
 | WB-040 | TODO | 管理端真实只读数据页第一批 | WB-001 | admin backend + frontend-admin | 用户、内容、AI 任务/用量、审计至少展示真实数据。 |
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
@@ -63,6 +71,18 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：PLAN-2026-07-13（Anki 式闪卡目标修正）
+
+- 执行日期：2026-07-13
+- 输入目标：用户明确希望复习卡片相关功能类似 Anki 闪卡，而不是简单复习。
+- 本轮结论：
+  - 当前 `card` 模块已有 `Deck / Card / Schedule / Review`、今日队列和 `again / hard / good / easy` 的 SM-2 调度，可作为迁移基础。
+  - 当前模型仍偏 `front/back` 简单卡片，缺少 Anki 核心的 Note / Card 分离、模板生成、Cloze、学习队列、重新学习、暂停/埋藏、标签、浏览器、来源回跳和导入导出边界。
+  - 新增 `ANKI-000` 至 `ANKI-070` 工作包，并将 `WB-033` 与 `LC-010` 调整为基于 Anki 式 CardNote / Card / Schedule 的学习反馈闭环。
+- 约束：
+  - P1 首轮只追求 Anki mental model 与 StudyMate 来源闭环，不把插件体系、完整 `.apkg` 兼容或复杂媒体同步作为当前阻塞项。
+  - 所有新卡片能力必须保留资料、PDF 批注、笔记块、图谱节点或 AI 草稿的来源回跳。
 
 ### 执行记录：FE-041（管理端共享 Tag 状态标签接线）
 - 执行日期：2026-07-13

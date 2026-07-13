@@ -207,7 +207,13 @@
 - **SE-020 / WB-044：搜索产品化**
   先在 MySQL fallback 上补服务端 cursor/分页、真实 count/total、排序、耗时、空结果建议和来源跳转契约；当前已先完成“真实命中数 / 首批返回数分离”切片，接下来继续补跨批次分页能力，再评估 Meilisearch adapter 和异步索引任务。
 - **LC-010：主演示学习闭环**
-  把“资料上传 -> PDF 阅读 -> 高亮批注 -> 摘录池 -> 笔记 -> 图谱节点草稿 -> 图谱关系整理 -> 卡片草稿 -> 今日复习”做成可验收主路径，避免平均扩展功能。
+  把“资料上传 -> PDF 阅读 -> 高亮批注 -> 摘录池 -> 笔记块 -> CardNote -> 模板生成闪卡 -> Anki 式复习 -> 图谱熟练度回写”做成可验收主路径，避免平均扩展功能。
+
+### 2026-07-13 Anki 式闪卡目标修正
+
+- 复习模块不再按“简单复习页”继续加厚，而应对齐 Anki 的核心心智模型：Note 与 Card 分离、NoteType / Template 生成卡片、Basic / Reverse / Cloze 三类首批模板、new / learning / review / relearning / suspended / buried 队列、每日新卡与复习上限、标签、浏览器、暂停/埋藏、撤销评分和来源回跳。
+- 当前已有 `Deck / Card / CardSchedule / CardReview`、今日队列和 `again / hard / good / easy` 调度，可以作为迁移基础；但不能继续把 `Card(front/back)` 当成长期唯一领域模型。
+- StudyMate 不需要第一阶段照搬 Anki 的插件体系、完整 `.apkg` 兼容或复杂媒体同步；近期应先建立“Anki mental model + StudyMate 来源闭环”，让阅读批注、笔记块、图谱节点和 AI 草稿能生成 `CardNote`，再由模板派生可调度卡片。
 
 ## Iteration 0：WB-001 基线核验已完成
 
@@ -284,6 +290,23 @@
 - WB-034：补图谱 API 与工作区回归验证。
 - GPH-040：在 `WB-032` 完成后拆分图谱工作区 store / commands / features / views，禁止继续把新增冲突、AI、模板和来源逻辑堆入单一控制器。
 - LC-010：以学习闭环主演示路径约束图谱-复习-笔记联动，所有新增入口必须能回到来源、草稿确认、卡片生成或复习反馈之一。
+
+## Iteration 3.5：Anki 式闪卡系统与学习反馈（P1）
+
+### 目标
+
+把现有 `Deck/Card + SM-2 + 今日队列` 升级为 StudyMate 的 Anki 式闪卡系统。复习卡片不再只是正反面文本，而是由来源驱动的 CardNote 经模板生成的可调度记忆对象，并能反向影响图谱与学习反馈。
+
+### 工作包
+
+- ANKI-000：定义 Anki 式产品契约，明确 Deck、CardNote、NoteType、CardTemplate、GeneratedCard、Schedule、ReviewLog、Tag、SourceLink 的职责边界。
+- ANKI-010：补 Note / Card 分离与模板生成能力，首批支持 Basic、Basic Reverse、Cloze 三类模板，并提供旧 `Card(front/back)` 的兼容迁移策略。
+- ANKI-020：升级调度与队列模型，补 new / learning / review / relearning / suspended / buried 状态、学习步进、每日新卡/复习上限和重新学习路径。
+- ANKI-030：升级复习会话体验，补撤销上一次评分、跳过/埋藏、暂停卡片、显示来源、显示下一次间隔预估和键盘路径。
+- ANKI-040：补卡片浏览器与批量管理，支持按牌组、标签、状态、来源、到期时间筛选，并能批量暂停、恢复、移动牌组、加标签和删除。
+- ANKI-050：打通来源驱动制卡闭环，从批注、笔记块、图谱节点、AI 草稿生成 CardNote，并由模板生成 Cards，所有卡片都能回跳来源。
+- ANKI-060：把复习结果回写到图谱节点熟练度、笔记学习状态和工作台反馈，让图谱知道哪些知识点薄弱。
+- ANKI-070：导入导出分阶段推进，近期先支持 CSV / JSON；`.apkg` 兼容只做技术预研，不作为当前 P1 阻塞项。
 
 ## Iteration 4：设计系统、API 契约与工程复现性（P0/P1）
 
