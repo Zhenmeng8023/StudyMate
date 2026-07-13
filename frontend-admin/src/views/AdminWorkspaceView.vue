@@ -69,6 +69,7 @@ import {
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import { runAdminWorkspaceViewLoad } from "./adminWorkspaceViewLoad";
 import { runAdminWorkspaceMountBootstrap } from "./adminWorkspaceMountBootstrap";
+import { runAdminWorkspaceSessionCleared } from "./adminWorkspaceSessionCleared";
 import {
   getAdminGovernanceLoadedNotice,
   getAdminLoginSuccessNotice,
@@ -337,13 +338,21 @@ const unsubscribeSession = subscribeSession(() => {
     const plan = buildAdminWorkspaceSessionClearedPlan(
       getAdminSessionEndedNotice(getSessionInvalidationPrompt(sessionInvalidation.value, "admin"))
     );
-    clearWorkspaceState(plan.resetKeys);
-    activeView.value = plan.nextView;
-    syncAdminWorkspaceLocation(plan.nextView, window.location, window.history, plan.syncMode);
-    if (plan.clearError) {
-      errorMessage.value = "";
-    }
-    notice.value = plan.notice;
+    runAdminWorkspaceSessionCleared(plan, {
+      clearError: () => {
+        errorMessage.value = "";
+      },
+      clearWorkspaceState,
+      setActiveView: (view) => {
+        activeView.value = view;
+      },
+      setNotice: (nextNotice) => {
+        notice.value = nextNotice;
+      },
+      syncLocation: (view, syncMode) => {
+        syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
+      }
+    });
   }
 });
 

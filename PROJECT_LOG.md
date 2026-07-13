@@ -1,3 +1,28 @@
+## 2026-07-13 23:48:01 +08:00 | v1.1.0-alpha.226 | 推进 FE-041 管理端会话清空执行 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `subscribeSession(...)` 在会话被清空时仍内联维护的工作台 reset、默认 view 回退、URL replace、错误清理与提示同步。
+- 目标是补一层共享 session-cleared execution helper，并让后台工作台在会话失效或被动清 session 后的最小回退顺序复用统一出口，减少组件继续手写这段稳定编排。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceSessionCleared.ts` 与 `adminWorkspaceSessionCleared.test.ts`，收口 `runAdminWorkspaceSessionCleared(...)` 出口，统一处理会话被清空后的工作台 reset、默认 view 回退、URL replace、错误清理与 notice 同步顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `subscribeSession(...)` 中的 session-cleared 分支改为消费共享 `adminWorkspaceSessionCleared` helper，而不是继续在组件里内联这段执行链。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端会话清空执行也已进入共享 helper 出口”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceSessionCleared.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从挂载自举执行推进到共享 session-cleared execution，后台工作台在会话失效、refresh 失败或 `user_disabled` 等被动清 session 场景下的 reset、回退与提示开始复用统一出口。
+- 这次仍然只先收口了 session-cleared helper；更进一步的 `refreshActiveView()` 共享刷新计划，或 session 变化下其余协调逻辑，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-13 22:25:40 +08:00 | v1.1.0-alpha.225 | 推进 FE-041 管理端挂载自举 helper 接线
 ### 任务内容
 
