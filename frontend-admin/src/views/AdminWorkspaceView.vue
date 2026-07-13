@@ -41,6 +41,7 @@ import {
   type AdminNavItem
 } from "./adminViewMeta";
 import { resolveGovernanceDataState, resolveModerationDataState } from "./adminViewDataState";
+import { runAdminViewLoadRequest } from "./adminViewLoadRequest";
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import {
   resetAdminWorkspaceState,
@@ -484,13 +485,18 @@ async function loadModeration() {
   errorMessage.value = "";
   moderationErrorStatus.value = null;
   try {
-    moderationItems.value = await get<ModerationItem[]>("/api/v1/admin/moderation").catch((error) => {
-      moderationErrorStatus.value = getRequestErrorStatus(error);
-      if (moderationErrorStatus.value === 403) {
+    const result = await runAdminViewLoadRequest({
+      readStatus: getRequestErrorStatus,
+      request: () => get<ModerationItem[]>("/api/v1/admin/moderation"),
+      onForbidden: () => {
         moderationItems.value = [];
       }
-      throw error;
     });
+    if (result.kind === "error") {
+      moderationErrorStatus.value = result.status;
+      throw result.error;
+    }
+    moderationItems.value = result.data;
     notice.value = `当前共有 ${moderationItems.value.length} 条待处理内容。`;
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "读取审核队列失败";
@@ -514,16 +520,21 @@ async function loadGovernance(view: AdminView) {
   }
   try {
     const config = governanceModuleConfig[plan.view];
-    governanceRows.value = await get<GovernanceRecord[]>(config.endpoint, config.query).catch((error) => {
-      governanceErrorStatus.value = getRequestErrorStatus(error);
-      if (governanceErrorStatus.value === 403) {
+    const result = await runAdminViewLoadRequest({
+      readStatus: getRequestErrorStatus,
+      request: () => get<GovernanceRecord[]>(config.endpoint, config.query),
+      onForbidden: () => {
         governanceRows.value = [];
         governanceSummary.value = null;
         governanceRowsView.value = null;
         selectedRecord.value = null;
       }
-      throw error;
     });
+    if (result.kind === "error") {
+      governanceErrorStatus.value = result.status;
+      throw result.error;
+    }
+    governanceRows.value = result.data;
     governanceRowsView.value = plan.view;
     selectedRecord.value = governanceRows.value[0] ?? null;
     if (plan.summaryEndpoint) {

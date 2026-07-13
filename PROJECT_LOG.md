@@ -6437,3 +6437,26 @@
 
 - `FE-041` 现在继续从共享加载元数据推进到共享页面状态判定，管理端审核和治理数据区开始复用统一的 `DataState` 分支出口。
 - 这次仍然只先收口页面状态 helper；更进一步的加载失败清理策略与页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 20:30:20 +08:00 | v1.1.0-alpha.210 | 推进 FE-041 管理端共享加载请求 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里审核队列和治理模块各自维护的“读取请求失败状态码并在 403 时清理旧数据”分支。
+- 目标是补一层共享加载请求 helper，并让工作台的审核加载与治理加载都复用统一的错误状态捕获和 `forbidden` 清理出口，减少页面层重复异常分支。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminViewLoadRequest.ts` 与 `adminViewLoadRequest.test.ts`，收口管理端加载请求的共享执行 helper，并锁定 `success / 403 forbidden / 非 403 failure` 三类输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `loadModeration()` 与 `loadGovernance()` 改为通过 `runAdminViewLoadRequest(...)` 处理请求失败状态与 403 清理，而不是继续各自内联 `catch` 分支。
+- 本轮不改审核/治理请求路径、成功提示、summary 加载、会话协议和 URL 路由，只把已稳定的加载失败处理语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminViewLoadRequest.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享页面状态推进到共享加载请求处理，管理端审核与治理加载路径开始复用统一的错误状态捕获和 forbidden 清理出口。
+- 这次仍然只先收口了加载请求 helper；更进一步的 overview/profile 加载协调和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
