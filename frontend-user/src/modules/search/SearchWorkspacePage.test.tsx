@@ -53,6 +53,7 @@ function buildResponse(input?: Partial<Record<SearchResultType, SearchResultPayl
         type,
         count: results.length,
         returnedCount: results.length,
+        nextOffset: null,
         results
       };
     })
@@ -72,6 +73,7 @@ function buildResponseWithCounts(input: Partial<Record<SearchResultType, { count
         type,
         count: group?.count ?? 0,
         returnedCount: group?.results.length ?? 0,
+        nextOffset: group && group.count > (group?.results.length ?? 0) ? group.results.length : null,
         results: group?.results ?? []
       };
     })
@@ -215,5 +217,57 @@ describe("SearchWorkspacePage", () => {
     await expect(
       screen.findByText("\u641c\u7d22\u5b8c\u6210\uff0c\u5171 1 \u6761\u7ed3\u679c\uff0c\u7528\u65f6 18ms\u3002\u5f53\u524d\u6bcf\u4e2a\u5206\u7ec4\u9996\u6279\u6700\u591a\u5c55\u793a 12 \u6761\u3002")
     ).resolves.toBeInTheDocument();
+  });
+
+  it("loads the next server batch for a single selected type and appends the new results", async () => {
+    const user = userEvent.setup();
+    searchAllMock
+      .mockResolvedValueOnce(
+        buildResponseWithCounts({
+          graph: {
+            count: 6,
+            results: [
+              buildResult("graph", 1),
+              buildResult("graph", 2),
+              buildResult("graph", 3),
+              buildResult("graph", 4)
+            ]
+          }
+        })
+      )
+      .mockResolvedValueOnce({
+        query: "\u56fe\u8c31",
+        limit: 12,
+        elapsedMs: 15,
+        total: 6,
+        groups: [
+          {
+            type: "graph",
+            count: 6,
+            returnedCount: 2,
+            nextOffset: null,
+            results: [buildResult("graph", 5), buildResult("graph", 6)]
+          }
+        ]
+      } as SearchResponsePayload);
+
+    renderPage("/search?q=%E5%9B%BE%E8%B0%B1&types=graph");
+
+    await expect(screen.findByRole("button", { name: "\u7ee7\u7eed\u52a0\u8f7d\u66f4\u591a\u56fe\u8c31\u7ed3\u679c" })).resolves.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "\u7ee7\u7eed\u52a0\u8f7d\u66f4\u591a\u56fe\u8c31\u7ed3\u679c" }));
+
+    await waitFor(() => {
+      expect(searchAllMock).toHaveBeenLastCalledWith(session, {
+        query: "\u56fe\u8c31",
+        types: ["graph"],
+        limit: 12,
+        offset: 4
+      });
+    });
+
+    await user.click(screen.getByRole("button", { name: "\u56fe\u8c31\u4e0b\u4e00\u9875" }));
+    expect(await screen.findByRole("link", { name: /graph-title-5/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /graph-title-6/ })).toBeInTheDocument();
   });
 });

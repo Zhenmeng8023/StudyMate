@@ -32,12 +32,15 @@ describe("search and share API clients", () => {
   it("builds grouped search requests with optional auth and filters", async () => {
     const fetchMock = mockApiResponse({
       query: "知识 图谱",
+      limit: 10,
+      elapsedMs: 18,
       total: 1,
       groups: [
         {
           type: "note",
           count: 1,
           returnedCount: 1,
+          nextOffset: null,
           results: [
             {
               type: "note",
@@ -52,7 +55,7 @@ describe("search and share API clients", () => {
       ]
     });
 
-    await searchAll(session, { query: "知识 图谱", types: ["note", "graph"], limit: 10 });
+    await searchAll(session, { query: "知识 图谱", types: ["note", "graph"], limit: 10, offset: 6 });
 
     const [path, init] = fetchMock.mock.calls[0];
     const url = new URL(String(path), "http://localhost");
@@ -60,6 +63,7 @@ describe("search and share API clients", () => {
     expect(url.searchParams.get("q")).toBe("知识 图谱");
     expect(url.searchParams.get("types")).toBe("note,graph");
     expect(url.searchParams.get("limit")).toBe("10");
+    expect(url.searchParams.get("offset")).toBe("6");
     expect(init?.headers).toMatchObject({
       Authorization: "Bearer access-token"
     });
@@ -68,6 +72,8 @@ describe("search and share API clients", () => {
   it("omits empty type filters so backend can apply the default search groups", async () => {
     const fetchMock = mockApiResponse({
       query: "图谱",
+      limit: 20,
+      elapsedMs: 12,
       total: 0,
       groups: []
     });
@@ -79,6 +85,7 @@ describe("search and share API clients", () => {
     expect(url.pathname).toBe("/api/v1/search");
     expect(url.searchParams.get("q")).toBe("图谱");
     expect(url.searchParams.has("types")).toBe(false);
+    expect(url.searchParams.has("offset")).toBe(false);
     expect(init?.headers).not.toMatchObject({
       Authorization: expect.any(String)
     });

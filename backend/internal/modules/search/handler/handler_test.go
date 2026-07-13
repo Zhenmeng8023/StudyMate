@@ -15,14 +15,16 @@ type fakeSearchService struct {
 	query  string
 	types  []string
 	limit  int
+	offset int
 	userID string
 	err    error
 }
 
-func (s *fakeSearchService) Search(query string, types []string, limit int, userID string) (*searchdto.Response, error) {
+func (s *fakeSearchService) Search(query string, types []string, limit int, offset int, userID string) (*searchdto.Response, error) {
 	s.query = query
 	s.types = types
 	s.limit = limit
+	s.offset = offset
 	s.userID = userID
 	if s.err != nil {
 		return nil, s.err
@@ -36,6 +38,7 @@ func (s *fakeSearchService) Search(query string, types []string, limit int, user
 			Type:          "note",
 			Count:         1,
 			ReturnedCount: 1,
+			NextOffset:    nil,
 			Results: []searchdto.Result{{
 				Type:    "note",
 				ID:      "note-1",
@@ -55,7 +58,7 @@ func TestSearchPassesQueryFiltersAndLimitToService(t *testing.T) {
 	router := gin.New()
 	router.GET("/search", handler.Search)
 
-	request := httptest.NewRequest(http.MethodGet, "/search?q=%E5%9B%BE%E8%B0%B1&types=note,graph&limit=7", nil)
+	request := httptest.NewRequest(http.MethodGet, "/search?q=%E5%9B%BE%E8%B0%B1&types=note,graph&limit=7&offset=3", nil)
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, request)
 
@@ -67,6 +70,9 @@ func TestSearchPassesQueryFiltersAndLimitToService(t *testing.T) {
 	}
 	if service.limit != 7 {
 		t.Fatalf("expected limit 7, got %d", service.limit)
+	}
+	if service.offset != 3 {
+		t.Fatalf("expected offset 3, got %d", service.offset)
 	}
 	if len(service.types) != 2 || service.types[0] != "note" || service.types[1] != "graph" {
 		t.Fatalf("expected note and graph filters, got %#v", service.types)
