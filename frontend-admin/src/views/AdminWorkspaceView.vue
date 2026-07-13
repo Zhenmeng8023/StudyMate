@@ -28,6 +28,7 @@ import {
 import { buildAdminWorkspaceConfirmDialogs } from "./adminWorkspaceConfirmDialogs";
 import { buildAdminWorkspaceModuleEvents } from "./adminWorkspaceModuleEvents";
 import { buildAdminWorkspaceModuleProps } from "./adminWorkspaceModuleProps";
+import { buildAdminWorkspaceShellEvents } from "./adminWorkspaceShellEvents";
 import { buildAdminWorkspaceShellProps } from "./adminWorkspaceShellProps";
 import {
   buildAdminWorkspaceConfirmResetHandlers,
@@ -214,6 +215,13 @@ const shellProps = computed(() =>
     notice: notice.value,
     profile: profile.value,
     profileInitial: profileInitial.value
+  })
+);
+const shellEvents = computed(() =>
+  buildAdminWorkspaceShellEvents({
+    logout,
+    refreshActiveView,
+    switchView
   })
 );
 const moderationDataState = computed<AdminDataStatePayload | null>(() =>
@@ -795,9 +803,9 @@ function selectRecord(row: GovernanceRecord) {
       :notice="shellProps.notice"
       :profile="shellProps.profile"
       :profile-initial="shellProps.profileInitial"
-      @logout="logout"
-      @refresh="refreshActiveView"
-      @switch-view="switchView($event as AdminView)"
+      @logout="shellEvents.logout()"
+      @refresh="shellEvents.refresh()"
+      @switch-view="shellEvents.switchView($event as AdminView)"
     >
       <AdminDashboardModule
         v-if="activeView === 'dashboard'"
