@@ -6260,3 +6260,25 @@
 
 - `FE-041` 现在继续从共享记录语义推进到共享治理配置语义，工作台开始复用统一的模块配置和资料治理桥接规则。
 - 这次仍然只先收口了治理配置 helper；工作台里针对各治理域的动作触发分发和部分历史内联配置仍未完全抽离，后续适合继续沿这条路径推进。
+
+## 2026-07-13 08:28:40 +08:00 | v1.1.0-alpha.202 | 推进 FE-041 管理端共享治理动作分发 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理能力，而是继续收口 `AdminWorkspaceView.vue` 里分散维护的治理动作判定与确认流分发逻辑。
+- 目标是补齐共享治理动作分发 helper，并让工作台直接复用统一的 view-to-action dispatch 结果，减少页面层对 `community / materials / users / ai / graph` 五组治理动作的重复分支维护。
+### 实际变更
+
+- 更新 `frontend-admin/src/views/adminGovernanceConfig.ts` 与 `adminGovernanceConfig.test.ts`，新增 `GovernanceActionPayload`、`GovernanceActionDispatch` 和 `resolveGovernanceActionDispatch(...)`，把共享治理动作分发规则沉到统一 helper，并补上社区举报、资料治理和无效资料记录的回归用例。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让治理动作按钮元数据直接复用 `getGovernanceActions(...)`，并把 `requestGovernanceAction(...)` 改为消费共享 dispatch 结果，再按 `report / moderation / user / aiTask / template / invalid / noop` 七类出口进入既有确认流。
+- 顺手清理 `AdminWorkspaceView.vue` 里已经不可达的状态筛选分支和未再使用的资料映射函数，进一步把工作台收回到“协调器”职责。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminGovernanceConfig.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从共享治理配置推进到共享治理动作分发，工作台里围绕五个治理域的动作触发分支开始复用统一出口。
+- 这次仍然只先收口动作分发 helper；更进一步的治理详情文案、动作确认元数据归一和 page/feature 级拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。

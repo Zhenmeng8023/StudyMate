@@ -30,6 +30,20 @@ export type GovernanceModerationItem = {
   updatedAt: string;
 };
 
+export type GovernanceActionPayload = {
+  action: string;
+  record: GovernanceRecord;
+};
+
+export type GovernanceActionDispatch =
+  | { kind: "report"; action: "resolve" | "dismiss"; record: GovernanceRecord }
+  | { kind: "moderation"; action: "approve" | "reject" | "hide"; item: GovernanceModerationItem }
+  | { kind: "user"; action: "disable" | "activate"; record: GovernanceRecord }
+  | { kind: "aiTask"; action: "retry" | "cancel"; record: GovernanceRecord }
+  | { kind: "template"; action: "publish" | "unpublish"; record: GovernanceRecord }
+  | { kind: "invalid"; message?: string }
+  | { kind: "noop" };
+
 export const governanceModuleConfig: Record<GovernanceModuleView, GovernanceModuleConfig> = {
   materials: {
     endpoint: "/api/v1/admin/materials",
@@ -157,4 +171,65 @@ export function mapGovernanceRecordToModerationItem(record: GovernanceRecord): G
     createdAt: String(record.createdAt ?? ""),
     updatedAt: String(record.updatedAt ?? "")
   };
+}
+
+export function resolveGovernanceActionDispatch(
+  view: AdminRouteKey,
+  payload: GovernanceActionPayload
+): GovernanceActionDispatch {
+  if (view === "community") {
+    if (payload.action !== "resolve" && payload.action !== "dismiss") return { kind: "noop" };
+    return {
+      kind: "report",
+      action: payload.action,
+      record: payload.record
+    };
+  }
+
+  if (view === "materials") {
+    if (payload.action !== "approve" && payload.action !== "reject" && payload.action !== "hide") return { kind: "noop" };
+
+    const item = mapGovernanceRecordToModerationItem(payload.record);
+    if (!item) {
+      return {
+        kind: "invalid",
+        message: "资料记录字段不完整，无法提交治理动作。"
+      };
+    }
+
+    return {
+      kind: "moderation",
+      action: payload.action,
+      item
+    };
+  }
+
+  if (view === "users") {
+    if (payload.action !== "disable" && payload.action !== "activate") return { kind: "noop" };
+    return {
+      kind: "user",
+      action: payload.action,
+      record: payload.record
+    };
+  }
+
+  if (view === "ai") {
+    if (payload.action !== "retry" && payload.action !== "cancel") return { kind: "noop" };
+    return {
+      kind: "aiTask",
+      action: payload.action,
+      record: payload.record
+    };
+  }
+
+  if (view === "graph") {
+    if (payload.action !== "publish" && payload.action !== "unpublish") return { kind: "noop" };
+    return {
+      kind: "template",
+      action: payload.action,
+      record: payload.record
+    };
+  }
+
+  return { kind: "noop" };
 }

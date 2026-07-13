@@ -21,9 +21,10 @@ import { defaultAdminRouteKey, getAdminRoutePath, normalizeAdminRoutePath, parse
 import type { AdminRouteKey } from "../router";
 import { buildStatusFilterOptions, filterCollectionByStatusAndQuery, type AdminFilterOption } from "./adminModuleFilters";
 import {
+  getGovernanceActions,
   governanceModuleConfig,
   isGovernanceModuleView,
-  mapGovernanceRecordToModerationItem
+  resolveGovernanceActionDispatch
 } from "./adminGovernanceConfig";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
 import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
@@ -144,80 +145,7 @@ const moderationConfirmingLabel = computed(() => {
   return "隐藏中…";
 });
 const moderationConfirmTone = computed(() => (pendingModerationAction.value?.action === "approve" ? "default" : "danger"));
-const governanceActions = computed(() => {
-  if (!selectedRecord.value) return [];
-
-  const status = String(selectedRecord.value.status ?? "").toLowerCase();
-  if (activeView.value === "community") {
-    if (status !== "pending") return [];
-    return [
-      { key: "resolve", label: "标记已处理" },
-      { key: "dismiss", label: "忽略举报", tone: "danger" as const }
-    ];
-  }
-
-  if (activeView.value === "materials") {
-    if (status === "pending") {
-      return [
-        { key: "approve", label: "通过资料" },
-        { key: "reject", label: "驳回资料", tone: "danger" as const }
-      ];
-    }
-    if (status === "approved") {
-      return [
-        { key: "hide", label: "下架资料", tone: "danger" as const }
-      ];
-    }
-    if (status === "hidden") {
-      return [
-        { key: "approve", label: "恢复资料" }
-      ];
-    }
-  }
-
-  if (activeView.value === "users") {
-    const role = String(selectedRecord.value.role ?? "").toLowerCase();
-    if (role === "admin") return [];
-    if (status === "active") {
-      return [
-        { key: "disable", label: "禁用用户", tone: "danger" as const }
-      ];
-    }
-    if (status === "disabled") {
-      return [
-        { key: "activate", label: "恢复用户" }
-      ];
-    }
-  }
-
-  if (activeView.value === "ai") {
-    if (status === "failed") {
-      return [
-        { key: "retry", label: "重试任务" }
-      ];
-    }
-    if (status === "pending") {
-      return [
-        { key: "cancel", label: "取消任务", tone: "danger" as const }
-      ];
-    }
-  }
-
-  if (activeView.value === "graph") {
-    if (status === "published") {
-      return [
-        { key: "unpublish", label: "下架模板", tone: "danger" as const }
-      ];
-    }
-    if (status === "unpublished") {
-      return [
-        { key: "publish", label: "发布模板" }
-      ];
-    }
-  }
-
-  return [];
-});
+const governanceActions = computed(() => getGovernanceActions(activeView.value, selectedRecord.value));
 const reportConfirmTitle = computed(() => {
   const pending = pendingReportAction.value;
   if (!pending) return "";
@@ -481,18 +409,6 @@ const visibleModerationItems = computed(() =>
 );
 const moderationStatusOptions = computed<FilterOption[]>(() => {
   return buildStatusFilterOptions(moderationItems.value, (item) => item.status);
-  const statuses = Array.from(
-    new Set(
-      moderationItems.value
-        .map((item) => String(item.status ?? "").trim())
-        .filter(Boolean)
-    )
-  );
-
-  return [
-    { label: "全部状态", value: "all" },
-    ...statuses.map((status) => ({ label: status, value: status.toLowerCase() }))
-  ];
 });
 const visibleGovernanceRows = computed(() =>
   filterCollectionByStatusAndQuery(governanceRows.value, {
@@ -504,20 +420,6 @@ const visibleGovernanceRows = computed(() =>
 );
 const governanceStatusOptions = computed<FilterOption[]>(() => {
   return buildStatusFilterOptions(governanceRows.value, (row) => String(row.status ?? ""));
-  const statuses = Array.from(
-    new Set(
-      governanceRows.value
-        .map((row) => String(row.status ?? "").trim())
-        .filter(Boolean)
-    )
-  );
-
-  return statuses.length
-    ? [
-        { label: "全部状态", value: "all" },
-        ...statuses.map((status) => ({ label: status, value: status.toLowerCase() }))
-      ]
-    : [{ label: "全部状态", value: "all" }];
 });
 const governanceColumns = computed(() => getGovernanceColumns(governanceRows.value));
 
@@ -873,78 +775,45 @@ function requestModerationAction(item: ModerationItem, action: ModerationAction)
 }
 
 function requestGovernanceAction(payload: { action: string; record: GovernanceRecord }) {
-  if (activeView.value === "community") {
-    if (payload.action !== "resolve" && payload.action !== "dismiss") return;
-
-    reportConfirmError.value = "";
-    pendingReportAction.value = {
-      action: payload.action,
-      record: payload.record
-    };
-    return;
-  }
-
-  if (activeView.value === "materials") {
-    if (payload.action !== "approve" && payload.action !== "reject" && payload.action !== "hide") return;
-
-    const item = mapGovernanceRecordToModerationItem(payload.record);
-    if (!item) {
-      errorMessage.value = "资料记录字段不完整，无法提交治理动作。";
+  const dispatch = resolveGovernanceActionDispatch(activeView.value, payload);
+  switch (dispatch.kind) {
+    case "report":
+      reportConfirmError.value = "";
+      pendingReportAction.value = {
+        action: dispatch.action,
+        record: dispatch.record
+      };
       return;
-    }
-    requestModerationAction(item, payload.action);
-    return;
+    case "moderation":
+      requestModerationAction(dispatch.item, dispatch.action);
+      return;
+    case "user":
+      userConfirmError.value = "";
+      pendingUserAction.value = {
+        action: dispatch.action,
+        record: dispatch.record
+      };
+      return;
+    case "aiTask":
+      aiTaskConfirmError.value = "";
+      pendingAITaskAction.value = {
+        action: dispatch.action,
+        record: dispatch.record
+      };
+      return;
+    case "template":
+      templateConfirmError.value = "";
+      pendingTemplateAction.value = {
+        action: dispatch.action,
+        record: dispatch.record
+      };
+      return;
+    case "invalid":
+      errorMessage.value = dispatch.message ?? "无法提交治理动作。";
+      return;
+    case "noop":
+      return;
   }
-
-  if (activeView.value === "users") {
-    if (payload.action !== "disable" && payload.action !== "activate") return;
-
-    userConfirmError.value = "";
-    pendingUserAction.value = {
-      action: payload.action,
-      record: payload.record
-    };
-    return;
-  }
-
-  if (activeView.value === "ai") {
-    if (payload.action !== "retry" && payload.action !== "cancel") return;
-
-    aiTaskConfirmError.value = "";
-    pendingAITaskAction.value = {
-      action: payload.action,
-      record: payload.record
-    };
-    return;
-  }
-
-  if (activeView.value === "graph") {
-    if (payload.action !== "publish" && payload.action !== "unpublish") return;
-
-    templateConfirmError.value = "";
-    pendingTemplateAction.value = {
-      action: payload.action,
-      record: payload.record
-    };
-  }
-}
-
-function mapGovernanceRecordToMaterial(record: GovernanceRecord): ModerationItem | null {
-  const id = String(record.id ?? "").trim();
-  const title = String(record.title ?? "").trim();
-  if (!id || !title) return null;
-
-  const summarySource = record.description ?? record.category ?? record.attachmentName ?? "";
-  return {
-    id,
-    type: "material",
-    title,
-    summary: String(summarySource),
-    authorName: String(record.ownerName ?? ""),
-    status: String(record.status ?? ""),
-    createdAt: String(record.createdAt ?? ""),
-    updatedAt: String(record.updatedAt ?? "")
-  };
 }
 
 function closeModerationConfirm() {
