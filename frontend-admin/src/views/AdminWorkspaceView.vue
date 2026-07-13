@@ -16,7 +16,7 @@ import type { AdminAuthUser, AdminSessionPayload } from "../api/sessionStore";
 import AdminConfirmStack from "../components/admin/AdminConfirmStack.vue";
 import AdminLoginPanel from "../components/admin/AdminLoginPanel.vue";
 import AdminShellFrame from "../components/admin/AdminShellFrame.vue";
-import { formatGovernanceCell, getGovernanceColumns, type GovernanceRecord } from "../components/admin/governanceRecord";
+import { getGovernanceColumns, type GovernanceRecord } from "../components/admin/governanceRecord";
 import { defaultAdminRouteKey, getAdminRoutePath, normalizeAdminRoutePath, parseAdminRoutePath } from "../router";
 import type { AdminRouteKey } from "../router";
 import {
@@ -33,7 +33,6 @@ import {
   type ConfirmDialogKey
 } from "./adminConfirmDialogState";
 import { buildAdminConfirmDialogs, type AdminConfirmDialogItem } from "./adminConfirmDialogs";
-import { buildStatusFilterOptions, filterCollectionByStatusAndQuery, type AdminFilterOption } from "./adminModuleFilters";
 import {
   buildAdminNavItems,
   getAdminActiveCountLabel,
@@ -46,6 +45,14 @@ import { resolveGovernanceDataState, resolveModerationDataState } from "./adminV
 import { runAdminViewLoadRequest } from "./adminViewLoadRequest";
 import { getAdminRequestErrorMessage, getAdminRequestErrorStatus } from "./adminRequestError";
 import { runAdminViewReadRequest } from "./adminViewReadRequest";
+import {
+  buildGovernanceStatusOptions,
+  buildModerationStatusOptions,
+  filterGovernanceRows,
+  filterModerationItems,
+  splitModerationItems,
+  type AdminWorkspaceModerationItem
+} from "./adminWorkspaceDerivedData";
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import {
   getAdminGovernanceLoadedNotice,
@@ -71,17 +78,6 @@ import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
 import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
 import AdminModerationModule from "./modules/AdminModerationModule.vue";
 
-interface ModerationItem {
-  id: string;
-  type: "post" | "material";
-  title: string;
-  summary: string;
-  authorName: string;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 interface OverviewPayload {
   userCount: number;
   postCount: number;
@@ -96,13 +92,12 @@ type ReportAction = "resolve" | "dismiss";
 type UserAction = "disable" | "activate";
 type AITaskAction = "retry" | "cancel";
 type TemplateAction = "publish" | "unpublish";
-type FilterOption = AdminFilterOption;
 
 const form = reactive({ login: "", password: "" });
 const session = ref<AdminSessionPayload | null>(readStoredAdminSession());
 const sessionInvalidation = ref(readStoredSessionInvalidation());
 const profile = ref<AdminAuthUser | null>(session.value?.user ?? null);
-const moderationItems = ref<ModerationItem[]>([]);
+const moderationItems = ref<AdminWorkspaceModerationItem[]>([]);
 const overview = ref<OverviewPayload | null>(null);
 const governanceRows = ref<GovernanceRecord[]>([]);
 const governanceSummary = ref<GovernanceRecord | null>(null);
@@ -118,7 +113,7 @@ const recordQuery = ref("");
 const moderationQuery = ref("");
 const moderationStatusFilter = ref("all");
 const governanceStatusFilter = ref("all");
-const pendingModerationAction = ref<{ action: ModerationAction; item: ModerationItem } | null>(null);
+const pendingModerationAction = ref<{ action: ModerationAction; item: AdminWorkspaceModerationItem } | null>(null);
 const moderationConfirmError = ref("");
 const pendingReportAction = ref<{ action: ReportAction; record: GovernanceRecord } | null>(null);
 const reportConfirmError = ref("");
@@ -130,8 +125,9 @@ const pendingTemplateAction = ref<{ action: TemplateAction; record: GovernanceRe
 const templateConfirmError = ref("");
 
 const loggedIn = computed(() => Boolean(session.value));
-const pendingPosts = computed(() => moderationItems.value.filter((item) => item.type === "post"));
-const pendingMaterials = computed(() => moderationItems.value.filter((item) => item.type === "material"));
+const moderationBuckets = computed(() => splitModerationItems(moderationItems.value));
+const pendingPosts = computed(() => moderationBuckets.value.pendingPosts);
+const pendingMaterials = computed(() => moderationBuckets.value.pendingMaterials);
 const profileInitial = computed(() => profile.value?.displayName?.trim().slice(0, 1) || "A");
 const moderationConfirmCopy = computed(() => getModerationConfirmCopy(pendingModerationAction.value));
 const governanceActions = computed(() => getGovernanceActions(activeView.value, selectedRecord.value));
@@ -203,28 +199,10 @@ const overviewCards = computed(() =>
   })
 );
 
-const visibleModerationItems = computed(() =>
-  filterCollectionByStatusAndQuery(moderationItems.value, {
-    getStatus: (item) => item.status,
-    query: moderationQuery.value,
-    statusFilter: moderationStatusFilter.value,
-    toSearchText: (item) => [item.title, item.summary, item.authorName, item.type, item.status].join(" ")
-  })
-);
-const moderationStatusOptions = computed<FilterOption[]>(() => {
-  return buildStatusFilterOptions(moderationItems.value, (item) => item.status);
-});
-const visibleGovernanceRows = computed(() =>
-  filterCollectionByStatusAndQuery(governanceRows.value, {
-    getStatus: (row) => String(row.status ?? ""),
-    query: recordQuery.value,
-    statusFilter: governanceStatusFilter.value,
-    toSearchText: (row) => Object.values(row).map((value) => formatGovernanceCell(value)).join(" ")
-  })
-);
-const governanceStatusOptions = computed<FilterOption[]>(() => {
-  return buildStatusFilterOptions(governanceRows.value, (row) => String(row.status ?? ""));
-});
+const visibleModerationItems = computed(() => filterModerationItems(moderationItems.value, moderationQuery.value, moderationStatusFilter.value));
+const moderationStatusOptions = computed(() => buildModerationStatusOptions(moderationItems.value));
+const visibleGovernanceRows = computed(() => filterGovernanceRows(governanceRows.value, recordQuery.value, governanceStatusFilter.value));
+const governanceStatusOptions = computed(() => buildGovernanceStatusOptions(governanceRows.value));
 const governanceColumns = computed(() => getGovernanceColumns(governanceRows.value));
 
 const confirmResetHandlers: ConfirmDialogHandlerMap<() => void> = {
@@ -435,7 +413,7 @@ async function loadModeration() {
   try {
     const result = await runAdminViewLoadRequest({
       readStatus: getAdminRequestErrorStatus,
-      request: () => get<ModerationItem[]>("/api/v1/admin/moderation"),
+      request: () => get<AdminWorkspaceModerationItem[]>("/api/v1/admin/moderation"),
       onForbidden: () => {
         moderationItems.value = [];
       }
@@ -499,7 +477,7 @@ async function loadGovernance(view: AdminView) {
   }
 }
 
-async function applyModerationAction(item: ModerationItem, action: ModerationAction) {
+async function applyModerationAction(item: AdminWorkspaceModerationItem, action: ModerationAction) {
   if (!session.value) return;
   loading.value = true;
   errorMessage.value = "";
@@ -583,7 +561,7 @@ async function applyTemplateAction(record: GovernanceRecord, action: TemplateAct
   await applyGovernanceRecordAction("template", record, action, templateConfirmError);
 }
 
-function requestModerationAction(item: ModerationItem, action: ModerationAction) {
+function requestModerationAction(item: AdminWorkspaceModerationItem, action: ModerationAction) {
   moderationConfirmError.value = "";
   pendingModerationAction.value = { action, item };
 }

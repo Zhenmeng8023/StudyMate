@@ -1,3 +1,25 @@
+## 2026-07-13 21:11:40 +08:00 | v1.1.0-alpha.218 | 推进 FE-041 管理端工作台派生数据 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里审核列表与治理列表分散维护的派生数据逻辑。
+- 目标是补一个共享派生数据 helper，并让帖子/资料拆分、本地筛选与状态选项生成都复用统一出口，减少工作台层继续内联这些 `computed` 分支。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceDerivedData.ts` 与 `adminWorkspaceDerivedData.test.ts`，收口 `splitModerationItems(...)`、`filterModerationItems(...)`、`buildModerationStatusOptions(...)`、`filterGovernanceRows(...)` 与 `buildGovernanceStatusOptions(...)` 五个出口。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `pendingPosts`、`pendingMaterials`、`visibleModerationItems`、`moderationStatusOptions`、`visibleGovernanceRows` 与 `governanceStatusOptions` 全部改为消费共享 `adminWorkspaceDerivedData` helper，而不是继续在工作台里内联筛选和状态选项分支。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端工作台派生数据也已进入共享 helper 出口”。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceDerivedData.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享工作台提示语义推进到共享派生数据逻辑，审核列表与治理列表开始复用统一的拆分、筛选和状态选项出口。
+- 这次仍然只先收口了派生数据 helper；更进一步的工作台级视图切换、URL 同步与请求协调逻辑仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
 ## 2026-07-13 07:49:16 +08:00 | v1.1.0-alpha.197 | 推进 FE-041 管理端共享 FilterBar 筛选条骨架接线
 ### 任务内容
 
