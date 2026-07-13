@@ -6348,3 +6348,25 @@
 
 - `FE-041` 现在继续从共享导航元数据推进到共享确认状态，工作台里的 confirm key 分发和批量清理开始复用统一出口。
 - 这次仍然只先收口确认状态 helper；更进一步的治理详情字段说明、模块级 feature 边界和页面级数据协调逻辑拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 18:35:05 +08:00 | v1.1.0-alpha.206 | 推进 FE-041 管理端共享工作台状态 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里 query/filter、数据区和确认区的重复 reset 逻辑。
+- 目标是补一层共享工作台状态 helper，并让 `popstate`、`switchView`、`logout` 和会话失效清空路径直接复用统一的 workspace reset key 路由，减少页面层分散维护的清理分支。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceState.ts` 与 `adminWorkspaceState.test.ts`，收口后台工作台 `queries / filters / moderationData / governanceData / confirmState` 五类 reset key 的共享 helper，并锁定默认顺序与按子集清理的行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `handleAdminPopstate`、`switchView`、`logout` 和后台会话失效清空路径改为消费共享 `resetAdminWorkspaceState(...)`，同时把 query/filter 清理也并入统一 workspace reset 入口。
+- 本轮不改治理动作、模块加载、会话协议和 URL 路由，只把已稳定的工作台局部状态重置语义继续从页面层下沉到共享 helper。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceState.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从共享确认状态推进到共享工作台状态，工作台里的 query/filter/数据区/reset 逻辑开始复用统一的 workspace key 路由。
+- 这次仍然只先收口工作台状态 helper；更进一步的模块级 feature 边界和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。

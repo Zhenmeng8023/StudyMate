@@ -41,6 +41,11 @@ import {
   type AdminNavItem
 } from "./adminViewMeta";
 import {
+  resetAdminWorkspaceState,
+  type AdminWorkspaceResetHandlers,
+  type AdminWorkspaceResetKey
+} from "./adminWorkspaceState";
+import {
   getGovernanceActions,
   governanceModuleConfig,
   isGovernanceModuleView,
@@ -378,6 +383,34 @@ function clearPendingConfirmState() {
   resetAdminConfirmDialogState(confirmResetHandlers);
 }
 
+const workspaceResetHandlers: AdminWorkspaceResetHandlers = {
+  queries: () => {
+    recordQuery.value = "";
+    moderationQuery.value = "";
+  },
+  filters: () => {
+    moderationStatusFilter.value = "all";
+    governanceStatusFilter.value = "all";
+  },
+  moderationData: () => {
+    moderationItems.value = [];
+    overview.value = null;
+  },
+  governanceData: () => {
+    governanceRows.value = [];
+    governanceSummary.value = null;
+    governanceRowsView.value = null;
+    selectedRecord.value = null;
+  },
+  confirmState: () => {
+    clearPendingConfirmState();
+  }
+};
+
+function clearWorkspaceState(keys?: AdminWorkspaceResetKey[]) {
+  resetAdminWorkspaceState(workspaceResetHandlers, keys);
+}
+
 function getRequestErrorStatus(error: unknown) {
   if (typeof error !== "object" || error === null || !("status" in error)) {
     return null;
@@ -422,8 +455,7 @@ function loadActiveView(view: AdminView) {
 
 function handleAdminPopstate() {
   activeView.value = normalizeAdminLocation();
-  recordQuery.value = "";
-  moderationQuery.value = "";
+  clearWorkspaceState(["queries"]);
   if (session.value) {
     loadActiveView(activeView.value);
   }
@@ -436,13 +468,7 @@ const unsubscribeSession = subscribeSession(() => {
   profile.value = nextSession?.user ?? null;
 
   if (!nextSession) {
-    moderationItems.value = [];
-    overview.value = null;
-    governanceRows.value = [];
-    governanceSummary.value = null;
-    governanceRowsView.value = null;
-    selectedRecord.value = null;
-    clearPendingConfirmState();
+    clearWorkspaceState();
     activeView.value = defaultAdminRouteKey;
     syncAdminLocation(defaultAdminRouteKey, "replace");
     errorMessage.value = "";
@@ -773,11 +799,7 @@ async function handleConfirmDialogConfirm(key: ConfirmDialogKey) {
 
 function switchView(view: AdminView) {
   activeView.value = view;
-  recordQuery.value = "";
-  moderationQuery.value = "";
-  moderationStatusFilter.value = "all";
-  governanceStatusFilter.value = "all";
-  clearPendingConfirmState();
+  clearWorkspaceState(["queries", "filters", "confirmState"]);
   syncAdminLocation(view);
   loadActiveView(view);
 }
@@ -789,15 +811,7 @@ function refreshActiveView() {
 function logout() {
   session.value = null;
   profile.value = null;
-  moderationItems.value = [];
-  overview.value = null;
-  governanceRows.value = [];
-  governanceSummary.value = null;
-  governanceRowsView.value = null;
-  selectedRecord.value = null;
-  moderationStatusFilter.value = "all";
-  governanceStatusFilter.value = "all";
-  clearPendingConfirmState();
+  clearWorkspaceState();
   activeView.value = defaultAdminRouteKey;
   syncAdminLocation(defaultAdminRouteKey, "replace");
   sessionInvalidation.value = null;
