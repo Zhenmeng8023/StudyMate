@@ -319,6 +319,71 @@ describe("AdminWorkspaceView governance modules", () => {
     expect(window.location.pathname).toBe("/admin/dashboard");
   });
 
+  it("returns to the login screen and shows the logout notice after an admin logout", async () => {
+    window.history.replaceState({}, "", "/admin/users");
+    window.localStorage.setItem(
+      "studymate.admin.session",
+      JSON.stringify({
+        accessToken: "admin-token",
+        refreshToken: "refresh-token",
+        accessTokenExpiresAt: "2026-06-02T12:00:00Z",
+        user: {
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        }
+      })
+    );
+    window.localStorage.setItem(
+      "studymate.admin.session.invalidation",
+      JSON.stringify({
+        kind: "refresh_failed",
+        message: "旧的失效提示"
+      })
+    );
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const path = String(input);
+      if (path === "/api/v1/admin/me") {
+        return apiPayload({
+          id: "admin-1",
+          username: "operator",
+          email: "operator@example.test",
+          displayName: "Operator",
+          role: "admin"
+        });
+      }
+      if (path === "/api/v1/admin/users?limit=20") {
+        return apiPayload([
+          {
+            id: "user-1",
+            username: "alice",
+            email: "alice@example.test",
+            role: "student",
+            status: "active"
+          }
+        ]);
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const wrapper = mount(AdminWorkspaceView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("alice");
+
+    await wrapper.get('button[data-admin-logout="true"]').trigger("click");
+    await flushPromises();
+
+    expect(window.localStorage.getItem("studymate.admin.session")).toBeNull();
+    expect(window.localStorage.getItem("studymate.admin.session.invalidation")).toBeNull();
+    expect(window.location.pathname).toBe("/admin/dashboard");
+    expect(wrapper.text()).toContain("进入管理后台");
+    expect(wrapper.text()).toContain("后台会话已清空。");
+  });
+
   it("asks for confirmation before applying a moderation action", async () => {
     window.history.replaceState({}, "", "/admin/dashboard");
     window.localStorage.setItem(
