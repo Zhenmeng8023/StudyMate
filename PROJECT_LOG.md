@@ -6507,3 +6507,27 @@
 
 - `FE-041` 现在继续从共享概览指标推进到共享治理模块配置，工作台里的治理描述、空态文案和加载配置开始复用统一出口。
 - 这次仍然只先收口了治理模块配置 helper；更进一步的 dashboard/overview 协调和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 20:44:20 +08:00 | v1.1.0-alpha.213 | 推进 FE-041 管理端共享读取请求 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `refreshProfile()` 和 `loadOverview()` 这两条仍各自维护的简单读取请求链路。
+- 目标是补一个共享读取 helper，并让工作台的管理员资料读取与后台概览读取都复用统一的成功/失败结果出口，减少页面层继续手写 `try/catch + fallback message`。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminViewReadRequest.ts` 与 `adminViewReadRequest.test.ts`，收口简单读取请求的共享执行 helper，并锁定 `success`、`Error.message` 透传和未知错误 fallback message 三类输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `refreshProfile()` 和 `loadOverview()` 改为通过 `runAdminViewReadRequest(...)` 处理读取结果，而不是继续各自维护内联的 `try/catch` 分支。
+- 本轮不改登录协议、会话刷新、overview 请求路径或 dashboard 模板，只把已稳定的简单读取语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminViewReadRequest.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享治理模块配置推进到共享简单读取请求，工作台里的 profile/overview 读取路径开始复用统一的成功/失败结果出口。
+- 这次仍然只先收口了读取请求 helper；更进一步的 dashboard feature 元数据和页面级 loading/error/notice 协调仍适合继续沿 `ADM-010 / ADM-011` 往前推进。

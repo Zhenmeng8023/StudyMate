@@ -43,6 +43,7 @@ import {
 import { buildAdminOverviewCards } from "./adminOverviewCards";
 import { resolveGovernanceDataState, resolveModerationDataState } from "./adminViewDataState";
 import { runAdminViewLoadRequest } from "./adminViewLoadRequest";
+import { runAdminViewReadRequest } from "./adminViewReadRequest";
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
 import {
   resetAdminWorkspaceState,
@@ -445,20 +446,30 @@ async function login() {
 
 async function refreshProfile() {
   if (!session.value) return;
-  try {
-    profile.value = await get<AdminAuthUser>("/api/v1/admin/me");
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : "读取管理员资料失败";
+  const result = await runAdminViewReadRequest({
+    fallbackMessage: "读取管理员资料失败",
+    readStatus: getRequestErrorStatus,
+    request: () => get<AdminAuthUser>("/api/v1/admin/me")
+  });
+  if (result.kind === "error") {
+    errorMessage.value = result.message;
+    return;
   }
+  profile.value = result.data;
 }
 
 async function loadOverview() {
   if (!session.value) return;
-  try {
-    overview.value = await get<OverviewPayload>("/api/v1/admin/overview");
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : "读取后台概览失败";
+  const result = await runAdminViewReadRequest({
+    fallbackMessage: "读取后台概览失败",
+    readStatus: getRequestErrorStatus,
+    request: () => get<OverviewPayload>("/api/v1/admin/overview")
+  });
+  if (result.kind === "error") {
+    errorMessage.value = result.message;
+    return;
   }
+  overview.value = result.data;
 }
 
 async function loadModeration() {
