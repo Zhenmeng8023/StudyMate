@@ -26,6 +26,7 @@ import {
   type ConfirmDialogKey
 } from "./adminConfirmDialogState";
 import { buildAdminWorkspaceConfirmDialogs } from "./adminWorkspaceConfirmDialogs";
+import { buildAdminWorkspaceLoginPanelProps } from "./adminWorkspaceLoginPanelProps";
 import { buildAdminWorkspaceModuleEvents } from "./adminWorkspaceModuleEvents";
 import { buildAdminWorkspaceModuleProps } from "./adminWorkspaceModuleProps";
 import { buildAdminWorkspaceShellEvents } from "./adminWorkspaceShellEvents";
@@ -198,6 +199,16 @@ const loginNotice = computed(() => {
   }
   return notice.value;
 });
+const loginPanelProps = computed(() =>
+  buildAdminWorkspaceLoginPanelProps({
+    errorMessage: errorMessage.value,
+    loading: loading.value,
+    loginPrompt: loginPrompt.value,
+    loginValue: form.login,
+    notice: loginNotice.value,
+    passwordValue: form.password
+  })
+);
 const activeDescription = computed(() => getAdminViewDescription(activeView.value, getGovernanceModuleConfig(activeView.value)?.description ?? ""));
 const activeCountLabel = computed(() =>
   getAdminActiveCountLabel(activeView.value, moderationItems.value.length, governanceRows.value.length)
@@ -779,12 +790,12 @@ function selectRecord(row: GovernanceRecord) {
 
     <AdminLoginPanel
       v-if="!loggedIn"
-      :error-message="errorMessage"
-      :loading="loading"
-      :notice="loginNotice"
-      :login-prompt="loginPrompt"
-      :login-value="form.login"
-      :password-value="form.password"
+      :error-message="loginPanelProps.errorMessage"
+      :loading="loginPanelProps.loading"
+      :notice="loginPanelProps.notice"
+      :login-prompt="loginPanelProps.loginPrompt"
+      :login-value="loginPanelProps.loginValue"
+      :password-value="loginPanelProps.passwordValue"
       @submit="login"
       @update:login-value="form.login = $event"
       @update:password-value="form.password = $event"

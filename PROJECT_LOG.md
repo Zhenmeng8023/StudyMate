@@ -7221,6 +7221,28 @@
 
 - `SE-020` 现在已经从“真实命中数 / 首批返回数分离 + 统计信息透传”继续推进到“单一类型可跨批次续取”的最小可用阶段，搜索页终于能基于后端契约继续拿下一批数据，而不是只做本地分页提示。
 - 这一步仍然没有把“全部类型”视图做成完整真分页；后续更适合继续沿 `SE-020 / WB-043 / WB-044` 补多分组分页编排、统一排序元数据和更强索引实现，而不是在前端继续堆局部技巧。
+## 2026-07-14 02:24:30 +08:00 | v1.1.0-alpha.240 | 推进 FE-041 管理端登录面板 props 装配 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里传给 `AdminLoginPanel` 的登录面板 props 装配逻辑。
+- 目标是补一层共享 `login-panel-props` helper，让后台未登录壳层输入继续复用统一出口，而不是把这层模板级错误、提示、输入值和 loading 绑定继续留在页面组件里。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceLoginPanelProps.ts` 与 `adminWorkspaceLoginPanelProps.test.ts`，收口登录面板 `errorMessage`、`notice`、`loginPrompt`、`loginValue`、`passwordValue` 与 `loading` 的装配。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `AdminLoginPanel` 改为消费共享 `adminWorkspaceLoginPanelProps` helper，页面层只保留 state 与 helper 入参绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端登录面板 props 也已进入共享 helper 出口”。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLoginPanelProps.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享壳层事件装配链推进到共享登录面板 props 装配链，后台工作台未登录视图里的高频输入绑定进一步变薄。
+- 这次仍然只先收口了 `login-panel-props` helper；更进一步的登录面板事件或更完整的壳层 feature adapter，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 ## 2026-07-14 02:15:55 +08:00 | v1.1.0-alpha.239 | 推进 FE-041 管理端壳层事件装配 helper 接线
 ### 任务内容
 
