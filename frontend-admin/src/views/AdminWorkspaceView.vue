@@ -50,6 +50,7 @@ import {
   type AdminWorkspaceResetKey
 } from "./adminWorkspaceState";
 import {
+  getGovernanceModuleConfig,
   getGovernanceActions,
   governanceModuleConfig,
   isGovernanceModuleView,
@@ -208,12 +209,7 @@ const navItems = computed<AdminNavItem[]>(() => buildAdminNavItems(moderationIte
 const navGroups = computed(() => groupAdminNavItems(navItems.value));
 const activeMeta = computed(() => navItems.value.find((item) => item.key === activeView.value) ?? navItems.value[0]);
 const loginPrompt = computed(() => getSessionInvalidationPrompt(sessionInvalidation.value, "admin"));
-const activeDescription = computed(() =>
-  getAdminViewDescription(
-    activeView.value,
-    isGovernanceModuleView(activeView.value) ? governanceModuleConfig[activeView.value].description : ""
-  )
-);
+const activeDescription = computed(() => getAdminViewDescription(activeView.value, getGovernanceModuleConfig(activeView.value)?.description ?? ""));
 const activeCountLabel = computed(() =>
   getAdminActiveCountLabel(activeView.value, moderationItems.value.length, governanceRows.value.length)
 );
@@ -241,21 +237,6 @@ const overviewCards = computed(() =>
     overview: overview.value
   })
 );
-const governanceConfig: Record<Exclude<AdminView, "dashboard" | "moderation">, { endpoint: string; query: { limit: number }; empty: string; description: string }> = {
-  materials: { endpoint: "/api/v1/admin/materials", query: { limit: 20 }, empty: "暂无资料治理记录。", description: "查看资料状态、作者与附件，并直接执行审核或上下架动作。" },
-  community: { endpoint: "/api/v1/admin/reports", query: { limit: 20 }, empty: "暂无举报记录。", description: "集中查看用户提交的举报与处理线索。" },
-  users: { endpoint: "/api/v1/admin/users", query: { limit: 20 }, empty: "暂无用户记录。", description: "按账号状态与角色查看用户资料。" },
-  graph: { endpoint: "/api/v1/admin/tags", query: { limit: 20 }, empty: "暂无标签记录。", description: "管理资料、笔记与图谱中的分类标签。" },
-  ai: { endpoint: "/api/v1/admin/ai/tasks", query: { limit: 20 }, empty: "暂无 AI 任务。", description: "追踪生成任务、状态与用量概览。" },
-  system: { endpoint: "/api/v1/admin/files", query: { limit: 20 }, empty: "暂无文件记录。", description: "查看上传文件与存储治理信息。" },
-  audit: { endpoint: "/api/v1/admin/audit-logs", query: { limit: 20 }, empty: "暂无审计日志。", description: "查看关键治理操作的可追溯记录。" }
-};
-governanceConfig.graph = {
-  endpoint: "/api/v1/admin/diagram-templates",
-  query: { limit: 20 },
-  empty: "暂无图谱模板记录。",
-  description: "管理图谱模板的发布状态与基础元数据。"
-};
 
 const visibleModerationItems = computed(() =>
   filterCollectionByStatusAndQuery(moderationItems.value, {
@@ -520,7 +501,8 @@ async function loadGovernance(view: AdminView) {
     selectedRecord.value = null;
   }
   try {
-    const config = governanceModuleConfig[plan.view];
+    const config = getGovernanceModuleConfig(plan.view);
+    if (!config) return;
     const result = await runAdminViewLoadRequest({
       readStatus: getRequestErrorStatus,
       request: () => get<GovernanceRecord[]>(config.endpoint, config.query),
@@ -791,7 +773,7 @@ function selectRecord(row: GovernanceRecord) {
         :actions="governanceActions"
         :columns="governanceColumns"
         :data-state="governanceDataState"
-        :empty-text="isGovernanceModuleView(activeView) ? governanceModuleConfig[activeView].empty : ''"
+        :empty-text="getGovernanceModuleConfig(activeView)?.empty ?? ''"
         :query="recordQuery"
         :rows="visibleGovernanceRows"
         :selected-record="selectedRecord"

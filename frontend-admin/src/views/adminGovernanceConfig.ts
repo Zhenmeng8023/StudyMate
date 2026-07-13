@@ -93,6 +93,14 @@ export function isGovernanceModuleView(view: AdminRouteKey): view is GovernanceM
   return view !== "dashboard" && view !== "moderation";
 }
 
+export function getGovernanceModuleConfig(view: AdminRouteKey): GovernanceModuleConfig | null {
+  if (!isGovernanceModuleView(view)) {
+    return null;
+  }
+
+  return governanceModuleConfig[view];
+}
+
 export function getGovernanceActions(view: AdminRouteKey, record: GovernanceRecord | null): GovernanceActionItem[] {
   if (!record || !isGovernanceModuleView(view)) return [];
 

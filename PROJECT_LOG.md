@@ -6483,3 +6483,27 @@
 
 - `FE-041` 现在继续从共享加载请求推进到共享概览指标语义，dashboard 概览卡片开始复用统一的 card builder 出口。
 - 这次仍然只先收口了 overviewCards helper；更进一步的 dashboard feature 元数据和页面级协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 20:38:50 +08:00 | v1.1.0-alpha.212 | 推进 FE-041 管理端治理模块配置 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里治理模块描述、空态文案和模块请求配置的重复来源。
+- 目标是补一个按 route 读取治理模块配置的共享 helper，并让工作台直接复用统一配置出口，消掉页面里那份已经发生过 `graph` endpoint 漂移风险的本地重复配置块。
+
+### 实际变更
+
+- 更新 `frontend-admin/src/views/adminGovernanceConfig.ts` 与 `adminGovernanceConfig.test.ts`，新增 `getGovernanceModuleConfig(...)`，统一返回治理模块的 endpoint、query、empty 和 description，并锁定 governance route / non-governance route 两类输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `activeDescription`、`loadGovernance(...)` 和治理模块空态文案都改为消费共享 `getGovernanceModuleConfig(...)`，并删除工作台里那份未再使用、且曾对 `graph` 视图写成 `/api/v1/admin/tags` 的本地 `governanceConfig` 重复配置。
+- 本轮不改治理动作协议、列表筛选、会话行为和路由结构，只把已稳定的治理模块配置语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminGovernanceConfig.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享概览指标推进到共享治理模块配置，工作台里的治理描述、空态文案和加载配置开始复用统一出口。
+- 这次仍然只先收口了治理模块配置 helper；更进一步的 dashboard/overview 协调和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
