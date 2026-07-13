@@ -6460,3 +6460,26 @@
 
 - `FE-041` 现在继续从共享页面状态推进到共享加载请求处理，管理端审核与治理加载路径开始复用统一的错误状态捕获和 forbidden 清理出口。
 - 这次仍然只先收口了加载请求 helper；更进一步的 overview/profile 加载协调和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+
+## 2026-07-13 20:34:40 +08:00 | v1.1.0-alpha.211 | 推进 FE-041 管理端共享概览卡片 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里 dashboard 概览卡片的指标语义与 fallback 规则。
+- 目标是补一层共享概览卡片 helper，并让工作台的 `overviewCards` 直接复用统一的卡片构建逻辑，减少页面层继续内联维护概览指标文案和值回退规则。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminOverviewCards.ts` 与 `adminOverviewCards.test.ts`，收口 dashboard 概览卡片的标签、helper 文案和值 fallback 规则，并锁定 overview 有值与 overview 缺失两类输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `overviewCards` 改为直接消费共享 `buildAdminOverviewCards(...)`，不再在工作台里内联四张概览卡片的构建逻辑。
+- 本轮不改 dashboard 模板、overview 请求路径、审核统计来源或模块路由，只把已稳定的概览卡片语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminOverviewCards.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+
+### 后续影响
+
+- `FE-041` 现在继续从共享加载请求推进到共享概览指标语义，dashboard 概览卡片开始复用统一的 card builder 出口。
+- 这次仍然只先收口了 overviewCards helper；更进一步的 dashboard feature 元数据和页面级协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。

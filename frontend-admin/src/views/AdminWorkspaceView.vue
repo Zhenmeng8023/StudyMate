@@ -40,6 +40,7 @@ import {
   groupAdminNavItems,
   type AdminNavItem
 } from "./adminViewMeta";
+import { buildAdminOverviewCards } from "./adminOverviewCards";
 import { resolveGovernanceDataState, resolveModerationDataState } from "./adminViewDataState";
 import { runAdminViewLoadRequest } from "./adminViewLoadRequest";
 import { resolveAdminViewLoadPlan, shouldPreserveGovernanceRows } from "./adminViewLoadMeta";
@@ -234,12 +235,12 @@ const governanceDataState = computed<AdminDataStatePayload | null>(() => {
     rowCount: governanceRows.value.length
   });
 });
-const overviewCards = computed(() => [
-  { label: "待处理", value: String(overview.value?.pendingModerationCount ?? moderationItems.value.length), helper: "需要审核或复核的公开内容" },
-  { label: "用户规模", value: String(overview.value?.userCount ?? 0), helper: "当前已注册的学习者与管理员" },
-  { label: "资料沉淀", value: String(overview.value?.materialCount ?? 0), helper: "可被阅读、引用和治理的资料" },
-  { label: "知识图谱", value: String(overview.value?.graphCount ?? 0), helper: "用户持续维护的知识结构" }
-]);
+const overviewCards = computed(() =>
+  buildAdminOverviewCards({
+    moderationItemsCount: moderationItems.value.length,
+    overview: overview.value
+  })
+);
 const governanceConfig: Record<Exclude<AdminView, "dashboard" | "moderation">, { endpoint: string; query: { limit: number }; empty: string; description: string }> = {
   materials: { endpoint: "/api/v1/admin/materials", query: { limit: 20 }, empty: "暂无资料治理记录。", description: "查看资料状态、作者与附件，并直接执行审核或上下架动作。" },
   community: { endpoint: "/api/v1/admin/reports", query: { limit: 20 }, empty: "暂无举报记录。", description: "集中查看用户提交的举报与处理线索。" },
