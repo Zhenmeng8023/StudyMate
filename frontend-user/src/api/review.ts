@@ -28,6 +28,7 @@ import type {
   ReaderStatePayload,
   ReviewQueuePayload,
   ReviewResultPayload,
+  UndoReviewResultPayload,
   TogglePayload
 } from "./types";
 
@@ -108,6 +109,31 @@ export async function reviewCard(
   }
 ) {
   return request<ReviewResultPayload>(`/cards/${cardId}/review`, {
+    method: "POST",
+    headers: withAuth(session),
+    body: input
+  });
+}
+
+export async function undoReviewCard(
+  session: AuthSession,
+  cardId: string,
+  input: {
+    reviewId: string;
+    previousSchedule: {
+      cardId: string;
+      userId: string;
+      dueAt: string;
+      intervalDays: number;
+      easeFactor: number;
+      repetitionCount: number;
+      lapseCount: number;
+      state: string;
+      updatedAt: string;
+    };
+  }
+) {
+  return request<UndoReviewResultPayload>(`/cards/${cardId}/review/undo`, {
     method: "POST",
     headers: withAuth(session),
     body: input

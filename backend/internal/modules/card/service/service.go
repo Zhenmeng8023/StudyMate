@@ -226,6 +226,64 @@ func (s *Service) UpdateCardStatus(ownerUserID string, cardID string, request ca
 	return &payload, nil
 }
 
+func (s *Service) UndoReview(ownerUserID string, cardID string, request carddto.UndoReviewRequest) (*carddto.UndoReviewResultPayload, error) {
+	card, err := s.requireOwnerCard(ownerUserID, cardID)
+	if err != nil {
+		return nil, err
+	}
+
+	reviewID := strings.TrimSpace(request.ReviewID)
+	if reviewID == "" {
+		return nil, apperrors.New(http.StatusBadRequest, "invalid_review_id", "撤销评分时必须提供 reviewId")
+	}
+
+	schedule, err := s.repository.FindSchedule(card.ID, ownerUserID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.New(http.StatusNotFound, "schedule_not_found", "当前卡片还没有复习计划")
+		}
+		return nil, apperrors.Internal("读取复习计划失败")
+	}
+
+	latestReview, err := s.repository.FindLatestReview(card.ID, ownerUserID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.New(http.StatusNotFound, "review_not_found", "没有找到可撤销的评分记录")
+		}
+		return nil, apperrors.Internal("读取评分记录失败")
+	}
+	if latestReview.ID != reviewID {
+		return nil, apperrors.New(http.StatusConflict, "review_undo_conflict", "当前只能撤销这张卡片最新的一次评分")
+	}
+
+	restoredSchedule, err := buildRestoredSchedule(*schedule, card.ID, ownerUserID, request.PreviousSchedule)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repository.InTransaction(func(repository *cardrepo.Repository) error {
+		if err := repository.SaveSchedule(&restoredSchedule); err != nil {
+			return err
+		}
+		if err := repository.DeleteReviewByID(latestReview.ID); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return nil, apperrors.Internal("撤销上一条评分失败")
+	}
+
+	_ = s.auditLogs.Create(ownerUserID, "card.review.undo", "card", map[string]any{
+		"cardId":   card.ID,
+		"reviewId": latestReview.ID,
+	})
+
+	return &carddto.UndoReviewResultPayload{
+		Schedule: cardrepo.BuildSchedulePayload(restoredSchedule),
+	}, nil
+}
+
 func (s *Service) requireOwnerDeck(ownerUserID string, deckID string) (*cardmodel.Deck, error) {
 	deck, err := s.repository.FindDeckByID(deckID)
 	if err != nil {
@@ -289,6 +347,64 @@ func maxElapsed(value int64) int64 {
 	}
 
 	return value
+}
+
+func buildRestoredSchedule(current cardmodel.CardSchedule, cardID string, userID string, payload carddto.CardSchedulePayload) (cardmodel.CardSchedule, error) {
+	if cardRef := strings.TrimSpace(payload.CardID); cardRef != "" && cardRef != cardID {
+		return current, apperrors.New(http.StatusBadRequest, "invalid_previous_schedule", "上一条评分快照与当前卡片不匹配")
+	}
+	if userRef := strings.TrimSpace(payload.UserID); userRef != "" && userRef != userID {
+		return current, apperrors.New(http.StatusBadRequest, "invalid_previous_schedule", "上一条评分快照与当前用户不匹配")
+	}
+
+	dueAt, err := parseScheduleTimestamp(payload.DueAt)
+	if err != nil {
+		return current, err
+	}
+	updatedAt, err := parseScheduleTimestamp(payload.UpdatedAt)
+	if err != nil {
+		return current, err
+	}
+
+	state, ok := normalizeScheduleState(payload.State)
+	if !ok {
+		return current, apperrors.New(http.StatusBadRequest, "invalid_previous_schedule", "上一条评分快照包含未知的复习状态")
+	}
+
+	current.CardID = cardID
+	current.UserID = userID
+	current.DueAt = dueAt
+	current.IntervalDays = payload.IntervalDays
+	current.EaseFactor = payload.EaseFactor
+	current.RepetitionCount = payload.RepetitionCount
+	current.LapseCount = payload.LapseCount
+	current.State = state
+	current.UpdatedAt = updatedAt
+
+	return current, nil
+}
+
+func parseScheduleTimestamp(value string) (time.Time, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return time.Time{}, apperrors.New(http.StatusBadRequest, "invalid_previous_schedule", "上一条评分快照缺少时间字段")
+	}
+
+	parsed, err := time.Parse(time.RFC3339, trimmed)
+	if err != nil {
+		return time.Time{}, apperrors.New(http.StatusBadRequest, "invalid_previous_schedule", "上一条评分快照包含无效的时间格式")
+	}
+
+	return parsed.UTC(), nil
+}
+
+func normalizeScheduleState(value string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "new", "learning", "review", "relearning":
+		return strings.ToLower(strings.TrimSpace(value)), true
+	default:
+		return "", false
+	}
 }
 
 func (s *Service) createCardsForDeck(ownerUserID string, deck *cardmodel.Deck, requests []carddto.CreateCardRequest) ([]carddto.CardPayload, error) {

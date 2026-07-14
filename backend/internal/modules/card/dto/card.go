@@ -29,6 +29,11 @@ type UpdateCardStatusRequest struct {
 	Status string `json:"status" binding:"required"`
 }
 
+type UndoReviewRequest struct {
+	ReviewID         string              `json:"reviewId" binding:"required"`
+	PreviousSchedule CardSchedulePayload `json:"previousSchedule" binding:"required"`
+}
+
 type CardDraftPayload struct {
 	ID             string         `json:"id"`
 	DraftID        string         `json:"draftId,omitempty"`
@@ -92,5 +97,9 @@ type ReviewQueuePayload struct {
 
 type ReviewResultPayload struct {
 	ReviewID string              `json:"reviewId"`
+	Schedule CardSchedulePayload `json:"schedule"`
+}
+
+type UndoReviewResultPayload struct {
 	Schedule CardSchedulePayload `json:"schedule"`
 }

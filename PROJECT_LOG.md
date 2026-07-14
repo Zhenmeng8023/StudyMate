@@ -7564,3 +7564,27 @@
 
 - `ANKI-030` 的复习会话现在已经具备评分、跳过、暂停、埋藏和恢复这几类最核心的显式控制动作，原型阶段的“先做一版能用的复习体验”更完整了一步。
 - 这一轮的埋藏仍然先落成“持久化状态 + 管理面板恢复”的可用原型，而不是完整的 Anki 日切埋藏语义；后续更适合继续沿 `ANKI-030 / ANKI-020 / LC-010` 补撤销上一次评分，以及把 `buried / suspended / learning / review / relearning` 的真实调度关系进一步做实。
+## 2026-07-15 07:20:00 +08:00 | v1.1.0-alpha.253 | 推进 ANKI-030 撤销上一次评分
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-030 / LC-010`，这一轮不切入新的 Note/Card 结构或完整调度模型，而是补齐复习会话里最后一个高频且直接影响纠错体验的显式动作。
+- 目标是让用户在刚提交评分后，仍能在当前会话里把这次评分撤回，恢复评分前的 schedule，并把卡片重新放回今日队列，而不是只能刷新页面或手工重建上下文。
+### 实际变更
+
+- 更新 `backend/internal/modules/card/dto/card.go`、`repository/repository.go`、`service/service.go`、`handler/handler.go`、`router/router.go`，补齐 `POST /api/v1/cards/:id/review/undo` 端到端链路：请求需携带 `reviewId` 与评分前的 `previousSchedule` 快照，服务端会校验卡片归属、仅允许撤销这张卡最新的一次评分，并在事务里恢复 schedule 后删除对应 review 记录。
+- 新增 `card.review.undo` 审计事件，保持撤销评分仍然留在 `card` 域内部闭环，不把这条会话逻辑扩散到其他模块。
+- 更新 `frontend-user/src/api/review.ts`、`frontend-user/src/api/types.ts` 与 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，新增 `undoReviewCard(...)` API 客户端、复习页“撤销上一次评分”按钮，以及评分后保留的本地 undo 状态；撤销成功后会恢复评分前的计数、把卡片重新放回今日队列头部，并给出明确反馈。
+- 更新 `frontend-user/src/styles/studio-workspaces.css`，补上复习提示区与撤销按钮并排展示的样式，保持空队列和正常复习两种状态下都能触发撤销。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-030 / LC-010` 的阶段描述推进到“复习会话已具备撤销上一次评分并恢复今日队列”这一层。
+### 验证结果
+
+- RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- GREEN：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+### 后续影响
+
+- `ANKI-030` 的复习会话现在已经具备评分、跳过、暂停、埋藏、恢复和撤销评分这组最关键的显式控制动作，原型阶段的“先做一版能用的复习体验”又完整了一步。
+- 这一轮的撤销仍然建立在“当前会话保留评分前 schedule 快照 + 仅允许撤销最新一条评分”的最小模型上；后续更适合继续沿 `ANKI-030 / ANKI-020 / LC-010` 做真实学习/复习/重新学习队列、埋藏日切语义与更统一的 SourceLink/反馈回写，而不是继续把更多调度推导留在前端会话状态里。

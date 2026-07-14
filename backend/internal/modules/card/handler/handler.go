@@ -23,6 +23,7 @@ type cardService interface {
 	TodayQueue(ownerUserID string) (*carddto.ReviewQueuePayload, error)
 	ReviewCard(ownerUserID string, cardID string, request carddto.ReviewCardRequest) (*carddto.ReviewResultPayload, error)
 	UpdateCardStatus(ownerUserID string, cardID string, request carddto.UpdateCardStatusRequest) (*carddto.CardPayload, error)
+	UndoReview(ownerUserID string, cardID string, request carddto.UndoReviewRequest) (*carddto.UndoReviewResultPayload, error)
 }
 
 func NewHandler(service cardService) *Handler {
@@ -133,6 +134,22 @@ func (h *Handler) UpdateCardStatus(ctx *gin.Context) {
 	}
 
 	result, err := h.service.UpdateCardStatus(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), request)
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}
+
+func (h *Handler) UndoReview(ctx *gin.Context) {
+	var request carddto.UndoReviewRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	result, err := h.service.UndoReview(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), request)
 	if err != nil {
 		response.Error(ctx, err)
 		return

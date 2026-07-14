@@ -12,6 +12,7 @@ import {
   listDeckCards,
   listDecks,
   reviewCard,
+  undoReviewCard,
   updateCardStatus
 } from "../../api/client";
 import { DataState, Select } from "../../design-system/primitives";
@@ -29,6 +30,13 @@ type ReviewWorkspaceState =
       description: string;
     }
   | null;
+
+type UndoableReviewState = {
+  reviewId: string;
+  item: ReviewQueueItemPayload;
+  previousDueCount: number;
+  previousCompletedCount: number;
+};
 
 const ratingOptions = [
   { value: "again", label: "重来", shortcut: "1", accessibilityLabel: "Again 重来" },
@@ -76,6 +84,14 @@ function prioritizeRequestedQueueItem(items: ReviewQueueItemPayload[], cardId: s
   return nextItems;
 }
 
+function cloneQueueItem(item: ReviewQueueItemPayload): ReviewQueueItemPayload {
+  return {
+    ...item,
+    card: { ...item.card },
+    schedule: { ...item.schedule }
+  };
+}
+
 function ReviewSourceSummary(props: { card: Pick<CardPayload, "sourceType" | "sourceId">; compact?: boolean }) {
   const sourceReference = formatReviewSourceReference(props.card);
   if (!sourceReference) {
@@ -115,6 +131,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [shownAt, setShownAt] = useState(() => Date.now());
   const [message, setMessage] = useState("");
   const [workspaceErrorMessage, setWorkspaceErrorMessage] = useState("");
+  const [undoableReview, setUndoableReview] = useState<UndoableReviewState | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [managementOpen, setManagementOpen] = useState(false);
@@ -257,6 +274,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     setLoading(true);
     setMessage("");
     setWorkspaceErrorMessage("");
+    setUndoableReview(null);
     try {
       const [nextDecks, reviewQueue] = await Promise.all([
         listDecks(props.session),
@@ -378,9 +396,16 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     setBusy(true);
     setMessage("");
     try {
+      const reviewedItem = cloneQueueItem(currentItem);
       const result = await reviewCard(props.session, currentItem.card.id, {
         rating,
         elapsedMs: Date.now() - shownAt
+      });
+      setUndoableReview({
+        reviewId: result.reviewId,
+        item: reviewedItem,
+        previousDueCount: dueCount,
+        previousCompletedCount: completedCount
       });
       setQueue((items) => items.slice(1));
       setDueCount((count) => Math.max(0, count - 1));
@@ -388,6 +413,34 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       setMessage(`已记录复习，下次 ${formatDateTime(result.schedule.dueAt)}。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "提交复习结果失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleUndoLastReview() {
+    if (!undoableReview) {
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await undoReviewCard(props.session, undoableReview.item.card.id, {
+        reviewId: undoableReview.reviewId,
+        previousSchedule: undoableReview.item.schedule
+      });
+      const restoredItem = {
+        ...cloneQueueItem(undoableReview.item),
+        schedule: result.schedule
+      };
+      setQueue((items) => [restoredItem, ...items.filter((item) => item.card.id !== restoredItem.card.id)]);
+      setDueCount(undoableReview.previousDueCount);
+      setCompletedCount(undoableReview.previousCompletedCount);
+      setUndoableReview(null);
+      setMessage("已撤销上一条评分，卡片已回到今日队列。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "撤销上一条评分失败");
     } finally {
       setBusy(false);
     }
@@ -518,7 +571,17 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         </div>
       </header>
 
-      {message ? <p className="review-focus-message" role="status">{message}</p> : null}
+      {message || undoableReview ? (
+        <div className="review-focus-message-row">
+          {message ? <p className="review-focus-message" role="status">{message}</p> : <div />}
+          {undoableReview ? (
+            <button className="secondary-button" disabled={busy} onClick={() => void handleUndoLastReview()} type="button">
+              <RotateCcw size={16} />
+              撤销上一次评分
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="review-focus__body">
         <main className="review-focus-stage" aria-label="复习卡片">

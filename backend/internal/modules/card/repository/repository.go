@@ -101,6 +101,28 @@ func (r *Repository) CreateReview(review *cardmodel.CardReview) error {
 	return r.db.Create(review).Error
 }
 
+func (r *Repository) FindLatestReview(cardID string, userID string) (*cardmodel.CardReview, error) {
+	var review cardmodel.CardReview
+	if err := r.db.
+		Where("card_id = ? AND user_id = ?", cardID, userID).
+		Order("reviewed_at desc, id desc").
+		First(&review).Error; err != nil {
+		return nil, err
+	}
+
+	return &review, nil
+}
+
+func (r *Repository) DeleteReviewByID(reviewID string) error {
+	return r.db.Delete(&cardmodel.CardReview{}, "id = ?", reviewID).Error
+}
+
+func (r *Repository) InTransaction(fn func(repository *Repository) error) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		return fn(&Repository{db: tx})
+	})
+}
+
 func (r *Repository) CountDueCards(userID string, dueBefore time.Time) (int64, error) {
 	var count int64
 	err := r.db.Table("card_schedules").

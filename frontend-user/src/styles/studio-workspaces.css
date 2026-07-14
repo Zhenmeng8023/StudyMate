@@ -108,6 +108,18 @@
   background: var(--accent-soft);
 }
 
+.review-focus-message-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.review-focus-message-row > .review-focus-message,
+.review-focus-message-row > div:first-child {
+  flex: 1 1 auto;
+}
+
 .reader-studio,
 .notes-studio,
 .review-focus {
@@ -911,7 +923,8 @@
   .reader-stage-card__meta,
   .notes-editor-card__head,
   .notes-editor-card__footer,
-  .review-focus-footer {
+  .review-focus-footer,
+  .review-focus-message-row {
     align-items: flex-start;
     flex-direction: column;
   }

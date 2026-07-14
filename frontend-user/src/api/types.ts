@@ -350,6 +350,10 @@ export interface ReviewResultPayload {
   schedule: CardSchedulePayload;
 }
 
+export interface UndoReviewResultPayload {
+  schedule: CardSchedulePayload;
+}
+
 export interface CardDraftPayload {
   id: string;
   draftId?: string;
