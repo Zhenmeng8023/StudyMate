@@ -7435,6 +7435,32 @@
 
 - `ANKI-050` 现在不仅能把批注/PDF 上下文带进卡片和复习，也能让 AI 草稿确认页继续消费这套上下文并回到 reader 精确位置，主学习闭环里的 `reader -> AI workspace -> reader` 又闭合了一段。
 - 这一轮仍只收口了 AI 草稿来源链接；如果后续要继续把 AI 任务历史、更多图谱来源类型和更统一的 `SourceLink` 契约继续做厚，下一步更适合继续沿 `ANKI-050 / WB-033 / LC-010` 扩同一套来源回跳模型，而不是在各页面继续堆独立路径判断。
+## 2026-07-15 06:41:01 +08:00 | v1.1.0-alpha.249 | 推进 ANKI-050 / LC-010 AI 任务历史来源精确回跳
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-050 / LC-010`，这一轮在 AI 草稿确认页补完之后，继续把 AI 任务历史也纳入同一套来源回跳主线。
+- 目标是避免 AI 任务历史只剩 `sourceType/sourceId` 这种粗粒度信息，尤其在 reader 批注生成卡片草稿这类场景里，用户应能从“最近 AI 任务”直接回到精确的页码与批注位置。
+### 实际变更
+
+- 后端补齐 AI 任务 `sourceMetadata` 通路：更新 `backend/internal/modules/ai/model/ai_task.go`、`dto/ai.go`、`repository/repository.go`、`service/service.go`，并新增 `backend/internal/modules/ai/repository/source_metadata.go`，让任务记录可以持久化并返回来源上下文。
+- 新增 MySQL 迁移 `backend/internal/migrations/mysql/006_ai_task_source_metadata.sql`（及 down migration），为 `ai_tasks` 表补上 `source_metadata` 文本列，兼容已有任务表结构。
+- `RecordReaderCardDrafts(...)` 与 `RecordReaderGraphDrafts(...)` 现在会把首个可用的 reader 来源 metadata 提升到任务记录层；这样 AI 任务历史里的 reader 任务也能保留 `materialId / page / annotationId / anchorId`。
+- 前端更新 `frontend-user/src/api/types.ts`、`frontend-user/src/features/ai/aiDrafts.ts` 与 `frontend-user/src/pages/AiPage.tsx`：新增 `buildAiTaskWorkspacePath(...)`，并在“最近 AI 任务”卡片里渲染 `打开来源工作台` 链接，直接复用既有 `graphSourceBacklinks` 规则生成精确 reader 回跳地址。
+- 补强回归：新增后端 `backend/internal/modules/ai/service/source_metadata_test.go`，并扩展 `frontend-user/src/features/ai/aiDrafts.test.ts`、`frontend-user/src/pages/AiPage.test.tsx`，锁定任务级来源上下文与页面链接渲染。
+### 验证结果
+
+- RED：`go test ./internal/modules/ai/service`
+- RED：`npm --workspace frontend-user run test -- src/features/ai/aiDrafts.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
+- GREEN：`go test ./internal/modules/ai/service ./internal/modules/ai/handler`
+- GREEN：`npm --workspace frontend-user run test -- src/features/ai/aiDrafts.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- `ANKI-050` 现在不仅覆盖 AI 草稿确认页，也把 AI 任务历史拉进了同一套来源回跳语义，主学习闭环里的 `reader -> AI task history -> reader` 也开始可用了。
+- 这一轮仍主要覆盖 reader 侧精确来源；如果后续要继续把更多图谱来源类型、任务结果回跳和更统一的 `SourceLink` 契约继续做厚，下一步更适合继续沿 `ANKI-050 / WB-033 / LC-010` 扩展这一层，而不是在任务卡片里继续堆临时字段判断。
 ## 2026-07-15 06:29:26 +08:00 | v1.1.0-alpha.247 | 复核 FE-010 / FE-020 / FE-030 / UI-04 当前环境验证
 ### 任务内容
 

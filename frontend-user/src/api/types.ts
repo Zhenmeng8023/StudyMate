@@ -368,6 +368,7 @@ export interface AiTaskPayload {
   taskType: string;
   sourceType?: string;
   sourceId?: string;
+  sourceMetadata?: Record<string, unknown>;
   status: string;
   model: string;
   inputTokens: number;

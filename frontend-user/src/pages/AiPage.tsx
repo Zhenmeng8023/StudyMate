@@ -23,6 +23,7 @@ import { formatDate, MetricTile, SectionFrame, WorkspaceHeader } from "../app/ap
 import { DataState, Select } from "../design-system/primitives";
 import {
   buildAiDraftWorkspacePath,
+  buildAiTaskWorkspacePath,
   buildCardInputsFromAiDrafts,
   buildGraphFocusLink,
   estimateAiDraftNodePlacement,
@@ -620,6 +621,11 @@ export function AiPage(props: { session: AuthSession }) {
                         <span>输出 {task.outputTokens}</span>
                         <span>{formatDate(task.createdAt)}</span>
                       </div>
+                      {buildAiTaskWorkspacePath(task) ? (
+                        <p className="inline-link-row">
+                          <Link to={buildAiTaskWorkspacePath(task)}>打开来源工作台</Link>
+                        </p>
+                      ) : null}
                       {task.errorMessage ? <p className="inline-message">{task.errorMessage}</p> : null}
                     </article>
                   ))

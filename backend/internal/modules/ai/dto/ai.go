@@ -1,21 +1,22 @@
 package dto
 
 type TaskPayload struct {
-	ID            string  `json:"id"`
-	UserID        string  `json:"userId"`
-	TaskType      string  `json:"taskType"`
-	SourceType    string  `json:"sourceType,omitempty"`
-	SourceID      string  `json:"sourceId,omitempty"`
-	Status        string  `json:"status"`
-	Model         string  `json:"model"`
-	InputTokens   int64   `json:"inputTokens"`
-	OutputTokens  int64   `json:"outputTokens"`
-	CostUnits     float64 `json:"costUnits"`
-	ResultRefType string  `json:"resultRefType,omitempty"`
-	ResultRefID   string  `json:"resultRefId,omitempty"`
-	ErrorMessage  string  `json:"errorMessage,omitempty"`
-	CreatedAt     string  `json:"createdAt"`
-	UpdatedAt     string  `json:"updatedAt"`
+	ID             string         `json:"id"`
+	UserID         string         `json:"userId"`
+	TaskType       string         `json:"taskType"`
+	SourceType     string         `json:"sourceType,omitempty"`
+	SourceID       string         `json:"sourceId,omitempty"`
+	SourceMetadata map[string]any `json:"sourceMetadata,omitempty"`
+	Status         string         `json:"status"`
+	Model          string         `json:"model"`
+	InputTokens    int64          `json:"inputTokens"`
+	OutputTokens   int64          `json:"outputTokens"`
+	CostUnits      float64        `json:"costUnits"`
+	ResultRefType  string         `json:"resultRefType,omitempty"`
+	ResultRefID    string         `json:"resultRefId,omitempty"`
+	ErrorMessage   string         `json:"errorMessage,omitempty"`
+	CreatedAt      string         `json:"createdAt"`
+	UpdatedAt      string         `json:"updatedAt"`
 }
 
 type UsageSummaryPayload struct {

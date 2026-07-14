@@ -100,6 +100,35 @@ export function buildAiDraftWorkspacePath(draft: AiDraftPayload) {
   }
 }
 
+export function buildAiTaskWorkspacePath(task: AiTaskPayload) {
+  const sourceType = task.sourceType?.trim();
+  const sourceId = task.sourceId?.trim();
+  if (!sourceType || !sourceId) {
+    return "";
+  }
+
+  const backlink = buildGraphSourceBacklinkFromSource({
+    type: sourceType,
+    id: sourceId,
+    label: "",
+    excerpt: task.errorMessage || ""
+  }, task.sourceMetadata);
+  if (backlink) {
+    return backlink.target;
+  }
+
+  switch (sourceType) {
+    case "graph":
+      return "/graph";
+    case "note":
+      return `/notes?selected=${encodeURIComponent(sourceId)}`;
+    case "material":
+      return `/reader/${encodeURIComponent(sourceId)}`;
+    default:
+      return "";
+  }
+}
+
 export function getAiDraftSourceKey(draft: AiDraftPayload) {
   return draft.sourceType || draft.targetType || "unknown";
 }

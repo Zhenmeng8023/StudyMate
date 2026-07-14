@@ -13,18 +13,19 @@ import (
 )
 
 type RecordTaskInput struct {
-	UserID        string
-	TaskType      string
-	SourceType    string
-	SourceID      string
-	Status        string
-	Model         string
-	InputTokens   int64
-	OutputTokens  int64
-	CostUnits     float64
-	ResultRefType string
-	ResultRefID   string
-	ErrorMessage  string
+	UserID         string
+	TaskType       string
+	SourceType     string
+	SourceID       string
+	SourceMetadata map[string]any
+	Status         string
+	Model          string
+	InputTokens    int64
+	OutputTokens   int64
+	CostUnits      float64
+	ResultRefType  string
+	ResultRefID    string
+	ErrorMessage   string
 }
 
 type Service struct {
@@ -134,15 +135,16 @@ func (s *Service) RecordNoteCardDrafts(userID string, noteID string, drafts []ca
 
 func (s *Service) RecordReaderCardDrafts(userID string, materialID string, drafts []carddto.CardDraftPayload) ([]carddto.CardDraftPayload, error) {
 	taskID, err := s.createTaskRecord(RecordTaskInput{
-		UserID:        userID,
-		TaskType:      "reader.generate_cards",
-		SourceType:    "material",
-		SourceID:      materialID,
-		Status:        "completed",
-		Model:         "local-draft-engine",
-		OutputTokens:  int64(len(drafts)),
-		ResultRefType: "material",
-		ResultRefID:   materialID,
+		UserID:         userID,
+		TaskType:       "reader.generate_cards",
+		SourceType:     "material",
+		SourceID:       materialID,
+		SourceMetadata: firstCardDraftSourceMetadata(drafts),
+		Status:         "completed",
+		Model:          "local-draft-engine",
+		OutputTokens:   int64(len(drafts)),
+		ResultRefType:  "material",
+		ResultRefID:    materialID,
 	})
 	if err != nil || s.documents == nil || len(drafts) == 0 {
 		return drafts, err
@@ -271,15 +273,16 @@ func (s *Service) RecordReaderGraphDrafts(userID string, materialID string, draf
 
 func (s *Service) recordStructuredDrafts(userID string, taskType string, sourceType string, sourceID string, drafts []aidto.DraftPayload) ([]aidto.DraftPayload, error) {
 	taskID, err := s.createTaskRecord(RecordTaskInput{
-		UserID:        userID,
-		TaskType:      taskType,
-		SourceType:    sourceType,
-		SourceID:      sourceID,
-		Status:        "completed",
-		Model:         "local-draft-engine",
-		OutputTokens:  int64(len(drafts)),
-		ResultRefType: sourceType,
-		ResultRefID:   sourceID,
+		UserID:         userID,
+		TaskType:       taskType,
+		SourceType:     sourceType,
+		SourceID:       sourceID,
+		SourceMetadata: firstDraftSourceMetadata(drafts),
+		Status:         "completed",
+		Model:          "local-draft-engine",
+		OutputTokens:   int64(len(drafts)),
+		ResultRefType:  sourceType,
+		ResultRefID:    sourceID,
 	})
 	if err != nil || s.documents == nil || len(drafts) == 0 {
 		return drafts, err
@@ -334,17 +337,18 @@ func (s *Service) createTaskRecord(input RecordTaskInput) (string, error) {
 	}
 
 	task := &aimodel.AITask{
-		UserID:        input.UserID,
-		TaskType:      strings.TrimSpace(input.TaskType),
-		SourceType:    strings.TrimSpace(input.SourceType),
-		SourceID:      strings.TrimSpace(input.SourceID),
-		Status:        normalizeTaskStatus(input.Status),
-		Model:         modelName,
-		InputTokens:   maxInt64(input.InputTokens, 0),
-		OutputTokens:  maxInt64(input.OutputTokens, 0),
-		ResultRefType: strings.TrimSpace(input.ResultRefType),
-		ResultRefID:   strings.TrimSpace(input.ResultRefID),
-		ErrorMessage:  strings.TrimSpace(input.ErrorMessage),
+		UserID:         input.UserID,
+		TaskType:       strings.TrimSpace(input.TaskType),
+		SourceType:     strings.TrimSpace(input.SourceType),
+		SourceID:       strings.TrimSpace(input.SourceID),
+		SourceMetadata: airepo.MarshalSourceMetadata(input.SourceMetadata),
+		Status:         normalizeTaskStatus(input.Status),
+		Model:          modelName,
+		InputTokens:    maxInt64(input.InputTokens, 0),
+		OutputTokens:   maxInt64(input.OutputTokens, 0),
+		ResultRefType:  strings.TrimSpace(input.ResultRefType),
+		ResultRefID:    strings.TrimSpace(input.ResultRefID),
+		ErrorMessage:   strings.TrimSpace(input.ErrorMessage),
 	}
 	if err := s.repository.CreateTask(task); err != nil {
 		return "", err
@@ -371,6 +375,26 @@ func (s *Service) createTaskRecord(input RecordTaskInput) (string, error) {
 	})
 
 	return task.ID, nil
+}
+
+func firstCardDraftSourceMetadata(drafts []carddto.CardDraftPayload) map[string]any {
+	for _, draft := range drafts {
+		if len(draft.SourceMetadata) > 0 {
+			return draft.SourceMetadata
+		}
+	}
+
+	return nil
+}
+
+func firstDraftSourceMetadata(drafts []aidto.DraftPayload) map[string]any {
+	for _, draft := range drafts {
+		if len(draft.Metadata) > 0 {
+			return draft.Metadata
+		}
+	}
+
+	return nil
 }
 
 func normalizeTaskStatus(status string) string {

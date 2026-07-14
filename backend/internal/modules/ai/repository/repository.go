@@ -34,21 +34,22 @@ func (r *Repository) ListTasksByUser(userID string, limit int) ([]aidto.TaskPayl
 		Group("task_id")
 
 	type taskRow struct {
-		ID            string
-		UserID        string
-		TaskType      string
-		SourceType    string
-		SourceID      string
-		Status        string
-		Model         string
-		InputTokens   int64
-		OutputTokens  int64
-		CostUnits     float64
-		ResultRefType string
-		ResultRefID   string
-		ErrorMessage  string
-		CreatedAt     time.Time
-		UpdatedAt     time.Time
+		ID             string
+		UserID         string
+		TaskType       string
+		SourceType     string
+		SourceID       string
+		SourceMetadata string
+		Status         string
+		Model          string
+		InputTokens    int64
+		OutputTokens   int64
+		CostUnits      float64
+		ResultRefType  string
+		ResultRefID    string
+		ErrorMessage   string
+		CreatedAt      time.Time
+		UpdatedAt      time.Time
 	}
 
 	var rows []taskRow
@@ -59,6 +60,7 @@ func (r *Repository) ListTasksByUser(userID string, limit int) ([]aidto.TaskPayl
 			ai_tasks.task_type,
 			ai_tasks.source_type,
 			ai_tasks.source_id,
+			ai_tasks.source_metadata,
 			ai_tasks.status,
 			ai_tasks.model,
 			COALESCE(ai_usage.input_tokens, ai_tasks.input_tokens, 0) AS input_tokens,
@@ -82,21 +84,22 @@ func (r *Repository) ListTasksByUser(userID string, limit int) ([]aidto.TaskPayl
 	result := make([]aidto.TaskPayload, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, aidto.TaskPayload{
-			ID:            row.ID,
-			UserID:        row.UserID,
-			TaskType:      row.TaskType,
-			SourceType:    row.SourceType,
-			SourceID:      row.SourceID,
-			Status:        row.Status,
-			Model:         row.Model,
-			InputTokens:   row.InputTokens,
-			OutputTokens:  row.OutputTokens,
-			CostUnits:     row.CostUnits,
-			ResultRefType: row.ResultRefType,
-			ResultRefID:   row.ResultRefID,
-			ErrorMessage:  row.ErrorMessage,
-			CreatedAt:     row.CreatedAt.UTC().Format(time.RFC3339),
-			UpdatedAt:     row.UpdatedAt.UTC().Format(time.RFC3339),
+			ID:             row.ID,
+			UserID:         row.UserID,
+			TaskType:       row.TaskType,
+			SourceType:     row.SourceType,
+			SourceID:       row.SourceID,
+			SourceMetadata: parseSourceMetadata(row.SourceMetadata),
+			Status:         row.Status,
+			Model:          row.Model,
+			InputTokens:    row.InputTokens,
+			OutputTokens:   row.OutputTokens,
+			CostUnits:      row.CostUnits,
+			ResultRefType:  row.ResultRefType,
+			ResultRefID:    row.ResultRefID,
+			ErrorMessage:   row.ErrorMessage,
+			CreatedAt:      row.CreatedAt.UTC().Format(time.RFC3339),
+			UpdatedAt:      row.UpdatedAt.UTC().Format(time.RFC3339),
 		})
 	}
 
