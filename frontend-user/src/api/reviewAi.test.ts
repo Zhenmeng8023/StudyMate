@@ -160,6 +160,29 @@ describe("review API clients", () => {
       status: "suspended"
     });
   });
+
+  it("updates card status for bury actions", async () => {
+    const fetchMock = mockApiResponse({
+      id: "card-1",
+      deckId: "deck-1",
+      ownerUserId: "user-1",
+      cardType: "basic",
+      front: "什么是知识图谱？",
+      back: "一种以节点和关系组织知识的结构。",
+      status: "buried",
+      createdAt: "2026-06-02T12:00:00Z",
+      updatedAt: "2026-06-02T12:00:00Z"
+    });
+
+    await updateCardStatus(session, "card-1", { status: "buried" as "active" | "suspended" });
+
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toBe("/api/v1/cards/card-1/status");
+    expect(init?.method).toBe("PATCH");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      status: "buried"
+    });
+  });
 });
 
 describe("AI API clients", () => {

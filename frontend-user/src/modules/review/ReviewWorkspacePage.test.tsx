@@ -318,6 +318,78 @@ describe("ReviewWorkspacePage", () => {
     expect(screen.getByText("1 张仍待完成")).toBeInTheDocument();
   });
 
+  it("buries the current card and keeps it out of today's queue until restored", async () => {
+    getTodayReviewQueueMock.mockResolvedValueOnce({
+      dueCount: 2,
+      items: [
+        {
+          deckTitle: "期末复习",
+          card: {
+            id: "card-1",
+            deckId: "deck-1",
+            ownerUserId: "user-1",
+            cardType: "basic",
+            front: "First queued card",
+            back: "First queued answer",
+            status: "active",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          },
+          schedule: {
+            cardId: "card-1",
+            userId: "user-1",
+            dueAt: "2026-06-02T12:00:00Z",
+            intervalDays: 0,
+            easeFactor: 2.5,
+            repetitionCount: 0,
+            lapseCount: 0,
+            state: "new",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        },
+        {
+          deckTitle: "期末复习",
+          card: {
+            id: "card-2",
+            deckId: "deck-1",
+            ownerUserId: "user-1",
+            cardType: "basic",
+            front: "Second queued card",
+            back: "Second queued answer",
+            status: "active",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          },
+          schedule: {
+            cardId: "card-2",
+            userId: "user-1",
+            dueAt: "2026-06-02T12:30:00Z",
+            intervalDays: 0,
+            easeFactor: 2.5,
+            repetitionCount: 0,
+            lapseCount: 0,
+            state: "new",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        }
+      ]
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("First queued card")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "埋藏当前卡片" }));
+
+    await waitFor(() => {
+      expect(updateCardStatusMock).toHaveBeenCalledWith(session, "card-1", { status: "buried" });
+    });
+    expect(await screen.findByText("Second queued card")).toBeInTheDocument();
+    expect(screen.getByText("已埋藏当前卡片，今天不会再出现。")).toBeInTheDocument();
+    expect(screen.getByText("1 张仍待完成")).toBeInTheDocument();
+  });
+
   it("restores a suspended card from review management", async () => {
     listDeckCardsMock.mockResolvedValueOnce([
       {

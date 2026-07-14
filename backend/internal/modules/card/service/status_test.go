@@ -89,3 +89,72 @@ func TestUpdateCardStatusControlsReviewQueueVisibility(t *testing.T) {
 		t.Fatalf("expected reactivated card to return to due queue, got due=%d items=%d", reactivatedQueue.DueCount, len(reactivatedQueue.Items))
 	}
 }
+
+func TestBuriedCardLeavesTodayQueueUntilRestored(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite db: %v", err)
+	}
+
+	if err := db.AutoMigrate(&adminmodel.AuditLog{}, &cardmodel.Deck{}, &cardmodel.Card{}, &cardmodel.CardSchedule{}, &cardmodel.CardReview{}); err != nil {
+		t.Fatalf("migrate sqlite schema: %v", err)
+	}
+
+	repository := cardrepo.NewRepository(db)
+	service := NewService(repository, adminrepo.NewAuditLogRepository(db), nil)
+	fixedNow := time.Date(2026, 7, 15, 8, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return fixedNow }
+
+	deck := &cardmodel.Deck{
+		ID:          "deck-1",
+		OwnerUserID: "user-1",
+		Title:       "Buried controls",
+		Description: "Buried cards should also leave today's queue",
+		Visibility:  "private",
+		CardCount:   0,
+	}
+	if err := repository.CreateDeck(deck); err != nil {
+		t.Fatalf("create deck: %v", err)
+	}
+
+	created, err := service.CreateCard("user-1", deck.ID, carddto.CreateCardRequest{
+		CardType: "basic",
+		Front:    "What does bury do in the prototype?",
+		Back:     "It removes the card from today's active queue until restored.",
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	buried, err := service.UpdateCardStatus("user-1", created.ID, carddto.UpdateCardStatusRequest{Status: "buried"})
+	if err != nil {
+		t.Fatalf("bury card: %v", err)
+	}
+	if buried.Status != "buried" {
+		t.Fatalf("expected buried status, got %#v", buried.Status)
+	}
+
+	buriedQueue, err := service.TodayQueue("user-1")
+	if err != nil {
+		t.Fatalf("load buried queue: %v", err)
+	}
+	if buriedQueue.DueCount != 0 || len(buriedQueue.Items) != 0 {
+		t.Fatalf("expected buried card to disappear from due queue, got due=%d items=%d", buriedQueue.DueCount, len(buriedQueue.Items))
+	}
+
+	restored, err := service.UpdateCardStatus("user-1", created.ID, carddto.UpdateCardStatusRequest{Status: "active"})
+	if err != nil {
+		t.Fatalf("restore buried card: %v", err)
+	}
+	if restored.Status != "active" {
+		t.Fatalf("expected active status after restore, got %#v", restored.Status)
+	}
+
+	restoredQueue, err := service.TodayQueue("user-1")
+	if err != nil {
+		t.Fatalf("load restored queue: %v", err)
+	}
+	if restoredQueue.DueCount != 1 || len(restoredQueue.Items) != 1 {
+		t.Fatalf("expected restored buried card to return to due queue, got due=%d items=%d", restoredQueue.DueCount, len(restoredQueue.Items))
+	}
+}
