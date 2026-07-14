@@ -1,3 +1,23 @@
+## 2026-07-15 07:44:09 +08:00 | v1.1.0-alpha.256 | 推进 SE-020 搜索分组继续加载
+### 任务内容
+
+- 避免继续在单一后台壳层里深挖，这一轮改为推进更贴近整版可用性的 `SE-020` 小切片：把搜索页现有的 `nextOffset` 能力从“单一类型筛选可续取”放开到“全部类型视图下的任意分组都可直接续取”。
+- 目标是在不改搜索 API grouped contract 的前提下，让用户在总览视图里也能直接把某个结果分组继续展开，而不是必须先切到单一类型再加载更多。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx`，新增页面级 RED/GREEN 回归，锁定“全部类型”视图里图谱分组仍有 `nextOffset` 时，可以直接显示“继续加载更多图谱结果”并把后续结果追加到当前组。
+- 更新 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`，放开 `handleLoadMore(...)` 对单一类型视图的限制，并让分组继续加载按钮按 `group.nextOffset !== null` 直接在对应分组展示。
+- 同步更新 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/DEVELOPMENT.md` 与 `README.md`，把搜索分页边界从“单一类型续取”修正为“按分组独立续取，但仍不是完整后端真分页”。
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- 搜索页现在在“全部类型”视图下也能直接把某个分组继续展开，`SE-020` 的 `offset / nextOffset` 能力终于不再只停留在切换到单一类型后的隐藏入口。
+- 这一轮仍然没有把 grouped search 升级成完整的服务端统一分页；下一步更适合补 grouped cursor、排序语义和空结果建议，而不是回退到旧的单一类型续取限制。
+
 ## 2026-07-15 07:36:36 +08:00 | v1.1.0-alpha.255 | 推进 FE-041 管理端 workspace reset controller 接线
 ### 任务内容
 

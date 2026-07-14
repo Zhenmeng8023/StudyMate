@@ -323,7 +323,7 @@ go test ./...
 - 匿名请求只会实际搜索 `material` 与 `post`；`note`、`graph`、`card` 会直接短路为空结果。登录请求中，`note` 仅返回 owner 自己的笔记，`card` 仅返回 owner 自己的 `active` 卡片，`graph` 仅返回 `active` 且“owner 或 public”的图谱。
 - 用户端搜索页只消费后端 grouped payload，不再在浏览器中拉全量资料、帖子、笔记和图谱做本地过滤。
 - 用户端搜索页现支持 URL `types` 类型筛选，并有页面级 Vitest 回归覆盖无关键词空态、后端错误态、筛选请求形状与来源链接渲染。
-- 搜索页分页目前明确限定在“当前批次结果”内：前端每次最多请求每组 `12` 条结果，并按每页 `4` 条切换；若后续需要跨批次真分页，应先扩展后端 offset/cursor 契约。
+- 搜索页分页目前明确限定在“当前已加载结果”内：前端每次最多请求每组 `12` 条结果，并按每页 `4` 条切换；当某个分组返回 `nextOffset` 时，无论当前是“全部类型”还是单一类型视图，都可直接继续追加该分组的下一批结果；若后续需要跨批次真分页，应先扩展后端 offset/cursor 契约。
 - 搜索专项回归入口为 `npm run verify:search`；契约、权限矩阵和自动化映射集中记录在 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`。
 - 图谱冲突专项回归入口为 `npm run verify:graph-conflicts`；当前冲突生命周期、工作区测试映射、图谱工作区桌面/窄屏 smoke、布局预览/导出状态、权限路径、真实 `graph_version_conflict` 路径和固定入口集中记录在 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`。
 - 分享入口为受保护的 `GET/POST /api/v1/share-links` 与 `DELETE /api/v1/share-links/:id`，公开解析为 `GET /api/v1/share/:token`；`share_links` 表由 `004_share_links.sql` 创建，`.down.sql` 可回滚。

@@ -121,7 +121,7 @@ function buildSearchCompleteMessage(payload: SearchResponsePayload): string {
     return `\u641c\u7d22\u5b8c\u6210\uff0c\u5171 ${payload.total} \u6761\u7ed3\u679c\uff0c\u7528\u65f6 ${payload.elapsedMs}ms\u3002\u5f53\u524d\u6bcf\u4e2a\u5206\u7ec4\u9996\u6279\u6700\u591a\u5c55\u793a ${payload.limit} \u6761\u3002`;
   }
 
-  return `\u641c\u7d22\u5b8c\u6210\uff0c\u5171 ${payload.total} \u6761\u7ed3\u679c\uff0c\u7528\u65f6 ${payload.elapsedMs}ms\u3002\u5f53\u524d\u6bcf\u4e2a\u5206\u7ec4\u9996\u6279\u6700\u591a\u5c55\u793a ${payload.limit} \u6761\uff0c\u90e8\u5206\u5206\u7ec4\u5f53\u524d\u4ec5\u8fd4\u56de\u9996\u6279\u7ed3\u679c\uff0c\u53ef\u7ee7\u7eed\u7f29\u5c0f\u5173\u952e\u8bcd\u6216\u5207\u6362\u7c7b\u578b\u67e5\u770b\u3002`;
+  return `\u641c\u7d22\u5b8c\u6210\uff0c\u5171 ${payload.total} \u6761\u7ed3\u679c\uff0c\u7528\u65f6 ${payload.elapsedMs}ms\u3002\u5f53\u524d\u6bcf\u4e2a\u5206\u7ec4\u9996\u6279\u6700\u591a\u5c55\u793a ${payload.limit} \u6761\uff0c\u90e8\u5206\u5206\u7ec4\u5f53\u524d\u4ec5\u8fd4\u56de\u9996\u6279\u7ed3\u679c\uff0c\u53ef\u76f4\u63a5\u5728\u5bf9\u5e94\u5206\u7ec4\u7ee7\u7eed\u52a0\u8f7d\u6216\u5207\u6362\u7c7b\u578b\u805a\u7126\u67e5\u770b\u3002`;
 }
 
 export function SearchWorkspacePage(props: { session: AuthSession | null }) {
@@ -134,8 +134,6 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
   const [message, setMessage] = useState("\u8f93\u5165\u5173\u952e\u8bcd\u540e\u5f00\u59cb\u641c\u7d22\u3002");
   const [loadingMoreType, setLoadingMoreType] = useState<SearchResultType | null>(null);
   const [groupPages, setGroupPages] = useState<Partial<Record<SearchResultType, number>>>({});
-  const singleSelectedType = selectedTypes.length === 1 ? selectedTypes[0] : null;
-
   const filterSummary = selectedTypes.length
     ? selectedTypes.map((type) => groupLabels[type]).join(" / ")
     : "\u5168\u90e8\u7c7b\u578b";
@@ -265,7 +263,7 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
   }
 
   async function handleLoadMore(type: SearchResultType, nextOffset: number) {
-    if (!keyword || singleSelectedType !== type) {
+    if (!keyword) {
       return;
     }
 
@@ -344,7 +342,7 @@ export function SearchWorkspacePage(props: { session: AuthSession | null }) {
           <section className="search-section-grid">
             {groups.map((group: SearchGroupPayload) => (
               <SearchGroupSection
-                canLoadMore={singleSelectedType === group.type}
+                canLoadMore={group.nextOffset !== null}
                 currentPage={groupPages[group.type] ?? 1}
                 group={group}
                 isLoadingMore={loadingMoreType === group.type}

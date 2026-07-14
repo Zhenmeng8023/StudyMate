@@ -18,7 +18,7 @@
 - `WB-031` 已完成图谱导出、缩略图与布局契约收口：新增 `docs/architecture/GRAPH_EXPORT_LAYOUT_CONTRACT.md`，把 JSON/SVG/PNG 导出边界、`thumbnailFileId` head 模型和 `POST /graphs/:id/layouts/preview` 来源泳道布局预览接口统一记录下来。
 - `WB-020` 已完成图谱文档契约收口：`GraphDocument` / `schemaVersion` / 兼容读取默认化现在分别在 `@studymate/graph-core` 与后端 graph DTO 中有显式单一来源，旧图谱 payload、空文档与快照恢复不再依赖分散硬编码。
 - 复习和 AI 已具备 SM-2 调度边界、Deck/Card 与 AI draft 基础闭环；`v1.1` 已开始补 Deck/Card、今日队列、复习回写、AI 草稿/用量/任务 API 合约测试、图谱变更草稿确认 API 合约测试、后端 card/AI handler 边界测试、ReviewWorkspace 页面回归测试、复习队列 Playwright smoke，以及 AI 卡片/图谱草稿确认页面测试。
-- 搜索、分享和后台治理已接入真实 API；`v1.1` 已补齐搜索契约、结果质量、权限矩阵和搜索页页面级回归，用户端搜索页现支持 URL 类型筛选、来源跳转、“真实命中数 + 首批返回数”分离后的当前批次提示，以及单一类型筛选下基于 `offset / nextOffset` 的继续加载；后续继续通过内部 `SearchIndexer` 抽象保留 MySQL fallback 默认实现，并沿 `SE-020` 继续补更完整的服务端分页与搜索文档记录。
+- 搜索、分享和后台治理已接入真实 API；`v1.1` 已补齐搜索契约、结果质量、权限矩阵和搜索页页面级回归，用户端搜索页现支持 URL 类型筛选、来源跳转、“真实命中数 + 首批返回数”分离后的当前批次提示，以及按分组基于 `offset / nextOffset` 的继续加载；后续继续通过内部 `SearchIndexer` 抽象保留 MySQL fallback 默认实现，并沿 `SE-020` 继续补更完整的服务端分页与搜索文档记录。
 - 阅读器/笔记收口继续按 TDD 推进：已补用户端 Reader API 合约测试、`ReaderPage` 书签与批注来源回归测试，以及后端 `reader/handler`、`reader/service` 的鉴权、请求体和来源选择边界测试。
 - `WB-002` 已完成第一轮配置安全收口：`JWT_SECRET` 与 `MYSQL_DSN` 不再回退到危险默认值，启动阶段会显式校验缺失项。
 - `WB-003` 已完成最小 CI 质量门禁补强：`gofmt` 检查、配置安全回归检查、Vitest、Playwright、Go test 与文档同步都已进入默认 `npm run ci`。

@@ -92,14 +92,14 @@
 | 某组无结果 | 组内显示“暂无匹配结果” |
 | 有结果 | 渲染来源链接卡片，并保留 `item.url` 跳转 |
 | 命中数大于首批返回数 | 组内明确显示“当前仅展示首批 X / Y 条结果。” |
-| 单一类型筛选且 `nextOffset != null` | 额外显示“继续加载更多...”按钮，请求下一批结果并追加到当前组 |
+| 任一分组 `nextOffset != null` | 在对应分组显示“继续加载更多...”按钮，请求下一批结果并追加到当前组 |
 | 有结果且请求成功 | 顶部概览文案显示真实总数、`elapsedMs` 与当前 `limit` 对应的首批边界 |
 
 ### 2.3 分页边界
 
 - “全部类型”视图当前仍不是完整的后端真分页。
 - 前端每次会按每组最大 `12` 条请求当前首批结果。
-- 当且仅当用户选中单一类型，且该组返回 `nextOffset` 时，页面会继续带上 `offset` 请求下一批结果并追加到当前组。
+- 当任一分组返回 `nextOffset` 时，页面都会在该分组内继续带上 `offset` 请求下一批结果并追加到当前组。
 - 每组当前已加载结果再按每页 `4` 条切换。
 - 因此页面中的“第 N / M 页”表示“当前已加载结果集”的本地分页，不等同于整站搜索已经具备统一 `cursor / page` 语义。
 
@@ -108,7 +108,7 @@
 | 覆盖层 | 关注点 | 主要文件 | 命令 |
 | --- | --- | --- | --- |
 | 前端 API | URL 查询参数、`offset` 透传、默认不发送空 `types=`、鉴权头 | `frontend-user/src/api/searchShare.test.ts` | `npm run test:search:frontend` |
-| 前端页面 | 空态、错误态、`types` 同步、来源链接、当前批次分页、`returnedCount` 提示、单一类型续取 | `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx` | `npm run test:search:frontend` |
+| 前端页面 | 空态、错误态、`types` 同步、来源链接、当前批次分页、`returnedCount` 提示、分组续取 | `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx` | `npm run test:search:frontend` |
 | 后端 service | 默认类型、非法类型、`limit/offset` 边界、真实命中数、`nextOffset`、权限 spec、排序、摘要 | `backend/internal/modules/search/service/*.go` | `npm run test:search:backend` |
 | 后端 handler | 查询参数解析、错误映射、success envelope | `backend/internal/modules/search/handler/*.go` | `npm run test:search:backend` |
 | E2E smoke | 搜索页消费 grouped payload 并展示结果卡片 | `e2e/v1-public-flows.spec.ts` | `npm run test:search:e2e` |
