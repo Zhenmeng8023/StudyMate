@@ -7,7 +7,8 @@ import {
   getTodayReviewQueue,
   listAiDrafts,
   listAiTasks,
-  reviewCard
+  reviewCard,
+  updateCardStatus
 } from "./client";
 import type { AuthSession } from "./types";
 
@@ -134,6 +135,29 @@ describe("review API clients", () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       rating: "good",
       elapsedMs: 1200
+    });
+  });
+
+  it("updates card status for suspend and resume actions", async () => {
+    const fetchMock = mockApiResponse({
+      id: "card-1",
+      deckId: "deck-1",
+      ownerUserId: "user-1",
+      cardType: "basic",
+      front: "什么是知识图谱？",
+      back: "一种以节点和关系组织知识的结构。",
+      status: "suspended",
+      createdAt: "2026-06-02T12:00:00Z",
+      updatedAt: "2026-06-02T12:00:00Z"
+    });
+
+    await updateCardStatus(session, "card-1", { status: "suspended" });
+
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toBe("/api/v1/cards/card-1/status");
+    expect(init?.method).toBe("PATCH");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      status: "suspended"
     });
   });
 });

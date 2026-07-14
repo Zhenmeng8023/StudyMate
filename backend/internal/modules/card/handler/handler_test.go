@@ -18,6 +18,7 @@ type fakeCardService struct {
 	cardID        string
 	createDeckReq carddto.CreateDeckRequest
 	reviewReq     carddto.ReviewCardRequest
+	statusReq     carddto.UpdateCardStatusRequest
 }
 
 func (s *fakeCardService) ListDecks(ownerUserID string) ([]carddto.DeckPayload, error) {
@@ -81,6 +82,20 @@ func (s *fakeCardService) ReviewCard(ownerUserID string, cardID string, request 
 			State:        "review",
 			IntervalDays: 1,
 		},
+	}, nil
+}
+
+func (s *fakeCardService) UpdateCardStatus(ownerUserID string, cardID string, request carddto.UpdateCardStatusRequest) (*carddto.CardPayload, error) {
+	s.ownerID = ownerUserID
+	s.cardID = cardID
+	s.statusReq = request
+	return &carddto.CardPayload{
+		ID:          cardID,
+		DeckID:      "deck-1",
+		OwnerUserID: ownerUserID,
+		Front:       "什么是图谱？",
+		Back:        "节点和关系。",
+		Status:      request.Status,
 	}, nil
 }
 
@@ -157,5 +172,27 @@ func TestReviewCardWritesRatingAndElapsedMs(t *testing.T) {
 	}
 	if service.reviewReq.Rating != "good" || service.reviewReq.ElapsedMs != 1200 {
 		t.Fatalf("unexpected review request: %#v", service.reviewReq)
+	}
+}
+
+func TestUpdateCardStatusWritesRequestedStatus(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCardService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.PATCH("/cards/:id/status", withUser(handler.UpdateCardStatus))
+
+	body := bytes.NewBufferString(`{"status":"suspended"}`)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPatch, "/cards/card-1/status", body))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if service.cardID != "card-1" {
+		t.Fatalf("expected card id card-1, got %q", service.cardID)
+	}
+	if service.statusReq.Status != "suspended" {
+		t.Fatalf("unexpected status request: %#v", service.statusReq)
 	}
 }

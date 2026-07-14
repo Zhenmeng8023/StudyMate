@@ -1,0 +1,91 @@
+package service
+
+import (
+	"testing"
+	"time"
+
+	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
+	adminmodel "studymate/backend/internal/modules/admin/model"
+	adminrepo "studymate/backend/internal/modules/admin/repository"
+	carddto "studymate/backend/internal/modules/card/dto"
+	cardmodel "studymate/backend/internal/modules/card/model"
+	cardrepo "studymate/backend/internal/modules/card/repository"
+)
+
+func TestUpdateCardStatusControlsReviewQueueVisibility(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite db: %v", err)
+	}
+
+	if err := db.AutoMigrate(&adminmodel.AuditLog{}, &cardmodel.Deck{}, &cardmodel.Card{}, &cardmodel.CardSchedule{}, &cardmodel.CardReview{}); err != nil {
+		t.Fatalf("migrate sqlite schema: %v", err)
+	}
+
+	repository := cardrepo.NewRepository(db)
+	service := NewService(repository, adminrepo.NewAuditLogRepository(db), nil)
+	fixedNow := time.Date(2026, 7, 15, 7, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return fixedNow }
+
+	deck := &cardmodel.Deck{
+		ID:          "deck-1",
+		OwnerUserID: "user-1",
+		Title:       "Review controls",
+		Description: "Suspended cards should leave the active queue",
+		Visibility:  "private",
+		CardCount:   0,
+	}
+	if err := repository.CreateDeck(deck); err != nil {
+		t.Fatalf("create deck: %v", err)
+	}
+
+	created, err := service.CreateCard("user-1", deck.ID, carddto.CreateCardRequest{
+		CardType: "basic",
+		Front:    "What should happen to a suspended card?",
+		Back:     "It should leave today's active review queue.",
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	initialQueue, err := service.TodayQueue("user-1")
+	if err != nil {
+		t.Fatalf("load initial queue: %v", err)
+	}
+	if initialQueue.DueCount != 1 || len(initialQueue.Items) != 1 {
+		t.Fatalf("expected one active due card, got due=%d items=%d", initialQueue.DueCount, len(initialQueue.Items))
+	}
+
+	suspended, err := service.UpdateCardStatus("user-1", created.ID, carddto.UpdateCardStatusRequest{Status: "suspended"})
+	if err != nil {
+		t.Fatalf("suspend card: %v", err)
+	}
+	if suspended.Status != "suspended" {
+		t.Fatalf("expected suspended status, got %#v", suspended.Status)
+	}
+
+	suspendedQueue, err := service.TodayQueue("user-1")
+	if err != nil {
+		t.Fatalf("load suspended queue: %v", err)
+	}
+	if suspendedQueue.DueCount != 0 || len(suspendedQueue.Items) != 0 {
+		t.Fatalf("expected suspended card to disappear from due queue, got due=%d items=%d", suspendedQueue.DueCount, len(suspendedQueue.Items))
+	}
+
+	reactivated, err := service.UpdateCardStatus("user-1", created.ID, carddto.UpdateCardStatusRequest{Status: "active"})
+	if err != nil {
+		t.Fatalf("reactivate card: %v", err)
+	}
+	if reactivated.Status != "active" {
+		t.Fatalf("expected active status, got %#v", reactivated.Status)
+	}
+
+	reactivatedQueue, err := service.TodayQueue("user-1")
+	if err != nil {
+		t.Fatalf("load reactivated queue: %v", err)
+	}
+	if reactivatedQueue.DueCount != 1 || len(reactivatedQueue.Items) != 1 {
+		t.Fatalf("expected reactivated card to return to due queue, got due=%d items=%d", reactivatedQueue.DueCount, len(reactivatedQueue.Items))
+	}
+}

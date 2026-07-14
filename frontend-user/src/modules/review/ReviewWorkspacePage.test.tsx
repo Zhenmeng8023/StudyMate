@@ -8,7 +8,8 @@ import {
   getTodayReviewQueue,
   listDeckCards,
   listDecks,
-  reviewCard
+  reviewCard,
+  updateCardStatus
 } from "../../api/client";
 import type { AuthSession } from "../../api/client";
 import { ReviewWorkspacePage } from "./ReviewWorkspacePage";
@@ -22,7 +23,8 @@ vi.mock("../../api/client", async () => {
     getTodayReviewQueue: vi.fn(),
     listDeckCards: vi.fn(),
     listDecks: vi.fn(),
-    reviewCard: vi.fn()
+    reviewCard: vi.fn(),
+    updateCardStatus: vi.fn()
   };
 });
 
@@ -43,6 +45,7 @@ const listDecksMock = vi.mocked(listDecks);
 const listDeckCardsMock = vi.mocked(listDeckCards);
 const getTodayReviewQueueMock = vi.mocked(getTodayReviewQueue);
 const reviewCardMock = vi.mocked(reviewCard);
+const updateCardStatusMock = vi.mocked(updateCardStatus);
 
 function renderPage(path = "/review") {
   return render(
@@ -64,6 +67,7 @@ describe("ReviewWorkspacePage", () => {
     listDeckCardsMock.mockReset();
     getTodayReviewQueueMock.mockReset();
     reviewCardMock.mockReset();
+    updateCardStatusMock.mockReset();
 
     listDecksMock.mockResolvedValue([
       {
@@ -134,6 +138,17 @@ describe("ReviewWorkspacePage", () => {
         updatedAt: "2026-06-02T12:00:00Z"
       }
     });
+    updateCardStatusMock.mockImplementation(async (_session, cardId, input) => ({
+      id: cardId,
+      deckId: "deck-1",
+      ownerUserId: "user-1",
+      cardType: "basic",
+      front: "什么是图谱？",
+      back: "节点和关系。",
+      status: input.status,
+      createdAt: "2026-06-02T12:00:00Z",
+      updatedAt: "2026-06-02T12:00:00Z"
+    }));
   });
 
   it("shows the due card and writes back a review rating", async () => {
@@ -229,6 +244,154 @@ describe("ReviewWorkspacePage", () => {
     expect(await screen.findByText("Second queued card")).toBeInTheDocument();
     expect(screen.getByText("已跳过当前卡片，稍后会回到这张卡。")).toBeInTheDocument();
     expect(screen.getByText("2 张仍待完成")).toBeInTheDocument();
+  });
+
+  it("suspends the current card and removes it from today's active queue", async () => {
+    getTodayReviewQueueMock.mockResolvedValueOnce({
+      dueCount: 2,
+      items: [
+        {
+          deckTitle: "期末复习",
+          card: {
+            id: "card-1",
+            deckId: "deck-1",
+            ownerUserId: "user-1",
+            cardType: "basic",
+            front: "First queued card",
+            back: "First queued answer",
+            status: "active",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          },
+          schedule: {
+            cardId: "card-1",
+            userId: "user-1",
+            dueAt: "2026-06-02T12:00:00Z",
+            intervalDays: 0,
+            easeFactor: 2.5,
+            repetitionCount: 0,
+            lapseCount: 0,
+            state: "new",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        },
+        {
+          deckTitle: "期末复习",
+          card: {
+            id: "card-2",
+            deckId: "deck-1",
+            ownerUserId: "user-1",
+            cardType: "basic",
+            front: "Second queued card",
+            back: "Second queued answer",
+            status: "active",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          },
+          schedule: {
+            cardId: "card-2",
+            userId: "user-1",
+            dueAt: "2026-06-02T12:30:00Z",
+            intervalDays: 0,
+            easeFactor: 2.5,
+            repetitionCount: 0,
+            lapseCount: 0,
+            state: "new",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        }
+      ]
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("First queued card")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "暂停当前卡片" }));
+
+    await waitFor(() => {
+      expect(updateCardStatusMock).toHaveBeenCalledWith(session, "card-1", { status: "suspended" });
+    });
+    expect(await screen.findByText("Second queued card")).toBeInTheDocument();
+    expect(screen.getByText("已暂停当前卡片，可在管理面板恢复。")).toBeInTheDocument();
+    expect(screen.getByText("1 张仍待完成")).toBeInTheDocument();
+  });
+
+  it("restores a suspended card from review management", async () => {
+    listDeckCardsMock.mockResolvedValueOnce([
+      {
+        id: "card-1",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Suspended card",
+        back: "Bring it back to today's queue",
+        status: "suspended",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    ]);
+    getTodayReviewQueueMock.mockResolvedValueOnce({
+      dueCount: 0,
+      items: []
+    });
+    listDeckCardsMock.mockResolvedValueOnce([
+      {
+        id: "card-1",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Suspended card",
+        back: "Bring it back to today's queue",
+        status: "active",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    ]);
+    getTodayReviewQueueMock.mockResolvedValueOnce({
+      dueCount: 1,
+      items: [
+        {
+          deckTitle: "期末复习",
+          card: {
+            id: "card-1",
+            deckId: "deck-1",
+            ownerUserId: "user-1",
+            cardType: "basic",
+            front: "Suspended card",
+            back: "Bring it back to today's queue",
+            status: "active",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          },
+          schedule: {
+            cardId: "card-1",
+            userId: "user-1",
+            dueAt: "2026-06-02T12:00:00Z",
+            intervalDays: 0,
+            easeFactor: 2.5,
+            repetitionCount: 0,
+            lapseCount: 0,
+            state: "new",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        }
+      ]
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("今天的队列已经清空")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "卡片" }));
+    await user.click(screen.getByRole("button", { name: "恢复卡片" }));
+
+    await waitFor(() => {
+      expect(updateCardStatusMock).toHaveBeenCalledWith(session, "card-1", { status: "active" });
+    });
+    expect(await screen.findByText("已恢复卡片，今日队列已同步更新。")).toBeInTheDocument();
+    expect(screen.getByText("Suspended card")).toBeInTheDocument();
   });
 
   it("renders the shared error state when the initial review workspace bootstrap fails", async () => {
