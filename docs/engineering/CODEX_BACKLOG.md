@@ -75,7 +75,7 @@
 ### 执行记录：FE-041（管理端 workspace reset controller 接线）
 
 - 执行日期：2026-07-15
-- 关联提交：`9e0deac`（RED）、待提交（GREEN）
+- 关联提交：`9e0deac`（RED）、`404c63e`（GREEN）
 - 实际变更：
   - 新增 `frontend-admin/src/views/adminWorkspaceResetController.ts`
   - 新增 `frontend-admin/src/views/adminWorkspaceResetController.test.ts`
