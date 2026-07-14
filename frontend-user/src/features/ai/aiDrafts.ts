@@ -1,4 +1,5 @@
 import type { AiDraftPayload, AiTaskPayload, GraphDetailPayload } from "../../api/client";
+import { buildGraphSourceBacklinkFromSource } from "../../modules/graph/lib/graphSourceBacklinks";
 
 export function buildCardInputsFromAiDrafts(drafts: AiDraftPayload[]) {
   return drafts.map((draft) => ({
@@ -73,13 +74,27 @@ export function formatAiDraftTarget(draft: AiDraftPayload) {
 }
 
 export function buildAiDraftWorkspacePath(draft: AiDraftPayload) {
-  switch (draft.sourceType || draft.targetType) {
+  const sourceType = draft.sourceType || draft.targetType;
+  const sourceId = draft.sourceId || draft.targetId;
+  if (sourceType && sourceId) {
+    const backlink = buildGraphSourceBacklinkFromSource({
+      type: sourceType,
+      id: sourceId,
+      label: draft.sourceLabel || "",
+      excerpt: draft.explanation || ""
+    }, draft.metadata);
+    if (backlink) {
+      return backlink.target;
+    }
+  }
+
+  switch (sourceType) {
     case "graph":
       return "/graph";
     case "note":
-      return `/notes?selected=${encodeURIComponent(draft.sourceId || draft.targetId)}`;
+      return `/notes?selected=${encodeURIComponent(sourceId)}`;
     case "material":
-      return `/reader/${encodeURIComponent(draft.sourceId || draft.targetId)}`;
+      return `/reader/${encodeURIComponent(sourceId)}`;
     default:
       return "";
   }

@@ -7412,6 +7412,29 @@
 
 - `ANKI-050` 现在不仅能把来源上下文带到 AI 工作台，还能让工作台真正吃掉这些上下文并把用户落到指定草稿/任务上，主学习闭环里的 `graph/review -> AI workspace` 又闭合了一段。
 - 这一轮仍只解决了“进入 AI 工作台时先看对对象”的问题；如果后续要继续补齐更统一的 `SourceLink` 抽象、更强的草稿来源预览，或把 AI 确认结果继续稳定回写到图谱/复习反馈，下一步更适合继续沿 `ANKI-050 / WB-033 / LC-010` 扩展同一条主线。
+## 2026-07-15 06:34:40 +08:00 | v1.1.0-alpha.248 | 推进 ANKI-050 / LC-010 AI 草稿来源精确回跳
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-050 / LC-010`，这一轮不扩散到新的领域模型，而是收口 AI 草稿确认页里仍然偏粗粒度的来源回跳。
+- 目标是让已经带着 `sourceMetadata` 进入 AI 工作台的批注和 PDF 锚点来源，不再只停留在“打开来源工作台”的宽泛入口，而是能从 AI 草稿直接精确回到 reader 的页码、批注或锚点位置。
+### 实际变更
+
+- 更新 `frontend-user/src/features/ai/aiDrafts.ts`，让 `buildAiDraftWorkspacePath(...)` 优先复用现有 `graphSourceBacklinks` 的来源解析规则，再在 `graph` 等少数 helper 不覆盖的类型上回退到既有简单路径。
+- 这样一来，`annotation` 与 `pdf-anchor` 类型的 AI 草稿来源链接现在会保留 `materialId / page / annotationId / anchorId` 等上下文，生成精确的 reader 回跳地址，而不是直接丢成空链接或只回到资料首页。
+- 扩展 `frontend-user/src/features/ai/aiDrafts.test.ts` 与 `frontend-user/src/pages/AiPage.test.tsx`，补上 annotation / pdf-anchor 来源路径与 AI 页面真实链接渲染的 RED/GREEN 回归。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-050 / LC-010` 的阶段描述推进到“AI 草稿确认页里的来源回跳也已接入精确 reader 定位”。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/features/ai/aiDrafts.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/features/ai/aiDrafts.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- `ANKI-050` 现在不仅能把批注/PDF 上下文带进卡片和复习，也能让 AI 草稿确认页继续消费这套上下文并回到 reader 精确位置，主学习闭环里的 `reader -> AI workspace -> reader` 又闭合了一段。
+- 这一轮仍只收口了 AI 草稿来源链接；如果后续要继续把 AI 任务历史、更多图谱来源类型和更统一的 `SourceLink` 契约继续做厚，下一步更适合继续沿 `ANKI-050 / WB-033 / LC-010` 扩同一套来源回跳模型，而不是在各页面继续堆独立路径判断。
 ## 2026-07-15 06:29:26 +08:00 | v1.1.0-alpha.247 | 复核 FE-010 / FE-020 / FE-030 / UI-04 当前环境验证
 ### 任务内容
 
