@@ -7366,3 +7366,28 @@
 
 - `ANKI-050` 现在已经不只是“卡片知道自己来自批注”，而是能把批注来源上下文稳定穿过草稿确认、AI 草稿确认、建卡与复习回看这条链路，主学习闭环里的 `reader -> review -> reader` 又闭合了一段。
 - 这一轮仍只补齐了批注来源；如果要把 PDF 锚点、图谱节点来源和更通用的 SourceLink 语义也统一起来，下一步更适合继续沿 `ANKI-050 / LC-010 / WB-033` 扩展同一套 `sourceMetadata`/SourceLink 模型，而不是回到前端做一次性路径猜测。
+
+## 2026-07-15 06:18:00 +08:00 | v1.1.0-alpha.245 | 推进 ANKI-050 / LC-010 图谱来源卡片上下文透传
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-050 / LC-010`，这一轮不另起新的子域，而是把上一轮 reader 批注来源能力继续扩展到 `graph -> card -> review` 这条链。
+- 目标是避免图谱节点生成卡片时再次丢失来源上下文，特别是 `pdf-anchor` 和携带 reader metadata 的节点，确保它们进入复习队列后仍然能跳回 reader 的原始定位位置。
+
+### 实际变更
+
+- 更新 `backend/internal/modules/graph/service/helpers.go`，为 `BuildCardCreateRequests(...)` 补上统一的来源解析与 metadata 提取逻辑，不再只依赖 `node.Source` 或 `metadata.content` 里少数几个字段。
+- 新增图谱卡片来源上下文解析：当节点本身已有 `source` 时，会同时整理对应的 `sourceMetadata`；当节点没有 `source` 但节点类型是 `pdf-anchor` 且 metadata 含 `pdfAnchor / pdfPage / materialId` 时，现在也能正确推断成 `pdf-anchor` 来源，而不是错误降级成 `material`。
+- 这一层还会把 reader/PDF 回跳所需字段规范成卡片可消费的 metadata，例如 `materialId`、`page`、`annotationId`、`anchorId`，从而与上一轮补好的 `card/review` SourceLink 通路直接对接。
+- 扩展 `backend/internal/modules/graph/service/helpers_test.go`，补上“图谱节点 reader metadata 不应丢失”和“pdf-anchor 节点不应被降级成 material 来源”的 RED/GREEN 回归；同步扩展 `frontend-user/src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`，覆盖 `pdf-anchor` 卡片在复习页里的 reader 回跳。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-050 / LC-010` 的阶段描述推进到“图谱节点转卡也开始保留 reader/PDF 锚点上下文”。
+
+### 验证结果
+
+- `go test ./internal/modules/graph/service`
+- `go test ./internal/modules/graph/... ./internal/modules/card/service ./internal/modules/reader/service`
+- `npm test -- --run src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+
+### 后续影响
+
+- 现在不只是 reader 直接生成的卡片能回跳原文，图谱节点再转成复习卡时，也开始保留 reader/PDF 来源上下文，主学习闭环里的 `reader -> graph -> review -> reader` 又闭合了一段。
+- 这一轮仍主要覆盖 `pdf-anchor` 与已有 reader metadata 的节点；如果要把更多图谱节点来源、笔记块模板化来源和更统一的 SourceLink 抽象继续做厚，下一步更适合继续沿 `ANKI-050 / WB-033 / LC-010` 把卡片来源解析从 helper 级能力推广到更完整的 CardNote/SourceLink 契约。

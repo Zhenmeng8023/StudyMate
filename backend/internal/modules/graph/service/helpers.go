@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	aidto "studymate/backend/internal/modules/ai/dto"
@@ -492,17 +493,50 @@ func BuildCardCreateRequests(document graphdto.GraphDocumentPayload, drafts []gr
 			Front:    front,
 			Back:     back,
 		}
-		if node.Source != nil {
-			request.SourceType = strings.TrimSpace(node.Source.Type)
-			request.SourceID = strings.TrimSpace(node.Source.ID)
-		} else if sourceType, sourceID := inferCardSourceFromMetadata(node.Metadata); sourceType != "" && sourceID != "" {
+		if sourceType, sourceID, sourceMetadata := resolveCardSourceContext(node); sourceType != "" && sourceID != "" {
 			request.SourceType = sourceType
 			request.SourceID = sourceID
+			request.SourceMetadata = sourceMetadata
 		}
 		requests = append(requests, request)
 	}
 
 	return requests, nil
+}
+
+func resolveCardSourceContext(node graphdto.GraphNodePayload) (string, string, map[string]any) {
+	if node.Source != nil {
+		sourceType := strings.TrimSpace(node.Source.Type)
+		sourceID := strings.TrimSpace(node.Source.ID)
+		if sourceType != "" && sourceID != "" {
+			return sourceType, sourceID, buildCardSourceMetadata(node.Metadata, sourceType, sourceID)
+		}
+	}
+
+	sourceType, sourceID := inferCardSourceFromNode(node)
+	if sourceType == "" || sourceID == "" {
+		return "", "", nil
+	}
+
+	return sourceType, sourceID, buildCardSourceMetadata(node.Metadata, sourceType, sourceID)
+}
+
+func inferCardSourceFromNode(node graphdto.GraphNodePayload) (string, string) {
+	switch normalizeGraphSourceType(node.Type) {
+	case "pdf-anchor":
+		sourceID := readMetadataFieldString(node.Metadata, "pdfAnchor")
+		if sourceID == "" {
+			sourceID = readMetadataFieldString(node.Metadata, "anchorId")
+		}
+		if sourceID == "" {
+			sourceID = readMetadataFieldString(node.Metadata, "anchor")
+		}
+		if sourceID != "" {
+			return "pdf-anchor", sourceID
+		}
+	}
+
+	return inferCardSourceFromMetadata(node.Metadata)
 }
 
 func inferCardSourceFromMetadata(metadata map[string]any) (string, string) {
@@ -518,12 +552,139 @@ func inferCardSourceFromMetadata(metadata map[string]any) (string, string) {
 		{key: "diagramSourceId", sourceType: "diagram"},
 	}
 	for _, field := range fields {
-		if value := readMetadataContentString(metadata, field.key); value != "" {
+		if value := readMetadataFieldString(metadata, field.key); value != "" {
 			return field.sourceType, value
 		}
 	}
 
 	return "", ""
+}
+
+func buildCardSourceMetadata(metadata map[string]any, sourceType string, sourceID string) map[string]any {
+	result := map[string]any{}
+
+	for _, key := range []string{"materialId", "sourceMaterialId", "materialUrl", "noteId", "cardId", "deckId", "aiDraftId", "aiTaskId", "diagramSourceId"} {
+		if value := readMetadataFieldString(metadata, key); value != "" {
+			result[key] = value
+		}
+	}
+
+	if page, ok := readMetadataFieldInt(metadata, "page"); ok {
+		result["page"] = page
+	} else if page, ok := readMetadataFieldInt(metadata, "pdfPage"); ok {
+		result["page"] = page
+	}
+
+	switch normalizeGraphSourceType(sourceType) {
+	case "annotation":
+		annotationID := readMetadataFieldString(metadata, "annotationId")
+		if annotationID == "" {
+			annotationID = sourceID
+		}
+		if annotationID != "" {
+			result["annotationId"] = annotationID
+		}
+	case "pdf-anchor":
+		anchorID := readMetadataFieldString(metadata, "anchorId")
+		if anchorID == "" {
+			anchorID = readMetadataFieldString(metadata, "pdfAnchor")
+		}
+		if anchorID == "" {
+			anchorID = readMetadataFieldString(metadata, "anchor")
+		}
+		if anchorID == "" {
+			anchorID = sourceID
+		}
+		if anchorID != "" {
+			result["anchorId"] = anchorID
+		}
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
+}
+
+func readMetadataFieldString(metadata map[string]any, key string) string {
+	if value := readMetadataTopLevelString(metadata, key); value != "" {
+		return value
+	}
+
+	return readMetadataContentString(metadata, key)
+}
+
+func readMetadataTopLevelString(metadata map[string]any, key string) string {
+	if metadata == nil {
+		return ""
+	}
+
+	value, ok := metadata[key]
+	if !ok {
+		return ""
+	}
+
+	text, ok := value.(string)
+	if !ok {
+		return ""
+	}
+
+	return strings.TrimSpace(text)
+}
+
+func readMetadataFieldInt(metadata map[string]any, key string) (int, bool) {
+	if value, ok := readMetadataTopLevelInt(metadata, key); ok {
+		return value, true
+	}
+
+	content, ok := metadata["content"].(map[string]any)
+	if !ok {
+		return 0, false
+	}
+
+	return readMetadataTopLevelInt(content, key)
+}
+
+func readMetadataTopLevelInt(metadata map[string]any, key string) (int, bool) {
+	if metadata == nil {
+		return 0, false
+	}
+
+	value, ok := metadata[key]
+	if !ok {
+		return 0, false
+	}
+
+	switch typed := value.(type) {
+	case int:
+		if typed > 0 {
+			return typed, true
+		}
+	case int32:
+		if typed > 0 {
+			return int(typed), true
+		}
+	case int64:
+		if typed > 0 {
+			return int(typed), true
+		}
+	case float64:
+		if typed > 0 {
+			return int(typed), true
+		}
+	case string:
+		parsed, err := strconv.Atoi(strings.TrimSpace(typed))
+		if err == nil && parsed > 0 {
+			return parsed, true
+		}
+	}
+
+	return 0, false
+}
+
+func normalizeGraphSourceType(value string) string {
+	return strings.TrimSpace(strings.ToLower(value))
 }
 
 func ApplyGraphChangeDrafts(
