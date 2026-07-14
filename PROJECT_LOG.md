@@ -7506,3 +7506,32 @@
 
 - `ANKI-030` 的复习会话现在已经具备一个更接近真实 Anki 使用习惯的“先跳过、稍后回来”入口，主学习闭环里的复习阶段可用性更完整了一步。
 - 这一轮仍只覆盖前端内存队列层的 defer 体验；后续更适合继续沿 `ANKI-030 / ANKI-020 / LC-010` 补撤销上一次评分、埋藏/暂停卡片，以及与真实调度状态一致的队列语义，而不是把更多会话分支继续堆进页面条件判断里。
+## 2026-07-15 06:56:42 +08:00 | v1.1.0-alpha.251 | 推进 ANKI-030 复习暂停与恢复卡片
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-030 / LC-010`，这一轮不直接上更重的 Note/Card 重构或完整调度模型，而是先补齐复习会话里另一个高频、可直接感知的控制动作。
+- 目标是让用户在复习过程中可以把当前不想继续做的卡片先暂停掉，立即从今日活跃队列移除，并且仍能在同一工作台里恢复回来，不必离开复习上下文。
+### 实际变更
+
+- 后端补齐卡片状态更新通路：为 `card` 模块新增 `PATCH /api/v1/cards/:id/status` 契约，允许在 `active / suspended` 两种状态间切换；`TodayQueue(...)` 继续只拉取 `active` 卡片，因此暂停后会自然离开今日队列。
+- 更新 `backend/internal/modules/card/service/service.go`、`handler/handler.go`、`router/router.go`、`repository/repository.go` 与 `dto/card.go`，补上状态校验、所有权校验、状态持久化与审计日志，保持变更仍然收口在 card 域内部。
+- 更新 `frontend-user/src/api/review.ts` 与 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`：复习卡片操作区新增 `暂停当前卡片` 按钮和 `P` 快捷键；暂停后当前卡片会从今日活跃队列移除、待完成计数同步减少，并提示可在管理面板恢复。
+- 管理面板中的卡片列表新增状态标签和 `暂停卡片 / 恢复卡片` 动作；恢复时会重新同步今日队列，让被暂停的卡片回到当前可复习集合。
+- 扩展 `backend/internal/modules/card/service/status_test.go`、`backend/internal/modules/card/handler/handler_test.go`、`frontend-user/src/api/reviewAi.test.ts` 与 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，用 RED/GREEN 回归锁定“暂停后离开今日活跃队列、恢复后重新回到队列”的端到端行为。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-030 / LC-010` 的阶段描述推进到“复习会话已具备暂停/恢复卡片”这一层。
+### 验证结果
+
+- RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- GREEN：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- `go test ./internal/modules/card/...`
+- `npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- `ANKI-030` 的复习会话现在不仅能“先跳过稍后回来”，也能真正把一张卡先暂停出今日活跃队列，并在同一工作台恢复，这让原型阶段的复习控制面更接近真实可用产品。
+- 这一轮仍然只覆盖 `active / suspended` 这条最小状态通路；后续更适合继续沿 `ANKI-030 / ANKI-020 / LC-010` 补撤销上一次评分、埋藏语义和与真实学习/复习/重新学习队列一致的调度状态，而不是继续在前端会话里堆更多一次性分支判断。

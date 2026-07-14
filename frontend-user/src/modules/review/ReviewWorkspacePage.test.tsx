@@ -391,7 +391,8 @@ describe("ReviewWorkspacePage", () => {
       expect(updateCardStatusMock).toHaveBeenCalledWith(session, "card-1", { status: "active" });
     });
     expect(await screen.findByText("已恢复卡片，今日队列已同步更新。")).toBeInTheDocument();
-    expect(screen.getByText("Suspended card")).toBeInTheDocument();
+    expect(screen.getByText("1 张仍待完成")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "暂停卡片" })).toBeInTheDocument();
   });
 
   it("renders the shared error state when the initial review workspace bootstrap fails", async () => {

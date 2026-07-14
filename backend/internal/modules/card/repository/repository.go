@@ -57,6 +57,10 @@ func (r *Repository) CreateCard(card *cardmodel.Card) error {
 	return r.db.Create(card).Error
 }
 
+func (r *Repository) SaveCard(card *cardmodel.Card) error {
+	return r.db.Save(card).Error
+}
+
 func (r *Repository) FindCardByID(cardID string) (*cardmodel.Card, error) {
 	var card cardmodel.Card
 	if err := r.db.First(&card, "id = ?", cardID).Error; err != nil {

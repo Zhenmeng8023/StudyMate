@@ -25,6 +25,10 @@ type ReviewCardRequest struct {
 	ElapsedMs int64  `json:"elapsedMs"`
 }
 
+type UpdateCardStatusRequest struct {
+	Status string `json:"status" binding:"required"`
+}
+
 type CardDraftPayload struct {
 	ID             string         `json:"id"`
 	DraftID        string         `json:"draftId,omitempty"`

@@ -113,3 +113,17 @@ export async function reviewCard(
     body: input
   });
 }
+
+export async function updateCardStatus(
+  session: AuthSession,
+  cardId: string,
+  input: {
+    status: "active" | "suspended";
+  }
+) {
+  return request<CardPayload>(`/cards/${cardId}/status`, {
+    method: "PATCH",
+    headers: withAuth(session),
+    body: input
+  });
+}

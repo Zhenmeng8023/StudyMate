@@ -197,6 +197,35 @@ func (s *Service) ReviewCard(ownerUserID string, cardID string, request carddto.
 	}, nil
 }
 
+func (s *Service) UpdateCardStatus(ownerUserID string, cardID string, request carddto.UpdateCardStatusRequest) (*carddto.CardPayload, error) {
+	card, err := s.requireOwnerCard(ownerUserID, cardID)
+	if err != nil {
+		return nil, err
+	}
+
+	status, ok := normalizeCardStatus(request.Status)
+	if !ok {
+		return nil, apperrors.New(http.StatusBadRequest, "invalid_card_status", "卡片状态必须是 active 或 suspended")
+	}
+	if card.Status == status {
+		payload := cardrepo.BuildCardPayload(*card)
+		return &payload, nil
+	}
+
+	card.Status = status
+	if err := s.repository.SaveCard(card); err != nil {
+		return nil, apperrors.Internal("更新卡片状态失败")
+	}
+
+	_ = s.auditLogs.Create(ownerUserID, "card.status.update", "card", map[string]any{
+		"cardId": card.ID,
+		"status": status,
+	})
+
+	payload := cardrepo.BuildCardPayload(*card)
+	return &payload, nil
+}
+
 func (s *Service) requireOwnerDeck(ownerUserID string, deckID string) (*cardmodel.Deck, error) {
 	deck, err := s.repository.FindDeckByID(deckID)
 	if err != nil {
@@ -242,6 +271,16 @@ func normalizeCardType(value string) string {
 	}
 
 	return trimmed
+}
+
+func normalizeCardStatus(value string) (string, bool) {
+	trimmed := strings.ToLower(strings.TrimSpace(value))
+	switch trimmed {
+	case "active", "suspended":
+		return trimmed, true
+	default:
+		return "", false
+	}
 }
 
 func maxElapsed(value int64) int64 {
