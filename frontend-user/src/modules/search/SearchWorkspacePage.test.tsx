@@ -270,4 +270,60 @@ describe("SearchWorkspacePage", () => {
     expect(await screen.findByRole("link", { name: /graph-title-5/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /graph-title-6/ })).toBeInTheDocument();
   });
+
+  it("allows loading more for a partial group directly from the all-types view", async () => {
+    const user = userEvent.setup();
+    searchAllMock
+      .mockResolvedValueOnce(
+        buildResponseWithCounts({
+          graph: {
+            count: 6,
+            results: [
+              buildResult("graph", 1),
+              buildResult("graph", 2),
+              buildResult("graph", 3),
+              buildResult("graph", 4)
+            ]
+          },
+          material: {
+            count: 1,
+            results: [buildResult("material", 1)]
+          }
+        })
+      )
+      .mockResolvedValueOnce({
+        query: "\u56fe\u8c31",
+        limit: 12,
+        elapsedMs: 15,
+        total: 7,
+        groups: [
+          {
+            type: "graph",
+            count: 6,
+            returnedCount: 2,
+            nextOffset: null,
+            results: [buildResult("graph", 5), buildResult("graph", 6)]
+          }
+        ]
+      } as SearchResponsePayload);
+
+    renderPage("/search?q=%E5%9B%BE%E8%B0%B1");
+
+    await expect(screen.findByRole("button", { name: "\u7ee7\u7eed\u52a0\u8f7d\u66f4\u591a\u56fe\u8c31\u7ed3\u679c" })).resolves.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "\u7ee7\u7eed\u52a0\u8f7d\u66f4\u591a\u56fe\u8c31\u7ed3\u679c" }));
+
+    await waitFor(() => {
+      expect(searchAllMock).toHaveBeenLastCalledWith(session, {
+        query: "\u56fe\u8c31",
+        types: ["graph"],
+        limit: 12,
+        offset: 4
+      });
+    });
+
+    await user.click(screen.getByRole("button", { name: "\u56fe\u8c31\u4e0b\u4e00\u9875" }));
+    expect(await screen.findByRole("link", { name: /graph-title-5/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /graph-title-6/ })).toBeInTheDocument();
+  });
 });
