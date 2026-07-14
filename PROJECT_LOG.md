@@ -1,3 +1,27 @@
+## 2026-07-15 07:55:10 +08:00 | v1.1.0-alpha.257 | 推进 FE-041 管理端 session 同步编排 helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `subscribeSession(...)` 触发后的本地状态同步与会话清空协同。
+- 目标是把 `session / sessionInvalidation / profile` 更新，以及 session 被清空后默认视图回退、错误清理、notice 同步这一段壳层编排抽到共享 helper，避免它继续留在页面层内联维护。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceSessionSync.ts` 与 `adminWorkspaceSessionSync.test.ts`，把 session 仍有效时的本地状态同步，以及 session 被清空时的 `reset + default view + replace URL + notice` 协同收口到共享 helper。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `subscribeSession(...)` 回调改为直接消费共享 `runAdminWorkspaceSessionSync(...)`，页面层只保留 ref setter 与 location sync 绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 session 订阅后的状态同步与清空协同也已进入共享 helper 出口”。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/views/adminWorkspaceSessionSync.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/adminWorkspaceSessionSync.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从共享 `adminWorkspaceSessionCleared` 推进到共享 `adminWorkspaceSessionSync`，后台工作台里围绕 session 订阅的状态协同也开始复用统一出口。
+- 这一轮仍然只先收口了 session 变化后的同步与清空路径；如果后续继续推进 `FE-041 / ADM-010`，更适合评估 `popstate + subscribe + mount` 的更高层 runtime 协调 helper，而不是把更多 session 分支重新写回页面层。
+
 ## 2026-07-15 07:44:09 +08:00 | v1.1.0-alpha.256 | 推进 SE-020 搜索分组继续加载
 ### 任务内容
 

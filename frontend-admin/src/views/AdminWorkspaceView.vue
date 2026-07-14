@@ -71,7 +71,6 @@ import {
   buildAdminWorkspaceMountPlan,
   buildAdminWorkspacePopstatePlan,
   buildAdminWorkspaceRefreshPlan,
-  buildAdminWorkspaceSessionClearedPlan,
   buildAdminWorkspaceViewSwitchPlan
 } from "./adminWorkspaceLifecycle";
 import { runAdminWorkspaceViewLoad } from "./adminWorkspaceViewLoad";
@@ -87,8 +86,8 @@ import {
   getAdminLoginSuccessNotice,
   getAdminLogoutNotice,
   getAdminModerationLoadedNotice,
-  getAdminSessionEndedNotice
 } from "./adminWorkspaceNotice";
+import { runAdminWorkspaceSessionSync } from "./adminWorkspaceSessionSync";
 import {
   type AdminWorkspaceResetKey
 } from "./adminWorkspaceState";
@@ -382,30 +381,31 @@ function handleAdminPopstate() {
 
 const unsubscribeSession = subscribeSession(() => {
   const nextSession = readStoredAdminSession();
-  session.value = nextSession;
-  sessionInvalidation.value = readStoredSessionInvalidation();
-  profile.value = nextSession?.user ?? null;
-
-  if (!nextSession) {
-    const plan = buildAdminWorkspaceSessionClearedPlan(
-      getAdminSessionEndedNotice(getSessionInvalidationPrompt(sessionInvalidation.value, "admin"))
-    );
-    runAdminWorkspaceSessionCleared(plan, {
-      clearError: () => {
-        errorMessage.value = "";
-      },
-      clearWorkspaceState,
-      setActiveView: (view) => {
-        activeView.value = view;
-      },
-      setNotice: (nextNotice) => {
-        notice.value = nextNotice;
-      },
-      syncLocation: (view, syncMode) => {
-        syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
-      }
-    });
-  }
+  const nextInvalidation = readStoredSessionInvalidation();
+  runAdminWorkspaceSessionSync(nextSession, nextInvalidation, {
+    clearError: () => {
+      errorMessage.value = "";
+    },
+    clearWorkspaceState,
+    setActiveView: (view) => {
+      activeView.value = view;
+    },
+    setNotice: (nextNotice) => {
+      notice.value = nextNotice;
+    },
+    setProfile: (nextProfile) => {
+      profile.value = nextProfile;
+    },
+    setSession: (nextValue) => {
+      session.value = nextValue;
+    },
+    setSessionInvalidation: (nextValue) => {
+      sessionInvalidation.value = nextValue;
+    },
+    syncLocation: (view, syncMode) => {
+      syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
+    }
+  });
 });
 
 onMounted(() => {
