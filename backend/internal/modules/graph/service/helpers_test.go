@@ -373,6 +373,94 @@ func TestBuildCardCreateRequestsFallsBackToStructuredMetadataSource(t *testing.T
 	}
 }
 
+func TestBuildCardCreateRequestsPreservesSourceMetadataForReaderBacklinks(t *testing.T) {
+	document := graphdto.GraphDocumentPayload{
+		Nodes: []graphdto.GraphNodePayload{
+			{
+				ID:    "node-1",
+				Type:  "text",
+				Title: "Heap invariant",
+				Source: &graphdto.GraphNodeSourcePayload{
+					Type: "annotation",
+					ID:   "annotation-1",
+				},
+				Metadata: map[string]any{
+					"materialId":   "material-1",
+					"annotationId": "annotation-1",
+					"page":         12,
+				},
+			},
+		},
+	}
+
+	requests, err := BuildCardCreateRequests(document, []graphdto.GraphCardDraftPayload{
+		{
+			ID:           "draft-1",
+			SourceNodeID: "node-1",
+			Front:        "What does this annotation highlight?",
+			Back:         "The invariant must hold after each sift-down step.",
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if len(requests) != 1 {
+		t.Fatalf("expected 1 request, got %d", len(requests))
+	}
+	if requests[0].SourceMetadata == nil {
+		t.Fatalf("expected source metadata to be preserved")
+	}
+	if requests[0].SourceMetadata["materialId"] != "material-1" || requests[0].SourceMetadata["annotationId"] != "annotation-1" {
+		t.Fatalf("expected reader backlink metadata, got %#v", requests[0].SourceMetadata)
+	}
+}
+
+func TestBuildCardCreateRequestsInfersPdfAnchorSourceFromNodeMetadata(t *testing.T) {
+	document := graphdto.GraphDocumentPayload{
+		Nodes: []graphdto.GraphNodePayload{
+			{
+				ID:    "node-1",
+				Type:  "pdf-anchor",
+				Title: "Section 2 anchor",
+				Metadata: map[string]any{
+					"content": map[string]any{
+						"materialId": "material-1",
+						"pdfPage":    "8",
+						"pdfAnchor":  "anchor-1",
+					},
+				},
+			},
+		},
+	}
+
+	requests, err := BuildCardCreateRequests(document, []graphdto.GraphCardDraftPayload{
+		{
+			ID:           "draft-1",
+			SourceNodeID: "node-1",
+			Front:        "What is the key point in section 2?",
+			Back:         "It introduces the main proof strategy.",
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if len(requests) != 1 {
+		t.Fatalf("expected 1 request, got %d", len(requests))
+	}
+	if requests[0].SourceType != "pdf-anchor" || requests[0].SourceID != "anchor-1" {
+		t.Fatalf("expected inferred pdf-anchor source, got %#v", requests[0])
+	}
+	if requests[0].SourceMetadata == nil {
+		t.Fatalf("expected inferred pdf-anchor metadata")
+	}
+	if requests[0].SourceMetadata["materialId"] != "material-1" {
+		t.Fatalf("expected material id in source metadata, got %#v", requests[0].SourceMetadata)
+	}
+	if requests[0].SourceMetadata["page"] != 8 {
+		t.Fatalf("expected normalized page 8 in source metadata, got %#v", requests[0].SourceMetadata["page"])
+	}
+}
+
 func TestBuildCardCreateRequestsRejectsMissingNode(t *testing.T) {
 	document := graphdto.GraphDocumentPayload{
 		Nodes: []graphdto.GraphNodePayload{{ID: "node-1", Type: "text", Title: "Binary Tree"}},

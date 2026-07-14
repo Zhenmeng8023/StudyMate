@@ -84,6 +84,27 @@ function buildAnnotationCard(): CardPayload {
   };
 }
 
+function buildPdfAnchorCard(): CardPayload {
+  return {
+    id: "card-pdf-anchor-1",
+    deckId: "deck-1",
+    ownerUserId: "user-1",
+    cardType: "basic",
+    front: "Linked PDF anchor card",
+    back: "Return to the anchored PDF context",
+    sourceType: "pdf-anchor",
+    sourceId: "anchor-1",
+    sourceMetadata: {
+      materialId: "material-1",
+      page: 8,
+      anchorId: "anchor-1"
+    },
+    status: "active",
+    createdAt: "2026-06-02T12:00:00Z",
+    updatedAt: "2026-06-02T12:00:00Z"
+  };
+}
+
 function buildQueue(card: CardPayload): ReviewQueuePayload {
   return {
     dueCount: 1,
@@ -157,6 +178,25 @@ describe("ReviewWorkspacePage source links", () => {
       expect(links).toHaveLength(2);
       for (const link of links) {
         expect(link).toHaveAttribute("href", "/reader/material-1?page=12&annotation=annotation-1");
+      }
+    });
+  });
+
+  it("renders pdf anchor source links with reader page and anchor query context", async () => {
+    const deck = buildDeck();
+    const card = buildPdfAnchorCard();
+    listDecksMock.mockResolvedValue([deck]);
+    listDeckCardsMock.mockResolvedValue([card]);
+    getTodayReviewQueueMock.mockResolvedValue(buildQueue(card));
+
+    renderPage("/review?card=card-pdf-anchor-1");
+
+    expect(await screen.findByText("Linked PDF anchor card")).toBeInTheDocument();
+    await waitFor(() => {
+      const links = screen.getAllByRole("link", { name: "回到 PDF 页" });
+      expect(links).toHaveLength(2);
+      for (const link of links) {
+        expect(link).toHaveAttribute("href", "/reader/material-1?page=8&anchor=anchor-1");
       }
     });
   });
