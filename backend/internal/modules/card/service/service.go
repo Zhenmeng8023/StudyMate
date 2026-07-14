@@ -205,7 +205,7 @@ func (s *Service) UpdateCardStatus(ownerUserID string, cardID string, request ca
 
 	status, ok := normalizeCardStatus(request.Status)
 	if !ok {
-		return nil, apperrors.New(http.StatusBadRequest, "invalid_card_status", "卡片状态必须是 active 或 suspended")
+		return nil, apperrors.New(http.StatusBadRequest, "invalid_card_status", "卡片状态必须是 active、suspended 或 buried")
 	}
 	if card.Status == status {
 		payload := cardrepo.BuildCardPayload(*card)
@@ -276,7 +276,7 @@ func normalizeCardType(value string) string {
 func normalizeCardStatus(value string) (string, bool) {
 	trimmed := strings.ToLower(strings.TrimSpace(value))
 	switch trimmed {
-	case "active", "suspended":
+	case "active", "suspended", "buried":
 		return trimmed, true
 	default:
 		return "", false

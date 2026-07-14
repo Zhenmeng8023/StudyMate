@@ -174,7 +174,7 @@ describe("review API clients", () => {
       updatedAt: "2026-06-02T12:00:00Z"
     });
 
-    await updateCardStatus(session, "card-1", { status: "buried" as "active" | "suspended" });
+    await updateCardStatus(session, "card-1", { status: "buried" });
 
     const [path, init] = fetchMock.mock.calls[0];
     expect(path).toBe("/api/v1/cards/card-1/status");

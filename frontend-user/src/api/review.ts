@@ -118,7 +118,7 @@ export async function updateCardStatus(
   session: AuthSession,
   cardId: string,
   input: {
-    status: "active" | "suspended";
+    status: "active" | "suspended" | "buried";
   }
 ) {
   return request<CardPayload>(`/cards/${cardId}/status`, {

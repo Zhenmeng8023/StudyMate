@@ -54,6 +54,8 @@ function formatRelativeInterval(days: number) {
 
 function formatCardStatusLabel(status: string) {
   switch (status) {
+    case "buried":
+      return "已埋藏";
     case "suspended":
       return "已暂停";
     case "active":
@@ -226,6 +228,14 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         if (currentItem && !busy) {
           event.preventDefault();
           void handleSuspendCurrent();
+        }
+        return;
+      }
+
+      if (event.key.toLowerCase() === "b") {
+        if (currentItem && !busy) {
+          event.preventDefault();
+          void handleBuryCurrent();
         }
         return;
       }
@@ -406,6 +416,29 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     }
   }
 
+  async function handleBuryCurrent() {
+    if (!currentItem) {
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+    try {
+      await updateCardStatus(props.session, currentItem.card.id, { status: "buried" });
+      setFocusedManagedCardId(currentItem.card.id);
+      setQueue((items) => items.filter((item) => item.card.id !== currentItem.card.id));
+      setCards((items) =>
+        items.map((card) => (card.id === currentItem.card.id ? { ...card, status: "buried" } : card))
+      );
+      setDueCount((count) => Math.max(0, count - 1));
+      setMessage("已埋藏当前卡片，今天不会再出现。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "埋藏卡片失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function handleSkipCurrent() {
     if (!currentItem || queue.length <= 1) {
       return;
@@ -420,8 +453,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     });
   }
 
-  async function handleManagedCardStatus(card: CardPayload) {
-    const nextStatus = card.status === "suspended" ? "active" : "suspended";
+  async function handleManagedCardStatus(card: CardPayload, nextStatus: "active" | "suspended" | "buried") {
 
     setBusy(true);
     setMessage("");
@@ -434,12 +466,20 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         return;
       }
 
-      setCards((items) => items.map((item) => (item.id === card.id ? { ...item, status: "suspended" } : item)));
+      setCards((items) => items.map((item) => (item.id === card.id ? { ...item, status: nextStatus } : item)));
       setQueue((items) => items.filter((item) => item.card.id !== card.id));
       setDueCount((count) => Math.max(0, count - 1));
-      setMessage("已暂停卡片，今日队列已同步移除。");
+      setMessage(nextStatus === "buried" ? "已埋藏卡片，今日队列已同步移除。" : "已暂停卡片，今日队列已同步移除。");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : nextStatus === "active" ? "恢复卡片失败" : "暂停卡片失败");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : nextStatus === "active"
+            ? "恢复卡片失败"
+            : nextStatus === "buried"
+              ? "埋藏卡片失败"
+              : "暂停卡片失败"
+      );
     } finally {
       setBusy(false);
     }
@@ -514,6 +554,10 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                 <button className="secondary-button" disabled={busy} onClick={() => void handleSuspendCurrent()} type="button">
                   <PanelRightClose size={16} />
                   暂停当前卡片
+                </button>
+                <button className="secondary-button" disabled={busy} onClick={() => void handleBuryCurrent()} type="button">
+                  <BookOpenCheck size={16} />
+                  埋藏当前卡片
                 </button>
                 <div className="review-focus-ratings" aria-label="记忆评分">
                   {ratingOptions.map((option) => (
@@ -633,9 +677,20 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                         <p>{card.back}</p>
                         <ReviewSourceSummary card={card} compact />
                         <div className="review-managed-card__actions">
-                          <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card)} type="button">
-                            {card.status === "suspended" ? "恢复卡片" : "暂停卡片"}
-                          </button>
+                          {card.status === "active" ? (
+                            <>
+                              <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "suspended")} type="button">
+                                暂停卡片
+                              </button>
+                              <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "buried")} type="button">
+                                埋藏卡片
+                              </button>
+                            </>
+                          ) : (
+                            <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "active")} type="button">
+                              恢复卡片
+                            </button>
+                          )}
                         </div>
                       </article>
                     ))}
@@ -650,7 +705,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       </div>
 
       <footer className="review-focus-footer">
-        <span>快捷键：空格 / Enter 翻面；S 跳过当前卡片；P 暂停当前卡片；答案显示后按 1–4 评分。</span>
+        <span>快捷键：空格 / Enter 翻面；S 跳过当前卡片；P 暂停当前卡片；B 埋藏当前卡片；答案显示后按 1–4 评分。</span>
         <button className="ghost-button" onClick={() => openManagement("decks")} type="button">
           <ChevronLeft size={15} /> 管理卡组 <ChevronRight size={15} />
         </button>

@@ -7535,3 +7535,32 @@
 
 - `ANKI-030` 的复习会话现在不仅能“先跳过稍后回来”，也能真正把一张卡先暂停出今日活跃队列，并在同一工作台恢复，这让原型阶段的复习控制面更接近真实可用产品。
 - 这一轮仍然只覆盖 `active / suspended` 这条最小状态通路；后续更适合继续沿 `ANKI-030 / ANKI-020 / LC-010` 补撤销上一次评分、埋藏语义和与真实学习/复习/重新学习队列一致的调度状态，而不是继续在前端会话里堆更多一次性分支判断。
+## 2026-07-15 07:02:37 +08:00 | v1.1.0-alpha.252 | 推进 ANKI-030 复习埋藏当前卡片
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-030 / LC-010`，这一轮不直接展开完整的队列重排或撤销评分，而是先把复习控制面里最后一个高频显式动作补到可用。
+- 目标是让用户在复习中可以把当前卡片埋藏掉，让它在今天的活跃队列里先消失，同时仍然能在管理面板中恢复，先形成一版可体验的原型语义。
+### 实际变更
+
+- 后端扩展 `card` 状态通路：`UpdateCardStatus(...)` 现已接受 `active / suspended / buried` 三种状态，`TodayQueue(...)` 仍只返回 `active` 卡片，因此被埋藏的卡片会和暂停卡片一样离开今日活跃队列。
+- 更新 `backend/internal/modules/card/service/service.go`，把 `buried` 纳入卡片状态校验；现有 `PATCH /api/v1/cards/:id/status` API 无需新增路由即可承接埋藏动作。
+- 更新 `frontend-user/src/api/review.ts` 与 `frontend-user/src/api/reviewAi.test.ts`，让前端状态更新客户端与 API 回归显式覆盖 `buried`。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`：复习卡片操作区新增 `埋藏当前卡片` 按钮和 `B` 快捷键；埋藏后当前卡片会从今日活跃队列移除、待完成计数同步减少，并提示“今天不会再出现”。
+- 管理面板中的卡片列表现在对 `active` 卡片同时提供 `暂停卡片 / 埋藏卡片` 两个动作；对 `suspended / buried` 状态则统一提供 `恢复卡片`，让这版原型里的队列外卡片都能回到今日集合。
+- 扩展 `backend/internal/modules/card/service/status_test.go` 与 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，用 RED/GREEN 回归锁定“埋藏后离开今日队列、恢复后可重新进入队列”的行为。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-030 / LC-010` 的阶段描述推进到“复习会话已具备埋藏当前卡片”这一层。
+### 验证结果
+
+- RED：`go test ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`go test ./internal/modules/card/service`
+- GREEN：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- `go test ./internal/modules/card/...`
+- `npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- `ANKI-030` 的复习会话现在已经具备评分、跳过、暂停、埋藏和恢复这几类最核心的显式控制动作，原型阶段的“先做一版能用的复习体验”更完整了一步。
+- 这一轮的埋藏仍然先落成“持久化状态 + 管理面板恢复”的可用原型，而不是完整的 Anki 日切埋藏语义；后续更适合继续沿 `ANKI-030 / ANKI-020 / LC-010` 补撤销上一次评分，以及把 `buried / suspended / learning / review / relearning` 的真实调度关系进一步做实。
