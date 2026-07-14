@@ -4,123 +4,85 @@ import { createAdminWorkspaceResetController } from "./adminWorkspaceResetContro
 describe("adminWorkspaceResetController", () => {
   it("resets all workspace slices through a single controller entry", () => {
     const state = {
-      governanceRows: [{}],
-      governanceRowsView: "users",
-      governanceStatusFilter: "pending",
-      moderationItems: [{}],
-      moderationQuery: "review",
-      moderationStatusFilter: "rejected",
-      overview: { userCount: 3 },
-      recordQuery: "audit",
-      selectedRecord: { id: "record-1" }
+      governanceRows: { value: [{}] },
+      governanceRowsView: { value: "users" },
+      governanceStatusFilter: { value: "pending" },
+      governanceSummary: { value: undefined as { id?: string } | null | undefined },
+      moderationItems: { value: [{}] },
+      moderationQuery: { value: "review" },
+      moderationStatusFilter: { value: "rejected" },
+      overview: { value: { userCount: 3 } },
+      recordQuery: { value: "audit" },
+      selectedRecord: { value: { id: "record-1" } }
     };
     const resetConfirmState = vi.fn();
 
     const controller = createAdminWorkspaceResetController({
+      governanceRows: state.governanceRows,
+      governanceRowsView: state.governanceRowsView,
+      governanceStatusFilter: state.governanceStatusFilter,
+      governanceSummary: state.governanceSummary,
+      moderationItems: state.moderationItems,
+      moderationQuery: state.moderationQuery,
+      moderationStatusFilter: state.moderationStatusFilter,
+      overview: state.overview,
+      recordQuery: state.recordQuery,
       resetConfirmState,
-      setGovernanceRows: (value) => {
-        state.governanceRows = value;
-      },
-      setGovernanceRowsView: (value) => {
-        state.governanceRowsView = value;
-      },
-      setGovernanceStatusFilter: (value) => {
-        state.governanceStatusFilter = value;
-      },
-      setGovernanceSummary: (value) => {
-        state.governanceSummary = value;
-      },
-      setModerationItems: (value) => {
-        state.moderationItems = value;
-      },
-      setModerationQuery: (value) => {
-        state.moderationQuery = value;
-      },
-      setModerationStatusFilter: (value) => {
-        state.moderationStatusFilter = value;
-      },
-      setOverview: (value) => {
-        state.overview = value;
-      },
-      setRecordQuery: (value) => {
-        state.recordQuery = value;
-      },
-      setSelectedRecord: (value) => {
-        state.selectedRecord = value;
-      }
+      selectedRecord: state.selectedRecord
     });
 
     controller.clearState();
 
-    expect(state.recordQuery).toBe("");
-    expect(state.moderationQuery).toBe("");
-    expect(state.moderationStatusFilter).toBe("all");
-    expect(state.governanceStatusFilter).toBe("all");
-    expect(state.moderationItems).toEqual([]);
-    expect(state.overview).toBeNull();
-    expect(state.governanceRows).toEqual([]);
-    expect(state.governanceSummary).toBeNull();
-    expect(state.governanceRowsView).toBeNull();
-    expect(state.selectedRecord).toBeNull();
+    expect(state.recordQuery.value).toBe("");
+    expect(state.moderationQuery.value).toBe("");
+    expect(state.moderationStatusFilter.value).toBe("all");
+    expect(state.governanceStatusFilter.value).toBe("all");
+    expect(state.moderationItems.value).toEqual([]);
+    expect(state.overview.value).toBeNull();
+    expect(state.governanceRows.value).toEqual([]);
+    expect(state.governanceSummary.value).toBeNull();
+    expect(state.governanceRowsView.value).toBeNull();
+    expect(state.selectedRecord.value).toBeNull();
     expect(resetConfirmState).toHaveBeenCalledTimes(1);
   });
 
   it("supports clearing only selected workspace slices", () => {
     const state = {
-      governanceRows: [{}],
-      governanceRowsView: "users",
-      governanceStatusFilter: "pending",
-      moderationItems: [{}],
-      moderationQuery: "review",
-      moderationStatusFilter: "rejected",
-      overview: { userCount: 3 },
-      recordQuery: "audit",
-      selectedRecord: { id: "record-1" }
+      governanceRows: { value: [{}] },
+      governanceRowsView: { value: "users" },
+      governanceStatusFilter: { value: "pending" },
+      governanceSummary: { value: undefined as { id?: string } | null | undefined },
+      moderationItems: { value: [{}] },
+      moderationQuery: { value: "review" },
+      moderationStatusFilter: { value: "rejected" },
+      overview: { value: { userCount: 3 } },
+      recordQuery: { value: "audit" },
+      selectedRecord: { value: { id: "record-1" } }
     };
     const resetConfirmState = vi.fn();
 
     const controller = createAdminWorkspaceResetController({
+      governanceRows: state.governanceRows,
+      governanceRowsView: state.governanceRowsView,
+      governanceStatusFilter: state.governanceStatusFilter,
+      governanceSummary: state.governanceSummary,
+      moderationItems: state.moderationItems,
+      moderationQuery: state.moderationQuery,
+      moderationStatusFilter: state.moderationStatusFilter,
+      overview: state.overview,
+      recordQuery: state.recordQuery,
       resetConfirmState,
-      setGovernanceRows: (value) => {
-        state.governanceRows = value;
-      },
-      setGovernanceRowsView: (value) => {
-        state.governanceRowsView = value;
-      },
-      setGovernanceStatusFilter: (value) => {
-        state.governanceStatusFilter = value;
-      },
-      setGovernanceSummary: (value) => {
-        state.governanceSummary = value;
-      },
-      setModerationItems: (value) => {
-        state.moderationItems = value;
-      },
-      setModerationQuery: (value) => {
-        state.moderationQuery = value;
-      },
-      setModerationStatusFilter: (value) => {
-        state.moderationStatusFilter = value;
-      },
-      setOverview: (value) => {
-        state.overview = value;
-      },
-      setRecordQuery: (value) => {
-        state.recordQuery = value;
-      },
-      setSelectedRecord: (value) => {
-        state.selectedRecord = value;
-      }
+      selectedRecord: state.selectedRecord
     });
 
     controller.clearState(["queries", "confirmState"]);
 
-    expect(state.recordQuery).toBe("");
-    expect(state.moderationQuery).toBe("");
-    expect(state.moderationStatusFilter).toBe("rejected");
-    expect(state.governanceStatusFilter).toBe("pending");
-    expect(state.moderationItems).toEqual([{}]);
-    expect(state.governanceRows).toEqual([{}]);
+    expect(state.recordQuery.value).toBe("");
+    expect(state.moderationQuery.value).toBe("");
+    expect(state.moderationStatusFilter.value).toBe("rejected");
+    expect(state.governanceStatusFilter.value).toBe("pending");
+    expect(state.moderationItems.value).toEqual([{}]);
+    expect(state.governanceRows.value).toEqual([{}]);
     expect(resetConfirmState).toHaveBeenCalledTimes(1);
   });
 });

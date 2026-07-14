@@ -21,6 +21,7 @@ import { defaultAdminRouteKey } from "../router";
 import type { AdminRouteKey } from "../router";
 import { runAdminConfirmDialogHandler, type ConfirmDialogKey } from "./adminConfirmDialogState";
 import { createAdminWorkspaceConfirmController } from "./adminWorkspaceConfirmController";
+import { createAdminWorkspaceResetController } from "./adminWorkspaceResetController";
 import { buildAdminWorkspaceLoginPanelEvents } from "./adminWorkspaceLoginPanelEvents";
 import { buildAdminWorkspaceLoginPanelProps } from "./adminWorkspaceLoginPanelProps";
 import { buildAdminWorkspaceModuleEvents } from "./adminWorkspaceModuleEvents";
@@ -89,8 +90,6 @@ import {
   getAdminSessionEndedNotice
 } from "./adminWorkspaceNotice";
 import {
-  resetAdminWorkspaceState,
-  type AdminWorkspaceResetHandlers,
   type AdminWorkspaceResetKey
 } from "./adminWorkspaceState";
 import {
@@ -343,32 +342,21 @@ const governanceColumns = computed(() => getGovernanceColumns(governanceRows.val
 
 const confirmResetHandlers = confirmController.resetHandlers;
 const confirmSubmitHandlers = confirmController.submitHandlers;
+const workspaceResetController = createAdminWorkspaceResetController({
+  governanceRows,
+  governanceRowsView,
+  governanceStatusFilter,
+  governanceSummary,
+  moderationItems,
+  moderationQuery,
+  moderationStatusFilter,
+  overview,
+  recordQuery,
+  resetConfirmState: confirmController.resetAll,
+  selectedRecord
+});
 
-const workspaceResetHandlers: AdminWorkspaceResetHandlers = {
-  queries: () => {
-    recordQuery.value = "";
-    moderationQuery.value = "";
-  },
-  filters: () => {
-    moderationStatusFilter.value = "all";
-    governanceStatusFilter.value = "all";
-  },
-  moderationData: () => {
-    moderationItems.value = [];
-    overview.value = null;
-  },
-  governanceData: () => {
-    governanceRows.value = [];
-    governanceSummary.value = null;
-    governanceRowsView.value = null;
-    selectedRecord.value = null;
-  },
-  confirmState: confirmController.resetAll
-};
-
-function clearWorkspaceState(keys?: AdminWorkspaceResetKey[]) {
-  resetAdminWorkspaceState(workspaceResetHandlers, keys);
-}
+const clearWorkspaceState = (keys?: AdminWorkspaceResetKey[]) => workspaceResetController.clearState(keys);
 
 function loadActiveView(view: AdminView) {
   void runAdminWorkspaceViewLoad(view, {

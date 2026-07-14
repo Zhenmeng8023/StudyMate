@@ -1,3 +1,25 @@
+## 2026-07-15 07:36:36 +08:00 | v1.1.0-alpha.255 | 推进 FE-041 管理端 workspace reset controller 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里仍然内联维护的 `workspaceResetHandlers / clearWorkspaceState` 这一组工作台 reset 编排。
+- 目标是补一层共享 `reset-controller` helper，让后台工作台在查询、筛选、审核数据、治理数据与确认状态的复位路径上也复用统一入口，并继续把视图文件稳定压在仓库约束线内。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceResetController.ts` 与 `adminWorkspaceResetController.test.ts`，把工作台五组 reset 切片的 handlers 组装和 `clearState(keys?)` 入口收口到共享 controller。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让页面层改为直接消费共享 `workspaceResetController`，不再在视图里维护一整段 reset handlers 与清理编排。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 workspace reset 也已进入共享 controller helper 出口”。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceResetController.test.ts src/views/AdminWorkspaceView.test.ts src/views/adminWorkspaceState.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从共享确认编排 controller 推进到共享 workspace reset controller，后台工作台壳层里的 reset 路径进一步变薄，`AdminWorkspaceView.vue` 也继续收口到 787 行。
+- 这一轮仍然只先收口 reset 组合入口；更进一步的治理动作包装、工作台 feature adapter 与 page/feature 边界，仍适合继续沿 `FE-041 / ADM-010` 往前推进。
+
 ## 2026-07-15 07:31:30 +08:00 | v1.1.0-alpha.254 | 推进 FE-041 管理端确认编排 controller helper 接线
 ### 任务内容
 
