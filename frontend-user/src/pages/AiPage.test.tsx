@@ -412,4 +412,33 @@ describe("AiPage", () => {
     const taskCards = taskSections.item(1)?.querySelectorAll(".ai-task-card strong") ?? [];
     expect(taskCards.item(0)?.textContent).toContain("Focused task");
   });
+
+  it("renders a precise reader backlink for annotation-based ai tasks", async () => {
+    listAiTasksMock.mockResolvedValue([
+      {
+        id: "task-annotation-1",
+        userId: "user-1",
+        taskType: "reader.generate_cards",
+        sourceType: "material",
+        sourceId: "material-7",
+        sourceMetadata: {
+          materialId: "material-7",
+          annotationId: "annotation-7",
+          page: 18
+        },
+        status: "completed",
+        model: "local-draft-engine",
+        inputTokens: 10,
+        outputTokens: 20,
+        costUnits: 0,
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    ]);
+
+    renderPage();
+
+    const backlinks = await screen.findAllByRole("link", { name: "打开来源工作台" });
+    expect(backlinks.at(-1)).toHaveAttribute("href", "/reader/material-7?page=18&annotation=annotation-7");
+  });
 });

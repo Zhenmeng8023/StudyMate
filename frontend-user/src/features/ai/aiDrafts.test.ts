@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAiDraftWorkspacePath, buildCardInputsFromAiDrafts } from "./aiDrafts";
+import { buildAiDraftWorkspacePath, buildAiTaskWorkspacePath, buildCardInputsFromAiDrafts } from "./aiDrafts";
 
 describe("buildCardInputsFromAiDrafts", () => {
   it("maps AI draft metadata into card source metadata for later review backlinks", () => {
@@ -93,5 +93,31 @@ describe("buildAiDraftWorkspacePath", () => {
         updatedAt: "2026-07-15T06:00:00Z"
       })
     ).toBe("/reader/material-2?page=7&anchor=anchor-1");
+  });
+});
+
+describe("buildAiTaskWorkspacePath", () => {
+  it("preserves precise reader context for AI tasks created from reader annotations", () => {
+    expect(
+      buildAiTaskWorkspacePath({
+        id: "task-annotation-1",
+        userId: "user-1",
+        taskType: "reader.generate_cards",
+        sourceType: "material",
+        sourceId: "material-1",
+        sourceMetadata: {
+          materialId: "material-1",
+          annotationId: "annotation-1",
+          page: 12
+        },
+        status: "completed",
+        model: "local-draft-engine",
+        inputTokens: 1,
+        outputTokens: 2,
+        costUnits: 0,
+        createdAt: "2026-07-15T06:00:00Z",
+        updatedAt: "2026-07-15T06:00:00Z"
+      })
+    ).toBe("/reader/material-1?page=12&annotation=annotation-1");
   });
 });
