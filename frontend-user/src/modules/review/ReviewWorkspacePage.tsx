@@ -203,6 +203,14 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         return;
       }
 
+      if (event.key.toLowerCase() === "s") {
+        if (currentItem && !busy && queue.length > 1) {
+          event.preventDefault();
+          handleSkipCurrent();
+        }
+        return;
+      }
+
       if (!showAnswer || busy || !currentItem) return;
       const option = ratingOptions.find((candidate) => candidate.shortcut === event.key);
       if (option) {
@@ -213,7 +221,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [busy, currentItem, showAnswer]);
+  }, [busy, currentItem, queue.length, showAnswer]);
 
   async function refreshAll() {
     setBusy(true);
@@ -356,6 +364,20 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     }
   }
 
+  function handleSkipCurrent() {
+    if (!currentItem || queue.length <= 1) {
+      return;
+    }
+
+    setMessage("已跳过当前卡片，稍后会回到这张卡。");
+    setQueue((items) => {
+      if (items.length <= 1) {
+        return items;
+      }
+      return [...items.slice(1), items[0]];
+    });
+  }
+
   function openManagement(tab: ReviewManagementTab) {
     setManagementTab(tab);
     setManagementOpen(true);
@@ -417,6 +439,10 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                 <button className="secondary-button" disabled={busy} onClick={() => setShowAnswer((value) => !value)} type="button">
                   <Sparkles size={16} />
                   {showAnswer ? "收起答案" : "显示答案"}
+                </button>
+                <button className="secondary-button" disabled={busy || queue.length <= 1} onClick={handleSkipCurrent} type="button">
+                  <ChevronRight size={16} />
+                  跳过当前卡片
                 </button>
                 <div className="review-focus-ratings" aria-label="记忆评分">
                   {ratingOptions.map((option) => (
@@ -547,7 +573,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       </div>
 
       <footer className="review-focus-footer">
-        <span>快捷键：空格 / Enter 翻面；答案显示后按 1–4 评分。</span>
+        <span>快捷键：空格 / Enter 翻面；S 跳过当前卡片；答案显示后按 1–4 评分。</span>
         <button className="ghost-button" onClick={() => openManagement("decks")} type="button">
           <ChevronLeft size={15} /> 管理卡组 <ChevronRight size={15} />
         </button>

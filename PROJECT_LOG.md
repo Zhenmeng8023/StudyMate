@@ -7485,3 +7485,24 @@
 
 - 当前环境下 `FE-010 / FE-020 / FE-030 / UI-04` 的最小验证链条仍然可通过，说明这些已收口工作包没有因为近期主路径迭代而发生真实回退。
 - 这次暴露的问题属于自动化选择器随 UI 语义演进产生的轻微漂移；后续如果继续推进首页 CTA、后台导航或治理模块骨架，应该同步维护 Playwright 稳定钩子，避免把测试噪声误判成产品回退。
+## 2026-07-15 06:46:36 +08:00 | v1.1.0-alpha.250 | 推进 ANKI-030 复习跳过当前卡片
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-030 / LC-010`，这一轮不扩散到新的调度模型或后台域，而是先补齐复习会话里最轻量、最直接影响可用性的操作缺口。
+- 目标是让用户在复习过程中遇到“这张先放后面再看”的场景时，不必退出当前会话，也不会破坏当前待完成队列的上下文。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，新增 `handleSkipCurrent()`，在当前卡片可跳过且队列长度大于 1 时，把当前卡片顺延到内存队列末尾，并立即切到下一张卡。
+- 复习卡片操作区新增 `跳过当前卡片` 按钮，并补上 `S` 键快捷路径；跳过后会显示“已跳过当前卡片，稍后会回到这张卡。”提示，同时保持待完成张数不变。
+- 扩展 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，用 RED/GREEN 回归锁定“跳过当前卡片后切到下一张、原卡片排到队尾、待完成计数不变”的行为。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-030 / LC-010` 的阶段描述推进到“复习会话已具备跳过当前卡片且保留队列上下文”这一层。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- `ANKI-030` 的复习会话现在已经具备一个更接近真实 Anki 使用习惯的“先跳过、稍后回来”入口，主学习闭环里的复习阶段可用性更完整了一步。
+- 这一轮仍只覆盖前端内存队列层的 defer 体验；后续更适合继续沿 `ANKI-030 / ANKI-020 / LC-010` 补撤销上一次评分、埋藏/暂停卡片，以及与真实调度状态一致的队列语义，而不是把更多会话分支继续堆进页面条件判断里。

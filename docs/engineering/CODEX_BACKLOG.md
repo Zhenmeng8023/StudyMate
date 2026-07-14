@@ -42,7 +42,7 @@
 | ANKI-000 | TODO | Anki 式闪卡产品契约 | FE-030 | docs/engineering、docs/architecture、card/review domain | 明确 Deck、CardNote、NoteType、CardTemplate、GeneratedCard、Schedule、ReviewLog、Tag、SourceLink 的职责边界；确认哪些 Anki 能力进入 P1，哪些仅预研。 |
 | ANKI-010 | TODO | Note / Card 分离与模板生成 | ANKI-000 | backend card models/dto/service、frontend review types | 支持一条 CardNote 通过模板生成一张或多张 Card；首批模板覆盖 Basic、Basic Reverse、Cloze；旧 `front/back` 卡片有兼容读取或迁移策略。 |
 | ANKI-020 | TODO | Anki 式调度与队列模型 | ANKI-000 | card schedule service/repository/review API | 支持 new / learning / review / relearning / suspended / buried 状态、学习步进、每日新卡/复习上限、重新学习路径；继续保留 `again / hard / good / easy` 评分语义。 |
-| ANKI-030 | IN_PROGRESS | Anki 式复习会话体验 | ANKI-010, ANKI-020 | `frontend-user/src/modules/review/`、review API | 复习会话已支持翻面、1-4 评分、来源卡片深链定位、复习页内对笔记/资料/卡片等可直达来源的回看入口、下一次间隔预估和键盘路径；后续补撤销上一次评分、跳过/埋藏、暂停卡片，并继续确保失败状态不丢当前会话上下文。 |
+| ANKI-030 | IN_PROGRESS | Anki 式复习会话体验 | ANKI-010, ANKI-020 | `frontend-user/src/modules/review/`、review API | 复习会话已支持翻面、1-4 评分、来源卡片深链定位、复习页内对笔记/资料/卡片等可直达来源的回看入口、下一次间隔预估、键盘路径，以及“跳过当前卡片”并将其顺延到当前内存队列末尾；后续补撤销上一次评分、埋藏、暂停卡片，并继续确保失败状态不丢当前会话上下文。 |
 | ANKI-040 | TODO | 卡片浏览器与批量管理 | ANKI-010, ANKI-020 | review/card browser UI + backend list/filter APIs | 支持按牌组、标签、状态、来源、到期时间筛选；支持批量暂停、恢复、移动牌组、加标签、删除；操作可确认并可审计/追溯。 |
 | ANKI-050 | IN_PROGRESS | 来源驱动制卡闭环 | ANKI-010, WB-030 | reader/note/graph/ai/card | 批注来源卡片现已补齐 `sourceMetadata` 通路，图谱节点转卡也开始保留 reader/PDF 锚点上下文，AI 草稿确认页与 AI 任务历史里的来源回跳也已接入同一套 reader 精确定位规则，能在草稿确认、AI 工作台深链定位、卡片创建与复习队列中回跳原批注、PDF 页或指定 AI 草稿/任务；后续继续补更通用的图谱节点与 SourceLink 抽象。 |
 | ANKI-060 | TODO | 复习反馈回写学习图谱 | ANKI-020, ANKI-050 | graph/card/review/dashboard | 复习结果可回写图谱节点熟练度、笔记学习状态和工作台反馈；薄弱知识点可在图谱和学习工作台中解释。 |
@@ -50,7 +50,7 @@
 | WB-033 | TODO | 图谱-复习学习反馈闭环 | ANKI-020, ANKI-050, WB-030 | graph/card/review | 基于 Anki 式 CardNote / Card / Schedule 模型串起图谱节点、卡片复习和学习反馈；卡片与来源节点可追溯，复习结果能回写节点熟练度。 |
 | WB-034 | TODO | 图谱 API 与工作区回归验证矩阵 | WB-032 | graph backend + frontend + e2e | 覆盖 create/save/restore/export/layout/conflict/权限路径；图谱工作区在桌面与窄屏至少有 smoke 回归，不再只依赖零散组件测试。 |
 | GPH-040 | TODO | 图谱工作区 store / commands / features 拆分 | WB-032, FE-020 | `frontend-user/src/modules/graph/`、`packages/graph-core` | `useGraphWorkspaceController` 不再继续承接新增业务；选中、相机、面板、保存、冲突等浏览器状态进入 store，新增节点/连线/分组/模板/恢复等用户意图进入 commands。 |
-| LC-010 | IN_PROGRESS | 主学习闭环演示路径收口 | WB-033, ANKI-030, FE-030 | material/reader/note/graph/card/review/AI | “资料上传 -> PDF 阅读 -> 高亮批注 -> 摘录池 -> 笔记块 -> CardNote -> 模板生成闪卡 -> Anki 式复习 -> 图谱熟练度回写”已开始按真实路径收口；当前已补上图谱来源卡片 `/review?card=` 深链定位、复习页内对可直达来源工作台的回看入口、批注来源卡片到 reader 批注位置的真实回跳、图谱节点生成卡片对 reader/PDF 锚点上下文的保留，以及 `/ai?draft=` / `/ai?task=` 深链下 AI 工作台对指定草稿/任务的优先定位、AI 草稿来源链接对批注/PDF 锚点的精确 reader 回跳，以及 AI 任务历史对 reader 上下文的精确回跳；后续继续补更统一的 SourceLink 与失败状态清晰。 |
+| LC-010 | IN_PROGRESS | 主学习闭环演示路径收口 | WB-033, ANKI-030, FE-030 | material/reader/note/graph/card/review/AI | “资料上传 -> PDF 阅读 -> 高亮批注 -> 摘录池 -> 笔记块 -> CardNote -> 模板生成闪卡 -> Anki 式复习 -> 图谱熟练度回写”已开始按真实路径收口；当前已补上图谱来源卡片 `/review?card=` 深链定位、复习页内对可直达来源工作台的回看入口、批注来源卡片到 reader 批注位置的真实回跳、图谱节点生成卡片对 reader/PDF 锚点上下文的保留，以及 `/ai?draft=` / `/ai?task=` 深链下 AI 工作台对指定草稿/任务的优先定位、AI 草稿来源链接对批注/PDF 锚点的精确 reader 回跳、AI 任务历史对 reader 上下文的精确回跳，和复习会话内“跳过当前卡片”但保持待完成队列上下文；后续继续补更统一的 SourceLink 与失败状态清晰。 |
 | WB-040 | TODO | 管理端真实只读数据页第一批 | WB-001 | admin backend + frontend-admin | 用户、内容、AI 任务/用量、审计至少展示真实数据。 |
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
