@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import type {
   AiDraftPayload,
   AiTaskPayload,
@@ -47,7 +47,26 @@ type AiWorkspaceState =
     }
   | null;
 
+function trimSearchParam(value: string | null) {
+  return value?.trim() ?? "";
+}
+
+function prioritizeRequestedItems<T extends { id: string }>(items: T[], requestedId: string) {
+  if (!requestedId) {
+    return items;
+  }
+
+  const targetIndex = items.findIndex((item) => item.id === requestedId);
+  if (targetIndex <= 0) {
+    return items;
+  }
+
+  const target = items[targetIndex];
+  return [target, ...items.slice(0, targetIndex), ...items.slice(targetIndex + 1)];
+}
+
 export function AiPage(props: { session: AuthSession }) {
+  const location = useLocation();
   const [tasks, setTasks] = useState<AiTaskPayload[]>([]);
   const [drafts, setDrafts] = useState<AiDraftPayload[]>([]);
   const [decks, setDecks] = useState<DeckPayload[]>([]);
@@ -64,20 +83,27 @@ export function AiPage(props: { session: AuthSession }) {
   const [busy, setBusy] = useState("");
   const [loadingWorkspace, setLoadingWorkspace] = useState(true);
   const [workspaceError, setWorkspaceError] = useState("");
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const requestedDraftId = trimSearchParam(searchParams.get("draft"));
+  const requestedTaskId = trimSearchParam(searchParams.get("task"));
 
   const sourceOptions = useMemo(
     () => Array.from(new Set(drafts.map((draft) => getAiDraftSourceKey(draft)))).sort(),
     [drafts]
   );
   const filteredDrafts = useMemo(
-    () =>
-      drafts.filter((draft) => {
+    () => {
+      const matchedDrafts = drafts.filter((draft) => {
         const matchesSource = sourceFilter === "all" || getAiDraftSourceKey(draft) === sourceFilter;
         const matchesStatus = statusFilter === "all" || draft.status === statusFilter;
         return matchesSource && matchesStatus;
-      }),
-    [drafts, sourceFilter, statusFilter]
+      });
+
+      return prioritizeRequestedItems(matchedDrafts, requestedDraftId);
+    },
+    [drafts, sourceFilter, statusFilter, requestedDraftId]
   );
+  const orderedTasks = useMemo(() => prioritizeRequestedItems(tasks, requestedTaskId), [tasks, requestedTaskId]);
   const pendingCardDrafts = useMemo(
     () => filteredDrafts.filter((draft) => draft.status === "pending" && draft.draftType === "card_draft"),
     [filteredDrafts]
@@ -116,6 +142,25 @@ export function AiPage(props: { session: AuthSession }) {
             description: workspaceError
           }
         : null;
+  const deepLinkMessage = useMemo(() => {
+    if (loadingWorkspace) {
+      return "";
+    }
+
+    if (requestedDraftId) {
+      return drafts.some((draft) => draft.id === requestedDraftId)
+        ? "已定位指定 AI 草稿，可直接确认或回看来源。"
+        : "未找到指定 AI 草稿，已回到默认工作台视图。";
+    }
+
+    if (requestedTaskId) {
+      return tasks.some((task) => task.id === requestedTaskId)
+        ? "已定位指定 AI 任务，可先查看结果后再决定是否继续确认。"
+        : "未找到指定 AI 任务，已回到默认工作台视图。";
+    }
+
+    return "";
+  }, [drafts, loadingWorkspace, requestedDraftId, requestedTaskId, tasks]);
 
   async function loadAiWorkspace(options?: { preserveExisting?: boolean }) {
     const preserveExisting = options?.preserveExisting ?? false;
@@ -295,6 +340,7 @@ export function AiPage(props: { session: AuthSession }) {
           <DataState action={workspaceAction} description={workspaceState.description} kind={workspaceState.kind} title={workspaceState.title} />
         ) : (
           <>
+            {deepLinkMessage ? <p className="inline-message">{deepLinkMessage}</p> : null}
             {workspaceState?.kind === "stale" ? (
               <DataState action={workspaceAction} description={workspaceState.description} kind={workspaceState.kind} title={workspaceState.title} />
             ) : null}
@@ -561,7 +607,7 @@ export function AiPage(props: { session: AuthSession }) {
             >
               <div className="ai-task-list">
                 {tasks.length ? (
-                  tasks.map((task) => (
+                  orderedTasks.map((task) => (
                     <article className="ai-task-card" key={task.id}>
                       <div className="story-card-head">
                         <strong>{formatAiTaskLabel(task.taskType)}</strong>

@@ -7391,3 +7391,24 @@
 
 - 现在不只是 reader 直接生成的卡片能回跳原文，图谱节点再转成复习卡时，也开始保留 reader/PDF 来源上下文，主学习闭环里的 `reader -> graph -> review -> reader` 又闭合了一段。
 - 这一轮仍主要覆盖 `pdf-anchor` 与已有 reader metadata 的节点；如果要把更多图谱节点来源、笔记块模板化来源和更统一的 SourceLink 抽象继续做厚，下一步更适合继续沿 `ANKI-050 / WB-033 / LC-010` 把卡片来源解析从 helper 级能力推广到更完整的 CardNote/SourceLink 契约。
+## 2026-07-15 06:22:47 +08:00 | v1.1.0-alpha.246 | 推进 ANKI-050 / LC-010 AI 工作台深链定位
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-050 / LC-010`，这一轮不扩散到新的图谱或后台子域，而是把上一轮已经产出的 AI 来源深链真正接到工作台落点上。
+- 目标是让图谱来源卡片、复习来源入口等场景生成的 `/ai?draft=<id>` 与 `/ai?task=<id>` 不再只把用户带到笼统的 AI 页面，而是优先定位到目标草稿或任务，让“来源回看 -> AI 工作台确认/复查”这段链路真正可用。
+### 实际变更
+
+- 更新 `frontend-user/src/pages/AiPage.tsx`，接入 `useLocation()` 与查询参数解析，新增通用的目标项优先排序 helper，让 AI 草稿列表和任务历史都能根据 `draft` / `task` 查询参数把指定项提升到首位。
+- 同一页面新增深链反馈文案：当指定 AI 草稿或任务存在时，工作台会明确提示已完成定位；若目标不存在，则回落到默认工作台视图并给出未命中的说明，避免用户误以为深链已经生效。
+- 扩展 `frontend-user/src/pages/AiPage.test.tsx`，补上 `/ai?draft=draft-card-2` 与 `/ai?task=task-2` 两个回归场景，锁定“目标草稿/任务应被优先呈现且给出正确提示”的行为。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-050 / LC-010` 的阶段描述推进到“AI 工作台也能消化来源深链并优先定位指定草稿/任务”这一层。
+### 验证结果
+
+- `npm test -- --run src/pages/AiPage.test.tsx`
+- `npm run typecheck`
+- `npm run build`
+- `git diff --check`
+### 后续影响
+
+- `ANKI-050` 现在不仅能把来源上下文带到 AI 工作台，还能让工作台真正吃掉这些上下文并把用户落到指定草稿/任务上，主学习闭环里的 `graph/review -> AI workspace` 又闭合了一段。
+- 这一轮仍只解决了“进入 AI 工作台时先看对对象”的问题；如果后续要继续补齐更统一的 `SourceLink` 抽象、更强的草稿来源预览，或把 AI 确认结果继续稳定回写到图谱/复习反馈，下一步更适合继续沿 `ANKI-050 / WB-033 / LC-010` 扩展同一条主线。
