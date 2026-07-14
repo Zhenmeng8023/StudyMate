@@ -1,3 +1,23 @@
+## 2026-07-15 07:31:30 +08:00 | v1.1.0-alpha.254 | 推进 FE-041 管理端确认编排 controller helper 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里仍然分散维护的五组确认弹层编排。
+- 目标是补一层共享 `confirm-controller` helper，让后台工作台在确认流上的 `dialogs / reset / submit` 组合入口继续复用统一出口，并把超出 800 行的视图文件压回仓库约束内。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceConfirmController.ts` 与 `adminWorkspaceConfirmController.test.ts`，收口五组确认弹层的 dialog 组装、reset handler 复用和 submit handler 分发。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让页面层改为消费共享 `confirmController`，不再在视图里内联整段确认编排。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端确认编排也已进入共享 controller helper 出口”。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceConfirmController.test.ts src/views/AdminWorkspaceView.test.ts src/views/adminWorkspaceConfirmState.test.ts src/views/adminWorkspaceConfirmDialogs.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从共享登录面板事件装配链推进到共享确认编排 controller，后台工作台壳层里残留的确认流组装进一步变薄，`AdminWorkspaceView.vue` 也已回到 800 行以内。
+- 这一轮仍然只先收口确认编排最小组合入口；更进一步的 `workspaceResetHandlers`、更完整的工作台 feature adapter 与治理模块 page/feature 边界，仍适合继续沿 `FE-041 / ADM-010` 往前推进。
 ## 2026-07-14 02:08:34 +08:00 | v1.1.0-alpha.238 | 推进 FE-041 管理端壳层 props 装配 helper 接线
 ### 任务内容
 

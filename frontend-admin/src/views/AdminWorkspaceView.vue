@@ -19,23 +19,14 @@ import AdminShellFrame from "../components/admin/AdminShellFrame.vue";
 import { getGovernanceColumns, type GovernanceRecord } from "../components/admin/governanceRecord";
 import { defaultAdminRouteKey } from "../router";
 import type { AdminRouteKey } from "../router";
-import {
-  resetAdminConfirmDialogState,
-  runAdminConfirmDialogHandler,
-  type ConfirmDialogHandlerMap,
-  type ConfirmDialogKey
-} from "./adminConfirmDialogState";
-import { buildAdminWorkspaceConfirmDialogs } from "./adminWorkspaceConfirmDialogs";
+import { runAdminConfirmDialogHandler, type ConfirmDialogKey } from "./adminConfirmDialogState";
+import { createAdminWorkspaceConfirmController } from "./adminWorkspaceConfirmController";
 import { buildAdminWorkspaceLoginPanelEvents } from "./adminWorkspaceLoginPanelEvents";
 import { buildAdminWorkspaceLoginPanelProps } from "./adminWorkspaceLoginPanelProps";
 import { buildAdminWorkspaceModuleEvents } from "./adminWorkspaceModuleEvents";
 import { buildAdminWorkspaceModuleProps } from "./adminWorkspaceModuleProps";
 import { buildAdminWorkspaceShellEvents } from "./adminWorkspaceShellEvents";
 import { buildAdminWorkspaceShellProps } from "./adminWorkspaceShellProps";
-import {
-  buildAdminWorkspaceConfirmResetHandlers,
-  buildAdminWorkspaceConfirmSubmitHandlers
-} from "./adminWorkspaceConfirmState";
 import {
   buildAdminNavItems,
   getAdminActiveCountLabel,
@@ -164,31 +155,55 @@ const moderationBuckets = computed(() => splitModerationItems(moderationItems.va
 const pendingPosts = computed(() => moderationBuckets.value.pendingPosts);
 const pendingMaterials = computed(() => moderationBuckets.value.pendingMaterials);
 const profileInitial = computed(() => profile.value?.displayName?.trim().slice(0, 1) || "A");
-const confirmDialogs = computed(() =>
-  buildAdminWorkspaceConfirmDialogs({
-    loading: loading.value,
-    moderation: {
-      errorMessage: moderationConfirmError.value,
-      pending: pendingModerationAction.value
-    },
-    report: {
-      errorMessage: reportConfirmError.value,
-      pending: pendingReportAction.value
-    },
-    aiTask: {
-      errorMessage: aiTaskConfirmError.value,
-      pending: pendingAITaskAction.value
-    },
-    template: {
-      errorMessage: templateConfirmError.value,
-      pending: pendingTemplateAction.value
-    },
-    user: {
-      errorMessage: userConfirmError.value,
-      pending: pendingUserAction.value
-    }
-  })
-);
+const confirmController = createAdminWorkspaceConfirmController({
+  applyAITaskAction,
+  applyModerationAction,
+  applyReportAction,
+  applyTemplateAction,
+  applyUserAction,
+  readAITaskAction: () => pendingAITaskAction.value,
+  readAITaskError: () => aiTaskConfirmError.value,
+  readLoading: () => loading.value,
+  readModerationAction: () => pendingModerationAction.value,
+  readModerationError: () => moderationConfirmError.value,
+  readReportAction: () => pendingReportAction.value,
+  readReportError: () => reportConfirmError.value,
+  readTemplateAction: () => pendingTemplateAction.value,
+  readTemplateError: () => templateConfirmError.value,
+  readUserAction: () => pendingUserAction.value,
+  readUserError: () => userConfirmError.value,
+  setAITaskAction: (value) => {
+    pendingAITaskAction.value = value;
+  },
+  setAITaskError: (value) => {
+    aiTaskConfirmError.value = value;
+  },
+  setModerationAction: (value) => {
+    pendingModerationAction.value = value;
+  },
+  setModerationError: (value) => {
+    moderationConfirmError.value = value;
+  },
+  setReportAction: (value) => {
+    pendingReportAction.value = value;
+  },
+  setReportError: (value) => {
+    reportConfirmError.value = value;
+  },
+  setTemplateAction: (value) => {
+    pendingTemplateAction.value = value;
+  },
+  setTemplateError: (value) => {
+    templateConfirmError.value = value;
+  },
+  setUserAction: (value) => {
+    pendingUserAction.value = value;
+  },
+  setUserError: (value) => {
+    userConfirmError.value = value;
+  }
+});
+const confirmDialogs = computed(() => confirmController.buildDialogs());
 
 const navItems = computed<AdminNavItem[]>(() => buildAdminNavItems(moderationItems.value.length));
 const navGroups = computed(() => groupAdminNavItems(navItems.value));
@@ -326,57 +341,8 @@ const visibleGovernanceRows = computed(() => filterGovernanceRows(governanceRows
 const governanceStatusOptions = computed(() => buildGovernanceStatusOptions(governanceRows.value));
 const governanceColumns = computed(() => getGovernanceColumns(governanceRows.value));
 
-const confirmResetHandlers: ConfirmDialogHandlerMap<() => void> =
-  buildAdminWorkspaceConfirmResetHandlers({
-    setAITaskAction: (value) => {
-      pendingAITaskAction.value = value;
-    },
-    setAITaskError: (value) => {
-      aiTaskConfirmError.value = value;
-    },
-    setModerationAction: (value) => {
-      pendingModerationAction.value = value;
-    },
-    setModerationError: (value) => {
-      moderationConfirmError.value = value;
-    },
-    setReportAction: (value) => {
-      pendingReportAction.value = value;
-    },
-    setReportError: (value) => {
-      reportConfirmError.value = value;
-    },
-    setTemplateAction: (value) => {
-      pendingTemplateAction.value = value;
-    },
-    setTemplateError: (value) => {
-      templateConfirmError.value = value;
-    },
-    setUserAction: (value) => {
-      pendingUserAction.value = value;
-    },
-    setUserError: (value) => {
-      userConfirmError.value = value;
-    }
-  });
-
-const confirmSubmitHandlers: ConfirmDialogHandlerMap<() => Promise<void>> =
-  buildAdminWorkspaceConfirmSubmitHandlers({
-    applyAITaskAction,
-    applyModerationAction,
-    applyReportAction,
-    applyTemplateAction,
-    applyUserAction,
-    readAITaskAction: () => pendingAITaskAction.value,
-    readModerationAction: () => pendingModerationAction.value,
-    readReportAction: () => pendingReportAction.value,
-    readTemplateAction: () => pendingTemplateAction.value,
-    readUserAction: () => pendingUserAction.value
-  });
-
-function clearPendingConfirmState() {
-  resetAdminConfirmDialogState(confirmResetHandlers);
-}
+const confirmResetHandlers = confirmController.resetHandlers;
+const confirmSubmitHandlers = confirmController.submitHandlers;
 
 const workspaceResetHandlers: AdminWorkspaceResetHandlers = {
   queries: () => {
@@ -397,9 +363,7 @@ const workspaceResetHandlers: AdminWorkspaceResetHandlers = {
     governanceRowsView.value = null;
     selectedRecord.value = null;
   },
-  confirmState: () => {
-    clearPendingConfirmState();
-  }
+  confirmState: confirmController.resetAll
 };
 
 function clearWorkspaceState(keys?: AdminWorkspaceResetKey[]) {
