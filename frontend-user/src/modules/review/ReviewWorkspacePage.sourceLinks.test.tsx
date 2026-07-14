@@ -149,11 +149,15 @@ describe("ReviewWorkspacePage source links", () => {
     listDeckCardsMock.mockResolvedValue([card]);
     getTodayReviewQueueMock.mockResolvedValue(buildQueue(card));
 
-    const { container } = renderPage("/review?card=card-annotation-1");
+    renderPage("/review?card=card-annotation-1");
 
     expect(await screen.findByText("Linked annotation card")).toBeInTheDocument();
     await waitFor(() => {
-      expect(container.querySelectorAll('a[href="/reader/material-1?page=12&annotation=annotation-1"]')).toHaveLength(2);
+      const links = screen.getAllByRole("link", { name: "回到批注" });
+      expect(links).toHaveLength(2);
+      for (const link of links) {
+        expect(link).toHaveAttribute("href", "/reader/material-1?page=12&annotation=annotation-1");
+      }
     });
   });
 });

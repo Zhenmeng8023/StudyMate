@@ -29,6 +29,11 @@ func BuildCardDraftsFromAnnotations(materialTitle string, annotations []readerdt
 			SourceType:  "annotation",
 			SourceID:    annotation.ID,
 			SourceLabel: materialTitle,
+			SourceMetadata: map[string]any{
+				"materialId":   annotation.MaterialID,
+				"annotationId": annotation.ID,
+				"page":         annotation.Page,
+			},
 			Front:       front,
 			Back:        truncateReaderText(back, 220),
 			Explanation: "根据阅读批注生成的复习卡片草稿，确认后会写入所选 deck。",

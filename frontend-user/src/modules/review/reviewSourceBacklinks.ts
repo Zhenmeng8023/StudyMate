@@ -1,7 +1,7 @@
 import type { CardPayload } from "../../api/client";
 import { buildGraphSourceBacklinkFromSource, type GraphSourceBacklink } from "../graph/lib/graphSourceBacklinks";
 
-type CardSourceLike = Pick<CardPayload, "sourceType" | "sourceId"> | null | undefined;
+type CardSourceLike = Pick<CardPayload, "sourceType" | "sourceId" | "sourceMetadata"> | null | undefined;
 
 export function buildReviewSourceBacklink(card: CardSourceLike): GraphSourceBacklink | null {
   const sourceType = card?.sourceType?.trim();
@@ -15,7 +15,7 @@ export function buildReviewSourceBacklink(card: CardSourceLike): GraphSourceBack
     id: sourceId,
     label: "",
     excerpt: ""
-  });
+  }, card?.sourceMetadata);
 }
 
 export function formatReviewSourceReference(card: CardSourceLike) {

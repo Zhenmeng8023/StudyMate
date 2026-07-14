@@ -7338,3 +7338,31 @@
 
 - `ANKI-030` 现在不仅支持“把来源卡片深链拉回复习页”，也支持从复习页继续回到笔记、资料和卡片等可直达来源工作台，主学习闭环里的“复习 -> 来源回看”又闭合了一段。
 - 这一轮仍未解决批注/PDF 锚点这类需要额外 `materialId` 上下文的来源直达，因为当前复习卡片 payload 只有 `sourceType / sourceId`；后续如果要把这类来源也真正打通，更适合继续沿 `ANKI-050 / LC-010` 给卡片补充更完整的 SourceLink 上下文字段，而不是在前端猜测来源路径。
+
+## 2026-07-15 06:12:00 +08:00 | v1.1.0-alpha.244 | 推进 ANKI-050 / LC-010 批注来源卡片回跳上下文
+### 任务内容
+
+- 继续按照 `CODEX_MASTER_PROMPT.md` 的“优先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-050 / LC-010`，这一轮不扩散到新的图谱或后台子域，而是把上一轮明确暴露的批注来源回跳缺口真正补齐。
+- 目标是让 `reader -> 批注生成卡片草稿 -> 确认入 deck -> review 队列 -> 回跳 reader 批注位置` 这一条链路不再在中途丢失 `materialId / page / annotationId` 上下文，避免复习页只能提示“这是批注来源”却无法真正定位回原文。
+
+### 实际变更
+
+- 后端为 `card` 域补充 `sourceMetadata` 通路：更新 `backend/internal/modules/card/dto/card.go`、`backend/internal/modules/card/model/card.go`、`backend/internal/modules/card/repository/repository.go`、`backend/internal/modules/card/service/service.go`，让建卡请求、持久化卡片与今日复习队列都能保留并返回来源上下文。
+- 新增 `backend/internal/modules/card/repository/source_metadata.go` 与 MySQL 迁移 `backend/internal/migrations/mysql/005_card_source_metadata.sql`（及 down migration），把卡片来源上下文以 JSON 文本形式落库，兼容现有 `sourceType / sourceId` 卡片。
+- 重写 `backend/internal/modules/reader/service/card_drafts.go`，让批注制卡草稿默认携带 `materialId / annotationId / page`；同时更新 `backend/internal/modules/ai/service/service.go`，让 reader/note 生成的 AI 草稿在记录与回传时也不会丢掉这份来源 metadata。
+- 前端更新 `frontend-user/src/api/types.ts`、`frontend-user/src/api/review.ts`、`frontend-user/src/app/appShared.tsx`、`frontend-user/src/features/ai/aiDrafts.ts` 与 `frontend-user/src/modules/review/reviewSourceBacklinks.ts`，让草稿确认、AI 草稿建卡与复习页来源回跳都消费同一份 `sourceMetadata`，从而把批注来源真正回跳到 `/reader/:materialId?page=...&annotation=...`。
+- 补充并收敛测试：新增 `backend/internal/modules/card/service/source_metadata_test.go`、`frontend-user/src/features/ai/aiDrafts.test.ts`，并扩展 `backend/internal/modules/reader/service/card_drafts_test.go`、`frontend-user/src/app/appShared.test.tsx`、`frontend-user/src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`，先复现 metadata 丢失，再验证 reader 批注回跳已经打通。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-050` 推进到 `IN_PROGRESS`，并同步记录 `LC-010` 已补上“批注来源卡片回跳到 reader 批注位置”这一阶段。
+
+### 验证结果
+
+- `go test ./internal/modules/reader/service ./internal/modules/card/service`
+- `go test ./internal/modules/ai/service ./internal/modules/card/... ./internal/modules/reader/...`
+- `npm test -- --run src/app/appShared.test.tsx src/features/ai/aiDrafts.test.ts src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+- `npm run typecheck`
+- `npm run build`
+
+### 后续影响
+
+- `ANKI-050` 现在已经不只是“卡片知道自己来自批注”，而是能把批注来源上下文稳定穿过草稿确认、AI 草稿确认、建卡与复习回看这条链路，主学习闭环里的 `reader -> review -> reader` 又闭合了一段。
+- 这一轮仍只补齐了批注来源；如果要把 PDF 锚点、图谱节点来源和更通用的 SourceLink 语义也统一起来，下一步更适合继续沿 `ANKI-050 / LC-010 / WB-033` 扩展同一套 `sourceMetadata`/SourceLink 模型，而不是回到前端做一次性路径猜测。

@@ -265,14 +265,15 @@ func (s *Service) createCardsForDeck(ownerUserID string, deck *cardmodel.Deck, r
 		}
 
 		card := &cardmodel.Card{
-			DeckID:      deck.ID,
-			OwnerUserID: ownerUserID,
-			CardType:    normalizeCardType(request.CardType),
-			Front:       front,
-			Back:        back,
-			SourceType:  strings.TrimSpace(request.SourceType),
-			SourceID:    strings.TrimSpace(request.SourceID),
-			Status:      "active",
+			DeckID:         deck.ID,
+			OwnerUserID:    ownerUserID,
+			CardType:       normalizeCardType(request.CardType),
+			Front:          front,
+			Back:           back,
+			SourceType:     strings.TrimSpace(request.SourceType),
+			SourceID:       strings.TrimSpace(request.SourceID),
+			SourceMetadata: cardrepo.MarshalSourceMetadata(request.SourceMetadata),
+			Status:         "active",
 		}
 		if err := s.repository.CreateCard(card); err != nil {
 			return nil, apperrors.Internal("创建卡片失败")

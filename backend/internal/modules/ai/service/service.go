@@ -102,6 +102,7 @@ func (s *Service) RecordNoteCardDrafts(userID string, noteID string, drafts []ca
 			SourceType:  draft.SourceType,
 			SourceID:    draft.SourceID,
 			SourceLabel: draft.SourceLabel,
+			Metadata:    draft.SourceMetadata,
 			Front:       draft.Front,
 			Back:        draft.Back,
 			Explanation: draft.Explanation,
@@ -116,14 +117,15 @@ func (s *Service) RecordNoteCardDrafts(userID string, noteID string, drafts []ca
 	result := make([]carddto.CardDraftPayload, 0, len(saved))
 	for index, draft := range drafts {
 		result = append(result, carddto.CardDraftPayload{
-			ID:          draft.ID,
-			DraftID:     saved[index].ID,
-			SourceType:  draft.SourceType,
-			SourceID:    draft.SourceID,
-			SourceLabel: draft.SourceLabel,
-			Front:       draft.Front,
-			Back:        draft.Back,
-			Explanation: draft.Explanation,
+			ID:             draft.ID,
+			DraftID:        saved[index].ID,
+			SourceType:     draft.SourceType,
+			SourceID:       draft.SourceID,
+			SourceLabel:    draft.SourceLabel,
+			SourceMetadata: draft.SourceMetadata,
+			Front:          draft.Front,
+			Back:           draft.Back,
+			Explanation:    draft.Explanation,
 		})
 	}
 
@@ -155,6 +157,7 @@ func (s *Service) RecordReaderCardDrafts(userID string, materialID string, draft
 			SourceType:  draft.SourceType,
 			SourceID:    draft.SourceID,
 			SourceLabel: draft.SourceLabel,
+			Metadata:    draft.SourceMetadata,
 			Front:       draft.Front,
 			Back:        draft.Back,
 			Explanation: draft.Explanation,
@@ -169,14 +172,15 @@ func (s *Service) RecordReaderCardDrafts(userID string, materialID string, draft
 	result := make([]carddto.CardDraftPayload, 0, len(saved))
 	for index, draft := range drafts {
 		result = append(result, carddto.CardDraftPayload{
-			ID:          draft.ID,
-			DraftID:     saved[index].ID,
-			SourceType:  draft.SourceType,
-			SourceID:    draft.SourceID,
-			SourceLabel: draft.SourceLabel,
-			Front:       draft.Front,
-			Back:        draft.Back,
-			Explanation: draft.Explanation,
+			ID:             draft.ID,
+			DraftID:        saved[index].ID,
+			SourceType:     draft.SourceType,
+			SourceID:       draft.SourceID,
+			SourceLabel:    draft.SourceLabel,
+			SourceMetadata: draft.SourceMetadata,
+			Front:          draft.Front,
+			Back:           draft.Back,
+			Explanation:    draft.Explanation,
 		})
 	}
 

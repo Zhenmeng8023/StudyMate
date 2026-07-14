@@ -316,6 +316,7 @@ export interface CardPayload {
   back: string;
   sourceType?: string;
   sourceId?: string;
+  sourceMetadata?: Record<string, unknown>;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -355,6 +356,7 @@ export interface CardDraftPayload {
   sourceType?: string;
   sourceId?: string;
   sourceLabel?: string;
+  sourceMetadata?: Record<string, unknown>;
   front: string;
   back: string;
   explanation?: string;

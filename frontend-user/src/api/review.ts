@@ -63,6 +63,7 @@ export async function createDeckCard(
     back: string;
     sourceType?: string;
     sourceId?: string;
+    sourceMetadata?: Record<string, unknown>;
   }
 ) {
   return request<CardPayload>(`/decks/${deckId}/cards`, {
@@ -82,6 +83,7 @@ export async function bulkCreateDeckCards(
     back: string;
     sourceType?: string;
     sourceId?: string;
+    sourceMetadata?: Record<string, unknown>;
   }>
 ) {
   return request<CardPayload[]>(`/decks/${deckId}/cards/bulk`, {

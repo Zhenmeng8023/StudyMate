@@ -7,7 +7,8 @@ export function buildCardInputsFromAiDrafts(drafts: AiDraftPayload[]) {
     front: draft.front,
     back: draft.back,
     sourceType: draft.sourceType,
-    sourceId: draft.sourceId
+    sourceId: draft.sourceId,
+    sourceMetadata: draft.metadata
   }));
 }
 

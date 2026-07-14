@@ -7,12 +7,13 @@ type CreateDeckRequest struct {
 }
 
 type CreateCardRequest struct {
-	CardType   string `json:"cardType"`
-	DraftID    string `json:"draftId,omitempty"`
-	Front      string `json:"front" binding:"required"`
-	Back       string `json:"back" binding:"required"`
-	SourceType string `json:"sourceType"`
-	SourceID   string `json:"sourceId"`
+	CardType       string         `json:"cardType"`
+	DraftID        string         `json:"draftId,omitempty"`
+	Front          string         `json:"front" binding:"required"`
+	Back           string         `json:"back" binding:"required"`
+	SourceType     string         `json:"sourceType"`
+	SourceID       string         `json:"sourceId"`
+	SourceMetadata map[string]any `json:"sourceMetadata,omitempty"`
 }
 
 type BulkCreateCardsRequest struct {
@@ -25,14 +26,15 @@ type ReviewCardRequest struct {
 }
 
 type CardDraftPayload struct {
-	ID          string `json:"id"`
-	DraftID     string `json:"draftId,omitempty"`
-	SourceType  string `json:"sourceType,omitempty"`
-	SourceID    string `json:"sourceId,omitempty"`
-	SourceLabel string `json:"sourceLabel,omitempty"`
-	Front       string `json:"front"`
-	Back        string `json:"back"`
-	Explanation string `json:"explanation,omitempty"`
+	ID             string         `json:"id"`
+	DraftID        string         `json:"draftId,omitempty"`
+	SourceType     string         `json:"sourceType,omitempty"`
+	SourceID       string         `json:"sourceId,omitempty"`
+	SourceLabel    string         `json:"sourceLabel,omitempty"`
+	SourceMetadata map[string]any `json:"sourceMetadata,omitempty"`
+	Front          string         `json:"front"`
+	Back           string         `json:"back"`
+	Explanation    string         `json:"explanation,omitempty"`
 }
 
 type DeckPayload struct {
@@ -47,17 +49,18 @@ type DeckPayload struct {
 }
 
 type CardPayload struct {
-	ID          string `json:"id"`
-	DeckID      string `json:"deckId"`
-	OwnerUserID string `json:"ownerUserId"`
-	CardType    string `json:"cardType"`
-	Front       string `json:"front"`
-	Back        string `json:"back"`
-	SourceType  string `json:"sourceType,omitempty"`
-	SourceID    string `json:"sourceId,omitempty"`
-	Status      string `json:"status"`
-	CreatedAt   string `json:"createdAt"`
-	UpdatedAt   string `json:"updatedAt"`
+	ID             string         `json:"id"`
+	DeckID         string         `json:"deckId"`
+	OwnerUserID    string         `json:"ownerUserId"`
+	CardType       string         `json:"cardType"`
+	Front          string         `json:"front"`
+	Back           string         `json:"back"`
+	SourceType     string         `json:"sourceType,omitempty"`
+	SourceID       string         `json:"sourceId,omitempty"`
+	SourceMetadata map[string]any `json:"sourceMetadata,omitempty"`
+	Status         string         `json:"status"`
+	CreatedAt      string         `json:"createdAt"`
+	UpdatedAt      string         `json:"updatedAt"`
 }
 
 type CardSchedulePayload struct {

@@ -117,6 +117,7 @@ func (r *Repository) ListDueCards(userID string, dueBefore time.Time, limit int)
 		Back            string
 		SourceType      string
 		SourceID        string
+		SourceMetadata  string
 		Status          string
 		CardCreatedAt   time.Time
 		CardUpdatedAt   time.Time
@@ -147,6 +148,7 @@ func (r *Repository) ListDueCards(userID string, dueBefore time.Time, limit int)
 			cards.back,
 			cards.source_type,
 			cards.source_id,
+			cards.source_metadata,
 			cards.status,
 			cards.created_at as card_created_at,
 			cards.updated_at as card_updated_at,
@@ -169,17 +171,18 @@ func (r *Repository) ListDueCards(userID string, dueBefore time.Time, limit int)
 	for _, row := range rows {
 		result = append(result, DueCardRow{
 			Card: cardmodel.Card{
-				ID:          row.CardID,
-				DeckID:      row.DeckID,
-				OwnerUserID: row.OwnerUserID,
-				CardType:    row.CardType,
-				Front:       row.Front,
-				Back:        row.Back,
-				SourceType:  row.SourceType,
-				SourceID:    row.SourceID,
-				Status:      row.Status,
-				CreatedAt:   row.CardCreatedAt,
-				UpdatedAt:   row.CardUpdatedAt,
+				ID:             row.CardID,
+				DeckID:         row.DeckID,
+				OwnerUserID:    row.OwnerUserID,
+				CardType:       row.CardType,
+				Front:          row.Front,
+				Back:           row.Back,
+				SourceType:     row.SourceType,
+				SourceID:       row.SourceID,
+				SourceMetadata: row.SourceMetadata,
+				Status:         row.Status,
+				CreatedAt:      row.CardCreatedAt,
+				UpdatedAt:      row.CardUpdatedAt,
 			},
 			Deck: cardmodel.Deck{
 				ID:    row.DeckID,
@@ -217,17 +220,18 @@ func BuildDeckPayload(deck cardmodel.Deck) carddto.DeckPayload {
 
 func BuildCardPayload(card cardmodel.Card) carddto.CardPayload {
 	return carddto.CardPayload{
-		ID:          card.ID,
-		DeckID:      card.DeckID,
-		OwnerUserID: card.OwnerUserID,
-		CardType:    card.CardType,
-		Front:       card.Front,
-		Back:        card.Back,
-		SourceType:  card.SourceType,
-		SourceID:    card.SourceID,
-		Status:      card.Status,
-		CreatedAt:   card.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:   card.UpdatedAt.Format(time.RFC3339),
+		ID:             card.ID,
+		DeckID:         card.DeckID,
+		OwnerUserID:    card.OwnerUserID,
+		CardType:       card.CardType,
+		Front:          card.Front,
+		Back:           card.Back,
+		SourceType:     card.SourceType,
+		SourceID:       card.SourceID,
+		SourceMetadata: parseSourceMetadata(card.SourceMetadata),
+		Status:         card.Status,
+		CreatedAt:      card.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:      card.UpdatedAt.Format(time.RFC3339),
 	}
 }
 
