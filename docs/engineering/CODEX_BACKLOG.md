@@ -746,7 +746,7 @@
 
 ### 执行记录：SE-020（全部类型视图下的分组继续加载）
 - 执行日期：2026-07-15
-- 关联提交：`7c58c82`（RED）、待提交（GREEN）
+- 关联提交：`7c58c82`（RED）、`fac7924`（GREEN）
 - 本轮完成：
   - `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx` 新增 RED/GREEN 页面回归，锁定“全部类型”搜索视图里，当某个分组返回 `nextOffset` 时，也能直接显示“继续加载更多...”按钮并把新结果追加到对应分组。
   - `frontend-user/src/modules/search/SearchWorkspacePage.tsx` 已放开分组继续加载限制，不再要求必须先切到单一类型；同时搜索完成提示文案也已同步改为提示“可直接在对应分组继续加载”。
