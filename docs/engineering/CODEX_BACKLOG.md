@@ -1666,6 +1666,25 @@
 - 验证结论：
   - 上述命令已在 2026-07-08 全部通过，FE-010 / FE-020 / FE-030 / UI-04 从“实现完成待验证”收口为“实现与回归均完成”。
   - 仍未包含多分辨率截图采集与更大范围全量 E2E 扫描；这部分保留给后续更系统的视觉验收和 `WB-034` 图谱回归矩阵。
+
+### 执行记录：FE-010 / FE-020 / FE-030 / UI-04（2026-07-15 复核）
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 未提交
+- 本轮完成：
+  - 按 `CODEX_MASTER_PROMPT.md` 的接手核验要求，在当前工作区重新复跑 FE-010、FE-020、FE-030 与 UI-04 的最小验证命令组。
+  - 修正两处随界面演进发生的 Playwright 选择器漂移：用户端首页 `打开资料库` 入口现在允许同名 CTA 共存，后台治理导航已统一收口到 `data-admin-nav-item-view`。
+  - 确认这两处仅影响自动化选择器，不影响 FE-010 / FE-020 / FE-030 / UI-04 已完成的产品行为与布局边界。
+- 已执行验证：
+  - `npm --workspace frontend-user run typecheck`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm --workspace frontend-user run test -- src/app/layouts/layoutPolicy.test.ts src/app/layouts/AppShell.test.tsx src/design-system/primitives/DataState.test.tsx src/design-system/primitives/Drawer.test.tsx src/design-system/primitives/Inspector.test.tsx src/modules/graph/components/GraphWorkspaceCanvasChrome.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+  - `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - `npm run build:user`
+  - `npm run build:admin`
+  - `npx playwright test e2e/user-shell.spec.ts e2e/v1-graph-workspace.spec.ts e2e/v1-review-flow.spec.ts e2e/v1-admin-governance.spec.ts`
+- 当前结论：
+  - 上述命令已在当前环境全部通过，`FE-010`、`FE-020`、`FE-030` 与 `UI-04` 维持 `DONE` 状态，无需回退到 `VERIFY`。
+  - 本轮暴露并修复的是测试选择器与当前 UI 契约的轻微漂移；后续若继续调整首页 CTA 或后台导航语义，应优先同步 Playwright 稳定选择器，而不是让已收口工作包重新积累“伪失败”。
 ### 执行记录：FE-010（验证中）
 
 - 执行日期：2026-07-02

@@ -17,5 +17,5 @@ test("user app shell loads the public workspace", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByLabel("继续学习")).toBeVisible();
-  await expect(page.getByRole("link", { name: "打开资料库" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "打开资料库" }).first()).toBeVisible();
 });

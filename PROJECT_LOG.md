@@ -7412,3 +7412,27 @@
 
 - `ANKI-050` 现在不仅能把来源上下文带到 AI 工作台，还能让工作台真正吃掉这些上下文并把用户落到指定草稿/任务上，主学习闭环里的 `graph/review -> AI workspace` 又闭合了一段。
 - 这一轮仍只解决了“进入 AI 工作台时先看对对象”的问题；如果后续要继续补齐更统一的 `SourceLink` 抽象、更强的草稿来源预览，或把 AI 确认结果继续稳定回写到图谱/复习反馈，下一步更适合继续沿 `ANKI-050 / WB-033 / LC-010` 扩展同一条主线。
+## 2026-07-15 06:29:26 +08:00 | v1.1.0-alpha.247 | 复核 FE-010 / FE-020 / FE-030 / UI-04 当前环境验证
+### 任务内容
+
+- 按 `CODEX_MASTER_PROMPT.md` 的接手核验要求，优先复核已收口的前端工作包在当前环境下是否仍然成立，避免把历史 `DONE` 结论建立在过期验证上。
+- 目标不是开启新功能，而是确认多布局壳层、图谱 CanvasLayout、阅读/笔记/复习工作区体验和后台治理工作台这几条主路径在当前代码下依旧可通过最小验证闭环。
+### 实际变更
+
+- 复跑 FE-010 / FE-020 / FE-030 / UI-04 当时的最小验证命令组，包括前后台类型检查、Vitest、用户端/管理端构建，以及 `user shell`、`graph workspace`、`review flow`、`admin governance` 四条 Playwright smoke。
+- 更新 `e2e/user-shell.spec.ts`，把首页 `打开资料库` 断言改为兼容同名 CTA 共存的稳定选择器，避免当前 dashboard 在 section action 与 empty-state CTA 同时出现时触发 strict mode 误报。
+- 更新 `e2e/v1-admin-governance.spec.ts`，让后台治理导航点击对齐当前 `AdminNavItem` 的真实 `data-admin-nav-item-view` 钩子，而不再依赖已经退役的旧属性名。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，追加本轮复核记录，明确这次修的是测试钩子漂移，不是产品行为回退。
+### 验证结果
+
+- `npm --workspace frontend-user run typecheck`
+- `npm --workspace frontend-admin run typecheck`
+- `npm --workspace frontend-user run test -- src/app/layouts/layoutPolicy.test.ts src/app/layouts/AppShell.test.tsx src/design-system/primitives/DataState.test.tsx src/design-system/primitives/Drawer.test.tsx src/design-system/primitives/Inspector.test.tsx src/modules/graph/components/GraphWorkspaceCanvasChrome.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- `npm run build:user`
+- `npm run build:admin`
+- `npx playwright test e2e/user-shell.spec.ts e2e/v1-graph-workspace.spec.ts e2e/v1-review-flow.spec.ts e2e/v1-admin-governance.spec.ts`
+### 后续影响
+
+- 当前环境下 `FE-010 / FE-020 / FE-030 / UI-04` 的最小验证链条仍然可通过，说明这些已收口工作包没有因为近期主路径迭代而发生真实回退。
+- 这次暴露的问题属于自动化选择器随 UI 语义演进产生的轻微漂移；后续如果继续推进首页 CTA、后台导航或治理模块骨架，应该同步维护 Playwright 稳定钩子，避免把测试噪声误判成产品回退。
