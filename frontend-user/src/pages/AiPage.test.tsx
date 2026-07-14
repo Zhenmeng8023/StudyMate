@@ -145,9 +145,9 @@ function makeGraphDetail(overrides: Partial<GraphDetailPayload> = {}): GraphDeta
   };
 }
 
-function renderPage() {
+function renderPage(path = "/ai") {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[path]}>
       <AiPage session={session} />
     </MemoryRouter>
   );
@@ -330,5 +330,68 @@ describe("AiPage", () => {
       expect(combobox).toHaveClass("ds-select");
       expect(combobox).toHaveClass("select-field");
     });
+  });
+
+  it("prioritizes the requested ai draft from the query string", async () => {
+    listAiDraftsMock.mockReset();
+    listAiDraftsMock.mockResolvedValue([
+      makeCardDraft({
+        id: "draft-card-1",
+        sourceLabel: "Older draft source",
+        front: "Older draft front"
+      }),
+      makeCardDraft({
+        id: "draft-card-2",
+        sourceLabel: "Focused draft source",
+        front: "Focused draft front",
+        updatedAt: "2026-06-03T12:00:00Z"
+      })
+    ]);
+
+    const { container } = renderPage("/ai?draft=draft-card-2");
+
+    expect(await screen.findByText("已定位指定 AI 草稿，可直接确认或回看来源。")).toBeInTheDocument();
+    const draftCards = container.querySelectorAll(".ai-task-list .ai-task-card strong");
+    expect(draftCards.item(0)?.textContent).toContain("Focused draft source");
+  });
+
+  it("prioritizes the requested ai task from the query string", async () => {
+    listAiTasksMock.mockResolvedValue([
+      {
+        id: "task-1",
+        userId: "user-1",
+        taskType: "Older task",
+        sourceType: "note",
+        sourceId: "note-1",
+        status: "completed",
+        model: "local-draft-engine",
+        inputTokens: 12,
+        outputTokens: 24,
+        costUnits: 0,
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      },
+      {
+        id: "task-2",
+        userId: "user-1",
+        taskType: "Focused task",
+        sourceType: "material",
+        sourceId: "material-1",
+        status: "completed",
+        model: "local-draft-engine",
+        inputTokens: 12,
+        outputTokens: 24,
+        costUnits: 0,
+        createdAt: "2026-06-03T12:00:00Z",
+        updatedAt: "2026-06-03T12:00:00Z"
+      }
+    ]);
+
+    const { container } = renderPage("/ai?task=task-2");
+
+    expect(await screen.findByText("已定位指定 AI 任务，可先查看结果后再决定是否继续确认。")).toBeInTheDocument();
+    const taskSections = container.querySelectorAll(".ai-task-list");
+    const taskCards = taskSections.item(1)?.querySelectorAll(".ai-task-card strong") ?? [];
+    expect(taskCards.item(0)?.textContent).toContain("Focused task");
   });
 });
