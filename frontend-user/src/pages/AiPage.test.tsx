@@ -234,6 +234,24 @@ describe("AiPage", () => {
     });
   });
 
+  it("renders a precise reader backlink for annotation-based ai drafts", async () => {
+    listAiDraftsMock.mockReset();
+    listAiDraftsMock.mockResolvedValue([
+      makeCardDraft({
+        metadata: {
+          materialId: "material-7",
+          annotationId: "annotation-1",
+          page: 18
+        }
+      })
+    ]);
+
+    renderPage();
+
+    const backlink = await screen.findByRole("link", { name: "打开来源工作台" });
+    expect(backlink).toHaveAttribute("href", "/reader/material-7?page=18&annotation=annotation-1");
+  });
+
   it("renders the shared error state when the ai workspace bootstrap fails", async () => {
     listAiTasksMock.mockRejectedValueOnce(new Error("workspace bootstrap failed"));
 
