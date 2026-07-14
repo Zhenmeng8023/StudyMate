@@ -8,6 +8,7 @@ import {
   listAiDrafts,
   listAiTasks,
   reviewCard,
+  undoReviewCard,
   updateCardStatus
 } from "./client";
 import type { AuthSession } from "./types";
@@ -135,6 +136,55 @@ describe("review API clients", () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       rating: "good",
       elapsedMs: 1200
+    });
+  });
+
+  it("posts undo review payload with the previous schedule snapshot", async () => {
+    const fetchMock = mockApiResponse({
+      schedule: {
+        cardId: "card-1",
+        userId: "user-1",
+        dueAt: "2026-06-02T12:00:00Z",
+        intervalDays: 0,
+        easeFactor: 2.5,
+        repetitionCount: 0,
+        lapseCount: 0,
+        state: "new",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    });
+
+    await undoReviewCard(session, "card-1", {
+      reviewId: "review-1",
+      previousSchedule: {
+        cardId: "card-1",
+        userId: "user-1",
+        dueAt: "2026-06-02T12:00:00Z",
+        intervalDays: 0,
+        easeFactor: 2.5,
+        repetitionCount: 0,
+        lapseCount: 0,
+        state: "new",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    });
+
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toBe("/api/v1/cards/card-1/review/undo");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      reviewId: "review-1",
+      previousSchedule: {
+        cardId: "card-1",
+        userId: "user-1",
+        dueAt: "2026-06-02T12:00:00Z",
+        intervalDays: 0,
+        easeFactor: 2.5,
+        repetitionCount: 0,
+        lapseCount: 0,
+        state: "new",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
     });
   });
 

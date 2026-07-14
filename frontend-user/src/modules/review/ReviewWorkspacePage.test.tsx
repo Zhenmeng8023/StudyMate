@@ -9,6 +9,7 @@ import {
   listDeckCards,
   listDecks,
   reviewCard,
+  undoReviewCard,
   updateCardStatus
 } from "../../api/client";
 import type { AuthSession } from "../../api/client";
@@ -24,6 +25,7 @@ vi.mock("../../api/client", async () => {
     listDeckCards: vi.fn(),
     listDecks: vi.fn(),
     reviewCard: vi.fn(),
+    undoReviewCard: vi.fn(),
     updateCardStatus: vi.fn()
   };
 });
@@ -45,6 +47,7 @@ const listDecksMock = vi.mocked(listDecks);
 const listDeckCardsMock = vi.mocked(listDeckCards);
 const getTodayReviewQueueMock = vi.mocked(getTodayReviewQueue);
 const reviewCardMock = vi.mocked(reviewCard);
+const undoReviewCardMock = vi.mocked(undoReviewCard);
 const updateCardStatusMock = vi.mocked(updateCardStatus);
 
 function renderPage(path = "/review") {
@@ -67,6 +70,7 @@ describe("ReviewWorkspacePage", () => {
     listDeckCardsMock.mockReset();
     getTodayReviewQueueMock.mockReset();
     reviewCardMock.mockReset();
+    undoReviewCardMock.mockReset();
     updateCardStatusMock.mockReset();
 
     listDecksMock.mockResolvedValue([
@@ -138,6 +142,19 @@ describe("ReviewWorkspacePage", () => {
         updatedAt: "2026-06-02T12:00:00Z"
       }
     });
+    undoReviewCardMock.mockResolvedValue({
+      schedule: {
+        cardId: "card-1",
+        userId: "user-1",
+        dueAt: "2026-06-02T12:00:00Z",
+        intervalDays: 0,
+        easeFactor: 2.5,
+        repetitionCount: 0,
+        lapseCount: 0,
+        state: "new",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    });
     updateCardStatusMock.mockImplementation(async (_session, cardId, input) => ({
       id: cardId,
       deckId: "deck-1",
@@ -175,6 +192,36 @@ describe("ReviewWorkspacePage", () => {
     });
     expect(await screen.findByText(/已记录复习，下次/)).toBeInTheDocument();
     expect(screen.getByText("今天的队列已经清空")).toBeInTheDocument();
+  });
+
+  it("undoes the last submitted review and restores the card to today's queue", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await expect(screen.findByText("什么是图谱？")).resolves.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /显示答案/ }));
+    await user.click(screen.getByRole("button", { name: "Good 记得" }));
+
+    expect(await screen.findByText(/已记录复习，下次/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "撤销上一次评分" }));
+
+    await waitFor(() => {
+      expect(undoReviewCardMock).toHaveBeenCalledWith(
+        session,
+        "card-1",
+        expect.objectContaining({
+          reviewId: "review-1",
+          previousSchedule: expect.objectContaining({
+            cardId: "card-1",
+            state: "new"
+          })
+        })
+      );
+    });
+    expect(await screen.findByText("已撤销上一条评分，卡片已回到今日队列。")).toBeInTheDocument();
+    expect(screen.getByText("什么是图谱？")).toBeInTheDocument();
+    expect(screen.getByText("1 张仍待完成")).toBeInTheDocument();
   });
 
   it("skips the current card and moves it to the end of the in-memory queue", async () => {

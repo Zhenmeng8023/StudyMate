@@ -19,6 +19,7 @@ type fakeCardService struct {
 	createDeckReq carddto.CreateDeckRequest
 	reviewReq     carddto.ReviewCardRequest
 	statusReq     carddto.UpdateCardStatusRequest
+	undoReq       carddto.UndoReviewRequest
 }
 
 func (s *fakeCardService) ListDecks(ownerUserID string) ([]carddto.DeckPayload, error) {
@@ -96,6 +97,15 @@ func (s *fakeCardService) UpdateCardStatus(ownerUserID string, cardID string, re
 		Front:       "什么是图谱？",
 		Back:        "节点和关系。",
 		Status:      request.Status,
+	}, nil
+}
+
+func (s *fakeCardService) UndoReview(ownerUserID string, cardID string, request carddto.UndoReviewRequest) (*carddto.UndoReviewResultPayload, error) {
+	s.ownerID = ownerUserID
+	s.cardID = cardID
+	s.undoReq = request
+	return &carddto.UndoReviewResultPayload{
+		Schedule: request.PreviousSchedule,
 	}, nil
 }
 
@@ -194,5 +204,27 @@ func TestUpdateCardStatusWritesRequestedStatus(t *testing.T) {
 	}
 	if service.statusReq.Status != "suspended" {
 		t.Fatalf("unexpected status request: %#v", service.statusReq)
+	}
+}
+
+func TestUndoReviewWritesReviewIdAndPreviousSchedule(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCardService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.POST("/cards/:id/review/undo", withUser(handler.UndoReview))
+
+	body := bytes.NewBufferString(`{"reviewId":"review-1","previousSchedule":{"cardId":"card-1","userId":"user-1","dueAt":"2026-06-02T12:00:00Z","intervalDays":0,"easeFactor":2.5,"repetitionCount":0,"lapseCount":0,"state":"new","updatedAt":"2026-06-02T12:00:00Z"}}`)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/cards/card-1/review/undo", body))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if service.cardID != "card-1" {
+		t.Fatalf("expected card id card-1, got %q", service.cardID)
+	}
+	if service.undoReq.ReviewID != "review-1" || service.undoReq.PreviousSchedule.CardID != "card-1" {
+		t.Fatalf("unexpected undo request: %#v", service.undoReq)
 	}
 }
