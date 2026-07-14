@@ -75,7 +75,7 @@
 ### 执行记录：FE-041（管理端确认编排 controller helper 接线）
 
 - 执行日期：2026-07-15
-- 关联提交：待提交（GREEN）
+- 关联提交：`5ac4a54`（GREEN）
 - 实际变更：
   - 新增 `frontend-admin/src/views/adminWorkspaceConfirmController.ts`
   - 新增 `frontend-admin/src/views/adminWorkspaceConfirmController.test.ts`
