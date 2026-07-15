@@ -127,6 +127,22 @@ func (f *fakeGraphCards) BulkCreateCards(_ string, _ string, _ []carddto.CreateC
 	return nil, nil
 }
 
+func (f *fakeGraphCards) ReviewFeedback(_ string) (*carddto.ReviewFeedbackPayload, error) {
+	return nil, nil
+}
+
+type fakeGraphCardsWithFeedback struct {
+	reviewFeedback *carddto.ReviewFeedbackPayload
+}
+
+func (f *fakeGraphCardsWithFeedback) BulkCreateCards(_ string, _ string, _ []carddto.CreateCardRequest) ([]carddto.CardPayload, error) {
+	return nil, nil
+}
+
+func (f *fakeGraphCardsWithFeedback) ReviewFeedback(_ string) (*carddto.ReviewFeedbackPayload, error) {
+	return f.reviewFeedback, nil
+}
+
 type fakeGraphAITasks struct{}
 
 func (f *fakeGraphAITasks) RecordGraphCardDrafts(_ string, _ string, drafts []graphdto.GraphCardDraftPayload) ([]graphdto.GraphCardDraftPayload, error) {
@@ -264,6 +280,93 @@ func TestBatchSaveRejectsStaleDocumentVersionInsteadOfSilentlyOverwriting(t *tes
 	}
 	if repo.savedGraph != nil || repo.createdVersion != nil || documents.upsertedCurrent != nil {
 		t.Fatalf("stale save must not persist graph lifecycle artifacts: saved=%#v version=%#v current=%#v", repo.savedGraph, repo.createdVersion, documents.upsertedCurrent)
+	}
+}
+
+func TestGetGraphEnrichesSourceNodeMetadataWithReviewFeedback(t *testing.T) {
+	repo := &fakeGraphRepository{
+		graph: &graphmodel.Graph{
+			ID:             "graph-1",
+			OwnerUserID:    "user-1",
+			Title:          "Mastery graph",
+			Visibility:     "private",
+			Status:         "active",
+			GraphType:      "knowledge",
+			Mode:           "free",
+			CurrentVersion: 3,
+		},
+	}
+	documents := &fakeGraphDocuments{
+		currentDocument: &graphdto.GraphDocumentPayload{
+			GraphID:       "graph-1",
+			Version:       3,
+			SchemaVersion: 1,
+			Viewport:      graphdto.GraphViewportPayload{X: 0, Y: 0, Zoom: 1},
+			Nodes: []graphdto.GraphNodePayload{
+				{
+					ID:     "node-1",
+					Type:   "material",
+					Title:  "Source node",
+					Width:  240,
+					Height: 120,
+					Source: &graphdto.GraphNodeSourcePayload{Type: "material", ID: "material-1"},
+					Metadata: map[string]any{
+						"detail": "preserved",
+					},
+				},
+				{
+					ID:       "node-2",
+					Type:     "concept",
+					Title:    "Free node",
+					Width:    220,
+					Height:   120,
+					Metadata: map[string]any{"detail": "free"},
+				},
+			},
+			Edges:  []graphdto.GraphEdgePayload{},
+			Groups: []graphdto.GraphGroupPayload{},
+		},
+	}
+	cards := &fakeGraphCardsWithFeedback{
+		reviewFeedback: &carddto.ReviewFeedbackPayload{
+			SourceSummaries: []carddto.ReviewFeedbackSourcePayload{
+				{
+					SourceType:        "material",
+					SourceID:          "material-1",
+					TotalCardCount:    3,
+					ReviewCardCount:   2,
+					MasteredCardCount: 1,
+					MasteryLevel:      "building",
+					MasteryScore:      33,
+					WeakCardCount:     2,
+					DueCount:          1,
+					LearningCount:     2,
+					MaxLapseCount:     3,
+					SampleCardFronts:  []string{"Card A"},
+				},
+			},
+		},
+	}
+	service := NewService(repo, documents, &fakeGraphAuditLogs{}, cards, &fakeGraphAITasks{})
+
+	result, err := service.GetGraph("user-1", "graph-1")
+	if err != nil {
+		t.Fatalf("GetGraph returned error: %v", err)
+	}
+
+	sourceNode := result.Document.Nodes[0]
+	if sourceNode.Metadata["detail"] != "preserved" {
+		t.Fatalf("expected existing metadata to survive enrichment, got %#v", sourceNode.Metadata)
+	}
+	reviewFeedback, ok := sourceNode.Metadata["reviewFeedback"].(carddto.ReviewFeedbackSourcePayload)
+	if !ok {
+		t.Fatalf("expected reviewFeedback summary on source node, got %#v", sourceNode.Metadata["reviewFeedback"])
+	}
+	if reviewFeedback.MasteryScore != 33 || reviewFeedback.WeakCardCount != 2 {
+		t.Fatalf("unexpected review feedback summary: %#v", reviewFeedback)
+	}
+	if _, exists := result.Document.Nodes[1].Metadata["reviewFeedback"]; exists {
+		t.Fatalf("expected free node to remain unenriched, got %#v", result.Document.Nodes[1].Metadata)
 	}
 }
 
