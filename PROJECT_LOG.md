@@ -1,3 +1,26 @@
+## 2026-07-15 20:08:20 +08:00 | v1.1.0-alpha.283 | 推进 FE-041 管理端 workspace page feature 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041 / ADM-010`，这一轮不新增治理功能，而是把 `AdminWorkspaceView.vue` 里剩余的大段 state/feature/confirm/interaction/surface 编排整体从页面本体抽离出去。
+- 目标是新增一个统一的 `workspace page feature`，让后台工作台页面最终回到纯 route container 角色。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspacePageFeature.ts`，把 state adapter、feature adapter、confirm adapter、interaction adapter、surface adapter 以及 request 边界统一聚合到同一出口。
+- 新增 `frontend-admin/src/views/adminWorkspacePageFeature.test.ts`，锁定这五层编排的接线顺序，并验证 reset controller 仍然绑定到 `confirm.resetAll`。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，移除页面层里原先整段 adapter 组装与本地 `get/post` 边界，改为只创建 `workspacePageFeature`、持有 runtime 清理句柄并把 surface 透传给 page surface。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 workspace page feature 已接线”这一层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspacePageFeature.test.ts src/views/AdminWorkspacePageSurface.test.ts src/views/modules/AdminWorkspaceModuleHost.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `npx playwright test e2e/v1-admin-governance.spec.ts`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从 page surface 推进到 page feature，后台工作台页面本体已经基本只剩 route 容器职责，`AdminWorkspaceView.vue` 进一步降到 34 行。
+- 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估真正的 Router 页面拆分或 route-level feature 边界，而不是把 adapter 编排重新写回 `AdminWorkspaceView.vue`。
 ## 2026-07-15 19:58:10 +08:00 | v1.1.0-alpha.282 | 推进 FE-041 管理端 workspace page surface 接线
 ### 任务内容
 
