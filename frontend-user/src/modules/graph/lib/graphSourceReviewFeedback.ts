@@ -1,6 +1,11 @@
 import type { GraphNodePayload, ReviewFeedbackSourcePayload } from "../../../api/client";
 
 export type GraphSourceReviewFeedback = {
+  totalCardCount: number;
+  reviewCardCount: number;
+  masteredCardCount: number;
+  masteryLevel: string;
+  masteryScore: number;
   weakCardCount: number;
   dueCount: number;
   learningCount: number;
@@ -21,11 +26,16 @@ export function resolveGraphSourceReviewFeedback(
   const matched = summaries.find(
     (summary) => normalizeSourceType(summary.sourceType) === sourceType && summary.sourceId?.trim() === sourceId
   );
-  if (!matched || matched.weakCardCount <= 0) {
+  if (!matched || (matched.totalCardCount ?? 0) <= 0) {
     return null;
   }
 
   return {
+    totalCardCount: matched.totalCardCount,
+    reviewCardCount: matched.reviewCardCount,
+    masteredCardCount: matched.masteredCardCount,
+    masteryLevel: matched.masteryLevel ?? "building",
+    masteryScore: matched.masteryScore,
     weakCardCount: matched.weakCardCount,
     dueCount: matched.dueCount,
     learningCount: matched.learningCount,

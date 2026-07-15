@@ -95,13 +95,32 @@ func (s *fakeCardService) ReviewFeedback(ownerUserID string) (*carddto.ReviewFee
 			DueAt:           "2026-06-02T12:00:00Z",
 		}},
 		WeakSources: []carddto.ReviewFeedbackSourcePayload{{
-			SourceType:      "graph",
-			SourceID:        "node-1",
-			WeakCardCount:   2,
-			DueCount:        1,
-			LearningCount:   1,
-			MaxLapseCount:   2,
-			SampleCardFronts: []string{"什么是图谱？"},
+			SourceType:        "graph",
+			SourceID:          "node-1",
+			TotalCardCount:    3,
+			ReviewCardCount:   1,
+			MasteredCardCount: 1,
+			MasteryLevel:      "building",
+			MasteryScore:      33,
+			WeakCardCount:     2,
+			DueCount:          1,
+			LearningCount:     1,
+			MaxLapseCount:     2,
+			SampleCardFronts:  []string{"什么是图谱？"},
+		}},
+		SourceSummaries: []carddto.ReviewFeedbackSourcePayload{{
+			SourceType:        "graph",
+			SourceID:          "node-1",
+			TotalCardCount:    3,
+			ReviewCardCount:   1,
+			MasteredCardCount: 1,
+			MasteryLevel:      "building",
+			MasteryScore:      33,
+			WeakCardCount:     2,
+			DueCount:          1,
+			LearningCount:     1,
+			MaxLapseCount:     2,
+			SampleCardFronts:  []string{"什么是图谱？"},
 		}},
 	}, nil
 }
@@ -268,6 +287,9 @@ func TestReviewFeedbackReturnsWeakCards(t *testing.T) {
 	}
 	if len(payload.Data.WeakSources) != 1 || payload.Data.WeakSources[0].SourceType != "graph" || payload.Data.WeakSources[0].SourceID != "node-1" {
 		t.Fatalf("unexpected weak source payload: %#v", payload.Data.WeakSources)
+	}
+	if len(payload.Data.SourceSummaries) != 1 || payload.Data.SourceSummaries[0].MasteryLevel != "building" || payload.Data.SourceSummaries[0].MasteryScore != 33 {
+		t.Fatalf("unexpected source summaries payload: %#v", payload.Data.SourceSummaries)
 	}
 }
 

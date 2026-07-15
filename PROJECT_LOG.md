@@ -1,3 +1,34 @@
+## 2026-07-15 21:16:04 +08:00 | v1.1.0-alpha.287 | 推进 WB-033 / LC-010 图谱节点来源级 mastery 摘要起步
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-033 / LC-010`，这一轮不直接上真正的节点熟练度持久字段，而是先把来源级 mastery 摘要通过现有复习反馈链回写到图谱节点检查器。
+- 目标是让图谱节点不仅能看到“待回补卡片”，还能看到该来源下的掌握度、稳定复习进度和最高遗忘次数，为后续更持久的 mastery 回写打真实页面落点。
+### 实际变更
+
+- 更新 `backend/internal/modules/card/dto/card.go`，扩展 `ReviewFeedbackSourcePayload` 与 `ReviewFeedbackPayload`，新增 `sourceSummaries`、`totalCardCount`、`reviewCardCount`、`masteredCardCount`、`masteryLevel` 和 `masteryScore`。
+- 更新 `backend/internal/modules/card/repository/repository.go`，新增 `ListSourceCards(userID)`，读取全部带来源的活跃卡片与其 schedule，作为来源级 mastery 聚合的数据底座。
+- 更新 `backend/internal/modules/card/service/review_feedback.go` 与 `backend/internal/modules/card/service/service.go`，基于全部来源卡片构建 `sourceSummaries`，保留 `weakSources` 兼容出口，并用最小规则区分 `weak / building / solid` 三档 mastery。
+- 更新 `backend/internal/modules/card/service/list_cards_filters_test.go`，锁定稳定来源也会进入 `sourceSummaries`，且会带出 `solid / 100%` 这类 mastery 元数据。
+- 更新 `frontend-user/src/api/types.ts`、`frontend-user/src/modules/graph/lib/graphSourceReviewFeedback.ts` 与 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让图谱侧优先消费 `sourceSummaries`，不再只盯 `weakSources`。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceSelectionPanel.tsx` 与对应测试，让节点检查器直接显示“掌握度 33% · 巩固中”“1 / 3 张已进入稳定复习”这类来源级 mastery 文案。
+- 新增 `e2e/v1-graph-workspace.spec.ts` 浏览器 smoke，验证图谱工作区选中来源节点后会在检查器里显示 mastery 摘要卡片。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-033` 推进到 `IN_PROGRESS`，并记录这次来源级 mastery 摘要起步。
+### 验证结果
+
+- RED：`go test ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceSelectionPanel.test.tsx`
+- GREEN：`go test ./internal/modules/card/service`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceSelectionPanel.test.tsx`
+- `go test ./internal/modules/card/...`
+- `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx src/modules/graph/components/GraphWorkspaceSelectionPanel.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "source mastery feedback"`
+### 后续影响
+
+- `WB-033 / LC-010` 现在已经从“图谱节点能看到弱项提醒”继续推进到“图谱节点也能看到来源级 mastery 摘要”，学习反馈开始具备更接近熟练度回写的雏形。
+- 这一轮仍然没有把 mastery 持久写回图谱文档或后端节点字段；如果继续推进，更适合优先补“复习完成后即时刷新图谱反馈”或“节点/来源级 mastery 持久化出口”，而不是回到新增零散入口。
+
 ## 2026-07-15 21:01:56 +08:00 | v1.1.0-alpha.286 | 推进 LC-010 / ANKI-060 图谱节点来源级精准回补
 ### 任务内容
 

@@ -27,6 +27,17 @@ import type { GraphSourceBacklink } from "../lib/graphSourceBacklinks";
 import type { GraphSourceReviewFeedback } from "../lib/graphSourceReviewFeedback";
 import { buildNodeTitle, getNodeSourceLabel, type SourceOrganizerMode } from "../lib/workspaceControllerHelpers";
 
+function formatMasteryLevelLabel(level: string) {
+  switch (level) {
+    case "weak":
+      return "待回补";
+    case "solid":
+      return "已掌握";
+    default:
+      return "巩固中";
+  }
+}
+
 export function GraphWorkspaceSelectionPanel(props: {
   batchEmphasis: GraphNodeEmphasis;
   batchSizePreset: GraphNodeSizePreset;
@@ -404,8 +415,16 @@ function GraphSingleNodePanel(props: {
       {props.selectedNodeReviewFeedback ? (
         <article className="graph-meta-card">
           <strong>复习反馈</strong>
-          <p>{`关联 ${props.selectedNodeReviewFeedback.weakCardCount} 张待回补卡片，其中 ${props.selectedNodeReviewFeedback.dueCount} 张已经到期。`}</p>
+          <p>
+            {props.selectedNodeReviewFeedback.weakCardCount > 0
+              ? `关联 ${props.selectedNodeReviewFeedback.weakCardCount} 张待回补卡片，其中 ${props.selectedNodeReviewFeedback.dueCount} 张已经到期。`
+              : props.selectedNodeReviewFeedback.masteredCardCount === props.selectedNodeReviewFeedback.totalCardCount
+                ? `当前来源下 ${props.selectedNodeReviewFeedback.totalCardCount} 张卡片都已进入稳定复习。`
+                : `当前来源下 ${props.selectedNodeReviewFeedback.totalCardCount} 张卡片中，已有 ${props.selectedNodeReviewFeedback.masteredCardCount} 张进入稳定复习。`}
+          </p>
           <div className="graph-source-summary-list">
+            <span className="graph-source-summary-pill">{`掌握度 ${props.selectedNodeReviewFeedback.masteryScore}% · ${formatMasteryLevelLabel(props.selectedNodeReviewFeedback.masteryLevel)}`}</span>
+            <span className="graph-source-summary-pill">{`${props.selectedNodeReviewFeedback.masteredCardCount} / ${props.selectedNodeReviewFeedback.totalCardCount} 张已进入稳定复习`}</span>
             <span className="graph-source-summary-pill">{`${props.selectedNodeReviewFeedback.learningCount} 张仍在学习中`}</span>
             <span className="graph-source-summary-pill">{`最高遗忘 ${props.selectedNodeReviewFeedback.maxLapseCount} 次`}</span>
           </div>

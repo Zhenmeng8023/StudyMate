@@ -240,9 +240,9 @@ func TestReviewFeedbackSummarizesWeakCardsAndLearningCounts(t *testing.T) {
 	}
 
 	stableCard, err := service.CreateCard("user-1", deck.ID, carddto.CreateCardRequest{
-		CardType: "basic",
-		Front:    "Stable review card",
-		Back:     "Already remembered",
+		CardType:   "basic",
+		Front:      "Stable review card",
+		Back:       "Already remembered",
 		SourceType: "graph",
 		SourceID:   "node-2",
 	})

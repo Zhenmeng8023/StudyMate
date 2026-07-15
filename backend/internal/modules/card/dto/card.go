@@ -136,22 +136,28 @@ type ReviewFeedbackCardPayload struct {
 }
 
 type ReviewFeedbackSourcePayload struct {
-	SourceType       string         `json:"sourceType,omitempty"`
-	SourceID         string         `json:"sourceId,omitempty"`
-	SourceMetadata   map[string]any `json:"sourceMetadata,omitempty"`
-	WeakCardCount    int            `json:"weakCardCount"`
-	DueCount         int            `json:"dueCount"`
-	LearningCount    int            `json:"learningCount"`
-	MaxLapseCount    int            `json:"maxLapseCount"`
-	SampleCardFronts []string       `json:"sampleCardFronts,omitempty"`
+	SourceType        string         `json:"sourceType,omitempty"`
+	SourceID          string         `json:"sourceId,omitempty"`
+	SourceMetadata    map[string]any `json:"sourceMetadata,omitempty"`
+	TotalCardCount    int            `json:"totalCardCount"`
+	ReviewCardCount   int            `json:"reviewCardCount"`
+	MasteredCardCount int            `json:"masteredCardCount"`
+	MasteryLevel      string         `json:"masteryLevel,omitempty"`
+	MasteryScore      int            `json:"masteryScore"`
+	WeakCardCount     int            `json:"weakCardCount"`
+	DueCount          int            `json:"dueCount"`
+	LearningCount     int            `json:"learningCount"`
+	MaxLapseCount     int            `json:"maxLapseCount"`
+	SampleCardFronts  []string       `json:"sampleCardFronts,omitempty"`
 }
 
 type ReviewFeedbackPayload struct {
-	DueCount      int64                         `json:"dueCount"`
-	LearningCount int64                         `json:"learningCount"`
-	WeakCardCount int64                         `json:"weakCardCount"`
-	WeakCards     []ReviewFeedbackCardPayload   `json:"weakCards"`
-	WeakSources   []ReviewFeedbackSourcePayload `json:"weakSources,omitempty"`
+	DueCount        int64                         `json:"dueCount"`
+	LearningCount   int64                         `json:"learningCount"`
+	WeakCardCount   int64                         `json:"weakCardCount"`
+	WeakCards       []ReviewFeedbackCardPayload   `json:"weakCards"`
+	SourceSummaries []ReviewFeedbackSourcePayload `json:"sourceSummaries,omitempty"`
+	WeakSources     []ReviewFeedbackSourcePayload `json:"weakSources,omitempty"`
 }
 
 type DeckExportPayload struct {

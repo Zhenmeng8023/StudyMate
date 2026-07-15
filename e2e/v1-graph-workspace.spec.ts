@@ -416,6 +416,108 @@ test("graph workspace previews source swimlanes and reports export statuses", as
   await expect(page.getByText("已导出 PNG 图谱")).toBeVisible();
 });
 
+test("graph workspace shows source mastery feedback in the inspector", async ({ page }) => {
+  const document = buildLayoutExportSmokeDocument();
+  const detail = buildGraphDetail({
+    currentVersion: 5,
+    description: "来源级 mastery 回写 smoke",
+    document,
+    edgeCount: 1,
+    nodeCount: 3,
+    title: "来源反馈图谱",
+    updatedAt: "2026-07-15T13:00:00Z"
+  });
+
+  await page.addInitScript((value) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(value));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname === "/api/v1/auth/me") {
+      await route.fulfill({ contentType: "application/json", body: success(session.user) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([detail]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/review/feedback") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          dueCount: 1,
+          learningCount: 1,
+          weakCardCount: 1,
+          weakCards: [],
+          sourceSummaries: [
+            {
+              sourceType: "material",
+              sourceId: "material-1",
+              totalCardCount: 3,
+              reviewCardCount: 1,
+              masteredCardCount: 1,
+              masteryLevel: "building",
+              masteryScore: 33,
+              weakCardCount: 1,
+              dueCount: 1,
+              learningCount: 1,
+              maxLapseCount: 2,
+              sampleCardFronts: ["资料卡片 A"]
+            }
+          ],
+          weakSources: [
+            {
+              sourceType: "material",
+              sourceId: "material-1",
+              totalCardCount: 3,
+              reviewCardCount: 1,
+              masteredCardCount: 1,
+              masteryLevel: "building",
+              masteryScore: 33,
+              weakCardCount: 1,
+              dueCount: 1,
+              learningCount: 1,
+              maxLapseCount: 2,
+              sampleCardFronts: ["资料卡片 A"]
+            }
+          ]
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+  await page.getByLabel("打开检查器").click();
+  await page.locator(".graph-node", { hasText: "布局节点 1" }).click();
+
+  await expect(page.getByText("复习反馈")).toBeVisible();
+  await expect(page.getByText("掌握度 33% · 巩固中")).toBeVisible();
+  await expect(page.getByText("1 / 3 张已进入稳定复习")).toBeVisible();
+  await expect(page.getByRole("button", { name: "打开复习工作台" })).toBeVisible();
+});
+
 test("graph workspace keeps the current graph when opening a forbidden graph fails", async ({ page }) => {
   const currentDetail = buildGraphDetail({
     currentVersion: 4,

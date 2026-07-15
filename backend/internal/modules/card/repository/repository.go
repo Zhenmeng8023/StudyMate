@@ -483,6 +483,105 @@ func (r *Repository) ListWeakCards(userID string, limit int) ([]ReviewFeedbackRo
 	return result, nil
 }
 
+func (r *Repository) ListSourceCards(userID string) ([]ReviewFeedbackRow, error) {
+	type sourceFeedbackJoin struct {
+		CardID          string
+		DeckID          string
+		DeckTitle       string
+		OwnerUserID     string
+		CardType        string
+		Front           string
+		Back            string
+		Tags            string
+		SourceType      string
+		SourceID        string
+		SourceMetadata  string
+		Status          string
+		CardCreatedAt   time.Time
+		CardUpdatedAt   time.Time
+		DueAt           time.Time
+		IntervalDays    int
+		EaseFactor      float64
+		RepetitionCount int
+		LapseCount      int
+		State           string
+		ScheduleUpdated time.Time
+	}
+
+	query := r.db.Table("card_schedules").
+		Select(`
+			card_schedules.card_id,
+			card_schedules.user_id as owner_user_id,
+			card_schedules.due_at,
+			card_schedules.interval_days,
+			card_schedules.ease_factor,
+			card_schedules.repetition_count,
+			card_schedules.lapse_count,
+			card_schedules.state,
+			card_schedules.updated_at as schedule_updated,
+			cards.deck_id,
+			cards.owner_user_id,
+			cards.card_type,
+			cards.front,
+			cards.back,
+			cards.tags,
+			cards.source_type,
+			cards.source_id,
+			cards.source_metadata,
+			cards.status,
+			cards.created_at as card_created_at,
+			cards.updated_at as card_updated_at,
+			decks.title as deck_title
+		`).
+		Joins("JOIN cards ON cards.id = card_schedules.card_id").
+		Joins("JOIN decks ON decks.id = cards.deck_id").
+		Where("card_schedules.user_id = ? AND cards.status = ? AND cards.source_type <> '' AND cards.source_id <> ''", userID, "active").
+		Order("cards.updated_at desc, card_schedules.updated_at desc")
+
+	var rows []sourceFeedbackJoin
+	if err := query.Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	result := make([]ReviewFeedbackRow, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, ReviewFeedbackRow{
+			Card: cardmodel.Card{
+				ID:             row.CardID,
+				DeckID:         row.DeckID,
+				OwnerUserID:    row.OwnerUserID,
+				CardType:       row.CardType,
+				Front:          row.Front,
+				Back:           row.Back,
+				Tags:           row.Tags,
+				SourceType:     row.SourceType,
+				SourceID:       row.SourceID,
+				SourceMetadata: row.SourceMetadata,
+				Status:         row.Status,
+				CreatedAt:      row.CardCreatedAt,
+				UpdatedAt:      row.CardUpdatedAt,
+			},
+			Deck: cardmodel.Deck{
+				ID:    row.DeckID,
+				Title: row.DeckTitle,
+			},
+			Schedule: cardmodel.CardSchedule{
+				CardID:          row.CardID,
+				UserID:          row.OwnerUserID,
+				DueAt:           row.DueAt,
+				IntervalDays:    row.IntervalDays,
+				EaseFactor:      row.EaseFactor,
+				RepetitionCount: row.RepetitionCount,
+				LapseCount:      row.LapseCount,
+				State:           row.State,
+				UpdatedAt:       row.ScheduleUpdated,
+			},
+		})
+	}
+
+	return result, nil
+}
+
 func BuildDeckPayload(deck cardmodel.Deck) carddto.DeckPayload {
 	return carddto.DeckPayload{
 		ID:          deck.ID,

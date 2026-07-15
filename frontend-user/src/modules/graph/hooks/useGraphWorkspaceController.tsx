@@ -327,8 +327,11 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const selectedEdge = selectedEdgeId ? document?.edges.find((edge) => edge.id === selectedEdgeId) ?? null : null;
   const selectedNodeSourceBacklink = selectedNode ? buildGraphSourceBacklink(selectedNode) : null;
   const selectedNodeReviewFeedback = useMemo(
-    () => (selectedNode ? resolveGraphSourceReviewFeedback(selectedNode, reviewFeedback?.weakSources ?? []) : null),
-    [reviewFeedback?.weakSources, selectedNode]
+    () =>
+      selectedNode
+        ? resolveGraphSourceReviewFeedback(selectedNode, reviewFeedback?.sourceSummaries ?? reviewFeedback?.weakSources ?? [])
+        : null,
+    [reviewFeedback?.sourceSummaries, reviewFeedback?.weakSources, selectedNode]
   );
   const contextMenuNode = contextMenu?.nodeId ? nodeMap.get(contextMenu.nodeId) ?? null : null;
   const contextMenuSourceBacklink = contextMenuNode ? buildGraphSourceBacklink(contextMenuNode) : null;

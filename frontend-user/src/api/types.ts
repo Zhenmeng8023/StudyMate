@@ -365,6 +365,11 @@ export interface ReviewFeedbackSourcePayload {
   sourceType?: string;
   sourceId?: string;
   sourceMetadata?: Record<string, unknown>;
+  totalCardCount: number;
+  reviewCardCount: number;
+  masteredCardCount: number;
+  masteryLevel?: "weak" | "building" | "solid" | string;
+  masteryScore: number;
   weakCardCount: number;
   dueCount: number;
   learningCount: number;
@@ -377,6 +382,7 @@ export interface ReviewFeedbackPayload {
   learningCount: number;
   weakCardCount: number;
   weakCards: ReviewFeedbackCardPayload[];
+  sourceSummaries?: ReviewFeedbackSourcePayload[];
   weakSources?: ReviewFeedbackSourcePayload[];
 }
 

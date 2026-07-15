@@ -261,7 +261,7 @@ func (s *Service) ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPay
 	if err != nil {
 		return nil, apperrors.Internal("读取复习反馈卡片失败")
 	}
-	allWeakRows, err := s.repository.ListWeakCards(ownerUserID, 0)
+	sourceRows, err := s.repository.ListSourceCards(ownerUserID)
 	if err != nil {
 		return nil, apperrors.Internal("读取复习反馈来源摘要失败")
 	}
@@ -283,12 +283,15 @@ func (s *Service) ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPay
 		})
 	}
 
+	sourceSummaries := buildSourceSummaries(sourceRows, now)
+
 	return &carddto.ReviewFeedbackPayload{
-		DueCount:      dueCount,
-		LearningCount: learningCount,
-		WeakCardCount: weakCardCount,
-		WeakCards:     weakCards,
-		WeakSources:   buildWeakSourceSummaries(allWeakRows, now),
+		DueCount:        dueCount,
+		LearningCount:   learningCount,
+		WeakCardCount:   weakCardCount,
+		WeakCards:       weakCards,
+		SourceSummaries: sourceSummaries,
+		WeakSources:     buildWeakSourceSummaries(sourceSummaries),
 	}, nil
 }
 
