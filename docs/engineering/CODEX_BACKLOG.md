@@ -85,6 +85,30 @@
 | WB-053 | TODO | Go 代码分析图 MVP | WB-051 | analysis jobs/graph | 路由图、ERD、模块依赖图至少一项可生成。 |
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
+### 执行记录：FE-041（管理端 interaction adapter 接线）
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 待提交
+- 实际变更：
+  - 新增 `frontend-admin/src/views/adminWorkspaceInteractionAdapter.ts`
+  - 新增 `frontend-admin/src/views/adminWorkspaceInteractionAdapter.test.ts`
+  - 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 后台工作台现已新增共享 `adminWorkspaceInteractionAdapter`，把确认弹层 `cancel / confirm` 分发、`switchView(...)` 和 `selectRecord(...)` 这组页面交互壳层动作继续收口到统一出口，而不是继续留在 `AdminWorkspaceView.vue` 里各自手工装配。
+  - `AdminWorkspaceView.vue` 现在通过 `workspaceInteractions` 统一驱动确认栈、壳层导航和治理详情选中记录，页面层只保留请求边界与响应式状态拼装，文件当前降到 622 行。
+  - 新增 interaction adapter 单测，锁定“loading 时 cancel confirm 不会误触发 reset”“switchView 会复用共享 view switch plan + runner”“selectRecord 会透传到选中记录状态”三组交互契约。
+- 已执行验证：
+  - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceInteractionAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+  - `npm run verify:docs`
+  - `npx playwright test e2e/v1-admin-governance.spec.ts`
+  - `git diff --check`
+- 后续影响：
+  - `FE-041` 现在继续从共享 workspace feature adapter 推进到更细一层的 interaction adapter，后台工作台页面壳层里剩余的确认栈与导航交互编排进一步变薄。
+  - 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估确认弹层元数据、reset 协调和模块装配是否继续进入更稳定的 feature 边界，而不是重新把这些 UI 交互分支写回 `AdminWorkspaceView.vue`。
+
 ### 执行记录：FE-041（管理端 workspace feature adapter 接线）
 - 执行日期：2026-07-15
 - 执行分支/提交：`master` / 待提交

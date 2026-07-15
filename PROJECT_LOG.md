@@ -1,3 +1,27 @@
+## 2026-07-15 14:05:00 +08:00 | v1.1.0-alpha.275 | 推进 FE-041 管理端 interaction adapter 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041`，这一轮不新增治理功能，而是继续收口后台工作台里 feature adapter 接线后仍停留在页面层的交互壳层动作。
+- 目标是把确认弹层 `cancel / confirm` 分发、`switchView(...)` 和 `selectRecord(...)` 这组页面交互统一收口成一个更稳定的 interaction adapter，避免这些 UI 交互继续直接分散在 `AdminWorkspaceView.vue`。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceInteractionAdapter.ts`，提供 `createAdminWorkspaceInteractionAdapter(...)` 出口，统一组合 confirm dialog handler、view switch plan 与 selected record 写入。
+- 新增并补齐 `frontend-admin/src/views/adminWorkspaceInteractionAdapter.test.ts`，锁定 loading 中取消确认不会误触发 reset、确认提交会按 key 分发，以及 `switchView / selectRecord` 会透传到共享 runner 与状态写入。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，改为通过 `workspaceInteractions` 消费确认弹层 cancel/confirm、壳层导航切换和治理记录选中；并删除页面层原有的 `switchView(...)`、`selectRecord(...)` 与两条 confirm handler 函数里的手工编排。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 interaction adapter 已接线”这一层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceInteractionAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `npx playwright test e2e/v1-admin-governance.spec.ts`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在不只是在拆 `runtime / action / read / mutation / feature` 这几组装配，后台工作台里围绕确认栈与导航切换的页面交互也开始进入共享 interaction adapter，`AdminWorkspaceView.vue` 进一步回到响应式状态拼装与展示角色。
+- 这一轮仍然只收口 UI 交互壳层；如果继续推进 `FE-041 / ADM-010`，更适合优先评估 confirm metadata、reset 协调和模块装配是否继续纳入更稳定的工作台 feature 边界，而不是立刻切去新的治理业务。
+
 ## 2026-07-15 13:45:00 +08:00 | v1.1.0-alpha.274 | 推进 FE-041 管理端 workspace feature adapter 接线
 ### 任务内容
 

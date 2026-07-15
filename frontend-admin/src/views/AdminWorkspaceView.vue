@@ -18,9 +18,10 @@ import AdminLoginPanel from "../components/admin/AdminLoginPanel.vue";
 import AdminShellFrame from "../components/admin/AdminShellFrame.vue";
 import { getGovernanceColumns, type GovernanceRecord } from "../components/admin/governanceRecord";
 import type { AdminRouteKey } from "../router";
-import { runAdminConfirmDialogHandler, type ConfirmDialogKey } from "./adminConfirmDialogState";
+import { type ConfirmDialogKey } from "./adminConfirmDialogState";
 import { createAdminWorkspaceConfirmController } from "./adminWorkspaceConfirmController";
 import { createAdminWorkspaceResetController } from "./adminWorkspaceResetController";
+import { createAdminWorkspaceInteractionAdapter } from "./adminWorkspaceInteractionAdapter";
 import { buildAdminWorkspaceLoginPanelEvents } from "./adminWorkspaceLoginPanelEvents";
 import { buildAdminWorkspaceLoginPanelProps } from "./adminWorkspaceLoginPanelProps";
 import { buildAdminWorkspaceModuleEvents } from "./adminWorkspaceModuleEvents";
@@ -46,8 +47,6 @@ import {
   type AdminWorkspaceModerationItem
 } from "./adminWorkspaceDerivedData";
 import { resolveAdminWorkspaceLocationView, syncAdminWorkspaceLocation } from "./adminWorkspaceLocation";
-import { buildAdminWorkspaceViewSwitchPlan } from "./adminWorkspaceLifecycle";
-import { runAdminWorkspaceViewSwitch } from "./adminWorkspaceViewSwitch";
 import {
   getAdminGovernanceLoadedNotice,
   getAdminLoginSuccessNotice,
@@ -343,6 +342,22 @@ const confirmController = createAdminWorkspaceConfirmController({
   }
 });
 const confirmDialogs = computed(() => confirmController.buildDialogs());
+const workspaceInteractions = createAdminWorkspaceInteractionAdapter({
+  clearWorkspaceState,
+  loadActiveView: workspaceRead.loadActiveView,
+  readLoading: () => loading.value,
+  resetConfirmHandlers: confirmController.resetHandlers,
+  setActiveView: (view) => {
+    activeView.value = view;
+  },
+  setSelectedRecord: (record) => {
+    selectedRecord.value = record;
+  },
+  submitConfirmHandlers: confirmController.submitHandlers,
+  syncLocation: (view, syncMode) => {
+    syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
+  }
+});
 
 const navItems = computed<AdminNavItem[]>(() => buildAdminNavItems(moderationItems.value.length));
 const navGroups = computed(() => groupAdminNavItems(navItems.value));
@@ -398,7 +413,7 @@ const shellEvents = computed(() =>
   buildAdminWorkspaceShellEvents({
     logout: () => workspaceActions.logout(),
     refreshActiveView: () => workspaceActions.refreshActiveView(),
-    switchView
+    switchView: workspaceInteractions.switchView
   })
 );
 const moderationDataState = computed<AdminDataStatePayload | null>(() =>
@@ -457,7 +472,7 @@ const moduleEvents = computed(() =>
   buildAdminWorkspaceModuleEvents({
     requestGovernanceAction: workspaceMutations.requestGovernanceAction,
     requestModerationAction: workspaceMutations.requestModerationAction,
-    selectRecord,
+    selectRecord: workspaceInteractions.selectRecord,
     setGovernanceQuery: (value) => {
       recordQuery.value = value;
     },
@@ -470,7 +485,7 @@ const moduleEvents = computed(() =>
     setModerationStatusFilter: (value) => {
       moderationStatusFilter.value = value;
     },
-    switchView
+    switchView: workspaceInteractions.switchView
   })
 );
 
@@ -480,8 +495,6 @@ const visibleGovernanceRows = computed(() => filterGovernanceRows(governanceRows
 const governanceStatusOptions = computed(() => buildGovernanceStatusOptions(governanceRows.value));
 const governanceColumns = computed(() => getGovernanceColumns(governanceRows.value));
 
-const confirmResetHandlers = confirmController.resetHandlers;
-const confirmSubmitHandlers = confirmController.submitHandlers;
 workspaceResetController = createAdminWorkspaceResetController({
   governanceRows,
   governanceRowsView,
@@ -508,26 +521,11 @@ onBeforeUnmount(() => {
 });
 
 function handleConfirmDialogCancel(key: ConfirmDialogKey) {
-  if (loading.value) return;
-  runAdminConfirmDialogHandler(key, confirmResetHandlers);
+  workspaceInteractions.cancelConfirmDialog(key);
 }
 
 async function handleConfirmDialogConfirm(key: ConfirmDialogKey) {
-  await runAdminConfirmDialogHandler(key, confirmSubmitHandlers);
-}
-
-function switchView(view: AdminView) {
-  const plan = buildAdminWorkspaceViewSwitchPlan(view);
-  runAdminWorkspaceViewSwitch(plan, {
-    clearWorkspaceState,
-    loadActiveView: workspaceRead.loadActiveView,
-    setActiveView: (nextView) => {
-      activeView.value = nextView;
-    },
-    syncLocation: (nextView, syncMode) => {
-      syncAdminWorkspaceLocation(nextView, window.location, window.history, syncMode);
-    }
-  });
+  await workspaceInteractions.confirmDialog(key);
 }
 
 
@@ -539,9 +537,6 @@ async function post<T>(path: string, body: ApiRequestInit["body"]) {
   return adminPost<T>(path, body, session.value);
 }
 
-function selectRecord(row: GovernanceRecord) {
-  selectedRecord.value = row;
-}
 </script>
 
 <template>
