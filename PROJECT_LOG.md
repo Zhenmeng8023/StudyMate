@@ -1,3 +1,28 @@
+## 2026-07-15 13:45:00 +08:00 | v1.1.0-alpha.274 | 推进 FE-041 管理端 workspace feature adapter 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041`，这一轮不新增治理功能，而是把已经拆出的 `runtime / action / read / mutation` 四组后台工作台编排继续往上收口。
+- 目标是新增一个更完整的 `workspace feature adapter`，让 `AdminWorkspaceView.vue` 直接消费统一的 `read / actions / mutations / startRuntime()` 出口，避免页面层继续手工装配这四组适配器。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceFeatureAdapter.ts`，提供 `createAdminWorkspaceFeatureAdapter(...)` 出口，统一组合 `createAdminWorkspaceReadAdapter(...)`、`createAdminWorkspaceActionAdapter(...)`、`createAdminWorkspaceMutationAdapter(...)` 与 `startAdminWorkspaceRuntime(...)`。
+- 新增并补齐 `frontend-admin/src/views/adminWorkspaceFeatureAdapter.test.ts`，锁定 action / mutation 会复用同一份 read adapter，以及 runtime 会透传 `loadActiveView / refreshProfile / readSession / readSessionInvalidation` 这两组关键契约。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，改为通过 `workspaceFeature.read`、`workspaceFeature.actions`、`workspaceFeature.mutations` 与 `workspaceFeature.startRuntime()` 消费后台工作台能力；同时把 reset controller 初始化顺序调整为先声明 `clearWorkspaceState` 包装器、再接线真正的 controller，避免 feature adapter 接线后出现初始化环依赖。
+- 更新 `frontend-admin/src/views/adminWorkspaceActionAdapter.ts`、`adminWorkspaceReadAdapter.ts`、`adminWorkspaceMutationAdapter.ts` 与 `adminWorkspaceRuntime.ts`，把各自的 options 接口显式导出，供新的 feature adapter 复用。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 workspace feature adapter 已接线”这一层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceFeatureAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `npx playwright test e2e/v1-admin-governance.spec.ts`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在不只是在拆 runtime、action、read 和 mutation 四组页面层编排，而是已经把这四组适配器汇总成更完整的后台工作台 feature adapter，`AdminWorkspaceView.vue` 进一步回到壳层角色。
+- 这一轮仍然只收口后台工作台内部装配；如果继续推进 `FE-041 / ADM-010`，更适合优先评估剩余的 confirm / reset / module composition 是否继续进入更稳定的 feature 边界，而不是立刻切去新的治理业务。
+
 ## 2026-07-15 13:32:00 +08:00 | v1.1.0-alpha.273 | 推进 FE-041 管理端 mutation adapter 接线
 ### 任务内容
 

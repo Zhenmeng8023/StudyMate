@@ -24,7 +24,7 @@ interface AdminWorkspaceActionAdapterRunners {
   runRefresh: typeof runAdminWorkspaceRefresh;
 }
 
-interface CreateAdminWorkspaceActionAdapterOptions {
+export interface CreateAdminWorkspaceActionAdapterOptions {
   clearError: () => void;
   clearProfile: () => void;
   clearSessionInvalidation: () => void;

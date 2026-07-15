@@ -25,7 +25,7 @@ interface AdminWorkspaceMutationAdapterRunners {
   runModerationAction: typeof runAdminWorkspaceModerationAction;
 }
 
-interface CreateAdminWorkspaceMutationAdapterOptions {
+export interface CreateAdminWorkspaceMutationAdapterOptions {
   hasSession: () => boolean;
   loadGovernance: (view: Exclude<AdminRouteKey, "dashboard" | "moderation">) => Promise<void> | void;
   loadModeration: () => Promise<void> | void;

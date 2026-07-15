@@ -21,7 +21,7 @@ interface AdminWorkspaceReadAdapterRunners {
   runViewLoad: typeof runAdminWorkspaceViewLoad;
 }
 
-interface CreateAdminWorkspaceReadAdapterOptions<Profile, Overview, ModerationItem> {
+export interface CreateAdminWorkspaceReadAdapterOptions<Profile, Overview, ModerationItem> {
   get: AdminWorkspaceGet;
   getGovernanceLoadedNotice: (count: number) => string;
   getModerationLoadedNotice: (count: number) => string;

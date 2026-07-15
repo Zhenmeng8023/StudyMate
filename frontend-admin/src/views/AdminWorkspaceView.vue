@@ -37,7 +37,6 @@ import {
 import { buildAdminOverviewCards } from "./adminOverviewCards";
 import { resolveGovernanceDataState, resolveModerationDataState } from "./adminViewDataState";
 import { getAdminRequestErrorMessage, getAdminRequestErrorStatus } from "./adminRequestError";
-import { createAdminWorkspaceActionAdapter } from "./adminWorkspaceActionAdapter";
 import {
   buildGovernanceStatusOptions,
   buildModerationStatusOptions,
@@ -61,9 +60,7 @@ import {
 import {
   getGovernanceModuleConfig,
 } from "./adminGovernanceConfig";
-import { createAdminWorkspaceMutationAdapter } from "./adminWorkspaceMutationAdapter";
-import { createAdminWorkspaceReadAdapter } from "./adminWorkspaceReadAdapter";
-import { startAdminWorkspaceRuntime } from "./adminWorkspaceRuntime";
+import { createAdminWorkspaceFeatureAdapter } from "./adminWorkspaceFeatureAdapter";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
 import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
 import AdminModerationModule from "./modules/AdminModerationModule.vue";
@@ -116,108 +113,181 @@ const pendingAITaskAction = ref<{ action: AITaskAction; record: GovernanceRecord
 const aiTaskConfirmError = ref("");
 const pendingTemplateAction = ref<{ action: TemplateAction; record: GovernanceRecord } | null>(null);
 const templateConfirmError = ref("");
-const workspaceRead = createAdminWorkspaceReadAdapter<
+let workspaceResetController: ReturnType<typeof createAdminWorkspaceResetController> | null = null;
+const clearWorkspaceState = (keys?: AdminWorkspaceResetKey[]) => {
+  workspaceResetController?.clearState(keys);
+};
+const workspaceFeature = createAdminWorkspaceFeatureAdapter<
   AdminAuthUser,
   OverviewPayload,
   AdminWorkspaceModerationItem
 >({
-  get,
-  getGovernanceLoadedNotice: getAdminGovernanceLoadedNotice,
-  getModerationLoadedNotice: getAdminModerationLoadedNotice,
-  hasSession: () => Boolean(session.value),
-  readGovernanceRows: () => governanceRows.value,
-  readGovernanceRowsView: () => governanceRowsView.value,
-  readStatus: getAdminRequestErrorStatus,
-  resolveErrorMessage: getAdminRequestErrorMessage,
-  setError: (message) => {
-    errorMessage.value = message;
+  action: {
+    clearError: () => {
+      errorMessage.value = "";
+    },
+    clearProfile: () => {
+      profile.value = null;
+    },
+    clearSessionInvalidation: () => {
+      sessionInvalidation.value = null;
+      clearSessionInvalidation();
+    },
+    clearSessionState: () => {
+      session.value = null;
+    },
+    clearWorkspaceState,
+    getLoginSuccessNotice: getAdminLoginSuccessNotice,
+    getLogoutNotice: getAdminLogoutNotice,
+    persistSession,
+    post,
+    readActiveView: () => activeView.value,
+    readForm: () => form,
+    resolveErrorMessage: getAdminRequestErrorMessage,
+    setActiveView: (view) => {
+      activeView.value = view;
+    },
+    setError: (message) => {
+      errorMessage.value = message;
+    },
+    setLoading: (nextLoading) => {
+      loading.value = nextLoading;
+    },
+    setNotice: (nextNotice) => {
+      notice.value = nextNotice;
+    },
+    syncLocation: (view, syncMode) => {
+      syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
+    }
   },
-  setGovernanceRows: (rows) => {
-    governanceRows.value = rows;
+  mutation: {
+    hasSession: () => Boolean(session.value),
+    post,
+    readActiveView: () => activeView.value,
+    readStatus: getAdminRequestErrorStatus,
+    resolveErrorMessage: getAdminRequestErrorMessage,
+    setAITaskAction: (value) => {
+      pendingAITaskAction.value = value;
+    },
+    setAITaskError: (value) => {
+      aiTaskConfirmError.value = value;
+    },
+    setError: (message) => {
+      errorMessage.value = message;
+    },
+    setGovernanceStatus: (status) => {
+      governanceErrorStatus.value = status;
+    },
+    setLoading: (nextLoading) => {
+      loading.value = nextLoading;
+    },
+    setModerationAction: (value) => {
+      pendingModerationAction.value = value;
+    },
+    setModerationConfirmError: (value) => {
+      moderationConfirmError.value = value;
+    },
+    setNotice: (nextNotice) => {
+      notice.value = nextNotice;
+    },
+    setReportAction: (value) => {
+      pendingReportAction.value = value;
+    },
+    setReportConfirmError: (value) => {
+      reportConfirmError.value = value;
+    },
+    setTemplateAction: (value) => {
+      pendingTemplateAction.value = value;
+    },
+    setTemplateConfirmError: (value) => {
+      templateConfirmError.value = value;
+    },
+    setUserAction: (value) => {
+      pendingUserAction.value = value;
+    },
+    setUserConfirmError: (value) => {
+      userConfirmError.value = value;
+    }
   },
-  setGovernanceRowsView: (view) => {
-    governanceRowsView.value = view;
+  read: {
+    get,
+    getGovernanceLoadedNotice: getAdminGovernanceLoadedNotice,
+    getModerationLoadedNotice: getAdminModerationLoadedNotice,
+    hasSession: () => Boolean(session.value),
+    readGovernanceRows: () => governanceRows.value,
+    readGovernanceRowsView: () => governanceRowsView.value,
+    readStatus: getAdminRequestErrorStatus,
+    resolveErrorMessage: getAdminRequestErrorMessage,
+    setError: (message) => {
+      errorMessage.value = message;
+    },
+    setGovernanceRows: (rows) => {
+      governanceRows.value = rows;
+    },
+    setGovernanceRowsView: (view) => {
+      governanceRowsView.value = view;
+    },
+    setGovernanceSelectedRecord: (record) => {
+      selectedRecord.value = record;
+    },
+    setGovernanceStatus: (status) => {
+      governanceErrorStatus.value = status;
+    },
+    setGovernanceSummary: (summary) => {
+      governanceSummary.value = summary;
+    },
+    setLoading: (nextLoading) => {
+      loading.value = nextLoading;
+    },
+    setModerationItems: (items) => {
+      moderationItems.value = items;
+    },
+    setModerationStatus: (status) => {
+      moderationErrorStatus.value = status;
+    },
+    setNotice: (nextNotice) => {
+      notice.value = nextNotice;
+    },
+    setOverview: (nextOverview) => {
+      overview.value = nextOverview;
+    },
+    setProfile: (nextProfile) => {
+      profile.value = nextProfile;
+    }
   },
-  setGovernanceSelectedRecord: (record) => {
-    selectedRecord.value = record;
-  },
-  setGovernanceStatus: (status) => {
-    governanceErrorStatus.value = status;
-  },
-  setGovernanceSummary: (summary) => {
-    governanceSummary.value = summary;
-  },
-  setLoading: (nextLoading) => {
-    loading.value = nextLoading;
-  },
-  setModerationItems: (items) => {
-    moderationItems.value = items;
-  },
-  setModerationStatus: (status) => {
-    moderationErrorStatus.value = status;
-  },
-  setNotice: (nextNotice) => {
-    notice.value = nextNotice;
-  },
-  setOverview: (nextOverview) => {
-    overview.value = nextOverview;
-  },
-  setProfile: (nextProfile) => {
-    profile.value = nextProfile;
+  runtime: {
+    clearError: () => {
+      errorMessage.value = "";
+    },
+    clearWorkspaceState,
+    hasSession: () => Boolean(session.value),
+    readSession: readStoredAdminSession,
+    readSessionInvalidation: readStoredSessionInvalidation,
+    setActiveView: (view) => {
+      activeView.value = view;
+    },
+    setNotice: (nextNotice) => {
+      notice.value = nextNotice;
+    },
+    setProfile: (nextProfile) => {
+      profile.value = nextProfile;
+    },
+    setSession: (nextValue) => {
+      session.value = nextValue;
+    },
+    setSessionInvalidation: (nextValue) => {
+      sessionInvalidation.value = nextValue;
+    },
+    subscribeSession,
+    syncLocation: (view, syncMode) => {
+      syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
+    },
+    window
   }
 });
-const workspaceMutations = createAdminWorkspaceMutationAdapter({
-  hasSession: () => Boolean(session.value),
-  loadGovernance: workspaceRead.loadGovernance,
-  loadModeration: workspaceRead.loadModeration,
-  loadOverview: workspaceRead.loadOverview,
-  post,
-  readActiveView: () => activeView.value,
-  readStatus: getAdminRequestErrorStatus,
-  resolveErrorMessage: getAdminRequestErrorMessage,
-  setAITaskAction: (value) => {
-    pendingAITaskAction.value = value;
-  },
-  setAITaskError: (value) => {
-    aiTaskConfirmError.value = value;
-  },
-  setError: (message) => {
-    errorMessage.value = message;
-  },
-  setGovernanceStatus: (status) => {
-    governanceErrorStatus.value = status;
-  },
-  setLoading: (nextLoading) => {
-    loading.value = nextLoading;
-  },
-  setModerationAction: (value) => {
-    pendingModerationAction.value = value;
-  },
-  setModerationConfirmError: (value) => {
-    moderationConfirmError.value = value;
-  },
-  setNotice: (nextNotice) => {
-    notice.value = nextNotice;
-  },
-  setReportAction: (value) => {
-    pendingReportAction.value = value;
-  },
-  setReportConfirmError: (value) => {
-    reportConfirmError.value = value;
-  },
-  setTemplateAction: (value) => {
-    pendingTemplateAction.value = value;
-  },
-  setTemplateConfirmError: (value) => {
-    templateConfirmError.value = value;
-  },
-  setUserAction: (value) => {
-    pendingUserAction.value = value;
-  },
-  setUserConfirmError: (value) => {
-    userConfirmError.value = value;
-  }
-});
+const workspaceRead = workspaceFeature.read;
+const workspaceMutations = workspaceFeature.mutations;
+const workspaceActions = workspaceFeature.actions;
 
 const loggedIn = computed(() => Boolean(session.value));
 const moderationBuckets = computed(() => splitModerationItems(moderationItems.value));
@@ -412,7 +482,7 @@ const governanceColumns = computed(() => getGovernanceColumns(governanceRows.val
 
 const confirmResetHandlers = confirmController.resetHandlers;
 const confirmSubmitHandlers = confirmController.submitHandlers;
-const workspaceResetController = createAdminWorkspaceResetController({
+workspaceResetController = createAdminWorkspaceResetController({
   governanceRows,
   governanceRowsView,
   governanceStatusFilter,
@@ -426,82 +496,10 @@ const workspaceResetController = createAdminWorkspaceResetController({
   selectedRecord
 });
 
-const clearWorkspaceState = (keys?: AdminWorkspaceResetKey[]) => workspaceResetController.clearState(keys);
-
 let stopRuntime: (() => void) | null = null;
-const workspaceActions = createAdminWorkspaceActionAdapter({
-  clearError: () => {
-    errorMessage.value = "";
-  },
-  clearProfile: () => {
-    profile.value = null;
-  },
-  clearSessionInvalidation: () => {
-    sessionInvalidation.value = null;
-    clearSessionInvalidation();
-  },
-  clearSessionState: () => {
-    session.value = null;
-  },
-  clearWorkspaceState,
-  getLoginSuccessNotice: getAdminLoginSuccessNotice,
-  getLogoutNotice: getAdminLogoutNotice,
-  loadActiveView: workspaceRead.loadActiveView,
-  persistSession,
-  post,
-  readActiveView: () => activeView.value,
-  readForm: () => form,
-  refreshProfile: workspaceRead.refreshProfile,
-  resolveErrorMessage: getAdminRequestErrorMessage,
-  setActiveView: (view) => {
-    activeView.value = view;
-  },
-  setError: (message) => {
-    errorMessage.value = message;
-  },
-  setLoading: (nextLoading) => {
-    loading.value = nextLoading;
-  },
-  setNotice: (nextNotice) => {
-    notice.value = nextNotice;
-  },
-  syncLocation: (view, syncMode) => {
-    syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
-  }
-});
 
 onMounted(() => {
-  stopRuntime = startAdminWorkspaceRuntime({
-    clearError: () => {
-      errorMessage.value = "";
-    },
-    clearWorkspaceState,
-    hasSession: () => Boolean(session.value),
-    loadActiveView: workspaceRead.loadActiveView,
-    readSession: readStoredAdminSession,
-    readSessionInvalidation: readStoredSessionInvalidation,
-    refreshProfile: workspaceRead.refreshProfile,
-    setActiveView: (view) => {
-      activeView.value = view;
-    },
-    setNotice: (nextNotice) => {
-      notice.value = nextNotice;
-    },
-    setProfile: (nextProfile) => {
-      profile.value = nextProfile;
-    },
-    setSession: (nextValue) => {
-      session.value = nextValue;
-    },
-    setSessionInvalidation: (nextValue) => {
-      sessionInvalidation.value = nextValue;
-    },
-    subscribeSession,
-    syncLocation: (view, syncMode) => {
-      syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
-    },
-    window
-  });
+  stopRuntime = workspaceFeature.startRuntime();
 });
 
 onBeforeUnmount(() => {

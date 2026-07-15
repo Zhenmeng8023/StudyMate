@@ -16,7 +16,7 @@ type AdminWorkspaceWindowLike = Pick<
   "addEventListener" | "removeEventListener" | "location" | "history"
 >;
 
-interface StartAdminWorkspaceRuntimeOptions {
+export interface StartAdminWorkspaceRuntimeOptions {
   clearError: () => void;
   clearWorkspaceState: (keys?: AdminWorkspaceResetKey[]) => void;
   hasSession: () => boolean;
