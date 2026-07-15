@@ -17,7 +17,7 @@ type Handler struct {
 type cardService interface {
 	ListDecks(ownerUserID string) ([]carddto.DeckPayload, error)
 	CreateDeck(ownerUserID string, request carddto.CreateDeckRequest) (*carddto.DeckPayload, error)
-	ListCards(ownerUserID string, deckID string) ([]carddto.CardPayload, error)
+	ListCards(ownerUserID string, deckID string, request carddto.ListCardsQuery) ([]carddto.CardPayload, error)
 	CreateCard(ownerUserID string, deckID string, request carddto.CreateCardRequest) (*carddto.CardPayload, error)
 	BulkCreateCards(ownerUserID string, deckID string, requests []carddto.CreateCardRequest) ([]carddto.CardPayload, error)
 	TodayQueue(ownerUserID string) (*carddto.ReviewQueuePayload, error)
@@ -59,7 +59,13 @@ func (h *Handler) CreateDeck(ctx *gin.Context) {
 }
 
 func (h *Handler) ListCards(ctx *gin.Context) {
-	result, err := h.service.ListCards(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"))
+	var request carddto.ListCardsQuery
+	if err := ctx.ShouldBindQuery(&request); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	result, err := h.service.ListCards(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), request)
 	if err != nil {
 		response.Error(ctx, err)
 		return

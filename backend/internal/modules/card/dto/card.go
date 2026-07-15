@@ -16,6 +16,13 @@ type CreateCardRequest struct {
 	SourceMetadata map[string]any `json:"sourceMetadata,omitempty"`
 }
 
+type ListCardsQuery struct {
+	Query      string `form:"q"`
+	Status     string `form:"status"`
+	SourceType string `form:"sourceType"`
+	DueBucket  string `form:"dueBucket"`
+}
+
 type BulkCreateCardsRequest struct {
 	Cards []CreateCardRequest `json:"cards" binding:"required,min=1,max=20,dive"`
 }
@@ -58,18 +65,19 @@ type DeckPayload struct {
 }
 
 type CardPayload struct {
-	ID             string         `json:"id"`
-	DeckID         string         `json:"deckId"`
-	OwnerUserID    string         `json:"ownerUserId"`
-	CardType       string         `json:"cardType"`
-	Front          string         `json:"front"`
-	Back           string         `json:"back"`
-	SourceType     string         `json:"sourceType,omitempty"`
-	SourceID       string         `json:"sourceId,omitempty"`
-	SourceMetadata map[string]any `json:"sourceMetadata,omitempty"`
-	Status         string         `json:"status"`
-	CreatedAt      string         `json:"createdAt"`
-	UpdatedAt      string         `json:"updatedAt"`
+	ID             string               `json:"id"`
+	DeckID         string               `json:"deckId"`
+	OwnerUserID    string               `json:"ownerUserId"`
+	CardType       string               `json:"cardType"`
+	Front          string               `json:"front"`
+	Back           string               `json:"back"`
+	SourceType     string               `json:"sourceType,omitempty"`
+	SourceID       string               `json:"sourceId,omitempty"`
+	SourceMetadata map[string]any       `json:"sourceMetadata,omitempty"`
+	Status         string               `json:"status"`
+	Schedule       *CardSchedulePayload `json:"schedule,omitempty"`
+	CreatedAt      string               `json:"createdAt"`
+	UpdatedAt      string               `json:"updatedAt"`
 }
 
 type CardSchedulePayload struct {

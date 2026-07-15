@@ -68,13 +68,28 @@ func (s *Service) CreateDeck(ownerUserID string, request carddto.CreateDeckReque
 	return &payload, nil
 }
 
-func (s *Service) ListCards(ownerUserID string, deckID string) ([]carddto.CardPayload, error) {
+func (s *Service) ListCards(ownerUserID string, deckID string, request carddto.ListCardsQuery) ([]carddto.CardPayload, error) {
 	deck, err := s.requireOwnerDeck(ownerUserID, deckID)
 	if err != nil {
 		return nil, err
 	}
 
-	cards, err := s.repository.ListCardsByDeck(deck.ID)
+	status, ok := normalizeCardListStatus(request.Status)
+	if !ok {
+		return nil, apperrors.New(http.StatusBadRequest, "invalid_card_list_status", "卡片列表状态筛选必须是 all、active、suspended 或 buried")
+	}
+	dueBucket, ok := normalizeCardListDueBucket(request.DueBucket)
+	if !ok {
+		return nil, apperrors.New(http.StatusBadRequest, "invalid_card_due_bucket", "到期时间筛选必须是 all、due 或 upcoming")
+	}
+
+	cards, err := s.repository.ListCardsByDeck(deck.ID, ownerUserID, cardrepo.ListCardsFilter{
+		Query:      strings.TrimSpace(request.Query),
+		Status:     status,
+		SourceType: strings.TrimSpace(request.SourceType),
+		DueBucket:  dueBucket,
+		Now:        s.now().UTC(),
+	})
 	if err != nil {
 		return nil, apperrors.Internal("读取卡片列表失败")
 	}
@@ -335,6 +350,30 @@ func normalizeCardStatus(value string) (string, bool) {
 	trimmed := strings.ToLower(strings.TrimSpace(value))
 	switch trimmed {
 	case "active", "suspended", "buried":
+		return trimmed, true
+	default:
+		return "", false
+	}
+}
+
+func normalizeCardListStatus(value string) (string, bool) {
+	trimmed := strings.ToLower(strings.TrimSpace(value))
+	switch trimmed {
+	case "", "all":
+		return "all", true
+	case "active", "suspended", "buried":
+		return trimmed, true
+	default:
+		return "", false
+	}
+}
+
+func normalizeCardListDueBucket(value string) (string, bool) {
+	trimmed := strings.ToLower(strings.TrimSpace(value))
+	switch trimmed {
+	case "", "all":
+		return "all", true
+	case "due", "upcoming":
 		return trimmed, true
 	default:
 		return "", false

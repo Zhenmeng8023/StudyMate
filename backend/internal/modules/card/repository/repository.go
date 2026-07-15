@@ -18,6 +18,14 @@ type DueCardRow struct {
 	Schedule cardmodel.CardSchedule
 }
 
+type ListCardsFilter struct {
+	Query      string
+	Status     string
+	SourceType string
+	DueBucket  string
+	Now        time.Time
+}
+
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
@@ -70,15 +78,117 @@ func (r *Repository) FindCardByID(cardID string) (*cardmodel.Card, error) {
 	return &card, nil
 }
 
-func (r *Repository) ListCardsByDeck(deckID string) ([]carddto.CardPayload, error) {
-	var cards []cardmodel.Card
-	if err := r.db.Where("deck_id = ?", deckID).Order("updated_at desc").Find(&cards).Error; err != nil {
+func (r *Repository) ListCardsByDeck(deckID string, ownerUserID string, filter ListCardsFilter) ([]carddto.CardPayload, error) {
+	type cardWithScheduleJoin struct {
+		ID              string
+		DeckID          string
+		OwnerUserID     string
+		CardType        string
+		Front           string
+		Back            string
+		SourceType      string
+		SourceID        string
+		SourceMetadata  string
+		Status          string
+		CardCreatedAt   time.Time
+		CardUpdatedAt   time.Time
+		ScheduleCardID  string
+		ScheduleUserID  string
+		DueAt           *time.Time
+		IntervalDays    *int
+		EaseFactor      *float64
+		RepetitionCount *int
+		LapseCount      *int
+		ScheduleState   string
+		ScheduleUpdated *time.Time
+	}
+
+	query := r.db.Table("cards").
+		Select(`
+			cards.id,
+			cards.deck_id,
+			cards.owner_user_id,
+			cards.card_type,
+			cards.front,
+			cards.back,
+			cards.source_type,
+			cards.source_id,
+			cards.source_metadata,
+			cards.status,
+			cards.created_at as card_created_at,
+			cards.updated_at as card_updated_at,
+			card_schedules.card_id as schedule_card_id,
+			card_schedules.user_id as schedule_user_id,
+			card_schedules.due_at,
+			card_schedules.interval_days,
+			card_schedules.ease_factor,
+			card_schedules.repetition_count,
+			card_schedules.lapse_count,
+			card_schedules.state as schedule_state,
+			card_schedules.updated_at as schedule_updated
+		`).
+		Joins("LEFT JOIN card_schedules ON card_schedules.card_id = cards.id AND card_schedules.user_id = ?", ownerUserID).
+		Where("cards.deck_id = ?", deckID)
+
+	if filter.Query != "" {
+		like := "%" + filter.Query + "%"
+		query = query.Where("(cards.front LIKE ? OR cards.back LIKE ? OR cards.source_type LIKE ? OR cards.source_id LIKE ?)", like, like, like, like)
+	}
+	if filter.Status != "" && filter.Status != "all" {
+		query = query.Where("cards.status = ?", filter.Status)
+	}
+	if filter.SourceType != "" && filter.SourceType != "all" {
+		if filter.SourceType == "none" {
+			query = query.Where("(cards.source_type = '' OR cards.source_type IS NULL)")
+		} else {
+			query = query.Where("cards.source_type = ?", filter.SourceType)
+		}
+	}
+	if filter.DueBucket == "due" {
+		query = query.Where("card_schedules.due_at <= ?", filter.Now)
+	}
+	if filter.DueBucket == "upcoming" {
+		query = query.Where("card_schedules.due_at > ?", filter.Now)
+	}
+
+	query = query.Order("cards.updated_at desc")
+
+	var cards []cardWithScheduleJoin
+	if err := query.Scan(&cards).Error; err != nil {
 		return nil, err
 	}
 
 	result := make([]carddto.CardPayload, 0, len(cards))
 	for _, card := range cards {
-		result = append(result, BuildCardPayload(card))
+		payload := BuildCardPayload(cardmodel.Card{
+			ID:             card.ID,
+			DeckID:         card.DeckID,
+			OwnerUserID:    card.OwnerUserID,
+			CardType:       card.CardType,
+			Front:          card.Front,
+			Back:           card.Back,
+			SourceType:     card.SourceType,
+			SourceID:       card.SourceID,
+			SourceMetadata: card.SourceMetadata,
+			Status:         card.Status,
+			CreatedAt:      card.CardCreatedAt,
+			UpdatedAt:      card.CardUpdatedAt,
+		})
+		if card.DueAt != nil && card.IntervalDays != nil && card.EaseFactor != nil && card.RepetitionCount != nil && card.LapseCount != nil && card.ScheduleUpdated != nil {
+			schedule := BuildSchedulePayload(cardmodel.CardSchedule{
+				CardID:          card.ScheduleCardID,
+				UserID:          card.ScheduleUserID,
+				DueAt:           *card.DueAt,
+				IntervalDays:    *card.IntervalDays,
+				EaseFactor:      *card.EaseFactor,
+				RepetitionCount: *card.RepetitionCount,
+				LapseCount:      *card.LapseCount,
+				State:           card.ScheduleState,
+				UpdatedAt:       *card.ScheduleUpdated,
+			})
+			payload.Schedule = &schedule
+		}
+		result = append(result, payload)
 	}
 
 	return result, nil

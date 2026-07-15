@@ -616,7 +616,7 @@ describe("ReviewWorkspacePage", () => {
     const sourceFilter = screen.getByLabelText("\u5361\u7247\u6765\u6e90\u7c7b\u578b\u7b5b\u9009");
     const dueFilter = screen.getByLabelText("\u5230\u671f\u65f6\u95f4\u7b5b\u9009");
 
-    expect(screen.getByText("3 张卡片")).toBeInTheDocument();
+    expect(screen.getAllByText("3 张卡片").length).toBeGreaterThan(0);
 
     await user.type(keywordInput, "note");
 
@@ -626,7 +626,7 @@ describe("ReviewWorkspacePage", () => {
     expect(await screen.findByText("Note summary card")).toBeInTheDocument();
     expect(screen.queryByText("Graph node card")).not.toBeInTheDocument();
     expect(screen.queryByText("Detached fact")).not.toBeInTheDocument();
-    expect(screen.getByText("1 张卡片")).toBeInTheDocument();
+    expect(screen.getAllByText("1 张卡片").length).toBeGreaterThan(0);
 
     await user.clear(keywordInput);
     await user.selectOptions(statusFilter, "buried");

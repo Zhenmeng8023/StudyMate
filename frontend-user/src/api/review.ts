@@ -49,8 +49,32 @@ export async function createDeck(
   });
 }
 
-export async function listDeckCards(session: AuthSession, deckId: string) {
-  return request<CardPayload[]>(`/decks/${deckId}/cards`, {
+export async function listDeckCards(
+  session: AuthSession,
+  deckId: string,
+  filters?: {
+    query?: string;
+    status?: "all" | "active" | "suspended" | "buried";
+    sourceType?: "all" | "none" | string;
+    dueBucket?: "all" | "due" | "upcoming";
+  }
+) {
+  const params = new URLSearchParams();
+  if (filters?.query?.trim()) {
+    params.set("q", filters.query.trim());
+  }
+  if (filters?.status && filters.status !== "all") {
+    params.set("status", filters.status);
+  }
+  if (filters?.sourceType && filters.sourceType !== "all") {
+    params.set("sourceType", filters.sourceType);
+  }
+  if (filters?.dueBucket && filters.dueBucket !== "all") {
+    params.set("dueBucket", filters.dueBucket);
+  }
+
+  const path = params.size ? `/decks/${deckId}/cards?${params.toString()}` : `/decks/${deckId}/cards`;
+  return request<CardPayload[]>(path, {
     headers: withAuth(session)
   });
 }

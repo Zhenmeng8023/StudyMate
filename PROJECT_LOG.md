@@ -1,3 +1,31 @@
+## 2026-07-15 08:55:37 +08:00 | v1.1.0-alpha.259 | 推进 ANKI-040 卡片浏览器服务端过滤与到期时间筛选
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把全局主路径做成能用版，再逐步细化”方向推进 `ANKI-040`，这一轮不直接切到更重的 Note/Card 结构重做，而是先把卡片浏览器从“纯前端内存筛选”推进到真正有后端承接的最小可用状态。
+- 目标是让复习工作区在卡片规模继续增大时，不必每次都先全量拉取再本地过滤，并把“到期时间”这类真实 schedule 语义接到浏览器里。
+### 实际变更
+
+- 后端更新 `backend/internal/modules/card/dto/card.go`、`handler/handler.go`、`service/service.go` 与 `repository/repository.go`，为 `GET /decks/:id/cards` 增加 `q / status / sourceType / dueBucket` 四组查询参数，并在列表返回里补上可选 `schedule`。
+- 新增 `backend/internal/modules/card/service/list_cards_filters_test.go`，并扩展 `backend/internal/modules/card/handler/handler_test.go`，锁定服务端过滤参数绑定、组合筛选和 schedule payload 返回。
+- 前端更新 `frontend-user/src/api/review.ts` 与 `frontend-user/src/api/types.ts`，让 `listDeckCards(...)` 能带筛选参数请求，并让卡片列表消费新增的可选 `schedule` 字段。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，把卡片浏览器的关键词、状态、来源和“到期时间”筛选统一切到服务端过滤结果；同时在卡片条目里补上学习状态与计划到期展示。
+- 扩展 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，让复习工作区回归覆盖服务端筛选请求和到期时间筛选；既有来源回跳测试 `ReviewWorkspacePage.sourceLinks.test.tsx` 保持通过。
+- 更新 `frontend-user/src/styles/studio-workspaces.css`，让新增到期时间筛选控件和卡片 schedule 文案接入现有复习管理样式。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-040` 当前边界推进到“服务端过滤与到期时间筛选已经接上”这一层。
+### 验证结果
+
+- RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npx playwright test e2e/v1-review-flow.spec.ts`
+### 后续影响
+
+- `ANKI-040` 现在不再只是一层前端本地筛选壳子，卡片浏览器已经开始把筛选语义和 schedule 数据沉到后端列表接口里，复习工作台在原型阶段更接近真实可扩展产品。
+- 这一轮仍然只先承接了关键词、状态、来源和到期时间四类过滤；如果后续继续推进 `ANKI-040 / ANKI-020 / LC-010`，更适合优先补标签筛选、结果总数/分页和批量动作的更完整后端支持，而不是继续把更重的数据能力留在页面内存态里。
+
 ## 2026-07-15 08:42:57 +08:00 | v1.1.0-alpha.258 | 推进 LC-010 / FE-040 首页接入复习与 AI 工作入口
 ### 任务内容
 

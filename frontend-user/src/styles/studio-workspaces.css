@@ -853,7 +853,7 @@
 .review-card-browser__filters {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .review-card-browser__field {
@@ -940,6 +940,11 @@
   color: var(--text-1);
   font-size: 12px;
   background: var(--surface-soft);
+}
+
+.review-managed-card__schedule {
+  display: block;
+  margin-top: -2px;
 }
 
 .review-focus-footer {

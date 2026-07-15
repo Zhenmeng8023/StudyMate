@@ -40,6 +40,7 @@ type UndoableReviewState = {
 
 type ManagedCardStatusFilter = "all" | "active" | "suspended" | "buried";
 type ManagedCardSourceFilter = "all" | "none" | string;
+type ManagedCardDueFilter = "all" | "due" | "upcoming";
 
 const ratingOptions = [
   { value: "again", label: "重来", shortcut: "1", accessibilityLabel: "Again 重来" },
@@ -95,6 +96,20 @@ function formatCardSourceTypeLabel(sourceType?: string) {
       return "未绑定来源";
     default:
       return sourceType || "未绑定来源";
+  }
+}
+
+function formatScheduleStateLabel(state?: string) {
+  switch (state) {
+    case "learning":
+      return "学习中";
+    case "review":
+      return "复习中";
+    case "relearning":
+      return "重新学习";
+    case "new":
+    default:
+      return "新卡";
   }
 }
 
@@ -165,6 +180,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [cardSearchQuery, setCardSearchQuery] = useState("");
   const [cardStatusFilter, setCardStatusFilter] = useState<ManagedCardStatusFilter>("all");
   const [cardSourceFilter, setCardSourceFilter] = useState<ManagedCardSourceFilter>("all");
+  const [cardDueFilter, setCardDueFilter] = useState<ManagedCardDueFilter>("all");
   const [selectedManagedCardIds, setSelectedManagedCardIds] = useState<string[]>([]);
   const [deckForm, setDeckForm] = useState({
     title: "",
@@ -190,21 +206,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         .map((value) => ({ value, label: formatCardSourceTypeLabel(value) })),
     [cards]
   );
-  const visibleCards = useMemo(() => {
-    const query = cardSearchQuery.trim().toLowerCase();
-    return cards.filter((card) => {
-      const matchesQuery =
-        !query ||
-        [card.front, card.back, card.sourceType, card.sourceId].some((value) =>
-          value?.toLowerCase().includes(query)
-        );
-      const matchesStatus = cardStatusFilter === "all" || card.status === cardStatusFilter;
-      const matchesSource =
-        cardSourceFilter === "all" ||
-        (cardSourceFilter === "none" ? !card.sourceType : card.sourceType === cardSourceFilter);
-      return matchesQuery && matchesStatus && matchesSource;
-    });
-  }, [cardSearchQuery, cardSourceFilter, cardStatusFilter, cards]);
+  const visibleCards = cards;
   const selectedManagedCards = useMemo(
     () => cards.filter((card) => selectedManagedCardIdSet.has(card.id)),
     [cards, selectedManagedCardIdSet]
@@ -266,7 +268,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     }
     void refreshCards(selectedDeckId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDeckId]);
+  }, [cardDueFilter, cardSearchQuery, cardSourceFilter, cardStatusFilter, selectedDeckId]);
 
   useEffect(() => {
     setSelectedManagedCardIds((current) => current.filter((id) => cards.some((card) => card.id === id)));
@@ -409,7 +411,14 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
 
   async function refreshCards(deckId: string) {
     try {
-      setCards(await listDeckCards(props.session, deckId));
+      setCards(
+        await listDeckCards(props.session, deckId, {
+          query: cardSearchQuery,
+          status: cardStatusFilter,
+          sourceType: cardSourceFilter,
+          dueBucket: cardDueFilter
+        })
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "读取卡片失败");
     }
@@ -896,9 +905,21 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                           ))}
                         </Select>
                       </label>
+                      <label className="review-card-browser__field">
+                        <span>到期时间筛选</span>
+                        <Select
+                          aria-label="到期时间筛选"
+                          onChange={(event) => setCardDueFilter(event.target.value as ManagedCardDueFilter)}
+                          value={cardDueFilter}
+                        >
+                          <option value="all">全部到期时间</option>
+                          <option value="due">已到期</option>
+                          <option value="upcoming">即将到期</option>
+                        </Select>
+                      </label>
                     </div>
                     <div className="review-card-browser__summary">
-                      <strong>{`${visibleCards.length} / ${cards.length} 张卡片`}</strong>
+                      <strong>{`${visibleCards.length} 张卡片`}</strong>
                       <span>{selectedVisibleCount ? `当前结果已选中 ${selectedVisibleCount} 张` : "先筛选再批量处理状态。"}</span>
                     </div>
                     <div className="review-card-browser__batch-actions">
@@ -976,6 +997,11 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                           <p>{card.back}</p>
                           <ReviewSourceSummary card={card} compact />
                           <span className="review-managed-card__source-type">{formatCardSourceTypeLabel(card.sourceType || "none")}</span>
+                          {card.schedule ? (
+                            <small className="review-managed-card__schedule">
+                              {`${formatScheduleStateLabel(card.schedule.state)} · 计划到期 ${formatDateTime(card.schedule.dueAt)}`}
+                            </small>
+                          ) : null}
                           <div className="review-managed-card__actions">
                             {card.status === "active" ? (
                               <>

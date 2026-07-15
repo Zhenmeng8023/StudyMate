@@ -68,7 +68,7 @@
 | ANKI-010 | TODO | Note / Card 分离与模板生成 | ANKI-000 | backend card models/dto/service、frontend review types | 支持一条 CardNote 通过模板生成一张或多张 Card；首批模板覆盖 Basic、Basic Reverse、Cloze；旧 `front/back` 卡片有兼容读取或迁移策略。 |
 | ANKI-020 | TODO | Anki 式调度与队列模型 | ANKI-000 | card schedule service/repository/review API | 支持 new / learning / review / relearning / suspended / buried 状态、学习步进、每日新卡/复习上限、重新学习路径；继续保留 `again / hard / good / easy` 评分语义。 |
 | ANKI-030 | IN_PROGRESS | Anki 式复习会话体验 | ANKI-010, ANKI-020 | `frontend-user/src/modules/review/`、review API | 复习会话已支持翻面、1-4 评分、来源卡片深链定位、复习页内对笔记/资料/卡片等可直达来源的回看入口、下一次间隔预估、键盘路径、“跳过当前卡片”并将其顺延到当前内存队列末尾，以及“暂停当前卡片”“埋藏当前卡片”从今日活跃队列移除、并可在管理面板恢复；本轮已补“撤销上一次评分”，可恢复评分前 schedule 并把卡片放回今日队列；后续继续确保失败状态不丢当前会话上下文。 |
-| ANKI-040 | IN_PROGRESS | 卡片浏览器与批量管理 | ANKI-010, ANKI-020 | review/card browser UI + backend list/filter APIs | 复习管理面板已支持卡片浏览器本地关键词/状态/来源筛选，以及批量暂停、埋藏、恢复选中卡片，并同步今日队列计数与反馈；后续继续补按标签/到期时间筛选、后端列表/过滤 API、批量移动牌组/加标签/删除与审计追溯。 |
+| ANKI-040 | IN_PROGRESS | 卡片浏览器与批量管理 | ANKI-010, ANKI-020 | review/card browser UI + backend list/filter APIs | 复习管理面板已支持卡片浏览器服务端关键词/状态/来源/到期时间筛选，并返回卡片 schedule 供前端展示计划到期；批量暂停、埋藏、恢复选中卡片仍会同步今日队列计数与反馈；后续继续补标签筛选、批量移动牌组/加标签/删除与审计追溯。 |
 | ANKI-050 | IN_PROGRESS | 来源驱动制卡闭环 | ANKI-010, WB-030 | reader/note/graph/ai/card | 批注来源卡片现已补齐 `sourceMetadata` 通路，图谱节点转卡也开始保留 reader/PDF 锚点上下文，AI 草稿确认页与 AI 任务历史里的来源回跳也已接入同一套 reader 精确定位规则，能在草稿确认、AI 工作台深链定位、卡片创建与复习队列中回跳原批注、PDF 页或指定 AI 草稿/任务；后续继续补更通用的图谱节点与 SourceLink 抽象。 |
 | ANKI-060 | TODO | 复习反馈回写学习图谱 | ANKI-020, ANKI-050 | graph/card/review/dashboard | 复习结果可回写图谱节点熟练度、笔记学习状态和工作台反馈；薄弱知识点可在图谱和学习工作台中解释。 |
 | ANKI-070 | TODO | 闪卡导入导出与 Anki 兼容预研 | ANKI-010 | card import/export docs/tools | 近期支持 CSV / JSON 导入导出；`.apkg` 兼容只输出技术预研和采用/不采用结论，不阻塞 P1 主线。 |
@@ -2393,3 +2393,41 @@
   - AI 区块当前只汇总草稿数量与最近任务，后续如果要继续做更强的来源预览、批量确认或统一 SourceLink 语义，仍应沿 `LC-010 / ANKI-050` 继续推进。
 - 下一建议任务：
   - `ANKI-040` 继续补后端列表/过滤 API 与标签/到期时间筛选
+### 执行记录：ANKI-040（卡片浏览器服务端过滤与到期时间筛选）
+
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 未提交
+- 实际变更：
+  - 更新 `backend/internal/modules/card/dto/card.go`
+  - 更新 `backend/internal/modules/card/handler/handler.go`
+  - 更新 `backend/internal/modules/card/handler/handler_test.go`
+  - 更新 `backend/internal/modules/card/repository/repository.go`
+  - 更新 `backend/internal/modules/card/service/service.go`
+  - 新增 `backend/internal/modules/card/service/list_cards_filters_test.go`
+  - 更新 `frontend-user/src/api/review.ts`
+  - 更新 `frontend-user/src/api/types.ts`
+  - 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`
+  - 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`
+  - 更新 `frontend-user/src/styles/studio-workspaces.css`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - `GET /decks/:id/cards` 现在支持 `q / status / sourceType / dueBucket` 四组查询参数，卡片浏览器不再只能先全量拉取再完全依赖前端内存筛选。
+  - 卡片列表响应现在会携带对应 `schedule`，复习工作区可以在卡片浏览器中显示“计划到期”与学习状态，`due / upcoming` 筛选也开始落到真实 schedule 语义上。
+  - 前端复习工作区已把关键词、状态、来源与到期时间筛选全部接到后端过滤入口；批量暂停、埋藏、恢复动作与来源回跳能力保持不退化。
+- 已执行验证：
+  - `go test ./internal/modules/card/handler ./internal/modules/card/service`
+  - `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm run build:user`
+  - `npx playwright test e2e/v1-review-flow.spec.ts`
+- 未执行验证及原因：
+  - 未运行全量 `go test ./internal/modules/card/...` 之外的后端其他模块测试：本工作包只改 `card` 模块列表过滤与用户端复习页，没有触及其他 Go 域逻辑。
+- 兼容性/迁移说明：
+  - 本工作包没有替换既有 `/decks/:id/cards` 路径，只是为现有列表接口增加可选 query 参数和可选 `schedule` 字段，旧调用方继续不带参数也能工作。
+  - `CardPayload.schedule` 是新增可选字段；既有依赖 `front/back/status/source` 的调用点不需要迁移即可继续使用。
+- 已知风险：
+  - 目前服务端过滤已覆盖关键词、状态、来源和到期时间，但标签筛选、跨牌组分页和总数统计仍未进入接口。
+  - `sourceType` 选项目前仍由当前结果集派生，后续如果要做更稳定的筛选体验，更适合继续补固定 facet/统计接口，而不是再把更多筛选语义留在页面层猜测。
+- 下一建议任务：
+  - `ANKI-040` 继续补标签筛选与批量动作的后端承接

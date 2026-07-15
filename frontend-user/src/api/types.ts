@@ -318,6 +318,7 @@ export interface CardPayload {
   sourceId?: string;
   sourceMetadata?: Record<string, unknown>;
   status: string;
+  schedule?: CardSchedulePayload;
   createdAt: string;
   updatedAt: string;
 }
