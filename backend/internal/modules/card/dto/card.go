@@ -25,8 +25,17 @@ type ListCardsQuery struct {
 	Tag        string `form:"tag"`
 }
 
+type ExportDeckQuery struct {
+	Format string `form:"format"`
+}
+
 type BulkCreateCardsRequest struct {
 	Cards []CreateCardRequest `json:"cards" binding:"required,min=1,max=20,dive"`
+}
+
+type ImportDeckRequest struct {
+	Filename string `json:"filename" binding:"required"`
+	Content  string `json:"content" binding:"required"`
 }
 
 type ReviewCardRequest struct {
@@ -125,6 +134,20 @@ type ReviewFeedbackPayload struct {
 	LearningCount int64                       `json:"learningCount"`
 	WeakCardCount int64                       `json:"weakCardCount"`
 	WeakCards     []ReviewFeedbackCardPayload `json:"weakCards"`
+}
+
+type DeckExportPayload struct {
+	Format     string `json:"format"`
+	Filename   string `json:"filename"`
+	MimeType   string `json:"mimeType"`
+	Content    string `json:"content"`
+	CardCount  int    `json:"cardCount"`
+	ExportedAt string `json:"exportedAt"`
+}
+
+type DeckImportPayload struct {
+	ImportedCount int    `json:"importedCount"`
+	StatusMessage string `json:"statusMessage"`
 }
 
 type ReviewResultPayload struct {

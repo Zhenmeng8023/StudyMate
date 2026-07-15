@@ -368,6 +368,20 @@ export interface ReviewFeedbackPayload {
   weakCards: ReviewFeedbackCardPayload[];
 }
 
+export interface DeckExportPayload {
+  format: "json" | "csv";
+  filename: string;
+  mimeType: string;
+  content: string;
+  cardCount: number;
+  exportedAt: string;
+}
+
+export interface DeckImportPayload {
+  importedCount: number;
+  statusMessage: string;
+}
+
 export interface ReviewResultPayload {
   reviewId: string;
   schedule: CardSchedulePayload;

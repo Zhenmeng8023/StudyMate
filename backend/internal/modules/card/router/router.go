@@ -11,6 +11,8 @@ func RegisterRoutes(group *gin.RouterGroup, handler *cardhandler.Handler) {
 	group.GET("/decks/:id/cards", handler.ListCards)
 	group.POST("/decks/:id/cards", handler.CreateCard)
 	group.POST("/decks/:id/cards/bulk", handler.CreateCardsBulk)
+	group.GET("/decks/:id/export", handler.ExportDeck)
+	group.POST("/decks/:id/import", handler.ImportDeck)
 	group.GET("/review/feedback", handler.ReviewFeedback)
 	group.GET("/review/today", handler.TodayQueue)
 	group.POST("/cards/:id/review", handler.ReviewCard)

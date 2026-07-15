@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -138,6 +139,69 @@ func (s *Service) BulkCreateCards(ownerUserID string, deckID string, requests []
 	})
 
 	return cards, nil
+}
+
+func (s *Service) ExportDeck(ownerUserID string, deckID string, format string) (*carddto.DeckExportPayload, error) {
+	deck, err := s.requireOwnerDeck(ownerUserID, deckID)
+	if err != nil {
+		return nil, err
+	}
+
+	normalizedFormat, ok := normalizeDeckExportFormat(format)
+	if !ok {
+		return nil, apperrors.New(http.StatusBadRequest, "invalid_deck_export_format", "导出格式必须是 json 或 csv")
+	}
+
+	cards, err := s.repository.ListCardsByDeck(deck.ID, ownerUserID, cardrepo.ListCardsFilter{})
+	if err != nil {
+		return nil, apperrors.Internal("读取卡组卡片失败")
+	}
+
+	artifact, err := buildDeckExportArtifact(deck.Title, cards, normalizedFormat, s.now().UTC())
+	if err != nil {
+		return nil, err
+	}
+
+	_ = s.auditLogs.Create(ownerUserID, "card.deck.export", "deck", map[string]any{
+		"deckId": deck.ID,
+		"format": normalizedFormat,
+		"count":  len(cards),
+	})
+
+	return artifact, nil
+}
+
+func (s *Service) ImportDeck(ownerUserID string, deckID string, request carddto.ImportDeckRequest) (*carddto.DeckImportPayload, error) {
+	deck, err := s.requireOwnerDeck(ownerUserID, deckID)
+	if err != nil {
+		return nil, err
+	}
+
+	cards, err := parseDeckImportRequest(request)
+	if err != nil {
+		return nil, err
+	}
+	if len(cards) == 0 {
+		return nil, apperrors.New(http.StatusBadRequest, "empty_deck_import", "导入文件中没有可用卡片")
+	}
+	if len(cards) > 200 {
+		return nil, apperrors.New(http.StatusBadRequest, "deck_import_too_large", "单次最多导入 200 张卡片")
+	}
+
+	created, err := s.createCardsForDeck(ownerUserID, deck, cards)
+	if err != nil {
+		return nil, err
+	}
+
+	_ = s.auditLogs.Create(ownerUserID, "card.deck.import", "deck", map[string]any{
+		"deckId": deck.ID,
+		"count":  len(created),
+	})
+
+	return &carddto.DeckImportPayload{
+		ImportedCount: len(created),
+		StatusMessage: "已导入 " + strconv.Itoa(len(created)) + " 张卡片到当前卡组。",
+	}, nil
 }
 
 func (s *Service) TodayQueue(ownerUserID string) (*carddto.ReviewQueuePayload, error) {
@@ -423,6 +487,17 @@ func normalizeCardListDueBucket(value string) (string, bool) {
 		return "all", true
 	case "due", "upcoming":
 		return trimmed, true
+	default:
+		return "", false
+	}
+}
+
+func normalizeDeckExportFormat(value string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", "json":
+		return "json", true
+	case "csv":
+		return "csv", true
 	default:
 		return "", false
 	}

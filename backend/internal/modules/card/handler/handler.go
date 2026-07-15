@@ -20,6 +20,8 @@ type cardService interface {
 	ListCards(ownerUserID string, deckID string, request carddto.ListCardsQuery) ([]carddto.CardPayload, error)
 	CreateCard(ownerUserID string, deckID string, request carddto.CreateCardRequest) (*carddto.CardPayload, error)
 	BulkCreateCards(ownerUserID string, deckID string, requests []carddto.CreateCardRequest) ([]carddto.CardPayload, error)
+	ExportDeck(ownerUserID string, deckID string, format string) (*carddto.DeckExportPayload, error)
+	ImportDeck(ownerUserID string, deckID string, request carddto.ImportDeckRequest) (*carddto.DeckImportPayload, error)
 	TodayQueue(ownerUserID string) (*carddto.ReviewQueuePayload, error)
 	ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPayload, error)
 	ReviewCard(ownerUserID string, cardID string, request carddto.ReviewCardRequest) (*carddto.ReviewResultPayload, error)
@@ -105,6 +107,38 @@ func (h *Handler) CreateCardsBulk(ctx *gin.Context) {
 	}
 
 	response.Success(ctx, http.StatusCreated, result)
+}
+
+func (h *Handler) ExportDeck(ctx *gin.Context) {
+	var query carddto.ExportDeckQuery
+	if err := ctx.ShouldBindQuery(&query); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	result, err := h.service.ExportDeck(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), query.Format)
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}
+
+func (h *Handler) ImportDeck(ctx *gin.Context) {
+	var request carddto.ImportDeckRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	result, err := h.service.ImportDeck(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), request)
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
 }
 
 func (h *Handler) TodayQueue(ctx *gin.Context) {

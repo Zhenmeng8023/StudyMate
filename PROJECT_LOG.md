@@ -1,3 +1,32 @@
+## 2026-07-15 09:55:44 +08:00 | v1.1.0-alpha.263 | 推进 ANKI-070 后端导入导出接口起步
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把全局主路径做成能用版，再逐步细化”方向推进 `ANKI-070`，这一轮不直接切进更重的导入预检中心或 `.apkg` 兼容，而是先把卡组导入导出从“只有前端本地 helper”推进到“后端也能统一承接”的最小可用状态。
+- 目标是让复习工作区的导出产物和导入入口不再完全依赖前端本地拼装/解析，而是由后端提供统一的 JSON / CSV 卡组导入导出契约。
+### 实际变更
+
+- 后端更新 `backend/internal/modules/card/dto/card.go`、`handler/handler.go`、`router/router.go` 与 `service/service.go`，并新增 `backend/internal/modules/card/service/import_export.go`，补上 `GET /api/v1/decks/:id/export?format=json|csv` 与 `POST /api/v1/decks/:id/import` 两条接口。
+- 服务端导出现在会统一返回 portable artifact：`format / filename / mimeType / content / cardCount / exportedAt`；服务端导入则会按文件名和内容自动识别 JSON / CSV，并把 portable card 解析成卡片请求写入当前卡组。
+- 扩展 `backend/internal/modules/card/handler/handler_test.go` 与 `backend/internal/modules/card/service/list_cards_filters_test.go`，锁定导入导出请求绑定、JSON/CSV artifact 构建，以及 JSON/CSV portable 文件内容导入。
+- 前端更新 `frontend-user/src/api/review.ts`、`frontend-user/src/api/types.ts` 与 `frontend-user/src/api/reviewAi.test.ts`，新增 `exportDeckCards(...)` 与 `importDeckCards(...)` 客户端契约。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，让复习管理面板中的“导出 JSON / 导出 CSV / 导入卡片文件”入口改为走后端接口，而不再只依赖本地构造 artifact 或本地解析后再批量直写。
+- 扩展 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，锁定页面导入导出入口已经切到新的后端 API。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-070` 当前边界推进到“前后端都已起步承接 portable 导入导出”这一层。
+### 验证结果
+
+- RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- GREEN：`go test ./internal/modules/card/...`
+- GREEN：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+### 后续影响
+
+- `ANKI-070` 现在不再只是“前端本地能导入导出”，复习工作区已经开始拥有统一的后端 portable 导入导出接口，后续要加预检、失败报告或更大规模导入时也有了承接边界。
+- 这一轮仍然只先补了最小后端承接：没有 multipart 上传、没有逐条失败报告、没有重复卡片检测，也还没有 `.apkg` 兼容；如果后续继续推进 `ANKI-070`，更适合优先补导入预览、重复检测和失败明细，而不是直接跳进更重的 Anki 全兼容链路。
+
 ## 2026-07-15 09:41:56 +08:00 | v1.1.0-alpha.262 | 推进 ANKI-060 首页学习反馈摘要起步
 ### 任务内容
 

@@ -71,7 +71,7 @@
 | ANKI-040 | IN_PROGRESS | 卡片浏览器与批量管理 | ANKI-010, ANKI-020 | review/card browser UI + backend list/filter APIs | 复习管理面板已支持卡片浏览器服务端关键词/状态/来源/到期时间/标签筛选，卡片创建链路也开始保留标签并在浏览器中展示；批量暂停、埋藏、恢复选中卡片仍会同步今日队列计数与反馈；后续继续补跨牌组分页、批量移动牌组/加标签/删除与审计追溯。 |
 | ANKI-050 | IN_PROGRESS | 来源驱动制卡闭环 | ANKI-010, WB-030 | reader/note/graph/ai/card | 批注来源卡片现已补齐 `sourceMetadata` 通路，图谱节点转卡也开始保留 reader/PDF 锚点上下文，AI 草稿确认页与 AI 任务历史里的来源回跳也已接入同一套 reader 精确定位规则，能在草稿确认、AI 工作台深链定位、卡片创建与复习队列中回跳原批注、PDF 页或指定 AI 草稿/任务；后续继续补更通用的图谱节点与 SourceLink 抽象。 |
 | ANKI-060 | IN_PROGRESS | 复习反馈回写学习图谱 | ANKI-020, ANKI-050 | graph/card/review/dashboard | 当前已起步补上 `GET /review/feedback` 摘要接口，并让 dashboard 直接展示薄弱卡片、学习中卡片与到期卡片数量，作为学习反馈入口；后续继续把复习结果回写到图谱节点熟练度、笔记学习状态和更完整的工作台反馈。 |
-| ANKI-070 | IN_PROGRESS | 闪卡导入导出与 Anki 兼容预研 | ANKI-010 | card import/export docs/tools | 复习工作区已起步支持当前卡组的本地 JSON / CSV 导出，以及从本地 JSON / CSV 文件批量导入到当前卡组；后续继续补后端导入导出接口、导入预检、失败报告与 `.apkg` 兼容预研。 |
+| ANKI-070 | IN_PROGRESS | 闪卡导入导出与 Anki 兼容预研 | ANKI-010 | card import/export docs/tools | 复习工作区现已支持当前卡组的 JSON / CSV 导入导出入口，且后端已起步提供 `GET /decks/:id/export` 与 `POST /decks/:id/import` 统一承接可移植卡片文件；后续继续补导入预检、失败报告、重复卡片检测与 `.apkg` 兼容预研。 |
 | WB-033 | TODO | 图谱-复习学习反馈闭环 | ANKI-020, ANKI-050, WB-030 | graph/card/review | 基于 Anki 式 CardNote / Card / Schedule 模型串起图谱节点、卡片复习和学习反馈；卡片与来源节点可追溯，复习结果能回写节点熟练度。 |
 | WB-034 | TODO | 图谱 API 与工作区回归验证矩阵 | WB-032 | graph backend + frontend + e2e | 覆盖 create/save/restore/export/layout/conflict/权限路径；图谱工作区在桌面与窄屏至少有 smoke 回归，不再只依赖零散组件测试。 |
 | GPH-040 | TODO | 图谱工作区 store / commands / features 拆分 | WB-032, FE-020 | `frontend-user/src/modules/graph/`、`packages/graph-core` | `useGraphWorkspaceController` 不再继续承接新增业务；选中、相机、面板、保存、冲突等浏览器状态进入 store，新增节点/连线/分组/模板/恢复等用户意图进入 commands。 |
@@ -2502,6 +2502,46 @@
   - 当前导入前还没有独立预检面板、重复卡片检测或逐条错误报告；大批量失败时仍主要依赖现有接口返回错误。
 - 下一建议任务：
   - `ANKI-070` 继续补导入预检、失败报告与后端导入导出接口
+### 执行记录：ANKI-070（后端导入导出接口起步）
+
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 未提交
+- 实际变更：
+  - 更新 `backend/internal/modules/card/dto/card.go`
+  - 更新 `backend/internal/modules/card/handler/handler.go`
+  - 更新 `backend/internal/modules/card/router/router.go`
+  - 更新 `backend/internal/modules/card/service/service.go`
+  - 新增 `backend/internal/modules/card/service/import_export.go`
+  - 更新 `backend/internal/modules/card/handler/handler_test.go`
+  - 更新 `backend/internal/modules/card/service/list_cards_filters_test.go`
+  - 更新 `frontend-user/src/api/review.ts`
+  - 更新 `frontend-user/src/api/types.ts`
+  - 更新 `frontend-user/src/api/reviewAi.test.ts`
+  - 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`
+  - 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 后端新增 `GET /decks/:id/export?format=json|csv`，会统一返回文件名、MIME、内容、卡片数与导出时间，避免前端再自己拼 portable artifact。
+  - 后端新增 `POST /decks/:id/import`，可直接接收 `filename + content` 的 JSON/CSV 卡片文件内容并写入当前卡组。
+  - 复习工作区的“导出 JSON / 导出 CSV / 导入卡片文件”入口现已改为走后端接口，而不是只依赖前端本地拼装或本地解析后再分批直写。
+- 已执行验证：
+  - `go test ./internal/modules/card/handler ./internal/modules/card/service`
+  - `go test ./internal/modules/card/...`
+  - `npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm run build:user`
+  - `npm run verify:docs`
+- 未执行验证及原因：
+  - 未运行更大范围的 review e2e：本轮只补导入导出接口与页面接线，没有改复习评分/调度主路径。
+- 兼容性/迁移说明：
+  - 本工作包新增的是轻量导入导出接口，不改变既有 `bulkCreateDeckCards(...)`、复习评分接口和卡片列表过滤契约。
+  - 当前导入仍然通过 `filename + content` 的 JSON 请求体提交，不含 multipart 上传、预检草稿或失败明细中心；这是原型阶段的最小服务端承接边界。
+- 已知风险：
+  - 服务端导入当前只做最小解析与 200 张上限控制，还没有重复卡片检测、逐条失败报告和导入预览。
+  - `.apkg` 兼容与更复杂的媒体/模板同步依然未进入当前实现边界，`ANKI-070` 仍处于原型推进阶段。
+- 下一建议任务：
+  - `ANKI-070` 继续补导入预检、重复卡片检测与失败报告
 ### 执行记录：ANKI-040（卡片浏览器服务端过滤与到期时间筛选）
 
 - 执行日期：2026-07-15

@@ -3,13 +3,14 @@ import { BookOpenCheck, ChevronLeft, ChevronRight, Layers3, PanelRightClose, Pan
 import { Link, useLocation } from "react-router-dom";
 import {
   AuthSession,
-  bulkCreateDeckCards,
   CardPayload,
   DeckPayload,
   ReviewQueueItemPayload,
   createDeck,
   createDeckCard,
+  exportDeckCards,
   getTodayReviewQueue,
+  importDeckCards,
   listDeckCards,
   listDecks,
   reviewCard,
@@ -17,7 +18,6 @@ import {
   updateCardStatus
 } from "../../api/client";
 import { DataState, Select } from "../../design-system/primitives";
-import { buildDeckExportArtifact, chunkDeckImportCards, parseDeckImportFile } from "./deckImportExport";
 import { buildReviewSourceBacklink, formatReviewSourceReference } from "./reviewSourceBacklinks";
 
 type ReviewWorkspacePageProps = {
@@ -675,13 +675,12 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     setBusy(true);
     setMessage("");
     try {
-      const parsed = parseDeckImportFile(await file.text(), file.name);
-      const batches = chunkDeckImportCards(parsed.cards);
-      for (const batch of batches) {
-        await bulkCreateDeckCards(props.session, selectedDeckId, batch);
-      }
+      const result = await importDeckCards(props.session, selectedDeckId, {
+        filename: file.name,
+        content: await file.text()
+      });
       await Promise.all([refreshCards(selectedDeckId), refreshAll()]);
-      setMessage(`已导入 ${parsed.cards.length} 张卡片到当前卡组。`);
+      setMessage(result.statusMessage);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "导入卡片失败");
     } finally {
@@ -698,20 +697,14 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     setBusy(true);
     setMessage("");
     try {
-      const deckCards = await listDeckCards(props.session, selectedDeckId);
-      if (deckCards.length === 0) {
+      const artifact = await exportDeckCards(props.session, selectedDeckId, format);
+      if (artifact.cardCount === 0) {
         setMessage("当前卡组还没有卡片可导出。");
         return;
       }
 
-      downloadArtifact(
-        buildDeckExportArtifact({
-          kind: format,
-          deckTitle: selectedDeck?.title ?? "deck",
-          cards: deckCards
-        })
-      );
-      setMessage(`已导出 ${deckCards.length} 张卡片到 ${format.toUpperCase()}。`);
+      downloadArtifact(artifact);
+      setMessage(`已导出 ${artifact.cardCount} 张卡片到 ${format.toUpperCase()}。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "导出卡片失败");
     } finally {

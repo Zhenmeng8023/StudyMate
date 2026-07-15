@@ -7,6 +7,8 @@ import type {
   AuthSession,
   CardDraftPayload,
   CardPayload,
+  DeckExportPayload,
+  DeckImportPayload,
   DeckPayload,
   DiagramTemplatePayload,
   FilePayload,
@@ -122,6 +124,31 @@ export async function bulkCreateDeckCards(
     method: "POST",
     headers: withAuth(session),
     body: { cards }
+  });
+}
+
+export async function exportDeckCards(
+  session: AuthSession,
+  deckId: string,
+  format: "json" | "csv"
+) {
+  return request<DeckExportPayload>(`/decks/${deckId}/export?format=${format}`, {
+    headers: withAuth(session)
+  });
+}
+
+export async function importDeckCards(
+  session: AuthSession,
+  deckId: string,
+  input: {
+    filename: string;
+    content: string;
+  }
+) {
+  return request<DeckImportPayload>(`/decks/${deckId}/import`, {
+    method: "POST",
+    headers: withAuth(session),
+    body: input
   });
 }
 
