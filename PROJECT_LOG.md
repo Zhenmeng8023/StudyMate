@@ -1,3 +1,26 @@
+## 2026-07-15 19:52:30 +08:00 | v1.1.0-alpha.281 | 推进 FE-041 管理端 workspace module host 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041 / ADM-010`，这一轮不新增治理功能，而是把 `AdminWorkspaceView.vue` 模板里剩下的 dashboard / moderation / governance 三分支模块切换从页面本体抽离出去。
+- 目标是补一个统一的 `workspace module host`，让工作台页面只保留 session、surface 与壳层协调，把最后一段模块模板分发压到独立组件里。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/modules/AdminWorkspaceModuleHost.vue`，统一承接 dashboard、moderation、governance 三组模块渲染与事件透传。
+- 新增 `frontend-admin/src/views/modules/AdminWorkspaceModuleHost.test.ts`，锁定三条渲染路径，以及 dashboard 打开审核、moderation 筛选/审核动作、governance 筛选/选中/治理动作的透传契约。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，移除页面层直接内联的三段 `v-if / v-else-if / v-else` 模板，改为只把 `activeView`、`moduleProps` 与 `moduleEvents` 交给新的 host。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 workspace module host 已接线”这一层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/modules/AdminWorkspaceModuleHost.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `npx playwright test e2e/v1-admin-governance.spec.ts`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从 workspace surface adapter 推进到更薄的一层 module host，后台工作台模板层里围绕模块切换的最后一段分支也开始从页面本体抽离。
+- 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估这个 host 是否继续升级为 route-level page feature，而不是重新把模块切换模板写回 `AdminWorkspaceView.vue`。
 ## 2026-07-15 19:40:03 +08:00 | v1.1.0-alpha.280 | 推进 FE-041 管理端 workspace surface adapter 接线
 ### 任务内容
 

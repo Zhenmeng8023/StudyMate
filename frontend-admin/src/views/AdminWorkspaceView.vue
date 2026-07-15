@@ -32,9 +32,7 @@ import {
 import { createAdminWorkspaceSurfaceAdapter } from "./adminWorkspaceSurfaceAdapter";
 import { createAdminWorkspaceStateAdapter } from "./adminWorkspaceStateAdapter";
 import { createAdminWorkspaceFeatureAdapter } from "./adminWorkspaceFeatureAdapter";
-import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
-import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
-import AdminModerationModule from "./modules/AdminModerationModule.vue";
+import AdminWorkspaceModuleHost from "./modules/AdminWorkspaceModuleHost.vue";
 
 interface OverviewPayload {
   userCount: number;
@@ -364,45 +362,10 @@ async function post<T>(path: string, body: ApiRequestInit["body"]) {
       @refresh="shellEvents.refresh()"
       @switch-view="shellEvents.switchView($event as AdminView)"
     >
-      <AdminDashboardModule
-        v-if="activeView === 'dashboard'"
-        :moderation-items-count="moduleProps.dashboard.moderationItemsCount"
-        :overview-cards="moduleProps.dashboard.overviewCards"
-        :pending-materials-count="moduleProps.dashboard.pendingMaterialsCount"
-        :pending-posts-count="moduleProps.dashboard.pendingPostsCount"
-        @open-moderation="moduleEvents.dashboard.openModeration()"
-      />
-
-      <AdminModerationModule
-        v-else-if="activeView === 'moderation'"
-        :data-state="moduleProps.moderation.dataState"
-        :items="moduleProps.moderation.items"
-        :query="moduleProps.moderation.query"
-        :status-filter="moduleProps.moderation.statusFilter"
-        :status-options="moduleProps.moderation.statusOptions"
-        :total-count="moduleProps.moderation.totalCount"
-        @request-action="moduleEvents.moderation.requestAction($event)"
-        @update:query="moduleEvents.moderation.updateQuery($event)"
-        @update:status-filter="moduleEvents.moderation.updateStatusFilter($event)"
-      />
-
-      <AdminGovernanceModule
-        v-else
-        :actions="moduleProps.governance.actions"
-        :columns="moduleProps.governance.columns"
-        :data-state="moduleProps.governance.dataState"
-        :empty-text="moduleProps.governance.emptyText"
-        :query="moduleProps.governance.query"
-        :rows="moduleProps.governance.rows"
-        :selected-record="moduleProps.governance.selectedRecord"
-        :status-filter="moduleProps.governance.statusFilter"
-        :status-options="moduleProps.governance.statusOptions"
-        :summary="moduleProps.governance.summary"
-        :total-count="moduleProps.governance.totalCount"
-        @request-action="moduleEvents.governance.requestAction($event)"
-        @select-record="moduleEvents.governance.selectRecord($event)"
-        @update:query="moduleEvents.governance.updateQuery($event)"
-        @update:status-filter="moduleEvents.governance.updateStatusFilter($event)"
+      <AdminWorkspaceModuleHost
+        :active-view="activeView"
+        :module-events="moduleEvents"
+        :module-props="moduleProps"
       />
     </AdminShellFrame>
   </main>
