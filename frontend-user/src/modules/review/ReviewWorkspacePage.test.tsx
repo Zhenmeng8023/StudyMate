@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  bulkCreateDeckCards,
   createDeck,
   createDeckCard,
   getTodayReviewQueue,
@@ -19,6 +20,7 @@ vi.mock("../../api/client", async () => {
   const actual = await vi.importActual<typeof import("../../api/client")>("../../api/client");
   return {
     ...actual,
+    bulkCreateDeckCards: vi.fn(),
     createDeck: vi.fn(),
     createDeckCard: vi.fn(),
     getTodayReviewQueue: vi.fn(),
@@ -50,6 +52,7 @@ const reviewCardMock = vi.mocked(reviewCard);
 const undoReviewCardMock = vi.mocked(undoReviewCard);
 const updateCardStatusMock = vi.mocked(updateCardStatus);
 const createDeckCardMock = vi.mocked(createDeckCard);
+const bulkCreateDeckCardsMock = vi.mocked(bulkCreateDeckCards);
 
 function renderPage(path = "/review") {
   return render(
@@ -65,6 +68,7 @@ describe("ReviewWorkspacePage", () => {
   });
 
   beforeEach(() => {
+    bulkCreateDeckCardsMock.mockReset();
     vi.mocked(createDeck).mockReset();
     vi.mocked(createDeckCard).mockReset();
     listDecksMock.mockReset();
@@ -179,6 +183,29 @@ describe("ReviewWorkspacePage", () => {
       status: "active",
       createdAt: "2026-06-02T12:00:00Z",
       updatedAt: "2026-06-02T12:00:00Z"
+    });
+    bulkCreateDeckCardsMock.mockResolvedValue([
+      {
+        id: "card-imported-1",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Imported card",
+        back: "Imported answer",
+        tags: ["graph"],
+        status: "active",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    ]);
+
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn(() => "blob:review-export")
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: vi.fn()
     });
   });
 
@@ -715,6 +742,72 @@ describe("ReviewWorkspacePage", () => {
         })
       );
     });
+  });
+
+  it("imports a local json card file into the selected deck", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("什么是图谱？")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "打开卡组管理" }));
+    await user.click(screen.getByRole("button", { name: "卡片" }));
+
+    const input = screen.getByLabelText("导入卡片文件");
+    await user.upload(
+      input,
+      new File(
+        [
+          JSON.stringify({
+            app: "StudyMate",
+            kind: "deck-cards",
+            cards: [
+              {
+                front: "Imported front",
+                back: "Imported back",
+                cardType: "basic",
+                tags: ["graph", "imported"]
+              }
+            ]
+          })
+        ],
+        "cards.json",
+        { type: "application/json" }
+      )
+    );
+
+    await waitFor(() => {
+      expect(bulkCreateDeckCardsMock).toHaveBeenCalledWith(
+        session,
+        "deck-1",
+        [
+          expect.objectContaining({
+            front: "Imported front",
+            back: "Imported back",
+            cardType: "basic",
+            tags: ["graph", "imported"]
+          })
+        ]
+      );
+    });
+    expect(await screen.findByText("已导入 1 张卡片到当前卡组。")).toBeInTheDocument();
+  });
+
+  it("exports the selected deck cards as json", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("什么是图谱？")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "打开卡组管理" }));
+    await user.click(screen.getByRole("button", { name: "卡片" }));
+    await user.click(screen.getByRole("button", { name: "导出 JSON" }));
+
+    await waitFor(() => {
+      expect(listDeckCardsMock).toHaveBeenLastCalledWith(session, "deck-1");
+    });
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(await screen.findByText("已导出 1 张卡片到 JSON。")).toBeInTheDocument();
   });
 
   it("batch updates the selected cards from the deck browser", async () => {
