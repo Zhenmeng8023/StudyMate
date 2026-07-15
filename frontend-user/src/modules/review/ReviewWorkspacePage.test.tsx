@@ -514,6 +514,195 @@ describe("ReviewWorkspacePage", () => {
     expect(screen.getByRole("button", { name: "暂停卡片" })).toBeInTheDocument();
   });
 
+  it("filters cards locally inside the deck browser by keyword, status, and source", async () => {
+    listDeckCardsMock.mockResolvedValueOnce([
+      {
+        id: "card-1",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Graph node card",
+        back: "Belongs to graph",
+        sourceType: "graph",
+        sourceId: "graph-1",
+        status: "active",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      },
+      {
+        id: "card-2",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Note summary card",
+        back: "Belongs to note",
+        sourceType: "note",
+        sourceId: "note-1",
+        status: "suspended",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      },
+      {
+        id: "card-3",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Detached fact",
+        back: "No source linked",
+        status: "buried",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    ]);
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await expect(screen.findByRole("button", { expanded: false })).resolves.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { expanded: false }));
+    await user.click(within(screen.getByRole("navigation")).getByRole("button", { name: "\u5361\u7247" }));
+
+    const keywordInput = screen.getByLabelText("\u7b5b\u9009\u5361\u7247\u5173\u952e\u8bcd");
+    const statusFilter = screen.getByLabelText("\u5361\u7247\u72b6\u6001\u7b5b\u9009");
+    const sourceFilter = screen.getByLabelText("\u5361\u7247\u6765\u6e90\u7c7b\u578b\u7b5b\u9009");
+
+    expect(screen.getByText("3 / 3 \u5f20\u5361\u7247")).toBeInTheDocument();
+
+    await user.type(keywordInput, "note");
+
+    expect(screen.getByText("Note summary card")).toBeInTheDocument();
+    expect(screen.queryByText("Graph node card")).not.toBeInTheDocument();
+    expect(screen.queryByText("Detached fact")).not.toBeInTheDocument();
+    expect(screen.getByText("1 / 3 \u5f20\u5361\u7247")).toBeInTheDocument();
+
+    await user.clear(keywordInput);
+    await user.selectOptions(statusFilter, "buried");
+
+    expect(screen.getByText("Detached fact")).toBeInTheDocument();
+    expect(screen.queryByText("Graph node card")).not.toBeInTheDocument();
+    expect(screen.queryByText("Note summary card")).not.toBeInTheDocument();
+
+    await user.selectOptions(statusFilter, "all");
+    await user.selectOptions(sourceFilter, "none");
+
+    expect(screen.getByText("Detached fact")).toBeInTheDocument();
+    expect(screen.queryByText("Graph node card")).not.toBeInTheDocument();
+    expect(screen.queryByText("Note summary card")).not.toBeInTheDocument();
+  });
+
+  it("batch updates the selected cards from the deck browser", async () => {
+    listDeckCardsMock.mockResolvedValueOnce([
+      {
+        id: "card-1",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "First queued card",
+        back: "First queued answer",
+        status: "active",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      },
+      {
+        id: "card-2",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Second queued card",
+        back: "Second queued answer",
+        status: "active",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      },
+      {
+        id: "card-3",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Already buried card",
+        back: "Already outside today's queue",
+        status: "buried",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    ]);
+    getTodayReviewQueueMock.mockResolvedValueOnce({
+      dueCount: 2,
+      items: [
+        {
+          deckTitle: "Queue deck",
+          card: {
+            id: "card-1",
+            deckId: "deck-1",
+            ownerUserId: "user-1",
+            cardType: "basic",
+            front: "First queued card",
+            back: "First queued answer",
+            status: "active",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          },
+          schedule: {
+            cardId: "card-1",
+            userId: "user-1",
+            dueAt: "2026-06-02T12:00:00Z",
+            intervalDays: 0,
+            easeFactor: 2.5,
+            repetitionCount: 0,
+            lapseCount: 0,
+            state: "new",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        },
+        {
+          deckTitle: "Queue deck",
+          card: {
+            id: "card-2",
+            deckId: "deck-1",
+            ownerUserId: "user-1",
+            cardType: "basic",
+            front: "Second queued card",
+            back: "Second queued answer",
+            status: "active",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          },
+          schedule: {
+            cardId: "card-2",
+            userId: "user-1",
+            dueAt: "2026-06-02T12:30:00Z",
+            intervalDays: 0,
+            easeFactor: 2.5,
+            repetitionCount: 0,
+            lapseCount: 0,
+            state: "new",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        }
+      ]
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("First queued card")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { expanded: false }));
+    await user.click(within(screen.getByRole("navigation")).getByRole("button", { name: "\u5361\u7247" }));
+    await user.click(screen.getByLabelText("\u9009\u62e9\u5361\u7247 First queued card"));
+    await user.click(screen.getByLabelText("\u9009\u62e9\u5361\u7247 Second queued card"));
+    await user.click(screen.getByRole("button", { name: "\u6279\u91cf\u6682\u505c\u9009\u4e2d\u5361\u7247" }));
+
+    await waitFor(() => {
+      expect(updateCardStatusMock).toHaveBeenCalledWith(session, "card-1", { status: "suspended" });
+      expect(updateCardStatusMock).toHaveBeenCalledWith(session, "card-2", { status: "suspended" });
+    });
+    expect(await screen.findByText("\u5df2\u6279\u91cf\u6682\u505c 2 \u5f20\u5361\u7247\uff0c\u4eca\u65e5\u961f\u5217\u5df2\u540c\u6b65\u79fb\u9664\u3002")).toBeInTheDocument();
+    expect(screen.getByText("0 \u5f20\u4ecd\u5f85\u5b8c\u6210")).toBeInTheDocument();
+    expect(screen.getAllByText("\u5df2\u6682\u505c").length).toBeGreaterThanOrEqual(2);
+  });
+
   it("renders the shared error state when the initial review workspace bootstrap fails", async () => {
     listDecksMock.mockRejectedValueOnce(new Error("复习工作台加载失败"));
     getTodayReviewQueueMock.mockRejectedValueOnce(new Error("复习工作台加载失败"));
