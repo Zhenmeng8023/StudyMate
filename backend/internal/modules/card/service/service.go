@@ -88,6 +88,7 @@ func (s *Service) ListCards(ownerUserID string, deckID string, request carddto.L
 		Status:     status,
 		SourceType: strings.TrimSpace(request.SourceType),
 		DueBucket:  dueBucket,
+		Tag:        strings.TrimSpace(request.Tag),
 		Now:        s.now().UTC(),
 	})
 	if err != nil {
@@ -464,6 +465,7 @@ func (s *Service) createCardsForDeck(ownerUserID string, deck *cardmodel.Deck, r
 			CardType:       normalizeCardType(request.CardType),
 			Front:          front,
 			Back:           back,
+			Tags:           cardrepo.EncodeTags(normalizeCardTags(request.Tags)),
 			SourceType:     strings.TrimSpace(request.SourceType),
 			SourceID:       strings.TrimSpace(request.SourceID),
 			SourceMetadata: cardrepo.MarshalSourceMetadata(request.SourceMetadata),
@@ -503,4 +505,30 @@ func (s *Service) createCardsForDeck(ownerUserID string, deck *cardmodel.Deck, r
 	}
 
 	return created, nil
+}
+
+func normalizeCardTags(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{}, len(values))
+	normalized := make([]string, 0, len(values))
+	for _, value := range values {
+		tag := strings.TrimSpace(value)
+		if tag == "" {
+			continue
+		}
+		if _, exists := seen[tag]; exists {
+			continue
+		}
+		seen[tag] = struct{}{}
+		normalized = append(normalized, tag)
+	}
+
+	if len(normalized) == 0 {
+		return nil
+	}
+
+	return normalized
 }

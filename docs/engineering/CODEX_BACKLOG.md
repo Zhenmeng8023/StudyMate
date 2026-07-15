@@ -68,7 +68,7 @@
 | ANKI-010 | TODO | Note / Card 分离与模板生成 | ANKI-000 | backend card models/dto/service、frontend review types | 支持一条 CardNote 通过模板生成一张或多张 Card；首批模板覆盖 Basic、Basic Reverse、Cloze；旧 `front/back` 卡片有兼容读取或迁移策略。 |
 | ANKI-020 | TODO | Anki 式调度与队列模型 | ANKI-000 | card schedule service/repository/review API | 支持 new / learning / review / relearning / suspended / buried 状态、学习步进、每日新卡/复习上限、重新学习路径；继续保留 `again / hard / good / easy` 评分语义。 |
 | ANKI-030 | IN_PROGRESS | Anki 式复习会话体验 | ANKI-010, ANKI-020 | `frontend-user/src/modules/review/`、review API | 复习会话已支持翻面、1-4 评分、来源卡片深链定位、复习页内对笔记/资料/卡片等可直达来源的回看入口、下一次间隔预估、键盘路径、“跳过当前卡片”并将其顺延到当前内存队列末尾，以及“暂停当前卡片”“埋藏当前卡片”从今日活跃队列移除、并可在管理面板恢复；本轮已补“撤销上一次评分”，可恢复评分前 schedule 并把卡片放回今日队列；后续继续确保失败状态不丢当前会话上下文。 |
-| ANKI-040 | IN_PROGRESS | 卡片浏览器与批量管理 | ANKI-010, ANKI-020 | review/card browser UI + backend list/filter APIs | 复习管理面板已支持卡片浏览器服务端关键词/状态/来源/到期时间筛选，并返回卡片 schedule 供前端展示计划到期；批量暂停、埋藏、恢复选中卡片仍会同步今日队列计数与反馈；后续继续补标签筛选、批量移动牌组/加标签/删除与审计追溯。 |
+| ANKI-040 | IN_PROGRESS | 卡片浏览器与批量管理 | ANKI-010, ANKI-020 | review/card browser UI + backend list/filter APIs | 复习管理面板已支持卡片浏览器服务端关键词/状态/来源/到期时间/标签筛选，卡片创建链路也开始保留标签并在浏览器中展示；批量暂停、埋藏、恢复选中卡片仍会同步今日队列计数与反馈；后续继续补跨牌组分页、批量移动牌组/加标签/删除与审计追溯。 |
 | ANKI-050 | IN_PROGRESS | 来源驱动制卡闭环 | ANKI-010, WB-030 | reader/note/graph/ai/card | 批注来源卡片现已补齐 `sourceMetadata` 通路，图谱节点转卡也开始保留 reader/PDF 锚点上下文，AI 草稿确认页与 AI 任务历史里的来源回跳也已接入同一套 reader 精确定位规则，能在草稿确认、AI 工作台深链定位、卡片创建与复习队列中回跳原批注、PDF 页或指定 AI 草稿/任务；后续继续补更通用的图谱节点与 SourceLink 抽象。 |
 | ANKI-060 | TODO | 复习反馈回写学习图谱 | ANKI-020, ANKI-050 | graph/card/review/dashboard | 复习结果可回写图谱节点熟练度、笔记学习状态和工作台反馈；薄弱知识点可在图谱和学习工作台中解释。 |
 | ANKI-070 | TODO | 闪卡导入导出与 Anki 兼容预研 | ANKI-010 | card import/export docs/tools | 近期支持 CSV / JSON 导入导出；`.apkg` 兼容只输出技术预研和采用/不采用结论，不阻塞 P1 主线。 |
@@ -2393,6 +2393,45 @@
   - AI 区块当前只汇总草稿数量与最近任务，后续如果要继续做更强的来源预览、批量确认或统一 SourceLink 语义，仍应沿 `LC-010 / ANKI-050` 继续推进。
 - 下一建议任务：
   - `ANKI-040` 继续补后端列表/过滤 API 与标签/到期时间筛选
+### 执行记录：ANKI-040（卡片标签筛选与创建链路）
+
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 未提交
+- 实际变更：
+  - 更新 `backend/internal/modules/card/dto/card.go`
+  - 更新 `backend/internal/modules/card/model/card.go`
+  - 更新 `backend/internal/modules/card/repository/repository.go`
+  - 更新 `backend/internal/modules/card/service/service.go`
+  - 新增 `backend/internal/migrations/mysql/007_card_tags.sql`
+  - 新增 `backend/internal/migrations/mysql/007_card_tags.down.sql`
+  - 更新 `frontend-user/src/api/review.ts`
+  - 更新 `frontend-user/src/api/types.ts`
+  - 更新 `frontend-user/src/app/appShared.tsx`
+  - 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`
+  - 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`
+  - 更新 `frontend-user/src/styles/studio-workspaces.css`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - `cards` 表新增 `tags` 持久化字段，卡片创建、批量创建、列表返回和今日复习队列都开始沿用统一的标签编码/解码通路。
+  - `GET /decks/:id/cards` 现在支持 `tag` 查询参数，复习管理面板可按标签筛选卡片，并在卡片条目里直接展示标签。
+  - 复习工作区新增“卡片标签筛选”和“卡片标签”输入，手动创建卡片时可写入标签，且不会破坏既有来源回跳、批量状态管理和今日队列刷新链路。
+- 已执行验证：
+  - `go test ./internal/modules/card/handler ./internal/modules/card/service`
+  - `go test ./internal/modules/card/...`
+  - `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm run build:user`
+- 未执行验证及原因：
+  - 未运行跨模块后端集成测试与 Playwright：本工作包只改 `card` 模块与复习工作区的标签链路，优先先完成同域回归与构建验证。
+- 兼容性/迁移说明：
+  - 需要执行新增的 `007_card_tags` migration，为既有 `cards` 表补 `tags` 列；迁移采用幂等写法，重复执行不会重复加列。
+  - 前端 `CardPayload.tags` 保持兼容旧 fixture 的可选形态，但新的卡片接口响应已开始稳定返回标签数组。
+- 已知风险：
+  - 当前标签筛选仍然基于单标签精确匹配，不支持多标签组合、标签统计 facet 或跨牌组聚合浏览。
+  - 标签目前只覆盖手动创建与列表展示链路，批量加标签、标签编辑和标签审计还没有进入后端动作接口。
+- 下一建议任务：
+  - `ANKI-040` 继续补批量加标签/删除与跨牌组分页统计
 ### 执行记录：ANKI-040（卡片浏览器服务端过滤与到期时间筛选）
 
 - 执行日期：2026-07-15

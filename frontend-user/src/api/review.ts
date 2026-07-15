@@ -57,6 +57,7 @@ export async function listDeckCards(
     status?: "all" | "active" | "suspended" | "buried";
     sourceType?: "all" | "none" | string;
     dueBucket?: "all" | "due" | "upcoming";
+    tag?: string;
   }
 ) {
   const params = new URLSearchParams();
@@ -72,6 +73,9 @@ export async function listDeckCards(
   if (filters?.dueBucket && filters.dueBucket !== "all") {
     params.set("dueBucket", filters.dueBucket);
   }
+  if (filters?.tag?.trim()) {
+    params.set("tag", filters.tag.trim());
+  }
 
   const path = params.size ? `/decks/${deckId}/cards?${params.toString()}` : `/decks/${deckId}/cards`;
   return request<CardPayload[]>(path, {
@@ -86,6 +90,7 @@ export async function createDeckCard(
     cardType: string;
     front: string;
     back: string;
+    tags?: string[];
     sourceType?: string;
     sourceId?: string;
     sourceMetadata?: Record<string, unknown>;
@@ -106,6 +111,7 @@ export async function bulkCreateDeckCards(
     draftId?: string;
     front: string;
     back: string;
+    tags?: string[];
     sourceType?: string;
     sourceId?: string;
     sourceMetadata?: Record<string, unknown>;

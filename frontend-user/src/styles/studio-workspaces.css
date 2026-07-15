@@ -853,7 +853,7 @@
 .review-card-browser__filters {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .review-card-browser__field {
@@ -940,6 +940,24 @@
   color: var(--text-1);
   font-size: 12px;
   background: var(--surface-soft);
+}
+
+.review-managed-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-managed-card__tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .review-managed-card__schedule {

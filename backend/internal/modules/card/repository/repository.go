@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"encoding/json"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -23,6 +25,7 @@ type ListCardsFilter struct {
 	Status     string
 	SourceType string
 	DueBucket  string
+	Tag        string
 	Now        time.Time
 }
 
@@ -86,6 +89,7 @@ func (r *Repository) ListCardsByDeck(deckID string, ownerUserID string, filter L
 		CardType        string
 		Front           string
 		Back            string
+		Tags            string
 		SourceType      string
 		SourceID        string
 		SourceMetadata  string
@@ -111,6 +115,7 @@ func (r *Repository) ListCardsByDeck(deckID string, ownerUserID string, filter L
 			cards.card_type,
 			cards.front,
 			cards.back,
+			cards.tags,
 			cards.source_type,
 			cards.source_id,
 			cards.source_metadata,
@@ -132,7 +137,7 @@ func (r *Repository) ListCardsByDeck(deckID string, ownerUserID string, filter L
 
 	if filter.Query != "" {
 		like := "%" + filter.Query + "%"
-		query = query.Where("(cards.front LIKE ? OR cards.back LIKE ? OR cards.source_type LIKE ? OR cards.source_id LIKE ?)", like, like, like, like)
+		query = query.Where("(cards.front LIKE ? OR cards.back LIKE ? OR cards.tags LIKE ? OR cards.source_type LIKE ? OR cards.source_id LIKE ?)", like, like, like, like, like)
 	}
 	if filter.Status != "" && filter.Status != "all" {
 		query = query.Where("cards.status = ?", filter.Status)
@@ -149,6 +154,9 @@ func (r *Repository) ListCardsByDeck(deckID string, ownerUserID string, filter L
 	}
 	if filter.DueBucket == "upcoming" {
 		query = query.Where("card_schedules.due_at > ?", filter.Now)
+	}
+	if filter.Tag != "" {
+		query = query.Where("cards.tags LIKE ?", buildTagSearchPattern(filter.Tag))
 	}
 
 	query = query.Order("cards.updated_at desc")
@@ -167,6 +175,7 @@ func (r *Repository) ListCardsByDeck(deckID string, ownerUserID string, filter L
 			CardType:       card.CardType,
 			Front:          card.Front,
 			Back:           card.Back,
+			Tags:           card.Tags,
 			SourceType:     card.SourceType,
 			SourceID:       card.SourceID,
 			SourceMetadata: card.SourceMetadata,
@@ -251,6 +260,7 @@ func (r *Repository) ListDueCards(userID string, dueBefore time.Time, limit int)
 		CardType        string
 		Front           string
 		Back            string
+		Tags            string
 		SourceType      string
 		SourceID        string
 		SourceMetadata  string
@@ -282,6 +292,7 @@ func (r *Repository) ListDueCards(userID string, dueBefore time.Time, limit int)
 			cards.card_type,
 			cards.front,
 			cards.back,
+			cards.tags,
 			cards.source_type,
 			cards.source_id,
 			cards.source_metadata,
@@ -313,6 +324,7 @@ func (r *Repository) ListDueCards(userID string, dueBefore time.Time, limit int)
 				CardType:       row.CardType,
 				Front:          row.Front,
 				Back:           row.Back,
+				Tags:           row.Tags,
 				SourceType:     row.SourceType,
 				SourceID:       row.SourceID,
 				SourceMetadata: row.SourceMetadata,
@@ -362,6 +374,7 @@ func BuildCardPayload(card cardmodel.Card) carddto.CardPayload {
 		CardType:       card.CardType,
 		Front:          card.Front,
 		Back:           card.Back,
+		Tags:           DecodeTags(card.Tags),
 		SourceType:     card.SourceType,
 		SourceID:       card.SourceID,
 		SourceMetadata: parseSourceMetadata(card.SourceMetadata),
@@ -383,4 +396,36 @@ func BuildSchedulePayload(schedule cardmodel.CardSchedule) carddto.CardScheduleP
 		State:           schedule.State,
 		UpdatedAt:       schedule.UpdatedAt.Format(time.RFC3339),
 	}
+}
+
+func EncodeTags(tags []string) string {
+	if len(tags) == 0 {
+		return "[]"
+	}
+
+	raw, err := json.Marshal(tags)
+	if err != nil {
+		return "[]"
+	}
+
+	return string(raw)
+}
+
+func DecodeTags(raw string) []string {
+	if raw == "" {
+		return []string{}
+	}
+
+	var tags []string
+	if err := json.Unmarshal([]byte(raw), &tags); err != nil {
+		return []string{}
+	}
+
+	return tags
+}
+
+func buildTagSearchPattern(tag string) string {
+	escaped := strings.ReplaceAll(tag, "\\", "\\\\")
+	escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
+	return "%\"" + escaped + "\"%"
 }

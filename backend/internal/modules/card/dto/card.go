@@ -11,6 +11,7 @@ type CreateCardRequest struct {
 	DraftID        string         `json:"draftId,omitempty"`
 	Front          string         `json:"front" binding:"required"`
 	Back           string         `json:"back" binding:"required"`
+	Tags           []string       `json:"tags,omitempty"`
 	SourceType     string         `json:"sourceType"`
 	SourceID       string         `json:"sourceId"`
 	SourceMetadata map[string]any `json:"sourceMetadata,omitempty"`
@@ -21,6 +22,7 @@ type ListCardsQuery struct {
 	Status     string `form:"status"`
 	SourceType string `form:"sourceType"`
 	DueBucket  string `form:"dueBucket"`
+	Tag        string `form:"tag"`
 }
 
 type BulkCreateCardsRequest struct {
@@ -71,6 +73,7 @@ type CardPayload struct {
 	CardType       string               `json:"cardType"`
 	Front          string               `json:"front"`
 	Back           string               `json:"back"`
+	Tags           []string             `json:"tags"`
 	SourceType     string               `json:"sourceType,omitempty"`
 	SourceID       string               `json:"sourceId,omitempty"`
 	SourceMetadata map[string]any       `json:"sourceMetadata,omitempty"`

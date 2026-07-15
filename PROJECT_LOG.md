@@ -1,3 +1,31 @@
+## 2026-07-15 09:21:26 +08:00 | v1.1.0-alpha.260 | 推进 ANKI-040 卡片标签筛选与创建链路
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把全局主路径做成能用版，再逐步细化”方向推进 `ANKI-040`，这一轮不切去更重的模板/Note 重构，而是把卡片浏览器和手动制卡里已经缺失很久的标签能力先补成可用闭环。
+- 目标是让复习工作区不只支持关键词、状态、来源和到期时间筛选，也能真正按卡片标签回看与组织，同时让手动创建卡片时写入的标签能稳定落库并回到浏览器展示。
+### 实际变更
+
+- 后端更新 `backend/internal/modules/card/dto/card.go`、`model/card.go`、`repository/repository.go` 与 `service/service.go`，为卡片创建/列表返回补上 `tags` 字段，并新增 `tag` 查询参数、标签编码解码与单标签筛选逻辑。
+- 新增 `backend/internal/migrations/mysql/007_card_tags.sql` 与 `007_card_tags.down.sql`，为既有 `cards` 表补充 `tags` 列，并保持迁移幂等。
+- 前端更新 `frontend-user/src/api/review.ts` 与 `frontend-user/src/api/types.ts`，让卡片列表请求与创建请求都能传递标签，同时保持旧 fixture 的类型兼容。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，在复习管理面板补上“卡片标签筛选”和“卡片标签”输入，并在卡片条目中展示标签 chips。
+- 扩展 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，锁定标签筛选控件存在、手动创建卡片时会提交标签，以及卡片浏览器会显示标签；来源回跳测试 `ReviewWorkspacePage.sourceLinks.test.tsx` 继续保持通过。
+- 顺手修正 `frontend-user/src/app/appShared.tsx` 里资料标签展示对可选 `tags` 的空值防御，避免当前类型检查因为历史类型定义而中断验证链路。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-040` 当前边界推进到“标签筛选与创建链路已接通”这一层。
+### 验证结果
+
+- RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- GREEN：`go test ./internal/modules/card/...`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- `ANKI-040` 现在不再只停留在“服务端过滤已接上，但标签还是空缺”的半成品状态；复习工作区已经开始具备最小可用的标签组织能力，手动制卡和浏览器回看也终于串起来了。
+- 这一轮仍然只先承接了单标签筛选和手动创建标签；如果后续继续推进 `ANKI-040 / ANKI-020 / LC-010`，更适合优先补批量加标签、标签编辑/删除、跨牌组分页与统计，而不是继续把更重的浏览器治理能力留空。
+
 ## 2026-07-15 08:55:37 +08:00 | v1.1.0-alpha.259 | 推进 ANKI-040 卡片浏览器服务端过滤与到期时间筛选
 ### 任务内容
 

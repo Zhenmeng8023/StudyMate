@@ -113,6 +113,21 @@ function formatScheduleStateLabel(state?: string) {
   }
 }
 
+function parseCardTags(value: string) {
+  if (!value.trim()) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
 function prioritizeRequestedQueueItem(items: ReviewQueueItemPayload[], cardId: string) {
   const index = items.findIndex((item) => item.card.id === cardId);
   if (index <= 0) {
@@ -181,6 +196,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [cardStatusFilter, setCardStatusFilter] = useState<ManagedCardStatusFilter>("all");
   const [cardSourceFilter, setCardSourceFilter] = useState<ManagedCardSourceFilter>("all");
   const [cardDueFilter, setCardDueFilter] = useState<ManagedCardDueFilter>("all");
+  const [cardTagFilter, setCardTagFilter] = useState("");
   const [selectedManagedCardIds, setSelectedManagedCardIds] = useState<string[]>([]);
   const [deckForm, setDeckForm] = useState({
     title: "",
@@ -190,7 +206,8 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [cardForm, setCardForm] = useState({
     front: "",
     back: "",
-    cardType: "basic"
+    cardType: "basic",
+    tags: ""
   });
 
   const currentItem = queue[0] ?? null;
@@ -204,6 +221,17 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       Array.from(new Set(cards.map((card) => card.sourceType).filter((value): value is string => Boolean(value))))
         .sort((left, right) => left.localeCompare(right))
         .map((value) => ({ value, label: formatCardSourceTypeLabel(value) })),
+    [cards]
+  );
+  const managedTagOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          cards
+            .flatMap((card) => card.tags ?? [])
+            .filter((value) => Boolean(value))
+        )
+      ).sort((left, right) => left.localeCompare(right)),
     [cards]
   );
   const visibleCards = cards;
@@ -268,7 +296,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     }
     void refreshCards(selectedDeckId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cardDueFilter, cardSearchQuery, cardSourceFilter, cardStatusFilter, selectedDeckId]);
+  }, [cardDueFilter, cardSearchQuery, cardSourceFilter, cardStatusFilter, cardTagFilter, selectedDeckId]);
 
   useEffect(() => {
     setSelectedManagedCardIds((current) => current.filter((id) => cards.some((card) => card.id === id)));
@@ -416,7 +444,8 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
           query: cardSearchQuery,
           status: cardStatusFilter,
           sourceType: cardSourceFilter,
-          dueBucket: cardDueFilter
+          dueBucket: cardDueFilter,
+          tag: cardTagFilter
         })
       );
     } catch (error) {
@@ -453,9 +482,14 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     setBusy(true);
     setMessage("");
     try {
-      await createDeckCard(props.session, selectedDeckId, cardForm);
+      await createDeckCard(props.session, selectedDeckId, {
+        cardType: cardForm.cardType,
+        front: cardForm.front,
+        back: cardForm.back,
+        tags: parseCardTags(cardForm.tags)
+      });
       await Promise.all([refreshCards(selectedDeckId), refreshAll()]);
-      setCardForm({ front: "", back: "", cardType: "basic" });
+      setCardForm({ front: "", back: "", cardType: "basic", tags: "" });
       setShowAnswer(false);
       setMessage("卡片已加入复习队列。");
     } catch (error) {
@@ -917,6 +951,21 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                           <option value="upcoming">即将到期</option>
                         </Select>
                       </label>
+                      <label className="review-card-browser__field">
+                        <span>卡片标签筛选</span>
+                        <Select
+                          aria-label="卡片标签筛选"
+                          onChange={(event) => setCardTagFilter(event.target.value)}
+                          value={cardTagFilter}
+                        >
+                          <option value="">全部标签</option>
+                          {managedTagOptions.map((tag) => (
+                            <option key={tag} value={tag}>
+                              {tag}
+                            </option>
+                          ))}
+                        </Select>
+                      </label>
                     </div>
                     <div className="review-card-browser__summary">
                       <strong>{`${visibleCards.length} 张卡片`}</strong>
@@ -971,6 +1020,15 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                       <span>答案</span>
                       <textarea aria-label="卡片答案" onChange={(event) => setCardForm((current) => ({ ...current, back: event.target.value }))} placeholder="写在卡片反面的答案" rows={4} value={cardForm.back} />
                     </label>
+                    <label>
+                      <span>卡片标签</span>
+                      <input
+                        aria-label="卡片标签"
+                        onChange={(event) => setCardForm((current) => ({ ...current, tags: event.target.value }))}
+                        placeholder="例如：graph, core"
+                        value={cardForm.tags}
+                      />
+                    </label>
                     <button className="secondary-button" disabled={busy || !cardForm.front.trim() || !cardForm.back.trim()} type="submit"><Plus size={16} /> 添加卡片</button>
                   </form>
                 ) : null}
@@ -995,6 +1053,15 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                             </div>
                           </div>
                           <p>{card.back}</p>
+                          {card.tags?.length ? (
+                            <div className="review-managed-card__tags">
+                              {(card.tags ?? []).map((tag) => (
+                                <span className="review-managed-card__tag" key={tag}>
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
                           <ReviewSourceSummary card={card} compact />
                           <span className="review-managed-card__source-type">{formatCardSourceTypeLabel(card.sourceType || "none")}</span>
                           {card.schedule ? (

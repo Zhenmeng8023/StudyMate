@@ -142,8 +142,9 @@ export function displayMaterialOwner(material: MaterialPayload) {
 }
 
 export function displayMaterialTags(material: MaterialPayload) {
-  return material.tags.length
-    ? material.tags.map((tag, index) => displayText(tag, `标签 ${index + 1}`, "标签"))
+  const tags = material.tags ?? [];
+  return tags.length
+    ? tags.map((tag, index) => displayText(tag, `标签 ${index + 1}`, "标签"))
     : ["待整理标签"];
 }
 

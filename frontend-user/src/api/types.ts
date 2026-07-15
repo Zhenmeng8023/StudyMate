@@ -72,7 +72,7 @@ export interface MaterialPayload {
   title: string;
   description: string;
   category: string;
-  tags: string[];
+  tags?: string[];
   coverFileId: string;
   attachmentFileId: string;
   attachmentName: string;
@@ -314,6 +314,7 @@ export interface CardPayload {
   cardType: string;
   front: string;
   back: string;
+  tags?: string[];
   sourceType?: string;
   sourceId?: string;
   sourceMetadata?: Record<string, unknown>;
