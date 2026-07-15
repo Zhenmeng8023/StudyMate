@@ -1,3 +1,25 @@
+## 2026-07-15 12:06:48 +08:00 | v1.1.0-alpha.269 | 校准设计说明书与快速原型开发计划
+### 任务内容
+
+- 读取根目录《学伴项目-设计说明书.md》、当前 README、工程上下文、执行路线图、任务队列、版本路线和项目日志，对照最初设计愿景检查真实开发进展。
+- 按用户要求把后续计划从“平均补齐各赛道专业能力”矫正为“快速开发原型优先”：先跑通资料/阅读、批注、笔记、图谱、卡片、复习反馈的主演示闭环，再逐步补 Anki 正式模型、图谱反馈回写、搜索产品化和后台治理细节。
+- 保留 Project Graph、Anki、NotebookLM、Obsidian/Notion、Zotero/Readwise Reader 等标杆作为长期方向，但不让课程/LMS、桌面端、完整工程图谱、向量/RAG 或 `.apkg` 深兼容打断当前主线。
+### 实际变更
+
+- 更新 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，新增“2026-07-15 设计说明书复核后的快速原型校准”，明确当前真实进展、计划纠偏顺序和后置范围。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，新增“快速原型优先级校准”，并调整 ANKI-000 至 ANKI-070、WB-033 的依赖和验收描述，让已在进行中的复习原型能力不再被未完成的正式 Anki 模型错误阻塞。
+- 更新 `PROJECT_LOG.md` 记录本次计划校准的任务、结果、验证和后续影响。
+### 验证结果
+
+- 已完成文档读取与交叉核验：设计说明书、README、`CODEX_PROJECT_CONTEXT.md`、`CODEX_EXECUTION_ROADMAP.md`、`CODEX_BACKLOG.md`、`docs/planning/ROADMAP.md`、`docs/planning/VERSION_PLAN.md`、`docs/architecture/*`。
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- 下一步默认优先推进 `LC-010 + ANKI-060`：让复习结果能回到 Dashboard 或图谱侧的薄弱反馈入口，形成可演示主闭环。
+- `ANKI-000/010/020` 仍必须补，但定位改为兼容层和最小正式模型，而不是阻塞现有复习原型继续可用化。
+- `GPH-040`、`SE-020`、`ADM-011` 继续服务主路径：只拆会阻碍交付速度的边界，只补能提升主演示和治理可信度的能力。
+
 ## 2026-07-15 10:45:54 +08:00 | v1.1.0-alpha.267 | 推进 ANKI-040 批量加标签与去标签
 ### 任务内容
 

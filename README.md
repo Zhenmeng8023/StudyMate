@@ -10,6 +10,7 @@
 
 `v1.0.0` 已完成本地发布标签，当前进入 `v1.1` 产品质量与测试硬化阶段。真实状态如下：
 
+- 2026-07-15 对照最初《学伴项目-设计说明书.md》后，当前执行策略校准为快速原型优先：先把“资料/PDF -> 批注 -> 笔记/图谱 -> 卡片 -> 复习 -> 薄弱反馈”跑成主演示闭环，再补完整 Anki 模型、图谱反馈回写、搜索产品化和后台治理深水区。
 - 阅读/笔记主链路已闭环：资料、PDF 阅读、批注、书签、富文本笔记、版本历史和 MongoDB 内容快照已经具备可用基础。
 - 图谱工作区已是强 MVP：支持创建保存、搜索定位、来源泳道、来源摘要、AI 落点预览、Markdown/Mermaid 导入、PNG/SVG 导出和快照恢复基础；`v1.1` 已把 selection / viewport / history 状态继续迁出大控制器，并在 `@studymate/graph-core` 与前端 hooks 上补齐回归测试。
 - `WB-022` 已完成图谱 import/export/validation 统一接口收口：`graphFileImportExport.ts` 现在统一承接 StudyMate JSON/SVG 导出、JSON 导入校验、Markdown/Mermaid 远端导入结果归一化，以及远端 validate 状态摘要。
