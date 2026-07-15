@@ -1,3 +1,26 @@
+## 2026-07-15 19:33:52 +08:00 | v1.1.0-alpha.279 | 推进 FE-041 管理端 workspace state adapter 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041`，这一次不新增治理能力，而是把 `AdminWorkspaceView.vue` 里仍然停留在页面层的本地状态束与 reset 协调继续收口。
+- 目标是新增一个统一的 `workspace state adapter`，把 session / invalidation、工作台查询筛选、治理数据、确认态和 reset controller 接线沉到同一出口，避免页面层继续手工声明和串接整组状态。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceStateAdapter.ts`，提供 `createAdminWorkspaceStateAdapter(...)` 出口，统一创建工作台本地 refs/reactive 状态、状态 setter、`clearWorkspaceState()` 和 reset controller 初始化。
+- 新增并补齐 `frontend-admin/src/views/adminWorkspaceStateAdapter.test.ts`，锁定“从已存 session / invalidation 与 URL 恢复初始状态”和“reset / clearSessionInvalidation 通过统一 adapter 出口生效”两组契约。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，改为通过 `workspaceState` 消费本地状态 refs 与 setters，并删除页面层原有的大块状态初始化与 reset controller 接线样板代码。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 workspace state adapter 已接线”这一层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceStateAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `npx playwright test e2e/v1-admin-governance.spec.ts`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从 module / chrome / confirm / interaction adapter 推进到 workspace state adapter，后台工作台页面层围绕本地状态束和 reset 协调的样板代码进一步变薄，`AdminWorkspaceView.vue` 当前降到 403 行。
+- 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估 refresh 计划、工作台局部 feature 状态与模块级边界是否继续并入更稳定的 adapter 出口，而不是重新把状态初始化和 reset 编排写回 `AdminWorkspaceView.vue`。
 ## 2026-07-15 19:55:00 +08:00 | v1.1.0-alpha.278 | 推进 FE-041 管理端 module adapter 接线
 ### 任务内容
 

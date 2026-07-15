@@ -85,6 +85,29 @@
 | WB-053 | TODO | Go 代码分析图 MVP | WB-051 | analysis jobs/graph | 路由图、ERD、模块依赖图至少一项可生成。 |
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
+### 执行记录：FE-041（管理端 workspace state adapter 接线）
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 待提交
+- 实际变更：
+  - 新增 `frontend-admin/src/views/adminWorkspaceStateAdapter.ts`
+  - 新增 `frontend-admin/src/views/adminWorkspaceStateAdapter.test.ts`
+  - 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 后台工作台现已新增共享 `adminWorkspaceStateAdapter`，把登录表单、本地 session / invalidation、moderation / governance 数据、确认态与查询筛选态的初始化收口到统一出口，并内聚 `clearWorkspaceState()` 与 reset controller 接线。
+  - `AdminWorkspaceView.vue` 不再在页面层内联声明整组本地 `ref/reactive` 状态，也不再手工拼装 reset controller 所依赖的状态束；当前改为消费 `workspaceState` 的 refs 与 setters，文件进一步降到 403 行。
+  - 新增 state adapter 单测，锁定“从已存会话/失效原因与 URL 恢复初始状态”和“reset / clearSessionInvalidation 通过统一 adapter 出口生效”两组契约。
+- 已执行验证：
+  - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceStateAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+  - `npm run verify:docs`
+  - `npx playwright test e2e/v1-admin-governance.spec.ts`
+  - `git diff --check`
+- 后续影响：
+  - `FE-041` 现在继续从 module / chrome / confirm / interaction adapter 推进到更底层的 workspace state adapter，后台工作台页面层围绕本地状态束和 reset 协调的样板代码进一步变薄。
+  - 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估 refresh 计划、工作台局部 feature 状态与模块级边界是否继续并入更稳定的 adapter 出口，而不是重新把状态初始化和 reset 编排写回 `AdminWorkspaceView.vue`。
 ### 执行记录：FE-041（管理端 module adapter 接线）
 - 执行日期：2026-07-15
 - 执行分支/提交：`master` / 待提交
