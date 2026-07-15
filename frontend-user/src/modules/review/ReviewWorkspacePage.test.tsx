@@ -276,6 +276,86 @@ describe("ReviewWorkspacePage", () => {
     expect(screen.getByText("今天的队列已经清空")).toBeInTheDocument();
   });
 
+  it("surfaces a graph backlink after rating a graph-sourced card", async () => {
+    const user = userEvent.setup();
+    listDeckCardsMock.mockResolvedValueOnce([
+      {
+        id: "card-graph-1",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Binary tree traversal",
+        back: "Visit left subtree before right subtree.",
+        sourceType: "graph",
+        sourceId: "node-1",
+        sourceMetadata: {
+          graphId: "graph-1",
+          focusX: 420,
+          focusY: 320,
+          focusWidth: 220,
+          focusHeight: 120,
+          focusLabel: "Binary Tree"
+        },
+        status: "active",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    ]);
+    getTodayReviewQueueMock.mockResolvedValueOnce({
+      dueCount: 1,
+      items: [
+        {
+          deckTitle: "期末复习",
+          card: {
+            id: "card-graph-1",
+            deckId: "deck-1",
+            ownerUserId: "user-1",
+            cardType: "basic",
+            front: "Binary tree traversal",
+            back: "Visit left subtree before right subtree.",
+            sourceType: "graph",
+            sourceId: "node-1",
+            sourceMetadata: {
+              graphId: "graph-1",
+              focusX: 420,
+              focusY: 320,
+              focusWidth: 220,
+              focusHeight: 120,
+              focusLabel: "Binary Tree"
+            },
+            status: "active",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          },
+          schedule: {
+            cardId: "card-graph-1",
+            userId: "user-1",
+            dueAt: "2026-06-02T12:00:00Z",
+            intervalDays: 0,
+            easeFactor: 2.5,
+            repetitionCount: 0,
+            lapseCount: 0,
+            state: "new",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        }
+      ]
+    });
+
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "开始复习" }));
+    await screen.findByText("Binary tree traversal");
+    await user.click(screen.getByRole("button", { name: "显示答案" }));
+    await user.click(screen.getByRole("button", { name: "Good 记得" }));
+
+    const backlink = await screen.findByRole("link", { name: "回到图谱查看反馈" });
+    expect(backlink).toHaveAttribute(
+      "href",
+      "/graph?graphId=graph-1&focusX=420&focusY=320&focusWidth=220&focusHeight=120&focusLabel=Binary+Tree"
+    );
+  });
+
   it("undoes the last submitted review after returning to the workspace", async () => {
     const user = userEvent.setup();
     renderPage();
