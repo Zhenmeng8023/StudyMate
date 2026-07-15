@@ -1,3 +1,27 @@
+## 2026-07-15 19:55:00 +08:00 | v1.1.0-alpha.278 | 推进 FE-041 管理端 module adapter 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041`，这一轮不新增治理功能，而是继续收口后台工作台里外壳绑定接线后仍停留在页面层的模块装配编排。
+- 目标是把 `moduleProps / moduleEvents` 以及它们依赖的审核/治理数据态、筛选结果、状态选项、治理列和 dashboard 概览卡片统一收口成一个更稳定的 module adapter，避免 `AdminWorkspaceView.vue` 继续分别维护多组模块级 computed。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceModuleAdapter.ts`，提供 `createAdminWorkspaceModuleAdapter(...)` 出口，统一组合 moderation/governance 数据态、筛选结果、列配置、overview cards 与模块事件装配。
+- 新增并补齐 `frontend-admin/src/views/adminWorkspaceModuleAdapter.test.ts`，锁定治理冲突态会落到共享 governance data state、dashboard 统计和 moderation/governance 事件会透传到共享装配出口两组组合契约。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，改为通过 `moduleBindings` 消费 `moduleProps / moduleEvents`；同时移除页面层原有的 `moderationDataState / governanceDataState / overviewCards / visibleModerationItems / visibleGovernanceRows / governanceColumns / statusOptions` 等模块级辅助 computed。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 module adapter 已接线”这一层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceModuleAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `npx playwright test e2e/v1-admin-governance.spec.ts`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在不只是在拆 `runtime / action / read / mutation / feature / interaction / confirm / chrome` 这几组装配，后台工作台里围绕模块装配的页面派生状态和事件编排也开始进入共享 module adapter，`AdminWorkspaceView.vue` 进一步回到响应式状态拼装与展示角色。
+- 这一轮仍然只收口模块装配层；如果继续推进 `FE-041 / ADM-010`，更适合优先评估 reset 协调、工作台本地状态束与模块级 feature 边界是否继续纳入更稳定的工作台出口，而不是立刻切去新的治理业务。
+
 ## 2026-07-15 19:35:00 +08:00 | v1.1.0-alpha.277 | 推进 FE-041 管理端 chrome adapter 接线
 ### 任务内容
 

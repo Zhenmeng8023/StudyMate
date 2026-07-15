@@ -3,7 +3,6 @@ import "../components/admin/admin.css";
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import type { ApiRequestInit } from "@studymate/api-client";
 import { adminGet, adminPost } from "../api/client";
-import type { AdminDataStatePayload } from "../components/admin/dataState";
 import {
   clearSessionInvalidation,
   persistSession,
@@ -15,24 +14,16 @@ import type { AdminAuthUser, AdminSessionPayload } from "../api/sessionStore";
 import AdminConfirmStack from "../components/admin/AdminConfirmStack.vue";
 import AdminLoginPanel from "../components/admin/AdminLoginPanel.vue";
 import AdminShellFrame from "../components/admin/AdminShellFrame.vue";
-import { getGovernanceColumns, type GovernanceRecord } from "../components/admin/governanceRecord";
+import type { GovernanceRecord } from "../components/admin/governanceRecord";
 import type { AdminRouteKey } from "../router";
 import { type ConfirmDialogKey } from "./adminConfirmDialogState";
 import { createAdminWorkspaceConfirmAdapter } from "./adminWorkspaceConfirmAdapter";
 import { createAdminWorkspaceChromeAdapter } from "./adminWorkspaceChromeAdapter";
+import { createAdminWorkspaceModuleAdapter } from "./adminWorkspaceModuleAdapter";
 import { createAdminWorkspaceResetController } from "./adminWorkspaceResetController";
 import { createAdminWorkspaceInteractionAdapter } from "./adminWorkspaceInteractionAdapter";
-import { buildAdminWorkspaceModuleEvents } from "./adminWorkspaceModuleEvents";
-import { buildAdminWorkspaceModuleProps } from "./adminWorkspaceModuleProps";
-import { buildAdminOverviewCards } from "./adminOverviewCards";
-import { resolveGovernanceDataState, resolveModerationDataState } from "./adminViewDataState";
 import { getAdminRequestErrorMessage, getAdminRequestErrorStatus } from "./adminRequestError";
 import {
-  buildGovernanceStatusOptions,
-  buildModerationStatusOptions,
-  filterGovernanceRows,
-  filterModerationItems,
-  splitModerationItems,
   type AdminWorkspaceModerationItem
 } from "./adminWorkspaceDerivedData";
 import { resolveAdminWorkspaceLocationView, syncAdminWorkspaceLocation } from "./adminWorkspaceLocation";
@@ -275,9 +266,6 @@ const workspaceMutations = workspaceFeature.mutations;
 const workspaceActions = workspaceFeature.actions;
 
 const loggedIn = computed(() => Boolean(session.value));
-const moderationBuckets = computed(() => splitModerationItems(moderationItems.value));
-const pendingPosts = computed(() => moderationBuckets.value.pendingPosts);
-const pendingMaterials = computed(() => moderationBuckets.value.pendingMaterials);
 const workspaceConfirm = createAdminWorkspaceConfirmAdapter({
   applyAITaskAction: workspaceMutations.applyAITaskAction,
   applyModerationAction: workspaceMutations.applyModerationAction,
@@ -370,84 +358,43 @@ const loginPanelProps = computed(() => chromeBindings.value.loginPanelProps);
 const loginPanelEvents = computed(() => chromeBindings.value.loginPanelEvents);
 const shellProps = computed(() => chromeBindings.value.shellProps);
 const shellEvents = computed(() => chromeBindings.value.shellEvents);
-const moderationDataState = computed<AdminDataStatePayload | null>(() =>
-  resolveModerationDataState({
-    errorMessage: errorMessage.value,
-    errorStatus: moderationErrorStatus.value,
-    loading: loading.value,
-    rowCount: moderationItems.value.length
-  })
-);
-const governanceDataState = computed<AdminDataStatePayload | null>(() => {
-  if (activeView.value === "dashboard" || activeView.value === "moderation") return null;
-  return resolveGovernanceDataState({
+const moduleBindings = computed(() =>
+  createAdminWorkspaceModuleAdapter({
     activeLabel: shellProps.value.activeTitle,
-    errorMessage: errorMessage.value,
-    errorStatus: governanceErrorStatus.value,
-    loading: loading.value,
-    rowCount: governanceRows.value.length
-  });
-});
-const overviewCards = computed(() =>
-  buildAdminOverviewCards({
-    moderationItemsCount: moderationItems.value.length,
-    overview: overview.value
-  })
-);
-const moduleProps = computed(() =>
-  buildAdminWorkspaceModuleProps({
     activeView: activeView.value,
-    governance: {
-      dataState: governanceDataState.value,
-      query: recordQuery.value,
-      rows: visibleGovernanceRows.value,
-      selectedRecord: selectedRecord.value,
-      statusFilter: governanceStatusFilter.value,
-      statusOptions: governanceStatusOptions.value,
-      summary: governanceSummary.value,
-      totalCount: governanceRows.value.length
-    },
-    governanceColumns: governanceColumns.value,
-    moderation: {
-      dataState: moderationDataState.value,
-      items: visibleModerationItems.value,
-      query: moderationQuery.value,
-      statusFilter: moderationStatusFilter.value,
-      statusOptions: moderationStatusOptions.value,
-      totalCount: moderationItems.value.length
-    },
-    overviewCards: overviewCards.value,
-    pendingMaterialsCount: pendingMaterials.value.length,
-    pendingPostsCount: pendingPosts.value.length,
-    totalModerationCount: moderationItems.value.length
-  })
-);
-const moduleEvents = computed(() =>
-  buildAdminWorkspaceModuleEvents({
+    errorMessage: errorMessage.value,
+    governanceErrorStatus: governanceErrorStatus.value,
+    governanceQuery: recordQuery.value,
+    governanceRows: governanceRows.value,
+    governanceStatusFilter: governanceStatusFilter.value,
+    governanceSummary: governanceSummary.value,
+    loading: loading.value,
+    moderationErrorStatus: moderationErrorStatus.value,
+    moderationItems: moderationItems.value,
+    moderationQuery: moderationQuery.value,
+    moderationStatusFilter: moderationStatusFilter.value,
+    overview: overview.value,
     requestGovernanceAction: workspaceMutations.requestGovernanceAction,
     requestModerationAction: workspaceMutations.requestModerationAction,
+    selectedRecord: selectedRecord.value,
     selectRecord: workspaceInteractions.selectRecord,
-    setGovernanceQuery: (value) => {
+    setGovernanceQuery: (value: string) => {
       recordQuery.value = value;
     },
-    setGovernanceStatusFilter: (value) => {
+    setGovernanceStatusFilter: (value: string) => {
       governanceStatusFilter.value = value;
     },
-    setModerationQuery: (value) => {
+    setModerationQuery: (value: string) => {
       moderationQuery.value = value;
     },
-    setModerationStatusFilter: (value) => {
+    setModerationStatusFilter: (value: string) => {
       moderationStatusFilter.value = value;
     },
     switchView: workspaceInteractions.switchView
   })
 );
-
-const visibleModerationItems = computed(() => filterModerationItems(moderationItems.value, moderationQuery.value, moderationStatusFilter.value));
-const moderationStatusOptions = computed(() => buildModerationStatusOptions(moderationItems.value));
-const visibleGovernanceRows = computed(() => filterGovernanceRows(governanceRows.value, recordQuery.value, governanceStatusFilter.value));
-const governanceStatusOptions = computed(() => buildGovernanceStatusOptions(governanceRows.value));
-const governanceColumns = computed(() => getGovernanceColumns(governanceRows.value));
+const moduleProps = computed(() => moduleBindings.value.moduleProps);
+const moduleEvents = computed(() => moduleBindings.value.moduleEvents);
 
 workspaceResetController = createAdminWorkspaceResetController({
   governanceRows,

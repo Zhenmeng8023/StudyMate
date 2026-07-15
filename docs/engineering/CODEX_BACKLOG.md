@@ -85,6 +85,30 @@
 | WB-053 | TODO | Go 代码分析图 MVP | WB-051 | analysis jobs/graph | 路由图、ERD、模块依赖图至少一项可生成。 |
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
+### 执行记录：FE-041（管理端 module adapter 接线）
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 待提交
+- 实际变更：
+  - 新增 `frontend-admin/src/views/adminWorkspaceModuleAdapter.ts`
+  - 新增 `frontend-admin/src/views/adminWorkspaceModuleAdapter.test.ts`
+  - 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 后台工作台现已新增共享 `adminWorkspaceModuleAdapter`，把 `moduleProps / moduleEvents` 以及它们依赖的审核/治理数据态、筛选结果、状态选项、治理列和 dashboard 概览卡片统一收口到同一出口，而不是继续由 `AdminWorkspaceView.vue` 分别维护多组模块级 computed。
+  - `AdminWorkspaceView.vue` 现在通过 `moduleBindings` 消费 `moduleProps / moduleEvents`，页面壳层里围绕模块装配的样板代码进一步收口，文件当前降到 523 行。
+  - 新增 module adapter 单测，锁定“治理冲突态会按共享数据态契约落到 governance props”“dashboard 统计与 moderation/governance 事件会按共享装配出口透传”两组模块装配契约。
+- 已执行验证：
+  - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceModuleAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+  - `npm run verify:docs`
+  - `npx playwright test e2e/v1-admin-governance.spec.ts`
+  - `git diff --check`
+- 后续影响：
+  - `FE-041` 现在继续从 chrome / confirm / interaction adapter 推进到 module adapter，后台工作台页面壳层里围绕模块装配的派生状态与事件编排进一步变薄。
+  - 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估 reset 协调、工作台本地状态束与模块级 feature 边界是否继续收口，而不是重新把这些筛选/数据态/事件组合逻辑写回 `AdminWorkspaceView.vue`。
+
 ### 执行记录：FE-041（管理端 chrome adapter 接线）
 - 执行日期：2026-07-15
 - 执行分支/提交：`master` / 待提交
