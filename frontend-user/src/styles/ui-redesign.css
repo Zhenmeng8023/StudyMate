@@ -1355,7 +1355,9 @@ select:focus-visible {
 }
 .dashboard-section-materials .list-row p,
 .dashboard-section-community .story-card p,
-.dashboard-section-notes .mini-card p {
+.dashboard-section-notes .mini-card p,
+.dashboard-section-review .mini-card p,
+.dashboard-section-ai .mini-card p {
   display: -webkit-box;
   margin: 6px 0 0;
   overflow: hidden;

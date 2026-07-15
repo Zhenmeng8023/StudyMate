@@ -1,8 +1,10 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { BookOpen, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { AuthSession, MaterialPayload, NotePayload, PostSummary } from "../api/client";
+import type { AiDraftPayload, AiTaskPayload, AuthSession, MaterialPayload, NotePayload, PostSummary, ReviewQueuePayload } from "../api/client";
+import { listAiDrafts, listAiTasks } from "../api/ai";
 import { listMaterials, listNotes, listPosts } from "../api/client";
+import { getTodayReviewQueue } from "../api/review";
 import {
   displayMaterialCategory,
   displayMaterialDescription,
@@ -18,6 +20,7 @@ import {
   WorkspaceHeader
 } from "../app/appShared";
 import { DataState } from "../design-system/primitives";
+import { formatAiStatusLabel, formatAiTaskLabel } from "../features/ai/aiDrafts";
 
 type DashboardSectionState =
   | {
@@ -31,12 +34,19 @@ export function DashboardPage(props: { session: AuthSession | null }) {
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
   const [notes, setNotes] = useState<NotePayload[]>([]);
   const [posts, setPosts] = useState<PostSummary[]>([]);
+  const [reviewQueue, setReviewQueue] = useState<ReviewQueuePayload | null>(null);
+  const [aiDrafts, setAiDrafts] = useState<AiDraftPayload[]>([]);
+  const [aiTasks, setAiTasks] = useState<AiTaskPayload[]>([]);
   const [materialsLoading, setMaterialsLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(true);
   const [notesLoading, setNotesLoading] = useState(Boolean(props.session));
+  const [reviewLoading, setReviewLoading] = useState(Boolean(props.session));
+  const [aiLoading, setAiLoading] = useState(Boolean(props.session));
   const [materialsError, setMaterialsError] = useState("");
   const [postsError, setPostsError] = useState("");
   const [notesError, setNotesError] = useState("");
+  const [reviewError, setReviewError] = useState("");
+  const [aiError, setAiError] = useState("");
 
   async function loadMaterialsSection() {
     setMaterialsLoading(true);
@@ -77,6 +87,35 @@ export function DashboardPage(props: { session: AuthSession | null }) {
     }
   }
 
+  async function loadReviewSection(session: AuthSession) {
+    setReviewLoading(true);
+    setReviewError("");
+    try {
+      setReviewQueue(await getTodayReviewQueue(session));
+    } catch (error) {
+      setReviewQueue(null);
+      setReviewError(error instanceof Error ? error.message : "读取今日复习失败。");
+    } finally {
+      setReviewLoading(false);
+    }
+  }
+
+  async function loadAiSection(session: AuthSession) {
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const [drafts, tasks] = await Promise.all([listAiDrafts(session), listAiTasks(session)]);
+      setAiDrafts(drafts);
+      setAiTasks(tasks);
+    } catch (error) {
+      setAiDrafts([]);
+      setAiTasks([]);
+      setAiError(error instanceof Error ? error.message : "读取 AI 工作台失败。");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   useEffect(() => {
     void loadMaterialsSection();
     void loadPostsSection();
@@ -87,15 +126,29 @@ export function DashboardPage(props: { session: AuthSession | null }) {
       setNotes([]);
       setNotesError("");
       setNotesLoading(false);
+      setReviewQueue(null);
+      setReviewError("");
+      setReviewLoading(false);
+      setAiDrafts([]);
+      setAiTasks([]);
+      setAiError("");
+      setAiLoading(false);
       return;
     }
 
     void loadNotesSection(props.session);
+    void loadReviewSection(props.session);
+    void loadAiSection(props.session);
   }, [props.session]);
 
   const recentMaterials = materials.slice(0, 4);
   const recentNotes = notes.slice(0, 4);
   const recentPosts = posts.slice(0, 4);
+  const recentReviewItems = reviewQueue?.items.slice(0, 3) || [];
+  const pendingAiTasks = aiTasks.filter((task) => !["completed", "confirmed", "failed"].includes(task.status));
+  const recentAiDrafts = aiDrafts.slice(0, 2);
+  const recentAiTasks = (pendingAiTasks.length ? pendingAiTasks : aiTasks).slice(0, 2);
+  const pendingWorkspaceCount = (reviewQueue?.dueCount || 0) + aiDrafts.length + pendingAiTasks.length;
 
   const materialsState: DashboardSectionState = materialsLoading
     ? {
@@ -163,6 +216,58 @@ export function DashboardPage(props: { session: AuthSession | null }) {
               description: "先从资料库进入一份材料，或者直接在笔记页新建一条阅读笔记。"
             };
 
+  const reviewState: DashboardSectionState = !props.session
+    ? {
+        kind: "unauthorized",
+        title: "登录后查看今日复习",
+        description: "登录后直接接上今天待完成的复习队列。"
+      }
+    : reviewLoading
+      ? {
+          kind: "loading",
+          title: "正在加载今日复习",
+          description: "准备你今天最该先完成的卡片。"
+        }
+      : reviewError
+        ? {
+            kind: "error",
+            title: "今日复习暂时不可用",
+            description: reviewError
+          }
+        : reviewQueue && reviewQueue.dueCount > 0
+          ? null
+          : {
+              kind: "empty",
+              title: "今天的复习队列已经清空",
+              description: "如果要继续整理卡片，可以去复习工作台管理牌组和来源草稿。"
+            };
+
+  const aiState: DashboardSectionState = !props.session
+    ? {
+        kind: "unauthorized",
+        title: "登录后查看 AI 草稿",
+        description: "登录后继续处理最近生成的草稿和任务。"
+      }
+    : aiLoading
+      ? {
+          kind: "loading",
+          title: "正在加载 AI 工作台",
+          description: "准备最近生成的 AI 草稿和任务。"
+        }
+      : aiError
+        ? {
+            kind: "error",
+            title: "AI 工作台暂时不可用",
+            description: aiError
+          }
+        : recentAiDrafts.length || recentAiTasks.length
+          ? null
+          : {
+              kind: "empty",
+              title: "还没有 AI 草稿",
+              description: "从阅读、笔记或图谱生成草稿后，这里会优先展示待确认内容。"
+            };
+
   function renderSectionState(state: Exclude<DashboardSectionState, null>, action?: ReactNode) {
     return <DataState action={action} description={state.description} kind={state.kind} title={state.title} />;
   }
@@ -204,8 +309,8 @@ export function DashboardPage(props: { session: AuthSession | null }) {
         </div>
         <div aria-label="学习资产概览" className="dashboard-continue-card__facts">
           <span><strong>{materials.length}</strong> 份资料</span>
-          <span><strong>{notes.length}</strong> 条笔记</span>
-          <span><strong>{posts.length}</strong> 条分享</span>
+          <span><strong>{reviewQueue?.dueCount || 0}</strong> 张待复习</span>
+          <span><strong>{aiDrafts.length + pendingAiTasks.length}</strong> 项待处理</span>
         </div>
       </section>
 
@@ -213,7 +318,7 @@ export function DashboardPage(props: { session: AuthSession | null }) {
         <MetricTile helper="公开资料和已整理附件总数" label="资料数" value={String(materials.length)} />
         <MetricTile helper="已经沉淀下来的个人笔记" label="笔记数" value={String(notes.length)} />
         <MetricTile helper="社区里可浏览的公开内容" label="社区分享" value={String(posts.length)} />
-        <MetricTile helper="集中查看图谱与复习入口" label="学习空间" value="已就绪" />
+        <MetricTile helper="复习与 AI 草稿会在这里汇总成今天的最小待办" label="今日待办" value={props.session ? String(pendingWorkspaceCount) : "登录后查看"} />
       </div>
 
       <div className="dashboard-grid">
@@ -325,6 +430,109 @@ export function DashboardPage(props: { session: AuthSession | null }) {
                     <p>{displayNoteSummary(note)}</p>
                     <Link className="secondary-button" to={`/notes?selected=${note.id}`}>
                       打开笔记
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            )}
+          </SectionFrame>
+
+          <SectionFrame
+            action={
+              <Link className="bookmark-chip" to={props.session ? "/review" : "/login"}>
+                进入复习
+              </Link>
+            }
+            className="dashboard-section dashboard-section-review"
+            subtitle="今日复习"
+            title="从队列继续"
+          >
+            {reviewState ? renderSectionState(
+              reviewState,
+              reviewState.kind === "error" ? (
+                <button className="secondary-button" onClick={() => props.session ? void loadReviewSection(props.session) : undefined} type="button">
+                  重新加载
+                </button>
+              ) : reviewState.kind === "unauthorized" ? (
+                <Link className="secondary-button" to="/login">
+                  登录后继续
+                </Link>
+              ) : reviewState.kind === "empty" ? (
+                <Link className="secondary-button" to={props.session ? "/review" : "/login"}>
+                  打开复习工作台
+                </Link>
+              ) : undefined
+            ) : (
+              <div className="mini-card-grid stacked">
+                <article className="mini-card">
+                  <strong>{reviewQueue?.dueCount || 0} 张卡片等待复习</strong>
+                  <p>先从今天最早到期的卡片开始，保持复习上下文连续。</p>
+                  <Link className="secondary-button" to="/review">
+                    打开今日复习
+                  </Link>
+                </article>
+                {recentReviewItems.map((item) => (
+                  <article className="mini-card" key={item.card.id}>
+                    <strong>{item.card.front}</strong>
+                    <p>{item.deckTitle} · {item.schedule.state === "review" ? "复习队列" : "待学习"}</p>
+                    <Link className="secondary-button" to={`/review?card=${encodeURIComponent(item.card.id)}`}>
+                      直接打开
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            )}
+          </SectionFrame>
+
+          <SectionFrame
+            action={
+              <Link className="bookmark-chip" to={props.session ? "/ai" : "/login"}>
+                打开 AI
+              </Link>
+            }
+            className="dashboard-section dashboard-section-ai"
+            subtitle="AI 工作台"
+            title="继续确认草稿"
+          >
+            {aiState ? renderSectionState(
+              aiState,
+              aiState.kind === "error" ? (
+                <button className="secondary-button" onClick={() => props.session ? void loadAiSection(props.session) : undefined} type="button">
+                  重新加载
+                </button>
+              ) : aiState.kind === "unauthorized" ? (
+                <Link className="secondary-button" to="/login">
+                  登录后继续
+                </Link>
+              ) : aiState.kind === "empty" ? (
+                <Link className="secondary-button" to={props.session ? "/ai" : "/login"}>
+                  打开 AI 工作台
+                </Link>
+              ) : undefined
+            ) : (
+              <div className="mini-card-grid stacked">
+                <article className="mini-card">
+                  <strong>{aiDrafts.length} 条草稿待确认</strong>
+                  <p>{pendingAiTasks.length ? `${pendingAiTasks.length} 个任务仍在进行中。` : "最近生成的草稿会集中显示在这里。"}</p>
+                  <Link className="secondary-button" to="/ai">
+                    打开 AI 工作台
+                  </Link>
+                </article>
+                {recentAiDrafts.map((draft) => (
+                  <article className="mini-card" key={draft.id}>
+                    <strong>{draft.front}</strong>
+                    <p>{draft.sourceLabel || "待确认卡片草稿"}</p>
+                    <Link className="secondary-button" to={`/ai?draft=${encodeURIComponent(draft.id)}`}>
+                      查看草稿
+                    </Link>
+                  </article>
+                ))}
+                {recentAiTasks.map((task) => (
+                  <article className="mini-card" key={task.id}>
+                    <strong>{formatAiTaskLabel(task.taskType)}</strong>
+                    <p>{formatAiStatusLabel(task.status)}</p>
+                    <Link className="secondary-button" to={`/ai?task=${encodeURIComponent(task.id)}`}>
+                      查看任务
                     </Link>
                   </article>
                 ))}

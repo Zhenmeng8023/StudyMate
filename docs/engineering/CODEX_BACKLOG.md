@@ -23,7 +23,7 @@
 | FE-010 | DONE | 多布局壳层与基础组件 | FE-000 | `frontend-user/src/app/`、`frontend-user/src/design-system/`、样式 | Standard / Studio / Canvas / Focus 路由布局可解析；Canvas 不挂全局 ContextPanel；基础组件与单测已添加，并已在 2026-07-08 跑通用户端 / 管理端类型检查、相关 Vitest、前后台构建与 Playwright 回归。 |
 | FE-020 | DONE | 图谱 CanvasLayout 与资源 / Inspector 重构 | FE-010 | `frontend-user/src/modules/graph/` | 已实现资源区 Tab 化与覆盖式 Dock；Inspector 承接节点、历史、冲突和 AI；2026-07-08 已完成类型检查、Vitest、构建和图谱工作区 Playwright smoke。 |
 | FE-030 | DONE | 阅读、笔记、复习工作区体验对齐 | FE-010 | `frontend-user/src/pages/ReaderPage.tsx`、`NotesPage.tsx`、`modules/review/`、`styles/studio-workspaces.css` | 阅读/笔记采用可收起资源区与检查器；复习采用单任务舞台和按需管理面板；既有 API 与数据契约不变，2026-07-08 已完成类型检查、Vitest、构建和阅读/复习/后台治理 Playwright 回归。 |
-| FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale / unauthorized / conflict` 的真实状态入口，用户端 `SearchWorkspacePage`、`DashboardPage`、`CommunityPage`、`MaterialsPage`、`ReviewWorkspacePage`、`NotesPage`、`ReaderPage`、`AiPage`、`SettingsPage`、`GraphWorkspacePage` 与 `SharePage` 已接入首批共享页面状态，其中首页已补上真实 `unauthorized / error` 入口，社区页、资料库、复习工作区、笔记工作区、阅读工作区、AI 工作台、设置页、图谱工作台和分享页也都已补上真实 `error / stale / loading` 落点；后续继续补更多用户端页面与跨端状态落点。 |
+| FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale / unauthorized / conflict` 的真实状态入口，用户端 `SearchWorkspacePage`、`DashboardPage`、`CommunityPage`、`MaterialsPage`、`ReviewWorkspacePage`、`NotesPage`、`ReaderPage`、`AiPage`、`SettingsPage`、`GraphWorkspacePage` 与 `SharePage` 已接入首批共享页面状态，其中首页已不再只覆盖资料/笔记/社区区块，而是把“今日复习”“AI 工作台”两组入口也接入共享 `loading / empty / error / unauthorized` 状态语义；社区页、资料库、复习工作区、笔记工作区、阅读工作区、AI 工作台、设置页、图谱工作台和分享页也都已补上真实 `error / stale / loading` 落点；后续继续补更多用户端页面与跨端状态落点。 |
 | FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `Select` 已覆盖笔记页、阅读页、复习工作区、图谱工作区与 AI 草稿中心里的高频下拉，共享 `PageHeader` 已覆盖主工作区页面、搜索工作区与图谱工作区，共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层；管理端也已新增 `AdminButton` / `AdminInput` / `AdminSelect` / `AdminPageHeader` / `AdminSearchToolbar` / `AdminCommandBar` / `AdminMetricCard` / `AdminDataCardHeader` / `AdminRecordInspector` / `AdminNavItem` / `AdminNavGroup` / `AdminActionBar` / `AdminTag` / `AdminFeatureCard` Vue 适配层，并接入登录、壳层、dashboard、审核与治理模块，其中审核/治理页已通过共享 `AdminSelect` 承载状态筛选，后台壳层顶部条已通过共享 `AdminCommandBar` 暴露统一 breadcrumb / 同步状态 / actions 契约，dashboard 与治理摘要区已通过共享 `AdminMetricCard` 收口重复卡片骨架，审核与治理模块的数据卡片标题区已通过共享 `AdminDataCardHeader` 暴露统一标题/说明骨架，治理记录详情区已通过共享 `AdminRecordInspector` 收口字段展示与动作区骨架，后台侧边导航项已通过共享 `AdminNavItem` 收口 active / badge / icon / press 契约，后台侧边导航分组也已通过共享 `AdminNavGroup` 收口标题与槽位骨架，审核行操作与治理详情动作则已通过共享 `AdminActionBar` 收口按钮组骨架，审核类型/状态标签与治理记录状态标签也已通过共享 `AdminTag` 收口 badge 语义，dashboard 的 priority/status 复合运营卡片也已通过共享 `AdminFeatureCard` 收口骨架，`AdminWorkspaceView.vue` 里的审核/治理数据区状态判定已收口到共享 `adminViewDataState` helper，加载请求失败状态和 403 清理已收口到共享 `adminViewLoadRequest` helper，dashboard 概览卡片已收口到共享 `adminOverviewCards` helper，治理模块描述/空态/加载配置已收口到共享 `getGovernanceModuleConfig(...)` 出口，profile/overview 简单读取链路已收口到共享 `adminViewReadRequest` helper，工作台里剩余的 profile/overview/moderation/governance 四条数据加载与状态落点也已收口到共享 `adminWorkspaceDataLoad` helper，moderation/governance 动作提交时的 loading、notice、confirm error、409 conflict 与 reload state adapter 也已收口到共享 `adminWorkspaceMutationState` helper，确认弹层 reset/submit 映射表也已收口到共享 `adminWorkspaceConfirmState` helper，pending action 的打开逻辑也已收口到共享 `adminWorkspacePendingAction` helper，确认弹层的 copy 解析与 dialog metadata 装配也已收口到共享 `adminWorkspaceConfirmDialogs` helper，五组确认状态的 dialogs/reset/submit 编排现已进一步收口到共享 `adminWorkspaceConfirmController` helper，并把 `AdminWorkspaceView.vue` 压回 800 行以内；本轮又把 `workspaceResetHandlers / clearWorkspaceState` 收口到共享 `adminWorkspaceResetController` helper，令 `AdminWorkspaceView.vue` 进一步降到 787 行。dashboard / moderation / governance 三组模块 props 装配也已收口到共享 `adminWorkspaceModuleProps` helper，dashboard / moderation / governance 三组模块事件装配也已收口到共享 `adminWorkspaceModuleEvents` helper，后台壳层 `AdminShellFrame` 的 props 装配也已收口到共享 `adminWorkspaceShellProps` helper，后台壳层 `AdminShellFrame` 的事件装配也已收口到共享 `adminWorkspaceShellEvents` helper，后台登录面板 `AdminLoginPanel` 的 props 装配也已收口到共享 `adminWorkspaceLoginPanelProps` helper，后台登录面板 `AdminLoginPanel` 的事件装配也已收口到共享 `adminWorkspaceLoginPanelEvents` helper，dashboard 主操作卡片 copy 和审核概览摘要规则已收口到共享 `adminDashboardMeta` helper，请求错误的 status/message/fallback 解析已收口到共享 `adminRequestError` helper，五组确认弹层 metadata 组装已收口到共享 `adminConfirmDialogs` helper，工作台提示文案已收口到共享 `adminWorkspaceNotice` helper，审核/治理派生数据拆分、筛选与状态选项已收口到共享 `adminWorkspaceDerivedData` helper，工作台 URL 解析、归一化与历史同步已收口到共享 `adminWorkspaceLocation` helper，挂载自举、`popstate`、导航切换、会话失效回退与退出计划已收口到共享 `adminWorkspaceLifecycle` helper，视图级 overview/moderation/governance 加载编排也已收口到共享 `adminWorkspaceViewLoad` helper，登录成功后的 session 持久化、profile 刷新与当前 view 加载顺序也已收口到共享 `adminWorkspaceBootstrap` helper，登录时的 loading/error/sessionInvalidation 清理、bootstrap 调度与成功提示同步也已收口到共享 `adminWorkspaceLogin` helper，治理动作请求分发、确认错误清理、pending action 打开与 invalid/noop 兜底也已收口到共享 `adminGovernanceActionRequest` helper，审核动作的 path、成功提示、资料治理回刷与 409 conflict 特例也已收口到共享 `adminModerationMutationMeta` helper，四组治理动作共用的提交执行、dialog reset、reload view 与 conflict 信号也已收口到共享 `adminGovernanceMutationFlow` helper，挂载时的目标 view 应用、profile 刷新与初始 view 加载顺序也已收口到共享 `adminWorkspaceMountBootstrap` helper，会话被清空后的工作台 reset、默认 view 回退、URL replace、错误清理与提示同步也已收口到共享 `adminWorkspaceSessionCleared` helper，本轮新增的 `adminWorkspaceSessionSync` helper 又把 session 订阅后的本地状态同步与会话清空协同从视图层抽离出来；浏览器 `popstate` 触发时的查询重置、目标 view 应用与按需加载顺序也已收口到共享 `adminWorkspacePopstate` helper，导航切换时的 reset、目标 view 应用、URL push 与按需加载顺序也已收口到共享 `adminWorkspaceViewSwitch` helper，退出时的 session/profile 清理、工作台 reset、默认 view 回退、无效化提示清空、持久化会话清除与退出提示同步也已收口到共享 `adminWorkspaceLogout` helper，刷新当前 active view 的 refresh plan 与执行 helper 也已进入共享 `adminWorkspaceLifecycle` / `adminWorkspaceRefresh` 出口，后续继续推进更多后台治理动作与跨端状态语义。 |
 
 ### 执行记录：FE-041（管理端 session 同步编排 helper 接线）
@@ -75,7 +75,7 @@
 | WB-033 | TODO | 图谱-复习学习反馈闭环 | ANKI-020, ANKI-050, WB-030 | graph/card/review | 基于 Anki 式 CardNote / Card / Schedule 模型串起图谱节点、卡片复习和学习反馈；卡片与来源节点可追溯，复习结果能回写节点熟练度。 |
 | WB-034 | TODO | 图谱 API 与工作区回归验证矩阵 | WB-032 | graph backend + frontend + e2e | 覆盖 create/save/restore/export/layout/conflict/权限路径；图谱工作区在桌面与窄屏至少有 smoke 回归，不再只依赖零散组件测试。 |
 | GPH-040 | TODO | 图谱工作区 store / commands / features 拆分 | WB-032, FE-020 | `frontend-user/src/modules/graph/`、`packages/graph-core` | `useGraphWorkspaceController` 不再继续承接新增业务；选中、相机、面板、保存、冲突等浏览器状态进入 store，新增节点/连线/分组/模板/恢复等用户意图进入 commands。 |
-| LC-010 | IN_PROGRESS | 主学习闭环演示路径收口 | WB-033, ANKI-030, FE-030 | material/reader/note/graph/card/review/AI | “资料上传 -> PDF 阅读 -> 高亮批注 -> 摘录池 -> 笔记块 -> CardNote -> 模板生成闪卡 -> Anki 式复习 -> 图谱熟练度回写”已开始按真实路径收口；当前已补上图谱来源卡片 `/review?card=` 深链定位、复习页内对可直达来源工作台的回看入口、批注来源卡片到 reader 批注位置的真实回跳、图谱节点生成卡片对 reader/PDF 锚点上下文的保留，以及 `/ai?draft=` / `/ai?task=` 深链下 AI 工作台对指定草稿/任务的优先定位、AI 草稿来源链接对批注/PDF 锚点的精确 reader 回跳、AI 任务历史对 reader 上下文的精确回跳，和复习会话内“跳过当前卡片”保持待完成队列上下文、“暂停当前卡片”“埋藏当前卡片”从今日活跃队列移除并可在管理面板恢复、以及“撤销上一次评分”恢复评分前 schedule 与今日队列；后续继续补更统一的 SourceLink 与失败状态清晰。 |
+| LC-010 | IN_PROGRESS | 主学习闭环演示路径收口 | WB-033, ANKI-030, FE-030 | material/reader/note/graph/card/review/AI | “资料上传 -> PDF 阅读 -> 高亮批注 -> 摘录池 -> 笔记块 -> CardNote -> 模板生成闪卡 -> Anki 式复习 -> 图谱熟练度回写”已开始按真实路径收口；当前已补上图谱来源卡片 `/review?card=` 深链定位、复习页内对可直达来源工作台的回看入口、批注来源卡片到 reader 批注位置的真实回跳、图谱节点生成卡片对 reader/PDF 锚点上下文的保留，以及 `/ai?draft=` / `/ai?task=` 深链下 AI 工作台对指定草稿/任务的优先定位、AI 草稿来源链接对批注/PDF 锚点的精确 reader 回跳、AI 任务历史对 reader 上下文的精确回跳，和复习会话内“跳过当前卡片”保持待完成队列上下文、“暂停当前卡片”“埋藏当前卡片”从今日活跃队列移除并可在管理面板恢复、以及“撤销上一次评分”恢复评分前 schedule 与今日队列；本轮首页也已能直接汇总今日复习队列与 AI 草稿/任务，让主路径入口不再只停留在资料/笔记概览；后续继续补更统一的 SourceLink 与失败状态清晰。 |
 | WB-040 | TODO | 管理端真实只读数据页第一批 | WB-001 | admin backend + frontend-admin | 用户、内容、AI 任务/用量、审计至少展示真实数据。 |
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
@@ -2363,5 +2363,33 @@
 - 已知风险：
   - 当前卡片浏览器筛选仍是本地派生，尚未覆盖标签、到期时间和跨牌组分页；当单牌组卡片规模继续增大时，需要后端列表/筛选 API 承接。
   - 批量操作还没有确认弹层、审计日志和批量失败明细，当前只提供最小可用反馈。
+- 下一建议任务：
+  - `ANKI-040` 继续补后端列表/过滤 API 与标签/到期时间筛选
+### 执行记录：LC-010 / FE-040（Dashboard 首页接入复习与 AI 工作入口）
+
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 未提交
+- 实际变更：
+  - 更新 `frontend-user/src/pages/DashboardPage.tsx`
+  - 更新 `frontend-user/src/pages/DashboardPage.test.tsx`
+  - 更新 `frontend-user/src/styles/ui-redesign.css`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 首页不再只展示资料、笔记和社区概览；登录用户现在可以在 dashboard 直接看到“今日复习”队列摘要、待复习卡片入口，以及 AI 草稿 / AI 任务的待处理摘要。
+  - Dashboard 新增的复习与 AI 区块沿用共享 `DataState` 语义，覆盖 `loading / empty / error / unauthorized`，未登录时不会误触发个人复习和 AI 请求。
+  - 复习卡片与 AI 条目都复用既有深链能力，可分别跳到 `/review?card=...`、`/ai?draft=...` 与 `/ai?task=...`，首页入口开始真正接上已有工作台，而不是停留在静态导航。
+- 已执行验证：
+  - `npm --workspace frontend-user run test -- src/pages/DashboardPage.test.tsx`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm run build:user`
+- 未执行验证及原因：
+  - 未运行后端测试：本工作包仅改用户端 dashboard 页面与样式，没有修改 Go 侧实现或 API 契约。
+- 兼容性/迁移说明：
+  - 本工作包不修改 review / ai / note / material 的接口结构，只在首页消费现有接口并新增深链入口。
+  - 未登录用户仍保持匿名可见的资料/社区概览，不会因为首页新增复习与 AI 区块而触发额外鉴权失败。
+- 已知风险：
+  - 首页目前展示的是“最小可继续工作入口”，还没有把复习失败态保留旧数据后的 `stale` 语义同步到 dashboard。
+  - AI 区块当前只汇总草稿数量与最近任务，后续如果要继续做更强的来源预览、批量确认或统一 SourceLink 语义，仍应沿 `LC-010 / ANKI-050` 继续推进。
 - 下一建议任务：
   - `ANKI-040` 继续补后端列表/过滤 API 与标签/到期时间筛选

@@ -1,3 +1,27 @@
+## 2026-07-15 08:42:57 +08:00 | v1.1.0-alpha.258 | 推进 LC-010 / FE-040 首页接入复习与 AI 工作入口
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把全局主路径做成能用版，再逐步细化”方向推进 `LC-010 / FE-040`，这一轮不新开后端域能力，而是收口首页仍然偏静态的工作台入口。
+- 目标是让 dashboard 不再只停留在资料、笔记和社区概览，而是把已经存在的今日复习队列、AI 草稿和 AI 任务真正接到首页，让用户一进来就能知道下一步该做什么。
+### 实际变更
+
+- 更新 `frontend-user/src/pages/DashboardPage.tsx`，接入 `getTodayReviewQueue(...)`、`listAiDrafts(...)` 和 `listAiTasks(...)`，为首页新增“今日复习”“AI 工作台”两组区块，并把待复习数量、AI 草稿数量和进行中任务汇总进首页待办视图。
+- 新增的复习与 AI 区块都沿用共享 `DataState` 语义，覆盖 `loading / empty / error / unauthorized`；未登录时不会触发个人复习或 AI 请求，而是明确提示登录后继续。
+- 首页中的复习卡片、AI 草稿和 AI 任务都复用既有深链能力，分别可以跳到 `/review?card=...`、`/ai?draft=...` 与 `/ai?task=...`，让首页入口直接接上已有工作台，而不是只给一个笼统导航。
+- 扩展 `frontend-user/src/pages/DashboardPage.test.tsx`，补上登录态下首页应展示今日复习与 AI 工作项、以及未登录时不触发个人请求的回归。
+- 更新 `frontend-user/src/styles/ui-redesign.css`，让新增复习与 AI 卡片复用现有 dashboard 卡片的摘要样式，避免首页新入口在视觉上脱节。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-040` 和 `LC-010` 的当前边界推进到“首页也已汇总复习与 AI 下一步入口”这一层。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/DashboardPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/DashboardPage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- `LC-010` 现在不再只是在阅读、复习和 AI 各工作台内部打通来源深链，首页也开始承担“把用户重新拉回真实下一步”的职责，主学习闭环入口更接近一版可实际使用的原型。
+- 这一轮仍然只先把 dashboard 接到现有复习与 AI 数据源；如果后续继续推进 `LC-010 / ANKI-050`，更适合继续补首页的 `stale` 语义、统一 SourceLink 预览和更强的待处理排序，而不是再把更多入口做成彼此独立的静态卡片。
+
 ## 2026-07-15 07:55:10 +08:00 | v1.1.0-alpha.257 | 推进 FE-041 管理端 session 同步编排 helper 接线
 ### 任务内容
 
