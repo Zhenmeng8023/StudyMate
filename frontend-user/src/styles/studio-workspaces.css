@@ -908,6 +908,26 @@
   font-size: 13px;
 }
 
+.review-card-browser__import-export {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.review-card-browser__file-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.review-card-browser__file-field input {
+  max-width: 220px;
+}
+
 .review-managed-card__selection {
   color: var(--text-1);
   font-size: 12px;

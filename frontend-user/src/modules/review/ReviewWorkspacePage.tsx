@@ -1,8 +1,9 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { BookOpenCheck, ChevronLeft, ChevronRight, Layers3, PanelRightClose, PanelRightOpen, Plus, RotateCcw, Sparkles } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
   AuthSession,
+  bulkCreateDeckCards,
   CardPayload,
   DeckPayload,
   ReviewQueueItemPayload,
@@ -16,6 +17,7 @@ import {
   updateCardStatus
 } from "../../api/client";
 import { DataState, Select } from "../../design-system/primitives";
+import { buildDeckExportArtifact, chunkDeckImportCards, parseDeckImportFile } from "./deckImportExport";
 import { buildReviewSourceBacklink, formatReviewSourceReference } from "./reviewSourceBacklinks";
 
 type ReviewWorkspacePageProps = {
@@ -146,6 +148,18 @@ function cloneQueueItem(item: ReviewQueueItemPayload): ReviewQueueItemPayload {
     card: { ...item.card },
     schedule: { ...item.schedule }
   };
+}
+
+function downloadArtifact(artifact: { filename: string; mimeType: string; content: string }) {
+  const blob = new Blob([artifact.content], { type: artifact.mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = artifact.filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 function ReviewSourceSummary(props: { card: Pick<CardPayload, "sourceType" | "sourceId">; compact?: boolean }) {
@@ -647,6 +661,64 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     }
   }
 
+  async function handleImportCards(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+    if (!selectedDeckId) {
+      setMessage("请先选择一个卡组。");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+    try {
+      const parsed = parseDeckImportFile(await file.text(), file.name);
+      const batches = chunkDeckImportCards(parsed.cards);
+      for (const batch of batches) {
+        await bulkCreateDeckCards(props.session, selectedDeckId, batch);
+      }
+      await Promise.all([refreshCards(selectedDeckId), refreshAll()]);
+      setMessage(`已导入 ${parsed.cards.length} 张卡片到当前卡组。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "导入卡片失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleExportCards(format: "json" | "csv") {
+    if (!selectedDeckId) {
+      setMessage("请先选择一个卡组。");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+    try {
+      const deckCards = await listDeckCards(props.session, selectedDeckId);
+      if (deckCards.length === 0) {
+        setMessage("当前卡组还没有卡片可导出。");
+        return;
+      }
+
+      downloadArtifact(
+        buildDeckExportArtifact({
+          kind: format,
+          deckTitle: selectedDeck?.title ?? "deck",
+          cards: deckCards
+        })
+      );
+      setMessage(`已导出 ${deckCards.length} 张卡片到 ${format.toUpperCase()}。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "导出卡片失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function toggleManagedCardSelection(cardId: string) {
     setSelectedManagedCardIds((current) =>
       current.includes(cardId) ? current.filter((id) => id !== cardId) : [...current, cardId]
@@ -1007,6 +1079,24 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                           批量恢复选中卡片
                         </button>
                       </div>
+                    </div>
+                    <div className="review-card-browser__import-export">
+                      <button className="secondary-button" disabled={busy || !selectedDeckId} onClick={() => void handleExportCards("json")} type="button">
+                        导出 JSON
+                      </button>
+                      <button className="secondary-button" disabled={busy || !selectedDeckId} onClick={() => void handleExportCards("csv")} type="button">
+                        导出 CSV
+                      </button>
+                      <label className="review-card-browser__file-field">
+                        <span>导入卡片文件</span>
+                        <input
+                          accept=".json,.csv,application/json,text/csv"
+                          aria-label="导入卡片文件"
+                          disabled={busy || !selectedDeckId}
+                          onChange={(event) => void handleImportCards(event)}
+                          type="file"
+                        />
+                      </label>
                     </div>
                   </section>
                 ) : null}

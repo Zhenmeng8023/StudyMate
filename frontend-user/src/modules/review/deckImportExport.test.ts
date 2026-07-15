@@ -68,7 +68,7 @@ describe("deckImportExport", () => {
     expect(artifact.filename).toBe("期末复习-cards.csv");
     expect(artifact.mimeType).toBe("text/csv;charset=utf-8");
     expect(artifact.content).toContain("front,back,cardType,tags,sourceType,sourceId");
-    expect(artifact.content).toContain("\"什么是图谱？\",\"节点和关系。\",basic,graph|core,note,note-1");
+    expect(artifact.content).toContain("什么是图谱？,节点和关系。,basic,graph|core,note,note-1");
   });
 
   it("parses a StudyMate deck json import file", () => {

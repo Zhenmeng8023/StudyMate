@@ -1,3 +1,27 @@
+## 2026-07-15 09:31:02 +08:00 | v1.1.0-alpha.261 | 推进 ANKI-070 复习工作区卡组导入导出起步
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把全局主路径做成能用版，再逐步细化”方向推进 `ANKI-070`，这一轮不先做更重的服务端导入导出中心，而是优先补一块用户马上能用到的原型能力。
+- 目标是让复习工作区不再只能在页面里浏览和手动逐条建卡，而是能把当前卡组导出为本地文件，也能把本地 JSON / CSV 卡片文件直接导回当前卡组。
+### 实际变更
+
+- 新增 `frontend-user/src/modules/review/deckImportExport.ts`，抽出卡组 JSON / CSV 导出内容生成、本地文件格式识别、CSV quoted field 解析、标签归一化和批量分片 helper。
+- 新增 `frontend-user/src/modules/review/deckImportExport.test.ts`，锁定 JSON 导出、CSV 导出、JSON 导入和 CSV 导入四条基础格式契约。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，在复习管理面板“卡片”页签里增加“导出 JSON”“导出 CSV”和“导入卡片文件”入口，并在导入时复用既有 `bulkCreateDeckCards(...)` 接口按 20 条分片提交。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，补上页面级回归，锁定“导入本地 JSON 卡片文件会写入当前卡组”和“导出 JSON 会请求当前卡组卡片并触发本地下载”。
+- 更新 `frontend-user/src/styles/studio-workspaces.css`，为导入导出工具条和文件输入补最小布局样式，让这组入口在现有复习管理面板里可用而不显得完全脱节。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-070` 从纯 `TODO` 推进到已起步状态。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/review/deckImportExport.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/deckImportExport.test.ts src/modules/review/ReviewWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- `ANKI-070` 现在不再完全停留在路线图层面，复习工作区已经拥有最小可用的本地导入导出能力，用户可以更真实地搬运和备份自己的卡组数据。
+- 这一轮仍然只先把能力落在用户端本地文件层：没有新增后端导入导出路由、没有导入预检面板，也还没有 `.apkg` 兼容结论；如果后续继续推进 `ANKI-070 / LC-010`，更适合优先补导入失败报告、重复卡片检测和更稳定的服务端导入导出接口。
+
 ## 2026-07-15 09:21:26 +08:00 | v1.1.0-alpha.260 | 推进 ANKI-040 卡片标签筛选与创建链路
 ### 任务内容
 
