@@ -53,6 +53,18 @@ func TestListCardsSupportsServerSideFiltersAndSchedulePayload(t *testing.T) {
 		t.Fatalf("create active card: %v", err)
 	}
 
+	secondGraphCard, err := service.CreateCard("user-1", deck.ID, carddto.CreateCardRequest{
+		CardType:   "basic",
+		Front:      "Another graph node card",
+		Back:       "Belongs to another graph source",
+		SourceType: "graph",
+		SourceID:   "graph-2",
+		Tags:       []string{"graph", "advanced"},
+	})
+	if err != nil {
+		t.Fatalf("create second graph card: %v", err)
+	}
+
 	suspendedNoteCard, err := service.CreateCard("user-1", deck.ID, carddto.CreateCardRequest{
 		CardType:   "basic",
 		Front:      "Note summary card",
@@ -90,6 +102,16 @@ func TestListCardsSupportsServerSideFiltersAndSchedulePayload(t *testing.T) {
 	activeSchedule.State = "review"
 	if err := repository.SaveSchedule(activeSchedule); err != nil {
 		t.Fatalf("save active schedule: %v", err)
+	}
+
+	secondGraphSchedule, err := repository.FindSchedule(secondGraphCard.ID, "user-1")
+	if err != nil {
+		t.Fatalf("find second graph schedule: %v", err)
+	}
+	secondGraphSchedule.DueAt = fixedNow.Add(6 * time.Hour)
+	secondGraphSchedule.State = "review"
+	if err := repository.SaveSchedule(secondGraphSchedule); err != nil {
+		t.Fatalf("save second graph schedule: %v", err)
 	}
 
 	suspendedSchedule, err := repository.FindSchedule(suspendedNoteCard.ID, "user-1")
@@ -149,8 +171,22 @@ func TestListCardsSupportsServerSideFiltersAndSchedulePayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list tag filtered cards: %v", err)
 	}
-	if len(tagFiltered) != 1 || tagFiltered[0].ID != activeGraphCard.ID {
-		t.Fatalf("expected only graph-tagged card, got %#v", tagFiltered)
+	if len(tagFiltered) != 2 {
+		t.Fatalf("expected both graph-tagged cards, got %#v", tagFiltered)
+	}
+	if tagFiltered[0].ID != secondGraphCard.ID && tagFiltered[1].ID != secondGraphCard.ID {
+		t.Fatalf("expected graph-2 card in tag-filtered results, got %#v", tagFiltered)
+	}
+
+	sourceFiltered, err := service.ListCards("user-1", deck.ID, carddto.ListCardsQuery{
+		SourceType: "graph",
+		SourceID:   "graph-1",
+	})
+	if err != nil {
+		t.Fatalf("list source filtered cards: %v", err)
+	}
+	if len(sourceFiltered) != 1 || sourceFiltered[0].ID != activeGraphCard.ID {
+		t.Fatalf("expected only graph-1 card, got %#v", sourceFiltered)
 	}
 }
 

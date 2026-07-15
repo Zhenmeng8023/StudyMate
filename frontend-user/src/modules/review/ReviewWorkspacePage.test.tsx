@@ -36,6 +36,79 @@ vi.mock("../../api/client", async () => {
     updateCardTags: vi.fn(),
     updateCardStatus: vi.fn()
   };
+  it("opens the deck browser with source-level filters from the route query", async () => {
+    listDecksMock.mockResolvedValueOnce([
+      {
+        id: "deck-1",
+        ownerUserId: "user-1",
+        title: "General deck",
+        description: "No requested source cards here",
+        visibility: "private",
+        cardCount: 1,
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      },
+      {
+        id: "deck-2",
+        ownerUserId: "user-1",
+        title: "Graph feedback deck",
+        description: "Contains the requested source cards",
+        visibility: "private",
+        cardCount: 1,
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    ]);
+    listDeckCardsMock.mockImplementation(async (_session, deckId, filters) => {
+      if (deckId === "deck-1" && filters?.sourceType === "graph" && filters?.sourceId === "node-2") {
+        return [];
+      }
+      if (deckId === "deck-2" && filters?.sourceType === "graph" && filters?.sourceId === "node-2") {
+        return [
+          {
+            id: "card-2",
+            deckId: "deck-2",
+            ownerUserId: "user-1",
+            cardType: "basic",
+            front: "Focused source card",
+            back: "Only cards for the requested graph node",
+            sourceType: "graph",
+            sourceId: "node-2",
+            status: "active",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        ];
+      }
+      return [
+        {
+          id: "card-1",
+          deckId,
+          ownerUserId: "user-1",
+          cardType: "basic",
+          front: "Fallback card",
+          back: "Fallback answer",
+          status: "active",
+          createdAt: "2026-06-02T12:00:00Z",
+          updatedAt: "2026-06-02T12:00:00Z"
+        }
+      ];
+    });
+
+    renderPage("/review?sourceType=graph&sourceId=node-2");
+
+    await waitFor(() => {
+      expect(listDeckCardsMock).toHaveBeenCalledWith(
+        session,
+        "deck-2",
+        expect.objectContaining({
+          sourceType: "graph",
+          sourceId: "node-2"
+        })
+      );
+    });
+    expect(await screen.findByText("Focused source card")).toBeInTheDocument();
+  });
 });
 
 const session: AuthSession = {

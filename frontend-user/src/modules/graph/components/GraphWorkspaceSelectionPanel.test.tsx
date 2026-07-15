@@ -145,7 +145,10 @@ describe("GraphWorkspaceSelectionPanel", () => {
     expect(screen.getByText("资料卡片 B")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "打开复习工作台" }));
-    expect(props.onOpenReviewWorkspace).toHaveBeenCalled();
+    expect(props.onOpenReviewWorkspace).toHaveBeenCalledWith({
+      sourceType: "material",
+      sourceId: "material-1"
+    });
   });
 
   it("delegates edge label and kind editing", async () => {
