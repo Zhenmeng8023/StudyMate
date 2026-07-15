@@ -1,4 +1,4 @@
-﻿# StudyMate Codex 可执行任务队列
+# StudyMate Codex 可执行任务队列
 
 **状态约定：** `TODO` / `IN_PROGRESS` / `BLOCKED` / `DONE` / `VERIFY`
 
@@ -68,7 +68,7 @@
 | ANKI-010 | TODO | Note / Card 分离与模板生成 | ANKI-000 | backend card models/dto/service、frontend review types | 支持一条 CardNote 通过模板生成一张或多张 Card；首批模板覆盖 Basic、Basic Reverse、Cloze；旧 `front/back` 卡片有兼容读取或迁移策略。 |
 | ANKI-020 | TODO | Anki 式调度与队列模型 | ANKI-000 | card schedule service/repository/review API | 支持 new / learning / review / relearning / suspended / buried 状态、学习步进、每日新卡/复习上限、重新学习路径；继续保留 `again / hard / good / easy` 评分语义。 |
 | ANKI-030 | IN_PROGRESS | Anki 式复习会话体验 | ANKI-010, ANKI-020 | `frontend-user/src/modules/review/`、review API | 复习会话已支持翻面、1-4 评分、来源卡片深链定位、复习页内对笔记/资料/卡片等可直达来源的回看入口、下一次间隔预估、键盘路径、“跳过当前卡片”并将其顺延到当前内存队列末尾，以及“暂停当前卡片”“埋藏当前卡片”从今日活跃队列移除、并可在管理面板恢复；本轮已补“撤销上一次评分”，可恢复评分前 schedule 并把卡片放回今日队列；后续继续确保失败状态不丢当前会话上下文。 |
-| ANKI-040 | TODO | 卡片浏览器与批量管理 | ANKI-010, ANKI-020 | review/card browser UI + backend list/filter APIs | 支持按牌组、标签、状态、来源、到期时间筛选；支持批量暂停、恢复、移动牌组、加标签、删除；操作可确认并可审计/追溯。 |
+| ANKI-040 | IN_PROGRESS | 卡片浏览器与批量管理 | ANKI-010, ANKI-020 | review/card browser UI + backend list/filter APIs | 复习管理面板已支持卡片浏览器本地关键词/状态/来源筛选，以及批量暂停、埋藏、恢复选中卡片，并同步今日队列计数与反馈；后续继续补按标签/到期时间筛选、后端列表/过滤 API、批量移动牌组/加标签/删除与审计追溯。 |
 | ANKI-050 | IN_PROGRESS | 来源驱动制卡闭环 | ANKI-010, WB-030 | reader/note/graph/ai/card | 批注来源卡片现已补齐 `sourceMetadata` 通路，图谱节点转卡也开始保留 reader/PDF 锚点上下文，AI 草稿确认页与 AI 任务历史里的来源回跳也已接入同一套 reader 精确定位规则，能在草稿确认、AI 工作台深链定位、卡片创建与复习队列中回跳原批注、PDF 页或指定 AI 草稿/任务；后续继续补更通用的图谱节点与 SourceLink 抽象。 |
 | ANKI-060 | TODO | 复习反馈回写学习图谱 | ANKI-020, ANKI-050 | graph/card/review/dashboard | 复习结果可回写图谱节点熟练度、笔记学习状态和工作台反馈；薄弱知识点可在图谱和学习工作台中解释。 |
 | ANKI-070 | TODO | 闪卡导入导出与 Anki 兼容预研 | ANKI-010 | card import/export docs/tools | 近期支持 CSV / JSON 导入导出；`.apkg` 兼容只输出技术预研和采用/不采用结论，不阻塞 P1 主线。 |
@@ -2337,3 +2337,32 @@
   - 搜索专项验证已集中化，但后端仍未提供 offset/cursor 真分页；任何需要跨批次翻页的产品需求都不能只靠当前文档或前端分页实现。
 - 下一建议任务：
   - `WB-020` 图谱文档模型与版本策略
+
+### 执行记录：ANKI-040（卡片浏览器本地筛选与批量状态管理）
+
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 未提交
+- 实际变更：
+  - 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`
+  - 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`
+  - 更新 `frontend-user/src/styles/studio-workspaces.css`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 复习管理面板中的“卡片”页签新增卡片浏览器，可按关键词、卡片状态与来源类型做本地筛选，并实时显示筛选结果计数。
+  - 卡片浏览器支持勾选当前结果并批量暂停、埋藏、恢复卡片；暂停/埋藏会同步把命中的今日队列卡片移出，恢复会回刷卡组与今日队列。
+  - 既有单卡暂停/埋藏/恢复、复习会话和来源摘要入口保持不退化，新增浏览器交互已有页面级测试锁定。
+- 已执行验证：
+  - `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm run build:user`
+- 未执行验证及原因：
+  - 未运行后端测试：本工作包仅改用户端复习工作区与样式，未修改 Go 侧实现。
+- 兼容性/迁移说明：
+  - 本工作包不修改 review/card API 契约，筛选与批量选择目前完全在前端当前卡组数据上完成。
+  - 批量恢复沿用现有单卡恢复策略，通过重新同步卡组列表与今日队列回到一致状态，不要求新增后端批量接口。
+- 已知风险：
+  - 当前卡片浏览器筛选仍是本地派生，尚未覆盖标签、到期时间和跨牌组分页；当单牌组卡片规模继续增大时，需要后端列表/筛选 API 承接。
+  - 批量操作还没有确认弹层、审计日志和批量失败明细，当前只提供最小可用反馈。
+- 下一建议任务：
+  - `ANKI-040` 继续补后端列表/过滤 API 与标签/到期时间筛选

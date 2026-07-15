@@ -38,6 +38,9 @@ type UndoableReviewState = {
   previousCompletedCount: number;
 };
 
+type ManagedCardStatusFilter = "all" | "active" | "suspended" | "buried";
+type ManagedCardSourceFilter = "all" | "none" | string;
+
 const ratingOptions = [
   { value: "again", label: "重来", shortcut: "1", accessibilityLabel: "Again 重来" },
   { value: "hard", label: "困难", shortcut: "2", accessibilityLabel: "Hard 困难" },
@@ -69,6 +72,29 @@ function formatCardStatusLabel(status: string) {
     case "active":
     default:
       return "进行中";
+  }
+}
+
+function formatCardSourceTypeLabel(sourceType?: string) {
+  switch (sourceType) {
+    case "graph":
+      return "图谱";
+    case "note":
+      return "笔记";
+    case "material":
+      return "资料";
+    case "reader":
+      return "阅读";
+    case "ai":
+      return "AI";
+    case "card":
+      return "卡片";
+    case "community":
+      return "社区";
+    case "none":
+      return "未绑定来源";
+    default:
+      return sourceType || "未绑定来源";
   }
 }
 
@@ -136,6 +162,10 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [loading, setLoading] = useState(true);
   const [managementOpen, setManagementOpen] = useState(false);
   const [managementTab, setManagementTab] = useState<ReviewManagementTab>("decks");
+  const [cardSearchQuery, setCardSearchQuery] = useState("");
+  const [cardStatusFilter, setCardStatusFilter] = useState<ManagedCardStatusFilter>("all");
+  const [cardSourceFilter, setCardSourceFilter] = useState<ManagedCardSourceFilter>("all");
+  const [selectedManagedCardIds, setSelectedManagedCardIds] = useState<string[]>([]);
   const [deckForm, setDeckForm] = useState({
     title: "",
     description: "",
@@ -152,6 +182,38 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     () => decks.find((deck) => deck.id === selectedDeckId) ?? null,
     [decks, selectedDeckId]
   );
+  const selectedManagedCardIdSet = useMemo(() => new Set(selectedManagedCardIds), [selectedManagedCardIds]);
+  const managedSourceOptions = useMemo(
+    () =>
+      Array.from(new Set(cards.map((card) => card.sourceType).filter((value): value is string => Boolean(value))))
+        .sort((left, right) => left.localeCompare(right))
+        .map((value) => ({ value, label: formatCardSourceTypeLabel(value) })),
+    [cards]
+  );
+  const visibleCards = useMemo(() => {
+    const query = cardSearchQuery.trim().toLowerCase();
+    return cards.filter((card) => {
+      const matchesQuery =
+        !query ||
+        [card.front, card.back, card.sourceType, card.sourceId].some((value) =>
+          value?.toLowerCase().includes(query)
+        );
+      const matchesStatus = cardStatusFilter === "all" || card.status === cardStatusFilter;
+      const matchesSource =
+        cardSourceFilter === "all" ||
+        (cardSourceFilter === "none" ? !card.sourceType : card.sourceType === cardSourceFilter);
+      return matchesQuery && matchesStatus && matchesSource;
+    });
+  }, [cardSearchQuery, cardSourceFilter, cardStatusFilter, cards]);
+  const selectedManagedCards = useMemo(
+    () => cards.filter((card) => selectedManagedCardIdSet.has(card.id)),
+    [cards, selectedManagedCardIdSet]
+  );
+  const selectedVisibleCount = useMemo(
+    () => visibleCards.filter((card) => selectedManagedCardIdSet.has(card.id)).length,
+    [selectedManagedCardIdSet, visibleCards]
+  );
+  const allVisibleSelected = visibleCards.length > 0 && selectedVisibleCount === visibleCards.length;
   const reviewedCount = completedCount;
   const reviewState: ReviewWorkspaceState = useMemo(() => {
     if (loading && queue.length === 0) {
@@ -205,6 +267,10 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     void refreshCards(selectedDeckId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDeckId]);
+
+  useEffect(() => {
+    setSelectedManagedCardIds((current) => current.filter((id) => cards.some((card) => card.id === id)));
+  }, [cards]);
 
   useEffect(() => {
     setShownAt(Date.now());
@@ -538,6 +604,77 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     }
   }
 
+  function toggleManagedCardSelection(cardId: string) {
+    setSelectedManagedCardIds((current) =>
+      current.includes(cardId) ? current.filter((id) => id !== cardId) : [...current, cardId]
+    );
+  }
+
+  function toggleAllVisibleManagedCards() {
+    const visibleIds = visibleCards.map((card) => card.id);
+    if (!visibleIds.length) {
+      return;
+    }
+
+    setSelectedManagedCardIds((current) => {
+      if (visibleIds.every((id) => current.includes(id))) {
+        return current.filter((id) => !visibleIds.includes(id));
+      }
+
+      return Array.from(new Set([...current, ...visibleIds]));
+    });
+  }
+
+  async function handleBatchManagedCardStatus(nextStatus: "active" | "suspended" | "buried") {
+    if (!selectedManagedCards.length) {
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+
+    try {
+      await Promise.all(
+        selectedManagedCards.map((card) => updateCardStatus(props.session, card.id, { status: nextStatus }))
+      );
+
+      const selectedIds = new Set(selectedManagedCards.map((card) => card.id));
+      const removedFromQueueCount = queue.filter((item) => selectedIds.has(item.card.id)).length;
+      setFocusedManagedCardId(selectedManagedCards[0]?.id ?? "");
+
+      if (nextStatus === "active") {
+        setSelectedManagedCardIds([]);
+        await Promise.all([refreshCards(selectedDeckId), refreshAll()]);
+        setMessage(`已批量恢复 ${selectedManagedCards.length} 张卡片，今日队列已同步更新。`);
+        return;
+      }
+
+      setCards((items) =>
+        items.map((card) => (selectedIds.has(card.id) ? { ...card, status: nextStatus } : card))
+      );
+      setQueue((items) => items.filter((item) => !selectedIds.has(item.card.id)));
+      setDueCount((count) => Math.max(0, count - removedFromQueueCount));
+      setSelectedManagedCardIds([]);
+      setMessage(
+        nextStatus === "buried"
+          ? `已批量埋藏 ${selectedManagedCards.length} 张卡片，今日队列已同步移除。`
+          : `已批量暂停 ${selectedManagedCards.length} 张卡片，今日队列已同步移除。`
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : nextStatus === "active"
+            ? "批量恢复卡片失败"
+            : nextStatus === "buried"
+              ? "批量埋藏卡片失败"
+              : "批量暂停卡片失败"
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function openManagement(tab: ReviewManagementTab) {
     setManagementTab(tab);
     setManagementOpen(true);
@@ -719,6 +856,91 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                   <span>{selectedDeck ? `${selectedDeck.cardCount} 张卡片` : "从卡组页选择后可查看和添加卡片。"}</span>
                 </section>
                 {selectedDeckId ? (
+                  <section className="review-card-browser">
+                    <div className="review-card-browser__filters">
+                      <label className="review-card-browser__field">
+                        <span>筛选卡片关键词</span>
+                        <input
+                          aria-label="筛选卡片关键词"
+                          onChange={(event) => setCardSearchQuery(event.target.value)}
+                          placeholder="搜索问题、答案或来源"
+                          value={cardSearchQuery}
+                        />
+                      </label>
+                      <label className="review-card-browser__field">
+                        <span>卡片状态筛选</span>
+                        <Select
+                          aria-label="卡片状态筛选"
+                          onChange={(event) => setCardStatusFilter(event.target.value as ManagedCardStatusFilter)}
+                          value={cardStatusFilter}
+                        >
+                          <option value="all">全部状态</option>
+                          <option value="active">进行中</option>
+                          <option value="suspended">已暂停</option>
+                          <option value="buried">已埋藏</option>
+                        </Select>
+                      </label>
+                      <label className="review-card-browser__field">
+                        <span>卡片来源类型筛选</span>
+                        <Select
+                          aria-label="卡片来源类型筛选"
+                          onChange={(event) => setCardSourceFilter(event.target.value)}
+                          value={cardSourceFilter}
+                        >
+                          <option value="all">全部来源</option>
+                          <option value="none">未绑定来源</option>
+                          {managedSourceOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </label>
+                    </div>
+                    <div className="review-card-browser__summary">
+                      <strong>{`${visibleCards.length} / ${cards.length} 张卡片`}</strong>
+                      <span>{selectedVisibleCount ? `当前结果已选中 ${selectedVisibleCount} 张` : "先筛选再批量处理状态。"}</span>
+                    </div>
+                    <div className="review-card-browser__batch-actions">
+                      <label className="review-card-browser__toggle-all">
+                        <input
+                          checked={allVisibleSelected}
+                          disabled={!visibleCards.length}
+                          onChange={toggleAllVisibleManagedCards}
+                          type="checkbox"
+                        />
+                        <span>{allVisibleSelected ? "取消全选当前结果" : "全选当前结果"}</span>
+                      </label>
+                      <div className="review-card-browser__batch-buttons">
+                        <button
+                          className="secondary-button"
+                          disabled={busy || !selectedManagedCards.some((card) => card.status === "active")}
+                          onClick={() => void handleBatchManagedCardStatus("suspended")}
+                          type="button"
+                        >
+                          批量暂停选中卡片
+                        </button>
+                        <button
+                          className="secondary-button"
+                          disabled={busy || !selectedManagedCards.some((card) => card.status === "active")}
+                          onClick={() => void handleBatchManagedCardStatus("buried")}
+                          type="button"
+                        >
+                          批量埋藏选中卡片
+                        </button>
+                        <button
+                          className="secondary-button"
+                          disabled={busy || !selectedManagedCards.some((card) => card.status !== "active")}
+                          onClick={() => void handleBatchManagedCardStatus("active")}
+                          type="button"
+                        >
+                          批量恢复选中卡片
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                ) : null}
+                {selectedDeckId ? (
                   <form className="review-management-form review-management-form--compact" onSubmit={handleCreateCard}>
                     <label>
                       <span>问题</span>
@@ -732,32 +954,50 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                   </form>
                 ) : null}
                 {selectedDeckId && cards.length ? (
-                  <div className="review-card-list">
-                    {cards.map((card) => (
-                      <article className={card.id === focusedManagedCardId ? "review-managed-card active" : "review-managed-card"} key={card.id}>
-                        <strong>{card.front}</strong>
-                        <small>{formatCardStatusLabel(card.status)}</small>
-                        <p>{card.back}</p>
-                        <ReviewSourceSummary card={card} compact />
-                        <div className="review-managed-card__actions">
-                          {card.status === "active" ? (
-                            <>
-                              <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "suspended")} type="button">
-                                暂停卡片
+                  visibleCards.length ? (
+                    <div className="review-card-list">
+                      {visibleCards.map((card) => (
+                        <article className={card.id === focusedManagedCardId ? "review-managed-card active" : "review-managed-card"} key={card.id}>
+                          <div className="review-managed-card__head">
+                            <label className="review-managed-card__selection">
+                              <input
+                                aria-label={`选择卡片 ${card.front}`}
+                                checked={selectedManagedCardIdSet.has(card.id)}
+                                onChange={() => toggleManagedCardSelection(card.id)}
+                                type="checkbox"
+                              />
+                              <span>选中</span>
+                            </label>
+                            <div className="review-managed-card__title">
+                              <strong>{card.front}</strong>
+                              <small>{formatCardStatusLabel(card.status)}</small>
+                            </div>
+                          </div>
+                          <p>{card.back}</p>
+                          <ReviewSourceSummary card={card} compact />
+                          <span className="review-managed-card__source-type">{formatCardSourceTypeLabel(card.sourceType || "none")}</span>
+                          <div className="review-managed-card__actions">
+                            {card.status === "active" ? (
+                              <>
+                                <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "suspended")} type="button">
+                                  暂停卡片
+                                </button>
+                                <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "buried")} type="button">
+                                  埋藏卡片
+                                </button>
+                              </>
+                            ) : (
+                              <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "active")} type="button">
+                                恢复卡片
                               </button>
-                              <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "buried")} type="button">
-                                埋藏卡片
-                              </button>
-                            </>
-                          ) : (
-                            <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "active")} type="button">
-                              恢复卡片
-                            </button>
-                          )}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
+                            )}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <DataState description="换个关键词、状态或来源筛选后再看。" kind="empty" title="当前筛选条件下没有卡片" />
+                  )
                 ) : selectedDeckId ? (
                   <DataState description="为这个卡组添加第一张卡片，或从阅读和笔记的草稿中写入。" kind="empty" title="这个卡组还没有卡片" />
                 ) : null}
