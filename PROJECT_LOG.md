@@ -1,3 +1,23 @@
+## 2026-07-15 13:05:00 +08:00 | v1.1.0-alpha.272 | 推进 FE-041 管理端 read adapter 接线
+### 任务内容
+
+- 继续沿 CODEX_MASTER_PROMPT.md 的 P0 路线推进 FE-041，这一轮不新增治理功能，而是收口后台工作台里仍然停留在页面层的读取链路编排。
+- 目标是把 AdminWorkspaceView.vue 里围绕 refreshProfile / loadOverview / loadModeration / loadGovernance / loadActiveView 的读侧装配统一收口到更高一层的 read adapter，避免这些读取路径继续各自直接拼装共享 helper。
+### 实际变更
+
+- 新增 frontend-admin/src/views/adminWorkspaceReadAdapter.ts，提供 createAdminWorkspaceReadAdapter(...) 出口，统一接线共享 adminWorkspaceDataLoad 与 adminWorkspaceViewLoad helpers。
+- 新增并补齐 frontend-admin/src/views/adminWorkspaceReadAdapter.test.ts，锁定无 session 短路、dashboard 视图读链路和 governance 缓存透传三条契约。
+- 更新 frontend-admin/src/views/AdminWorkspaceView.vue，让 workspaceActions、runtime、自举刷新和治理动作回刷都改为复用 workspaceRead，移除页面层原有的五条本地读取函数。
+- 同步更新 docs/engineering/CODEX_BACKLOG.md，把 FE-041 当前边界推进到“管理端 read adapter 已接线”这一层。
+### 验证结果
+
+- npm --workspace frontend-admin run test -- src/views/adminWorkspaceReadAdapter.test.ts src/views/AdminWorkspaceView.test.ts
+- npm --workspace frontend-admin run typecheck
+- npm run build:admin
+### 后续影响
+
+- FE-041 现在不只是在拆 runtime、action、props 和 events，后台工作台里围绕 profile / overview / moderation / governance / loadActiveView 的高频读侧编排也开始进入共享 read adapter，页面壳层继续变薄。
+- 这一轮仍然只补了读侧装配路径；如果继续推进 FE-041 / ADM-010，更适合优先评估 mutation、runtime、action、read 这几组出口是否继续汇总为更完整的 workspace feature adapter，而不是立刻切去新的治理业务。
 ## 2026-07-15 12:11:28 +08:00 | v1.1.0-alpha.270 | 增加后端变更必须同步前端验收要求
 ### 任务内容
 

@@ -85,7 +85,25 @@
 | WB-053 | TODO | Go 代码分析图 MVP | WB-051 | analysis jobs/graph | 路由图、ERD、模块依赖图至少一项可生成。 |
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
-## 执行记录
+### 执行记录：FE-041（管理端 read adapter 接线）
+- 执行日期：2026-07-15
+- 执行分支/提交：master / 待提交
+- 实际变更：
+  - 新增 frontend-admin/src/views/adminWorkspaceReadAdapter.ts
+  - 新增 frontend-admin/src/views/adminWorkspaceReadAdapter.test.ts
+  - 更新 frontend-admin/src/views/AdminWorkspaceView.vue
+  - 更新 docs/engineering/CODEX_BACKLOG.md
+- 完成证据：
+  - AdminWorkspaceView.vue 里原本分散维护的 refreshProfile / loadOverview / loadModeration / loadGovernance / loadActiveView 读取链路，现已统一收口到共享 adminWorkspaceReadAdapter。
+  - createAdminWorkspaceReadAdapter(...) 会复用既有 adminWorkspaceDataLoad 与 adminWorkspaceViewLoad helpers，让页面层只保留 ref setter、get/post 边界和模块动作接线。
+  - 新增 adapter 单测，锁定“无 session 时跳过 profile 读取”“dashboard 视图会通过共享 view-load runner 触发 overview + moderation 读取”“governance 读取会透传当前 rows/rowsView”三条契约。
+- 已执行验证：
+  - npm --workspace frontend-admin run test -- src/views/adminWorkspaceReadAdapter.test.ts src/views/AdminWorkspaceView.test.ts
+  - npm --workspace frontend-admin run typecheck
+  - npm run build:admin
+- 后续影响：
+  - FE-041 现在继续从共享 runtime 协调与 action adapter 推进到共享 read adapter，后台工作台页面层里剩余的读取编排进一步变薄。
+  - 后续继续沿 FE-041 / ADM-010 推进时，更适合优先评估 mutation / runtime / action / read 这几组出口是否继续汇总为更完整的 workspace feature adapter，而不是把新的读取或刷新分支重新写回 AdminWorkspaceView.vue。
 
 ### 执行记录：FE-041（管理端 session 同步编排 helper 接线）
 
