@@ -174,6 +174,7 @@ export interface GraphNodeAppearancePayload {
 export interface GraphNodeMetadataPayload extends Record<string, unknown> {
   detail?: string;
   appearance?: GraphNodeAppearancePayload | null;
+  reviewFeedback?: ReviewFeedbackSourcePayload | null;
 }
 
 export interface GraphNodePayload {

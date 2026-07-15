@@ -1,3 +1,27 @@
+## 2026-07-16 03:33:33 +08:00 | v1.1.0-alpha.289 | 推进 WB-033 / LC-010 图谱详情内嵌 mastery 摘要
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-033 / LC-010`，这一轮不直接把 mastery 持久写回图谱节点字段，而是先把图谱详情读接口补成能直接携带节点级学习反馈快照。
+- 目标是让图谱工作区在打开具体图谱时，就能随详情一起拿到来源级 mastery 摘要，同时明确把这类运行时回填字段挡在持久化边界之外，避免把反馈快照误写进 graph document。
+### 实际变更
+
+- 更新 `backend/internal/modules/graph/service/service.go`，扩展 `graphCardService` 接口以读取 `ReviewFeedback(...)`，并在构造 `GraphDetailPayload` 时为带来源的节点内嵌 `metadata.reviewFeedback`。
+- 同文件新增运行时字段清理逻辑，在图谱保存、导入和快照恢复前先剥离 `reviewFeedback`，避免这类读时 enrichment 被写进当前文档、版本快照或后续冲突草稿。
+- 更新 `backend/internal/modules/graph/service/service_test.go`，补一条 RED/GREEN 服务测试，锁定 `GetGraph(...)` 会保留原有节点 metadata，同时只给命中的来源节点回填 mastery 摘要。
+- 更新 `frontend-user/src/api/types.ts` 与 `frontend-user/src/modules/graph/lib/graphSourceReviewFeedback.ts`，让前端图谱侧优先消费节点自带的 `reviewFeedback`，只有缺失时才回退到全局 `sourceSummaries / weakSources` 汇总。
+- 新增 `frontend-user/src/modules/graph/lib/graphSourceReviewFeedback.test.ts`，锁定节点 metadata 内嵌反馈的优先级，避免后续又退回成“必须额外依赖全局摘要接口”。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把这次“图谱详情内嵌 mastery 摘要、写前剥离运行时字段”的切片补回 `WB-033 / LC-010` 执行记录。
+### 验证结果
+
+- RED：`go test ./internal/modules/graph/service`
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphSourceReviewFeedback.test.ts`
+- GREEN：`go test ./internal/modules/graph/service`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphSourceReviewFeedback.test.ts`
+### 后续影响
+
+- `WB-033 / LC-010` 现在从“图谱页面额外再拉一份反馈摘要”推进到“图谱详情自身就携带节点级 mastery 快照”，图谱工作区对学习反馈的读取链路更接近真正闭环。
+- 这一轮仍然没有把 mastery 定义成正式持久字段；后续更适合继续补“复习完成后即时刷新图谱反馈”或“节点/来源级 mastery 正式持久化出口”，而不是让运行时 metadata 自然扩散。
+
 ## 2026-07-15 21:16:04 +08:00 | v1.1.0-alpha.287 | 推进 WB-033 / LC-010 图谱节点来源级 mastery 摘要起步
 ### 任务内容
 

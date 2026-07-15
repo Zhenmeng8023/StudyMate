@@ -14,9 +14,14 @@ export type GraphSourceReviewFeedback = {
 };
 
 export function resolveGraphSourceReviewFeedback(
-  node: Pick<GraphNodePayload, "source"> | null | undefined,
+  node: Pick<GraphNodePayload, "source" | "metadata"> | null | undefined,
   summaries: ReviewFeedbackSourcePayload[]
 ): GraphSourceReviewFeedback | null {
+  const embedded = toGraphSourceReviewFeedback(readEmbeddedReviewFeedback(node));
+  if (embedded) {
+    return embedded;
+  }
+
   const sourceType = normalizeSourceType(node?.source?.type);
   const sourceId = node?.source?.id?.trim();
   if (!sourceType || !sourceId || summaries.length === 0) {
@@ -30,20 +35,37 @@ export function resolveGraphSourceReviewFeedback(
     return null;
   }
 
-  return {
-    totalCardCount: matched.totalCardCount,
-    reviewCardCount: matched.reviewCardCount,
-    masteredCardCount: matched.masteredCardCount,
-    masteryLevel: matched.masteryLevel ?? "building",
-    masteryScore: matched.masteryScore,
-    weakCardCount: matched.weakCardCount,
-    dueCount: matched.dueCount,
-    learningCount: matched.learningCount,
-    maxLapseCount: matched.maxLapseCount,
-    sampleCardFronts: matched.sampleCardFronts ?? []
-  };
+  return toGraphSourceReviewFeedback(matched);
 }
 
 function normalizeSourceType(sourceType: string | undefined) {
   return sourceType?.trim().toLowerCase().replace(/_/g, "-") ?? "";
+}
+
+function readEmbeddedReviewFeedback(node: Pick<GraphNodePayload, "metadata"> | null | undefined) {
+  const reviewFeedback = node?.metadata?.reviewFeedback;
+  return reviewFeedback && typeof reviewFeedback === "object" && !Array.isArray(reviewFeedback)
+    ? (reviewFeedback as ReviewFeedbackSourcePayload)
+    : null;
+}
+
+function toGraphSourceReviewFeedback(
+  summary: ReviewFeedbackSourcePayload | null | undefined
+): GraphSourceReviewFeedback | null {
+  if (!summary || (summary.totalCardCount ?? 0) <= 0) {
+    return null;
+  }
+
+  return {
+    totalCardCount: summary.totalCardCount,
+    reviewCardCount: summary.reviewCardCount,
+    masteredCardCount: summary.masteredCardCount,
+    masteryLevel: summary.masteryLevel ?? "building",
+    masteryScore: summary.masteryScore,
+    weakCardCount: summary.weakCardCount,
+    dueCount: summary.dueCount,
+    learningCount: summary.learningCount,
+    maxLapseCount: summary.maxLapseCount,
+    sampleCardFronts: summary.sampleCardFronts ?? []
+  };
 }

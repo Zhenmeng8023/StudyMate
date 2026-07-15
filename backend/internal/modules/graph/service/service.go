@@ -42,6 +42,7 @@ type auditLogRecorder interface {
 
 type graphCardService interface {
 	BulkCreateCards(ownerUserID string, deckID string, requests []carddto.CreateCardRequest) ([]carddto.CardPayload, error)
+	ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPayload, error)
 }
 
 type graphAITaskService interface {
@@ -184,7 +185,7 @@ func (s *Service) BatchSave(ownerUserID string, graphID string, request graphdto
 	}
 
 	nextVersion := graph.CurrentVersion + 1
-	document := graphdto.NormalizeDocumentPayload(graph.ID, nextVersion, request.Document)
+	document := sanitizeRuntimeGraphDocumentMetadata(graphdto.NormalizeDocumentPayload(graph.ID, nextVersion, request.Document))
 
 	if HasBlockingValidationIssues(ValidateDocument(document)) {
 		return nil, apperrors.New(http.StatusBadRequest, "invalid_graph_document", "图谱包含重复 ID、悬挂连线或非法尺寸等结构错误")
@@ -251,7 +252,7 @@ func (s *Service) RestoreSnapshot(ownerUserID string, graphID string, request gr
 		return nil, apperrors.Internal("恢复图谱快照失败")
 	}
 
-	normalized := graphdto.NormalizeDocumentPayload(graph.ID, graph.CurrentVersion, *document)
+	normalized := sanitizeRuntimeGraphDocumentMetadata(graphdto.NormalizeDocumentPayload(graph.ID, graph.CurrentVersion, *document))
 	s.persistDocument(ownerUserID, graph, normalized, "恢复历史快照")
 
 	return s.buildDetail(graph, normalized), nil
@@ -564,7 +565,7 @@ func (s *Service) ListDiagramTemplates() []graphdto.DiagramTemplatePayload {
 
 func (s *Service) saveImportedDocument(ownerUserID string, graph *graphmodel.Graph, document graphdto.GraphDocumentPayload, summary string) (*graphdto.GraphDetailPayload, error) {
 	nextVersion := graph.CurrentVersion + 1
-	normalized := graphdto.NormalizeDocumentPayload(graph.ID, nextVersion, document)
+	normalized := sanitizeRuntimeGraphDocumentMetadata(graphdto.NormalizeDocumentPayload(graph.ID, nextVersion, document))
 
 	if HasBlockingValidationIssues(ValidateDocument(normalized)) {
 		return nil, apperrors.New(http.StatusBadRequest, "invalid_graph_document", "图谱包含重复 ID、悬挂连线或非法尺寸等结构错误")
@@ -615,10 +616,123 @@ func (s *Service) persistDocument(ownerUserID string, graph *graphmodel.Graph, d
 }
 
 func (s *Service) buildDetail(graph *graphmodel.Graph, document graphdto.GraphDocumentPayload) *graphdto.GraphDetailPayload {
+	document = s.enrichDocumentWithReviewFeedback(graph.OwnerUserID, document)
 	return &graphdto.GraphDetailPayload{
 		GraphSummaryPayload: graphrepo.BuildSummary(*graph),
 		Document:            document,
 	}
+}
+
+func (s *Service) enrichDocumentWithReviewFeedback(ownerUserID string, document graphdto.GraphDocumentPayload) graphdto.GraphDocumentPayload {
+	if s.cards == nil || len(document.Nodes) == 0 {
+		return document
+	}
+
+	feedback, err := s.cards.ReviewFeedback(ownerUserID)
+	if err != nil {
+		log.Printf("graph review feedback enrichment failed: user=%s err=%v", ownerUserID, err)
+		return document
+	}
+	if feedback == nil || len(feedback.SourceSummaries) == 0 {
+		return document
+	}
+
+	summaries := make(map[string]carddto.ReviewFeedbackSourcePayload, len(feedback.SourceSummaries))
+	for _, summary := range feedback.SourceSummaries {
+		sourceType := normalizeGraphFeedbackSourceType(summary.SourceType)
+		sourceID := strings.TrimSpace(summary.SourceID)
+		if sourceType == "" || sourceID == "" {
+			continue
+		}
+		summaries[sourceType+"::"+sourceID] = summary
+	}
+	if len(summaries) == 0 {
+		return document
+	}
+
+	nextNodes := append([]graphdto.GraphNodePayload{}, document.Nodes...)
+	changed := false
+	for index, node := range nextNodes {
+		sourceType := ""
+		sourceID := ""
+		if node.Source != nil {
+			sourceType = normalizeGraphFeedbackSourceType(node.Source.Type)
+			sourceID = strings.TrimSpace(node.Source.ID)
+		}
+		if sourceType == "" || sourceID == "" {
+			continue
+		}
+		summary, ok := summaries[sourceType+"::"+sourceID]
+		if !ok {
+			continue
+		}
+
+		nextNode := node
+		nextMetadata := cloneGraphNodeMetadata(node.Metadata)
+		if nextMetadata == nil {
+			nextMetadata = map[string]any{}
+		}
+		nextMetadata["reviewFeedback"] = summary
+		nextNode.Metadata = nextMetadata
+		nextNodes[index] = nextNode
+		changed = true
+	}
+	if !changed {
+		return document
+	}
+
+	document.Nodes = nextNodes
+	return document
+}
+
+func sanitizeRuntimeGraphDocumentMetadata(document graphdto.GraphDocumentPayload) graphdto.GraphDocumentPayload {
+	if len(document.Nodes) == 0 {
+		return document
+	}
+
+	nextNodes := append([]graphdto.GraphNodePayload{}, document.Nodes...)
+	changed := false
+	for index, node := range nextNodes {
+		if len(node.Metadata) == 0 {
+			continue
+		}
+		if _, exists := node.Metadata["reviewFeedback"]; !exists {
+			continue
+		}
+
+		nextNode := node
+		nextMetadata := cloneGraphNodeMetadata(node.Metadata)
+		delete(nextMetadata, "reviewFeedback")
+		if len(nextMetadata) == 0 {
+			nextNode.Metadata = nil
+		} else {
+			nextNode.Metadata = nextMetadata
+		}
+		nextNodes[index] = nextNode
+		changed = true
+	}
+	if !changed {
+		return document
+	}
+
+	document.Nodes = nextNodes
+	return document
+}
+
+func cloneGraphNodeMetadata(metadata map[string]any) map[string]any {
+	if len(metadata) == 0 {
+		return nil
+	}
+
+	copy := make(map[string]any, len(metadata))
+	for key, value := range metadata {
+		copy[key] = value
+	}
+	return copy
+}
+
+func normalizeGraphFeedbackSourceType(sourceType string) string {
+	return strings.ToLower(strings.TrimSpace(strings.ReplaceAll(sourceType, "_", "-")))
 }
 
 func (s *Service) requireOwnerGraph(ownerUserID string, graphID string) (*graphmodel.Graph, error) {
