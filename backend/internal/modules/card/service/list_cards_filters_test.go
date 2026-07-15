@@ -46,6 +46,7 @@ func TestListCardsSupportsServerSideFiltersAndSchedulePayload(t *testing.T) {
 		Back:       "Belongs to graph",
 		SourceType: "graph",
 		SourceID:   "graph-1",
+		Tags:       []string{"graph", "core"},
 	})
 	if err != nil {
 		t.Fatalf("create active card: %v", err)
@@ -57,6 +58,7 @@ func TestListCardsSupportsServerSideFiltersAndSchedulePayload(t *testing.T) {
 		Back:       "Belongs to note",
 		SourceType: "note",
 		SourceID:   "note-1",
+		Tags:       []string{"note", "summary"},
 	})
 	if err != nil {
 		t.Fatalf("create suspended card: %v", err)
@@ -66,6 +68,7 @@ func TestListCardsSupportsServerSideFiltersAndSchedulePayload(t *testing.T) {
 		CardType: "basic",
 		Front:    "Detached fact",
 		Back:     "No source linked",
+		Tags:     []string{"fact"},
 	})
 	if err != nil {
 		t.Fatalf("create buried card: %v", err)
@@ -129,6 +132,9 @@ func TestListCardsSupportsServerSideFiltersAndSchedulePayload(t *testing.T) {
 	if filtered[0].Schedule.State != "learning" {
 		t.Fatalf("expected learning schedule state, got %#v", filtered[0].Schedule.State)
 	}
+	if len(filtered[0].Tags) != 2 || filtered[0].Tags[0] != "note" {
+		t.Fatalf("expected card tags to be preserved, got %#v", filtered[0].Tags)
+	}
 
 	dueCards, err := service.ListCards("user-1", deck.ID, carddto.ListCardsQuery{DueBucket: "due"})
 	if err != nil {
@@ -136,5 +142,13 @@ func TestListCardsSupportsServerSideFiltersAndSchedulePayload(t *testing.T) {
 	}
 	if len(dueCards) != 1 || dueCards[0].ID != activeGraphCard.ID {
 		t.Fatalf("expected only due active graph card, got %#v", dueCards)
+	}
+
+	tagFiltered, err := service.ListCards("user-1", deck.ID, carddto.ListCardsQuery{Tag: "graph"})
+	if err != nil {
+		t.Fatalf("list tag filtered cards: %v", err)
+	}
+	if len(tagFiltered) != 1 || tagFiltered[0].ID != activeGraphCard.ID {
+		t.Fatalf("expected only graph-tagged card, got %#v", tagFiltered)
 	}
 }

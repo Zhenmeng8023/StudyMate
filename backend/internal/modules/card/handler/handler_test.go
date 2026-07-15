@@ -173,7 +173,7 @@ func TestListCardsReadsServerSideFiltersFromQuery(t *testing.T) {
 	router.GET("/decks/:id/cards", withUser(handler.ListCards))
 
 	recorder := httptest.NewRecorder()
-	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/decks/deck-1/cards?q=note&status=suspended&sourceType=note&dueBucket=upcoming", nil))
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/decks/deck-1/cards?q=note&status=suspended&sourceType=note&dueBucket=upcoming&tag=graph", nil))
 
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
@@ -181,7 +181,7 @@ func TestListCardsReadsServerSideFiltersFromQuery(t *testing.T) {
 	if service.deckID != "deck-1" || service.ownerID != "user-1" {
 		t.Fatalf("unexpected request binding: owner=%q deck=%q", service.ownerID, service.deckID)
 	}
-	if service.listCardsReq.Query != "note" || service.listCardsReq.Status != "suspended" || service.listCardsReq.SourceType != "note" || service.listCardsReq.DueBucket != "upcoming" {
+	if service.listCardsReq.Query != "note" || service.listCardsReq.Status != "suspended" || service.listCardsReq.SourceType != "note" || service.listCardsReq.DueBucket != "upcoming" || service.listCardsReq.Tag != "graph" {
 		t.Fatalf("unexpected list cards query: %#v", service.listCardsReq)
 	}
 }

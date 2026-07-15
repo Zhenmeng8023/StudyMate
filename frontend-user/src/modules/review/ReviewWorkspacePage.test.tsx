@@ -49,6 +49,7 @@ const getTodayReviewQueueMock = vi.mocked(getTodayReviewQueue);
 const reviewCardMock = vi.mocked(reviewCard);
 const undoReviewCardMock = vi.mocked(undoReviewCard);
 const updateCardStatusMock = vi.mocked(updateCardStatus);
+const createDeckCardMock = vi.mocked(createDeckCard);
 
 function renderPage(path = "/review") {
   return render(
@@ -72,6 +73,7 @@ describe("ReviewWorkspacePage", () => {
     reviewCardMock.mockReset();
     undoReviewCardMock.mockReset();
     updateCardStatusMock.mockReset();
+    createDeckCardMock.mockReset();
 
     listDecksMock.mockResolvedValue([
       {
@@ -166,6 +168,18 @@ describe("ReviewWorkspacePage", () => {
       createdAt: "2026-06-02T12:00:00Z",
       updatedAt: "2026-06-02T12:00:00Z"
     }));
+    createDeckCardMock.mockResolvedValue({
+      id: "card-created-1",
+      deckId: "deck-1",
+      ownerUserId: "user-1",
+      cardType: "basic",
+      front: "Created card",
+      back: "Created answer",
+      tags: ["graph"],
+      status: "active",
+      createdAt: "2026-06-02T12:00:00Z",
+      updatedAt: "2026-06-02T12:00:00Z"
+    });
   });
 
   it("shows the due card and writes back a review rating", async () => {
@@ -525,6 +539,7 @@ describe("ReviewWorkspacePage", () => {
         back: "Belongs to graph",
         sourceType: "graph",
         sourceId: "graph-1",
+        tags: ["graph", "core"],
         status: "active",
         schedule: {
           cardId: "card-1",
@@ -549,6 +564,7 @@ describe("ReviewWorkspacePage", () => {
         back: "Belongs to note",
         sourceType: "note",
         sourceId: "note-1",
+        tags: ["note", "summary"],
         status: "suspended",
         schedule: {
           cardId: "card-2",
@@ -571,6 +587,7 @@ describe("ReviewWorkspacePage", () => {
         cardType: "basic",
         front: "Detached fact",
         back: "No source linked",
+        tags: ["fact"],
         status: "buried",
         schedule: {
           cardId: "card-3",
@@ -600,6 +617,9 @@ describe("ReviewWorkspacePage", () => {
       if (filters?.dueBucket === "upcoming") {
         return [allCards[1], allCards[2]];
       }
+      if (filters?.tag === "graph") {
+        return [allCards[0]];
+      }
       return allCards;
     });
 
@@ -615,6 +635,7 @@ describe("ReviewWorkspacePage", () => {
     const statusFilter = screen.getByLabelText("\u5361\u7247\u72b6\u6001\u7b5b\u9009");
     const sourceFilter = screen.getByLabelText("\u5361\u7247\u6765\u6e90\u7c7b\u578b\u7b5b\u9009");
     const dueFilter = screen.getByLabelText("\u5230\u671f\u65f6\u95f4\u7b5b\u9009");
+    const tagFilter = screen.getByLabelText("\u5361\u7247\u6807\u7b7e\u7b5b\u9009");
 
     expect(screen.getAllByText("3 张卡片").length).toBeGreaterThan(0);
 
@@ -657,6 +678,43 @@ describe("ReviewWorkspacePage", () => {
     expect(await screen.findByText("Note summary card")).toBeInTheDocument();
     expect(screen.getByText("Detached fact")).toBeInTheDocument();
     expect(screen.queryByText("Graph node card")).not.toBeInTheDocument();
+
+    await user.selectOptions(dueFilter, "all");
+    await user.selectOptions(tagFilter, "graph");
+
+    await waitFor(() => {
+      expect(listDeckCardsMock).toHaveBeenLastCalledWith(session, "deck-1", expect.objectContaining({ tag: "graph" }));
+    });
+    expect(await screen.findByText("Graph node card")).toBeInTheDocument();
+    expect(screen.queryByText("Note summary card")).not.toBeInTheDocument();
+    expect(screen.queryByText("Detached fact")).not.toBeInTheDocument();
+  });
+
+  it("submits tags when creating a card from review management", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("什么是图谱？")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "打开卡组管理" }));
+    await user.click(screen.getByRole("button", { name: "卡片" }));
+
+    await user.type(screen.getByLabelText("卡片问题"), "Tagged card");
+    await user.type(screen.getByLabelText("卡片答案"), "Card with tags");
+    await user.type(screen.getByLabelText("卡片标签"), "graph, core");
+    await user.click(screen.getByRole("button", { name: /添加卡片/ }));
+
+    await waitFor(() => {
+      expect(createDeckCardMock).toHaveBeenCalledWith(
+        session,
+        "deck-1",
+        expect.objectContaining({
+          front: "Tagged card",
+          back: "Card with tags",
+          tags: ["graph", "core"]
+        })
+      );
+    });
   });
 
   it("batch updates the selected cards from the deck browser", async () => {
