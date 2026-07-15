@@ -22,6 +22,7 @@ type fakeCardService struct {
 	listCardsReq  carddto.ListCardsQuery
 	reviewReq     carddto.ReviewCardRequest
 	statusReq     carddto.UpdateCardStatusRequest
+	tagReq        carddto.UpdateCardTagsRequest
 	undoReq       carddto.UndoReviewRequest
 }
 
@@ -345,6 +346,28 @@ func TestUpdateCardStatusWritesRequestedStatus(t *testing.T) {
 	}
 	if service.statusReq.Status != "suspended" {
 		t.Fatalf("unexpected status request: %#v", service.statusReq)
+	}
+}
+
+func TestUpdateCardTagsWritesRequestedTags(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCardService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.PATCH("/cards/:id/tags", withUser(handler.UpdateCardTags))
+
+	body := bytes.NewBufferString(`{"tags":["graph","core"]}`)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPatch, "/cards/card-1/tags", body))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if service.cardID != "card-1" {
+		t.Fatalf("expected card id card-1, got %q", service.cardID)
+	}
+	if len(service.tagReq.Tags) != 2 || service.tagReq.Tags[0] != "graph" || service.tagReq.Tags[1] != "core" {
+		t.Fatalf("unexpected tag request: %#v", service.tagReq)
 	}
 }
 

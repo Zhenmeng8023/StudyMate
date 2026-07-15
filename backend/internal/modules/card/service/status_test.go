@@ -158,3 +158,58 @@ func TestBuriedCardLeavesTodayQueueUntilRestored(t *testing.T) {
 		t.Fatalf("expected restored buried card to return to due queue, got due=%d items=%d", restoredQueue.DueCount, len(restoredQueue.Items))
 	}
 }
+
+func TestUpdateCardTagsReplacesNormalizedTags(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite db: %v", err)
+	}
+
+	if err := db.AutoMigrate(&adminmodel.AuditLog{}, &cardmodel.Deck{}, &cardmodel.Card{}, &cardmodel.CardSchedule{}, &cardmodel.CardReview{}); err != nil {
+		t.Fatalf("migrate sqlite schema: %v", err)
+	}
+
+	repository := cardrepo.NewRepository(db)
+	service := NewService(repository, adminrepo.NewAuditLogRepository(db), nil)
+
+	deck := &cardmodel.Deck{
+		ID:          "deck-1",
+		OwnerUserID: "user-1",
+		Title:       "Tag controls",
+		Description: "Updated tags should be normalized and persisted",
+		Visibility:  "private",
+		CardCount:   0,
+	}
+	if err := repository.CreateDeck(deck); err != nil {
+		t.Fatalf("create deck: %v", err)
+	}
+
+	created, err := service.CreateCard("user-1", deck.ID, carddto.CreateCardRequest{
+		CardType: "basic",
+		Front:    "What should happen to updated tags?",
+		Back:     "They should be normalized and replaced in place.",
+		Tags:     []string{"graph"},
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	updated, err := service.UpdateCardTags("user-1", created.ID, carddto.UpdateCardTagsRequest{
+		Tags: []string{" graph ", "core", "graph", ""},
+	})
+	if err != nil {
+		t.Fatalf("update card tags: %v", err)
+	}
+	if len(updated.Tags) != 2 || updated.Tags[0] != "graph" || updated.Tags[1] != "core" {
+		t.Fatalf("expected normalized tags, got %#v", updated.Tags)
+	}
+
+	reloaded, err := repository.FindCardByID(created.ID)
+	if err != nil {
+		t.Fatalf("reload card: %v", err)
+	}
+	decoded := cardrepo.DecodeTags(reloaded.Tags)
+	if len(decoded) != 2 || decoded[0] != "graph" || decoded[1] != "core" {
+		t.Fatalf("expected persisted tags to match update, got %#v", decoded)
+	}
+}

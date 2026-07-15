@@ -12,6 +12,7 @@ import {
   listAiTasks,
   reviewCard,
   undoReviewCard,
+  updateCardTags,
   updateCardStatus
 } from "./client";
 import type { AuthSession } from "./types";
@@ -293,6 +294,30 @@ describe("review API clients", () => {
     expect(init?.method).toBe("PATCH");
     expect(JSON.parse(String(init?.body))).toEqual({
       status: "buried"
+    });
+  });
+
+  it("updates card tags with a dedicated patch payload", async () => {
+    const fetchMock = mockApiResponse({
+      id: "card-1",
+      deckId: "deck-1",
+      ownerUserId: "user-1",
+      cardType: "basic",
+      front: "什么是知识图谱？",
+      back: "一种以节点和关系组织知识的结构。",
+      tags: ["graph", "core"],
+      status: "active",
+      createdAt: "2026-06-02T12:00:00Z",
+      updatedAt: "2026-06-02T12:00:00Z"
+    });
+
+    await updateCardTags(session, "card-1", { tags: ["graph", "core"] });
+
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toBe("/api/v1/cards/card-1/tags");
+    expect(init?.method).toBe("PATCH");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      tags: ["graph", "core"]
     });
   });
 });

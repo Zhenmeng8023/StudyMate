@@ -13,6 +13,7 @@ import {
   listDecks,
   reviewCard,
   undoReviewCard,
+  updateCardTags,
   updateCardStatus
 } from "../../api/client";
 import type { AuthSession } from "../../api/client";
@@ -32,6 +33,7 @@ vi.mock("../../api/client", async () => {
     listDecks: vi.fn(),
     reviewCard: vi.fn(),
     undoReviewCard: vi.fn(),
+    updateCardTags: vi.fn(),
     updateCardStatus: vi.fn()
   };
 });
@@ -54,6 +56,7 @@ const listDeckCardsMock = vi.mocked(listDeckCards);
 const getTodayReviewQueueMock = vi.mocked(getTodayReviewQueue);
 const reviewCardMock = vi.mocked(reviewCard);
 const undoReviewCardMock = vi.mocked(undoReviewCard);
+const updateCardTagsMock = vi.mocked(updateCardTags);
 const updateCardStatusMock = vi.mocked(updateCardStatus);
 const createDeckCardMock = vi.mocked(createDeckCard);
 const bulkCreateDeckCardsMock = vi.mocked(bulkCreateDeckCards);
@@ -84,6 +87,7 @@ describe("ReviewWorkspacePage", () => {
     getTodayReviewQueueMock.mockReset();
     reviewCardMock.mockReset();
     undoReviewCardMock.mockReset();
+    updateCardTagsMock.mockReset();
     updateCardStatusMock.mockReset();
     createDeckCardMock.mockReset();
 
@@ -177,6 +181,18 @@ describe("ReviewWorkspacePage", () => {
       front: "什么是图谱？",
       back: "节点和关系。",
       status: input.status,
+      createdAt: "2026-06-02T12:00:00Z",
+      updatedAt: "2026-06-02T12:00:00Z"
+    }));
+    updateCardTagsMock.mockImplementation(async (_session, cardId, input) => ({
+      id: cardId,
+      deckId: "deck-1",
+      ownerUserId: "user-1",
+      cardType: "basic",
+      front: "什么是图谱？",
+      back: "节点和关系。",
+      tags: input.tags,
+      status: "active",
       createdAt: "2026-06-02T12:00:00Z",
       updatedAt: "2026-06-02T12:00:00Z"
     }));
@@ -991,6 +1007,100 @@ describe("ReviewWorkspacePage", () => {
     expect(await screen.findByText("\u5df2\u6279\u91cf\u6682\u505c 2 \u5f20\u5361\u7247\uff0c\u4eca\u65e5\u961f\u5217\u5df2\u540c\u6b65\u79fb\u9664\u3002")).toBeInTheDocument();
     expect(screen.getByText("0 \u5f20\u4ecd\u5f85\u5b8c\u6210")).toBeInTheDocument();
     expect(screen.getAllByText("\u5df2\u6682\u505c").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("batch adds tags to the selected cards from the deck browser", async () => {
+    listDeckCardsMock.mockResolvedValueOnce([
+      {
+        id: "card-1",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Graph node card",
+        back: "Belongs to graph",
+        tags: ["graph"],
+        status: "active",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      },
+      {
+        id: "card-2",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Note summary card",
+        back: "Belongs to note",
+        tags: ["note", "graph"],
+        status: "active",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    ]);
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await expect(screen.findByText("什么是图谱？")).resolves.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "打开卡组管理" }));
+    await user.click(screen.getByRole("button", { name: "卡片" }));
+    await user.click(screen.getByLabelText("选择卡片 Graph node card"));
+    await user.click(screen.getByLabelText("选择卡片 Note summary card"));
+    await user.type(screen.getByLabelText("批量添加标签"), "core, exam");
+    await user.click(screen.getByRole("button", { name: "为选中卡片添加标签" }));
+
+    await waitFor(() => {
+      expect(updateCardTagsMock).toHaveBeenCalledWith(session, "card-1", { tags: ["graph", "core", "exam"] });
+      expect(updateCardTagsMock).toHaveBeenCalledWith(session, "card-2", { tags: ["note", "graph", "core", "exam"] });
+    });
+    expect(await screen.findByText("已为 2 张卡片添加标签。")).toBeInTheDocument();
+  });
+
+  it("batch removes tags from the selected cards in the deck browser", async () => {
+    listDeckCardsMock.mockResolvedValueOnce([
+      {
+        id: "card-1",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Graph node card",
+        back: "Belongs to graph",
+        tags: ["graph", "core", "exam"],
+        status: "active",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      },
+      {
+        id: "card-2",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        cardType: "basic",
+        front: "Note summary card",
+        back: "Belongs to note",
+        tags: ["note", "graph", "exam"],
+        status: "active",
+        createdAt: "2026-06-02T12:00:00Z",
+        updatedAt: "2026-06-02T12:00:00Z"
+      }
+    ]);
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await expect(screen.findByText("什么是图谱？")).resolves.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "打开卡组管理" }));
+    await user.click(screen.getByRole("button", { name: "卡片" }));
+    await user.click(screen.getByLabelText("选择卡片 Graph node card"));
+    await user.click(screen.getByLabelText("选择卡片 Note summary card"));
+    await user.type(screen.getByLabelText("批量移除标签"), "graph, missing");
+    await user.click(screen.getByRole("button", { name: "从选中卡片移除标签" }));
+
+    await waitFor(() => {
+      expect(updateCardTagsMock).toHaveBeenCalledWith(session, "card-1", { tags: ["core", "exam"] });
+      expect(updateCardTagsMock).toHaveBeenCalledWith(session, "card-2", { tags: ["note", "exam"] });
+    });
+    expect(await screen.findByText("已从 2 张卡片移除标签。")).toBeInTheDocument();
   });
 
   it("renders the shared error state when the initial review workspace bootstrap fails", async () => {
