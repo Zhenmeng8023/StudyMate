@@ -2,6 +2,13 @@ import type { ApiRequestInit } from "@studymate/api-client";
 import type { AdminSessionPayload } from "../api/sessionStore";
 import { describe, expect, it, vi } from "vitest";
 import { createAdminWorkspaceActionAdapter } from "./adminWorkspaceActionAdapter";
+import { runAdminWorkspaceLoginBootstrap } from "./adminWorkspaceBootstrap";
+import { runAdminWorkspaceLogin } from "./adminWorkspaceLogin";
+
+const loginSuccessNotice = "\u5df2\u8fdb\u5165\u7ba1\u7406\u540e\u53f0\u3002";
+const logoutNotice = "\u540e\u53f0\u4f1a\u8bdd\u5df2\u6e05\u7a7a\u3002";
+const loginFailureMessage = "\u767b\u5f55\u5931\u8d25";
+const loginFallbackMessage = "\u7ba1\u7406\u5458\u767b\u5f55\u5931\u8d25";
 
 function createSession(): AdminSessionPayload {
   return {
@@ -21,7 +28,8 @@ function createSession(): AdminSessionPayload {
 describe("adminWorkspaceActionAdapter", () => {
   it("wires the login action through the shared login and bootstrap runners", async () => {
     const form = { login: "operator@example.test", password: "secret" };
-    const post = vi.fn(async <T,>(_path: string, _body: ApiRequestInit["body"]) => createSession() as T);
+    const postMock = vi.fn(async (_path: string, _body: ApiRequestInit["body"]) => createSession());
+    const post = <T,>(path: string, body: ApiRequestInit["body"]) => postMock(path, body) as Promise<T>;
     const persistSession = vi.fn();
     const refreshProfile = vi.fn(async () => {});
     const loadActiveView = vi.fn();
@@ -31,19 +39,24 @@ describe("adminWorkspaceActionAdapter", () => {
     const setLoading = vi.fn();
     const setNotice = vi.fn();
 
-    const runLoginBootstrap = vi.fn(async (_view, options) => {
+    const runLoginBootstrapMock = vi.fn(async (_view, options) => {
       await options.authenticate();
       options.persistSession(createSession());
       await options.refreshProfile();
       options.loadActiveView("users");
+      return createSession();
     });
-    const runLogin = vi.fn(async (view, options) => {
+    const runLoginBootstrap: typeof runAdminWorkspaceLoginBootstrap = (view, options) =>
+      runLoginBootstrapMock(view, options);
+
+    const runLoginMock = vi.fn(async (view, options) => {
       await options.bootstrap(view);
       options.clearError();
       options.clearSessionInvalidation();
       options.setLoading(true);
       options.setNotice(options.getSuccessNotice());
     });
+    const runLogin: typeof runAdminWorkspaceLogin = (view, options) => runLoginMock(view, options);
 
     const actions = createAdminWorkspaceActionAdapter({
       clearError,
@@ -51,15 +64,15 @@ describe("adminWorkspaceActionAdapter", () => {
       clearSessionInvalidation,
       clearSessionState: vi.fn(),
       clearWorkspaceState: vi.fn(),
-      getLoginSuccessNotice: () => "已进入管理后台。",
-      getLogoutNotice: () => "后台会话已清空。",
+      getLoginSuccessNotice: () => loginSuccessNotice,
+      getLogoutNotice: () => logoutNotice,
       loadActiveView,
       persistSession,
       post,
       readActiveView: () => "users",
       readForm: () => form,
       refreshProfile,
-      resolveErrorMessage: vi.fn(() => "登录失败"),
+      resolveErrorMessage: vi.fn(() => loginFailureMessage),
       runners: {
         buildLogoutPlan: vi.fn(),
         buildRefreshPlan: vi.fn(),
@@ -77,13 +90,13 @@ describe("adminWorkspaceActionAdapter", () => {
 
     await actions.login();
 
-    expect(runLogin).toHaveBeenCalledWith(
+    expect(runLoginMock).toHaveBeenCalledWith(
       "users",
       expect.objectContaining({
-        fallbackMessage: "管理员登录失败"
+        fallbackMessage: loginFallbackMessage
       })
     );
-    expect(runLoginBootstrap).toHaveBeenCalledWith(
+    expect(runLoginBootstrapMock).toHaveBeenCalledWith(
       "users",
       expect.objectContaining({
         loadActiveView,
@@ -91,7 +104,7 @@ describe("adminWorkspaceActionAdapter", () => {
         refreshProfile
       })
     );
-    expect(post).toHaveBeenCalledWith("/api/v1/admin/login", form);
+    expect(postMock).toHaveBeenCalledWith("/api/v1/admin/login", form);
   });
 
   it("wires the refresh action through the shared refresh plan and runner", () => {
@@ -106,8 +119,8 @@ describe("adminWorkspaceActionAdapter", () => {
       clearSessionInvalidation: vi.fn(),
       clearSessionState: vi.fn(),
       clearWorkspaceState: vi.fn(),
-      getLoginSuccessNotice: () => "已进入管理后台。",
-      getLogoutNotice: () => "后台会话已清空。",
+      getLoginSuccessNotice: () => loginSuccessNotice,
+      getLogoutNotice: () => logoutNotice,
       loadActiveView,
       persistSession: vi.fn(),
       post: vi.fn(),
@@ -140,7 +153,7 @@ describe("adminWorkspaceActionAdapter", () => {
     const plan = {
       clearSessionInvalidation: true,
       nextView: "dashboard",
-      notice: "后台会话已清空。",
+      notice: logoutNotice,
       resetKeys: undefined,
       syncMode: "replace"
     } as const;
@@ -161,8 +174,8 @@ describe("adminWorkspaceActionAdapter", () => {
       clearSessionInvalidation,
       clearSessionState,
       clearWorkspaceState,
-      getLoginSuccessNotice: () => "已进入管理后台。",
-      getLogoutNotice: () => "后台会话已清空。",
+      getLoginSuccessNotice: () => loginSuccessNotice,
+      getLogoutNotice: () => logoutNotice,
       loadActiveView: vi.fn(),
       persistSession,
       post: vi.fn(),
@@ -187,7 +200,7 @@ describe("adminWorkspaceActionAdapter", () => {
 
     actions.logout();
 
-    expect(buildLogoutPlan).toHaveBeenCalledWith("后台会话已清空。");
+    expect(buildLogoutPlan).toHaveBeenCalledWith(logoutNotice);
     expect(runLogout).toHaveBeenCalledWith(
       plan,
       expect.objectContaining({

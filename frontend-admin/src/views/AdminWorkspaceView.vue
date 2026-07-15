@@ -38,7 +38,7 @@ import {
 import { buildAdminOverviewCards } from "./adminOverviewCards";
 import { resolveGovernanceDataState, resolveModerationDataState } from "./adminViewDataState";
 import { getAdminRequestErrorMessage, getAdminRequestErrorStatus } from "./adminRequestError";
-import { runAdminWorkspaceLoginBootstrap } from "./adminWorkspaceBootstrap";
+import { createAdminWorkspaceActionAdapter } from "./adminWorkspaceActionAdapter";
 import {
   runAdminWorkspaceGovernanceLoad,
   runAdminWorkspaceModerationLoad,
@@ -66,15 +66,8 @@ import {
   resolveAdminWorkspaceLocationView,
   syncAdminWorkspaceLocation
 } from "./adminWorkspaceLocation";
-import {
-  buildAdminWorkspaceLogoutPlan,
-  buildAdminWorkspaceRefreshPlan,
-  buildAdminWorkspaceViewSwitchPlan
-} from "./adminWorkspaceLifecycle";
+import { buildAdminWorkspaceViewSwitchPlan } from "./adminWorkspaceLifecycle";
 import { runAdminWorkspaceViewLoad } from "./adminWorkspaceViewLoad";
-import { runAdminWorkspaceRefresh } from "./adminWorkspaceRefresh";
-import { runAdminWorkspaceLogin } from "./adminWorkspaceLogin";
-import { runAdminWorkspaceLogout } from "./adminWorkspaceLogout";
 import { runAdminWorkspaceViewSwitch } from "./adminWorkspaceViewSwitch";
 import {
   getAdminGovernanceLoadedNotice,
@@ -108,7 +101,7 @@ type ReportAction = "resolve" | "dismiss";
 type UserAction = "disable" | "activate";
 type AITaskAction = "retry" | "cancel";
 type TemplateAction = "publish" | "unpublish";
-const initialAdminWorkspaceNotice = "登录后会同步当前治理队列与运营数据。";
+const initialAdminWorkspaceNotice = "\u767b\u5f55\u540e\u4f1a\u540c\u6b65\u5f53\u524d\u6cbb\u7406\u961f\u5217\u4e0e\u8fd0\u8425\u6570\u636e\u3002";
 
 const form = reactive({ login: "", password: "" });
 const session = ref<AdminSessionPayload | null>(readStoredAdminSession());
@@ -220,7 +213,7 @@ const loginPanelProps = computed(() =>
 );
 const loginPanelEvents = computed(() =>
   buildAdminWorkspaceLoginPanelEvents({
-    login,
+    login: () => workspaceActions.login(),
     setLoginValue: (value) => {
       form.login = value;
     },
@@ -250,8 +243,8 @@ const shellProps = computed(() =>
 );
 const shellEvents = computed(() =>
   buildAdminWorkspaceShellEvents({
-    logout,
-    refreshActiveView,
+    logout: () => workspaceActions.logout(),
+    refreshActiveView: () => workspaceActions.refreshActiveView(),
     switchView
   })
 );
@@ -361,6 +354,46 @@ function loadActiveView(view: AdminView) {
 }
 
 let stopRuntime: (() => void) | null = null;
+const workspaceActions = createAdminWorkspaceActionAdapter({
+  clearError: () => {
+    errorMessage.value = "";
+  },
+  clearProfile: () => {
+    profile.value = null;
+  },
+  clearSessionInvalidation: () => {
+    sessionInvalidation.value = null;
+    clearSessionInvalidation();
+  },
+  clearSessionState: () => {
+    session.value = null;
+  },
+  clearWorkspaceState,
+  getLoginSuccessNotice: getAdminLoginSuccessNotice,
+  getLogoutNotice: getAdminLogoutNotice,
+  loadActiveView,
+  persistSession,
+  post,
+  readActiveView: () => activeView.value,
+  readForm: () => form,
+  refreshProfile,
+  resolveErrorMessage: getAdminRequestErrorMessage,
+  setActiveView: (view) => {
+    activeView.value = view;
+  },
+  setError: (message) => {
+    errorMessage.value = message;
+  },
+  setLoading: (nextLoading) => {
+    loading.value = nextLoading;
+  },
+  setNotice: (nextNotice) => {
+    notice.value = nextNotice;
+  },
+  syncLocation: (view, syncMode) => {
+    syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
+  }
+});
 
 onMounted(() => {
   stopRuntime = startAdminWorkspaceRuntime({
@@ -401,38 +434,11 @@ onBeforeUnmount(() => {
   stopRuntime = null;
 });
 
-async function login() {
-  await runAdminWorkspaceLogin(activeView.value, {
-    bootstrap: (view) =>
-      runAdminWorkspaceLoginBootstrap(view, {
-        authenticate: () => post<AdminSessionPayload>("/api/v1/admin/login", form),
-        loadActiveView,
-        persistSession,
-        refreshProfile
-      }),
-    clearError: () => {
-      errorMessage.value = "";
-    },
-    clearSessionInvalidation,
-    fallbackMessage: "管理员登录失败",
-    getSuccessNotice: getAdminLoginSuccessNotice,
-    resolveErrorMessage: getAdminRequestErrorMessage,
-    setError: (message) => {
-      errorMessage.value = message;
-    },
-    setLoading: (nextLoading) => {
-      loading.value = nextLoading;
-    },
-    setNotice: (nextNotice) => {
-      notice.value = nextNotice;
-    }
-  });
-}
 
 async function refreshProfile() {
   if (!session.value) return;
   await runAdminWorkspaceProfileRefresh({
-    fallbackMessage: "读取管理员资料失败",
+    fallbackMessage: "\u8bfb\u53d6\u7ba1\u7406\u5458\u8d44\u6599\u5931\u8d25\u3002",
     readStatus: getAdminRequestErrorStatus,
     request: () => get<AdminAuthUser>("/api/v1/admin/me"),
     setError: (message) => {
@@ -447,7 +453,7 @@ async function refreshProfile() {
 async function loadOverview() {
   if (!session.value) return;
   await runAdminWorkspaceOverviewLoad({
-    fallbackMessage: "读取后台概览失败",
+    fallbackMessage: "閻犲洩顕цぐ鍥触鎼粹€抽叡婵帒鍊介～宥嗗緞鏉堫偉袝",
     readStatus: getAdminRequestErrorStatus,
     request: () => get<OverviewPayload>("/api/v1/admin/overview"),
     setError: (message) => {
@@ -462,7 +468,7 @@ async function loadOverview() {
 async function loadModeration() {
   if (!session.value) return;
   await runAdminWorkspaceModerationLoad({
-    fallbackMessage: "读取审核队列失败",
+    fallbackMessage: "\u8bfb\u53d6\u5ba1\u6838\u961f\u5217\u5931\u8d25\u3002",
     getLoadedNotice: getAdminModerationLoadedNotice,
     readStatus: getAdminRequestErrorStatus,
     request: () => get<AdminWorkspaceModerationItem[]>("/api/v1/admin/moderation"),
@@ -490,7 +496,7 @@ async function loadGovernance(view: AdminView) {
   await runAdminWorkspaceGovernanceLoad(view, {
     currentRows: governanceRows.value,
     currentRowsView: governanceRowsView.value,
-    fallbackMessage: "读取治理模块失败",
+    fallbackMessage: "\u8bfb\u53d6\u6cbb\u7406\u6a21\u5757\u5931\u8d25\u3002",
     getLoadedNotice: getAdminGovernanceLoadedNotice,
     readStatus: getAdminRequestErrorStatus,
     request: (path, query) => get<GovernanceRecord[]>(path, query),
@@ -628,7 +634,7 @@ function requestGovernanceAction(payload: { action: string; record: GovernanceRe
     clearUserError: () => {
       userConfirmError.value = "";
     },
-    invalidFallbackMessage: "无法提交治理动作。",
+    invalidFallbackMessage: "\u65e0\u6cd5\u63d0\u4ea4\u6cbb\u7406\u52a8\u4f5c\u3002",
     requestModerationAction,
     setAITaskAction: (value) => {
       pendingAITaskAction.value = value;
@@ -671,38 +677,6 @@ function switchView(view: AdminView) {
   });
 }
 
-function refreshActiveView() {
-  runAdminWorkspaceRefresh(buildAdminWorkspaceRefreshPlan(activeView.value), {
-    loadActiveView
-  });
-}
-
-function logout() {
-  const plan = buildAdminWorkspaceLogoutPlan(getAdminLogoutNotice());
-  runAdminWorkspaceLogout(plan, {
-    clearProfile: () => {
-      profile.value = null;
-    },
-    clearSessionInvalidation: () => {
-      sessionInvalidation.value = null;
-      clearSessionInvalidation();
-    },
-    clearSessionState: () => {
-      session.value = null;
-    },
-    clearWorkspaceState,
-    persistSession,
-    setActiveView: (view) => {
-      activeView.value = view;
-    },
-    setNotice: (nextNotice) => {
-      notice.value = nextNotice;
-    },
-    syncLocation: (view, syncMode) => {
-      syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
-    }
-  });
-}
 
 async function get<T>(path: string, query?: { limit?: number }) {
   return adminGet<T>(path, session.value, query);

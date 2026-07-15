@@ -8025,3 +8025,28 @@
 
 - `FE-041` 现在不只是在拆 props、events 和局部 controller，后台工作台里最容易继续回涨的 runtime 协调层也开始进入共享 helper。
 - 这一轮仍然只补了 `mount / popstate / subscribeSession` 这条壳层运行时路径；如果继续推进 `FE-041 / ADM-010`，更适合优先评估登录、自举、刷新与退出是否进一步汇总为更完整的 workspace feature adapter，而不是立刻切去新的治理业务。
+
+## 2026-07-15 12:45:00 +08:00 | v1.1.0-alpha.271 | 推进 FE-041 管理端 action adapter 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041`，这一轮不新增治理功能，而是收口后台工作台里仍然停留在页面层的登录、刷新与退出动作编排。
+- 目标是把 `AdminWorkspaceView.vue` 里围绕 `login / refreshActiveView / logout` 的壳层动作统一收口到更高一层的 action adapter，避免这些动作继续各自直接拼装共享 helper。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceActionAdapter.ts`，提供 `createAdminWorkspaceActionAdapter(...)` 出口，统一接线共享 `adminWorkspaceLogin`、`adminWorkspaceBootstrap`、`adminWorkspaceRefresh`、`adminWorkspaceLogout` 与 lifecycle plan helper。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让登录面板事件与后台壳层事件改为直接走 `workspaceActions.login()`、`workspaceActions.refreshActiveView()`、`workspaceActions.logout()`，并删除已失效的本地动作函数。
+- 新增并整理 `frontend-admin/src/views/adminWorkspaceActionAdapter.test.ts`，锁定登录、刷新、退出三条 action 会按既有共享 runner 与 plan helper 协同执行。
+- 顺手修复 `AdminWorkspaceView.vue` 里三处损坏的字符串字面量，避免这一轮 adapter 接线后被旧编码问题继续阻断编译与验证。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 action adapter 已接线”这一层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceActionAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `npx playwright test e2e/v1-admin-governance.spec.ts`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在不只是在拆 runtime、props 和 events，后台工作台里围绕登录、自举、刷新与退出的高频动作也开始进入共享 action adapter，页面壳层继续变薄。
+- 这一轮仍然只补了三条壳层动作路径；如果继续推进 `FE-041 / ADM-010`，更适合优先评估 profile/overview/loadActiveView 这类读取链路是否也继续汇总为更完整的 workspace feature adapter，而不是立刻切去新的治理业务。
