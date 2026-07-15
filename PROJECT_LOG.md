@@ -1,3 +1,30 @@
+## 2026-07-15 09:41:56 +08:00 | v1.1.0-alpha.262 | 推进 ANKI-060 首页学习反馈摘要起步
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把全局主路径做成能用版，再逐步细化”方向推进 `ANKI-060 / LC-010`，这一轮不直接切进图谱熟练度回写或 Note/Card 更大重构，而是先把复习后的薄弱反馈做成一个首页可见、可继续行动的最小入口。
+- 目标是让用户在完成若干复习后，不必再进入复习工作区才知道自己哪里薄弱，而是能在 dashboard 直接看到需要优先回补的卡片、学习中卡片和到期卡片摘要。
+### 实际变更
+
+- 后端更新 `backend/internal/modules/card/dto/card.go`、`handler/handler.go`、`repository/repository.go`、`router/router.go` 与 `service/service.go`，新增 `GET /api/v1/review/feedback` 摘要接口，汇总 `dueCount / learningCount / weakCardCount / weakCards`。
+- 扩展 `backend/internal/modules/card/handler/handler_test.go` 与 `backend/internal/modules/card/service/list_cards_filters_test.go`，锁定反馈接口返回、薄弱卡片排序，以及 learning / relearning 计数汇总。
+- 前端更新 `frontend-user/src/api/review.ts`、`frontend-user/src/api/types.ts` 与 `frontend-user/src/api/reviewAi.test.ts`，把反馈摘要请求和 DTO 契约接到既有 review API 层。
+- 更新 `frontend-user/src/pages/DashboardPage.tsx`，在首页新增“学习反馈”区块，展示薄弱卡片、学习中/到期摘要，并提供跳到 `/review` 与 `/review?card=...` 的回补入口。
+- 扩展 `frontend-user/src/pages/DashboardPage.test.tsx`，锁定登录态下首页会显示学习反馈摘要，未登录时不会误触发反馈请求。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-060` 从纯 `TODO` 推进到 `IN_PROGRESS`，并记录这次已完成的是“首页学习反馈摘要起步”这一层。
+### 验证结果
+
+- RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/pages/DashboardPage.test.tsx`
+- GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- GREEN：`go test ./internal/modules/card/...`
+- GREEN：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/pages/DashboardPage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- `ANKI-060` 现在不再完全停留在路线图层面，首页已经开始承担“把复习后的薄弱反馈重新拉回用户视野”的职责，主学习闭环比之前更接近真实可继续使用的原型。
+- 这一轮仍然只先把反馈落在 card/review/dashboard 摘要层；如果后续继续推进 `ANKI-060 / WB-033 / LC-010`，更适合优先补图谱节点熟练度回写、笔记学习状态回写和来源级反馈解释，而不是继续只在首页堆更多静态提示。
+
 ## 2026-07-15 09:31:02 +08:00 | v1.1.0-alpha.261 | 推进 ANKI-070 复习工作区卡组导入导出起步
 ### 任务内容
 

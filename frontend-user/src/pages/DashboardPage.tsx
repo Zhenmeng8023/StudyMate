@@ -1,10 +1,10 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { BookOpen, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { AiDraftPayload, AiTaskPayload, AuthSession, MaterialPayload, NotePayload, PostSummary, ReviewQueuePayload } from "../api/client";
+import type { AiDraftPayload, AiTaskPayload, AuthSession, MaterialPayload, NotePayload, PostSummary, ReviewFeedbackPayload, ReviewQueuePayload } from "../api/client";
 import { listAiDrafts, listAiTasks } from "../api/ai";
 import { listMaterials, listNotes, listPosts } from "../api/client";
-import { getTodayReviewQueue } from "../api/review";
+import { getReviewFeedback, getTodayReviewQueue } from "../api/review";
 import {
   displayMaterialCategory,
   displayMaterialDescription,
@@ -35,17 +35,20 @@ export function DashboardPage(props: { session: AuthSession | null }) {
   const [notes, setNotes] = useState<NotePayload[]>([]);
   const [posts, setPosts] = useState<PostSummary[]>([]);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueuePayload | null>(null);
+  const [reviewFeedback, setReviewFeedback] = useState<ReviewFeedbackPayload | null>(null);
   const [aiDrafts, setAiDrafts] = useState<AiDraftPayload[]>([]);
   const [aiTasks, setAiTasks] = useState<AiTaskPayload[]>([]);
   const [materialsLoading, setMaterialsLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(true);
   const [notesLoading, setNotesLoading] = useState(Boolean(props.session));
   const [reviewLoading, setReviewLoading] = useState(Boolean(props.session));
+  const [feedbackLoading, setFeedbackLoading] = useState(Boolean(props.session));
   const [aiLoading, setAiLoading] = useState(Boolean(props.session));
   const [materialsError, setMaterialsError] = useState("");
   const [postsError, setPostsError] = useState("");
   const [notesError, setNotesError] = useState("");
   const [reviewError, setReviewError] = useState("");
+  const [feedbackError, setFeedbackError] = useState("");
   const [aiError, setAiError] = useState("");
 
   async function loadMaterialsSection() {
@@ -100,6 +103,19 @@ export function DashboardPage(props: { session: AuthSession | null }) {
     }
   }
 
+  async function loadFeedbackSection(session: AuthSession) {
+    setFeedbackLoading(true);
+    setFeedbackError("");
+    try {
+      setReviewFeedback(await getReviewFeedback(session));
+    } catch (error) {
+      setReviewFeedback(null);
+      setFeedbackError(error instanceof Error ? error.message : "读取复习反馈失败。");
+    } finally {
+      setFeedbackLoading(false);
+    }
+  }
+
   async function loadAiSection(session: AuthSession) {
     setAiLoading(true);
     setAiError("");
@@ -129,6 +145,9 @@ export function DashboardPage(props: { session: AuthSession | null }) {
       setReviewQueue(null);
       setReviewError("");
       setReviewLoading(false);
+      setReviewFeedback(null);
+      setFeedbackError("");
+      setFeedbackLoading(false);
       setAiDrafts([]);
       setAiTasks([]);
       setAiError("");
@@ -138,6 +157,7 @@ export function DashboardPage(props: { session: AuthSession | null }) {
 
     void loadNotesSection(props.session);
     void loadReviewSection(props.session);
+    void loadFeedbackSection(props.session);
     void loadAiSection(props.session);
   }, [props.session]);
 
@@ -145,6 +165,7 @@ export function DashboardPage(props: { session: AuthSession | null }) {
   const recentNotes = notes.slice(0, 4);
   const recentPosts = posts.slice(0, 4);
   const recentReviewItems = reviewQueue?.items.slice(0, 3) || [];
+  const weakReviewCards = reviewFeedback?.weakCards.slice(0, 3) || [];
   const pendingAiTasks = aiTasks.filter((task) => !["completed", "confirmed", "failed"].includes(task.status));
   const recentAiDrafts = aiDrafts.slice(0, 2);
   const recentAiTasks = (pendingAiTasks.length ? pendingAiTasks : aiTasks).slice(0, 2);
@@ -267,6 +288,46 @@ export function DashboardPage(props: { session: AuthSession | null }) {
               title: "还没有 AI 草稿",
               description: "从阅读、笔记或图谱生成草稿后，这里会优先展示待确认内容。"
             };
+
+  const feedbackState: DashboardSectionState = !props.session
+    ? {
+        kind: "unauthorized",
+        title: "登录后查看学习反馈",
+        description: "登录后查看最近反复遗忘或仍在学习中的卡片。"
+      }
+    : feedbackLoading
+      ? {
+          kind: "loading",
+          title: "正在加载学习反馈",
+          description: "准备你最近最需要优先回补的卡片。"
+        }
+      : feedbackError
+        ? {
+            kind: "error",
+            title: "学习反馈暂时不可用",
+            description: feedbackError
+          }
+        : reviewFeedback && reviewFeedback.weakCardCount > 0
+          ? null
+          : {
+              kind: "empty",
+              title: "最近没有明显薄弱点",
+              description: "继续保持当前复习节奏，新的反馈会在这里出现。"
+            };
+
+  function formatFeedbackStateLabel(state: string) {
+    switch (state) {
+      case "learning":
+        return "学习中";
+      case "relearning":
+        return "重新学习";
+      case "review":
+        return "复习中";
+      case "new":
+      default:
+        return "新卡";
+    }
+  }
 
   function renderSectionState(state: Exclude<DashboardSectionState, null>, action?: ReactNode) {
     return <DataState action={action} description={state.description} kind={state.kind} title={state.title} />;
@@ -477,6 +538,53 @@ export function DashboardPage(props: { session: AuthSession | null }) {
                     <p>{item.deckTitle} · {item.schedule.state === "review" ? "复习队列" : "待学习"}</p>
                     <Link className="secondary-button" to={`/review?card=${encodeURIComponent(item.card.id)}`}>
                       直接打开
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            )}
+          </SectionFrame>
+
+          <SectionFrame
+            action={
+              <Link className="bookmark-chip" to={props.session ? "/review" : "/login"}>
+                查看反馈
+              </Link>
+            }
+            className="dashboard-section dashboard-section-feedback"
+            subtitle="学习反馈"
+            title="优先回补这些卡片"
+          >
+            {feedbackState ? renderSectionState(
+              feedbackState,
+              feedbackState.kind === "error" ? (
+                <button className="secondary-button" onClick={() => props.session ? void loadFeedbackSection(props.session) : undefined} type="button">
+                  重新加载
+                </button>
+              ) : feedbackState.kind === "unauthorized" ? (
+                <Link className="secondary-button" to="/login">
+                  登录后继续
+                </Link>
+              ) : feedbackState.kind === "empty" ? (
+                <Link className="secondary-button" to={props.session ? "/review" : "/login"}>
+                  打开复习工作台
+                </Link>
+              ) : undefined
+            ) : (
+              <div className="mini-card-grid stacked">
+                <article className="mini-card">
+                  <strong>{reviewFeedback?.weakCardCount || 0} 张卡片需要回补</strong>
+                  <p>{`${reviewFeedback?.learningCount || 0} 张仍在学习中，${reviewFeedback?.dueCount || 0} 张已经到期。`}</p>
+                  <Link className="secondary-button" to="/review">
+                    打开复习工作台
+                  </Link>
+                </article>
+                {weakReviewCards.map((card) => (
+                  <article className="mini-card" key={card.cardId}>
+                    <strong>{card.front}</strong>
+                    <p>{`${card.deckTitle} · ${formatFeedbackStateLabel(card.state)} · 遗忘 ${card.lapseCount} 次`}</p>
+                    <Link className="secondary-button" to={`/review?card=${encodeURIComponent(card.cardId)}`}>
+                      直接回补
                     </Link>
                   </article>
                 ))}

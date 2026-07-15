@@ -347,6 +347,27 @@ export interface ReviewQueuePayload {
   items: ReviewQueueItemPayload[];
 }
 
+export interface ReviewFeedbackCardPayload {
+  cardId: string;
+  deckId: string;
+  deckTitle: string;
+  front: string;
+  sourceType?: string;
+  sourceId?: string;
+  sourceMetadata?: Record<string, unknown>;
+  dueAt: string;
+  lapseCount: number;
+  repetitionCount: number;
+  state: string;
+}
+
+export interface ReviewFeedbackPayload {
+  dueCount: number;
+  learningCount: number;
+  weakCardCount: number;
+  weakCards: ReviewFeedbackCardPayload[];
+}
+
 export interface ReviewResultPayload {
   reviewId: string;
   schedule: CardSchedulePayload;

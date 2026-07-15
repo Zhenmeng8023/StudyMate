@@ -70,12 +70,12 @@
 | ANKI-030 | IN_PROGRESS | Anki 式复习会话体验 | ANKI-010, ANKI-020 | `frontend-user/src/modules/review/`、review API | 复习会话已支持翻面、1-4 评分、来源卡片深链定位、复习页内对笔记/资料/卡片等可直达来源的回看入口、下一次间隔预估、键盘路径、“跳过当前卡片”并将其顺延到当前内存队列末尾，以及“暂停当前卡片”“埋藏当前卡片”从今日活跃队列移除、并可在管理面板恢复；本轮已补“撤销上一次评分”，可恢复评分前 schedule 并把卡片放回今日队列；后续继续确保失败状态不丢当前会话上下文。 |
 | ANKI-040 | IN_PROGRESS | 卡片浏览器与批量管理 | ANKI-010, ANKI-020 | review/card browser UI + backend list/filter APIs | 复习管理面板已支持卡片浏览器服务端关键词/状态/来源/到期时间/标签筛选，卡片创建链路也开始保留标签并在浏览器中展示；批量暂停、埋藏、恢复选中卡片仍会同步今日队列计数与反馈；后续继续补跨牌组分页、批量移动牌组/加标签/删除与审计追溯。 |
 | ANKI-050 | IN_PROGRESS | 来源驱动制卡闭环 | ANKI-010, WB-030 | reader/note/graph/ai/card | 批注来源卡片现已补齐 `sourceMetadata` 通路，图谱节点转卡也开始保留 reader/PDF 锚点上下文，AI 草稿确认页与 AI 任务历史里的来源回跳也已接入同一套 reader 精确定位规则，能在草稿确认、AI 工作台深链定位、卡片创建与复习队列中回跳原批注、PDF 页或指定 AI 草稿/任务；后续继续补更通用的图谱节点与 SourceLink 抽象。 |
-| ANKI-060 | TODO | 复习反馈回写学习图谱 | ANKI-020, ANKI-050 | graph/card/review/dashboard | 复习结果可回写图谱节点熟练度、笔记学习状态和工作台反馈；薄弱知识点可在图谱和学习工作台中解释。 |
+| ANKI-060 | IN_PROGRESS | 复习反馈回写学习图谱 | ANKI-020, ANKI-050 | graph/card/review/dashboard | 当前已起步补上 `GET /review/feedback` 摘要接口，并让 dashboard 直接展示薄弱卡片、学习中卡片与到期卡片数量，作为学习反馈入口；后续继续把复习结果回写到图谱节点熟练度、笔记学习状态和更完整的工作台反馈。 |
 | ANKI-070 | IN_PROGRESS | 闪卡导入导出与 Anki 兼容预研 | ANKI-010 | card import/export docs/tools | 复习工作区已起步支持当前卡组的本地 JSON / CSV 导出，以及从本地 JSON / CSV 文件批量导入到当前卡组；后续继续补后端导入导出接口、导入预检、失败报告与 `.apkg` 兼容预研。 |
 | WB-033 | TODO | 图谱-复习学习反馈闭环 | ANKI-020, ANKI-050, WB-030 | graph/card/review | 基于 Anki 式 CardNote / Card / Schedule 模型串起图谱节点、卡片复习和学习反馈；卡片与来源节点可追溯，复习结果能回写节点熟练度。 |
 | WB-034 | TODO | 图谱 API 与工作区回归验证矩阵 | WB-032 | graph backend + frontend + e2e | 覆盖 create/save/restore/export/layout/conflict/权限路径；图谱工作区在桌面与窄屏至少有 smoke 回归，不再只依赖零散组件测试。 |
 | GPH-040 | TODO | 图谱工作区 store / commands / features 拆分 | WB-032, FE-020 | `frontend-user/src/modules/graph/`、`packages/graph-core` | `useGraphWorkspaceController` 不再继续承接新增业务；选中、相机、面板、保存、冲突等浏览器状态进入 store，新增节点/连线/分组/模板/恢复等用户意图进入 commands。 |
-| LC-010 | IN_PROGRESS | 主学习闭环演示路径收口 | WB-033, ANKI-030, FE-030 | material/reader/note/graph/card/review/AI | “资料上传 -> PDF 阅读 -> 高亮批注 -> 摘录池 -> 笔记块 -> CardNote -> 模板生成闪卡 -> Anki 式复习 -> 图谱熟练度回写”已开始按真实路径收口；当前已补上图谱来源卡片 `/review?card=` 深链定位、复习页内对可直达来源工作台的回看入口、批注来源卡片到 reader 批注位置的真实回跳、图谱节点生成卡片对 reader/PDF 锚点上下文的保留，以及 `/ai?draft=` / `/ai?task=` 深链下 AI 工作台对指定草稿/任务的优先定位、AI 草稿来源链接对批注/PDF 锚点的精确 reader 回跳、AI 任务历史对 reader 上下文的精确回跳，和复习会话内“跳过当前卡片”保持待完成队列上下文、“暂停当前卡片”“埋藏当前卡片”从今日活跃队列移除并可在管理面板恢复、以及“撤销上一次评分”恢复评分前 schedule 与今日队列；本轮首页也已能直接汇总今日复习队列与 AI 草稿/任务，让主路径入口不再只停留在资料/笔记概览；后续继续补更统一的 SourceLink 与失败状态清晰。 |
+| LC-010 | IN_PROGRESS | 主学习闭环演示路径收口 | WB-033, ANKI-030, FE-030 | material/reader/note/graph/card/review/AI | “资料上传 -> PDF 阅读 -> 高亮批注 -> 摘录池 -> 笔记块 -> CardNote -> 模板生成闪卡 -> Anki 式复习 -> 图谱熟练度回写”已开始按真实路径收口；当前已补上图谱来源卡片 `/review?card=` 深链定位、复习页内对可直达来源工作台的回看入口、批注来源卡片到 reader 批注位置的真实回跳、图谱节点生成卡片对 reader/PDF 锚点上下文的保留，以及 `/ai?draft=` / `/ai?task=` 深链下 AI 工作台对指定草稿/任务的优先定位、AI 草稿来源链接对批注/PDF 锚点的精确 reader 回跳、AI 任务历史对 reader 上下文的精确回跳，和复习会话内“跳过当前卡片”保持待完成队列上下文、“暂停当前卡片”“埋藏当前卡片”从今日活跃队列移除并可在管理面板恢复、以及“撤销上一次评分”恢复评分前 schedule 与今日队列；首页除今日复习与 AI 入口外，本轮也已开始展示学习反馈摘要、薄弱卡片和回补入口，让主路径入口不再只停留在资料/笔记概览；后续继续补更统一的 SourceLink 与失败状态清晰。 |
 | WB-040 | TODO | 管理端真实只读数据页第一批 | WB-001 | admin backend + frontend-admin | 用户、内容、AI 任务/用量、审计至少展示真实数据。 |
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
@@ -2393,6 +2393,45 @@
   - AI 区块当前只汇总草稿数量与最近任务，后续如果要继续做更强的来源预览、批量确认或统一 SourceLink 语义，仍应沿 `LC-010 / ANKI-050` 继续推进。
 - 下一建议任务：
   - `ANKI-040` 继续补后端列表/过滤 API 与标签/到期时间筛选
+### 执行记录：ANKI-060 / LC-010（Dashboard 首页学习反馈摘要起步）
+
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 未提交
+- 实际变更：
+  - 更新 `backend/internal/modules/card/dto/card.go`
+  - 更新 `backend/internal/modules/card/handler/handler.go`
+  - 更新 `backend/internal/modules/card/repository/repository.go`
+  - 更新 `backend/internal/modules/card/router/router.go`
+  - 更新 `backend/internal/modules/card/service/service.go`
+  - 更新 `backend/internal/modules/card/handler/handler_test.go`
+  - 更新 `backend/internal/modules/card/service/list_cards_filters_test.go`
+  - 更新 `frontend-user/src/api/review.ts`
+  - 更新 `frontend-user/src/api/types.ts`
+  - 更新 `frontend-user/src/api/reviewAi.test.ts`
+  - 更新 `frontend-user/src/pages/DashboardPage.tsx`
+  - 更新 `frontend-user/src/pages/DashboardPage.test.tsx`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 后端新增 `GET /api/v1/review/feedback`，会汇总当前用户的到期卡片数、学习中卡片数、薄弱卡片数，并返回优先回补的薄弱卡片摘要。
+  - Dashboard 新增“学习反馈”区块，登录用户现在可以在首页直接看到薄弱卡片、学习中/到期统计，以及回跳 `/review` 和 `/review?card=...` 的入口。
+  - 薄弱卡片摘要会保留牌组标题、学习状态、遗忘次数与来源元数据，为后续图谱/笔记熟练度回写保留最小反馈契约。
+- 已执行验证：
+  - `go test ./internal/modules/card/handler ./internal/modules/card/service`
+  - `go test ./internal/modules/card/...`
+  - `npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/pages/DashboardPage.test.tsx`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm run build:user`
+- 未执行验证及原因：
+  - 未运行图谱或更大范围端到端回归：本轮只新增 card feedback 接口与 dashboard 摘要展示，尚未触及图谱回写链路。
+- 兼容性/迁移说明：
+  - 本工作包新增的是只读反馈摘要接口，不修改既有 review 提交流程、deck/card 创建链路或图谱 API 契约。
+  - 当前学习反馈仍停留在 dashboard / review 摘要层，没有直接回写图谱节点熟练度或笔记学习状态，因此不会引入现有学习数据迁移。
+- 已知风险：
+  - 薄弱卡片判定当前仍基于现有 `state / lapse_count / due_at` 的最小启发式，不等于完整的学习画像；后续仍需沿 `ANKI-020` 调度模型继续细化。
+  - 首页目前只展示卡片级反馈，还没有把这组反馈写回图谱节点、笔记块或来源级熟练度，因此 `ANKI-060` 仍只是起步状态。
+- 下一建议任务：
+  - `ANKI-060` 继续补图谱节点/笔记学习状态回写
 ### 执行记录：ANKI-040（卡片标签筛选与创建链路）
 
 - 执行日期：2026-07-15

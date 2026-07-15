@@ -21,6 +21,7 @@ type cardService interface {
 	CreateCard(ownerUserID string, deckID string, request carddto.CreateCardRequest) (*carddto.CardPayload, error)
 	BulkCreateCards(ownerUserID string, deckID string, requests []carddto.CreateCardRequest) ([]carddto.CardPayload, error)
 	TodayQueue(ownerUserID string) (*carddto.ReviewQueuePayload, error)
+	ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPayload, error)
 	ReviewCard(ownerUserID string, cardID string, request carddto.ReviewCardRequest) (*carddto.ReviewResultPayload, error)
 	UpdateCardStatus(ownerUserID string, cardID string, request carddto.UpdateCardStatusRequest) (*carddto.CardPayload, error)
 	UndoReview(ownerUserID string, cardID string, request carddto.UndoReviewRequest) (*carddto.UndoReviewResultPayload, error)
@@ -108,6 +109,16 @@ func (h *Handler) CreateCardsBulk(ctx *gin.Context) {
 
 func (h *Handler) TodayQueue(ctx *gin.Context) {
 	result, err := h.service.TodayQueue(ctx.GetString(middleware.ContextUserIDKey))
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}
+
+func (h *Handler) ReviewFeedback(ctx *gin.Context) {
+	result, err := h.service.ReviewFeedback(ctx.GetString(middleware.ContextUserIDKey))
 	if err != nil {
 		response.Error(ctx, err)
 		return

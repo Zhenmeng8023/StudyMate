@@ -27,6 +27,7 @@ import type {
   ReaderAnnotationPayload,
   ReaderStatePayload,
   ReviewQueuePayload,
+  ReviewFeedbackPayload,
   ReviewResultPayload,
   UndoReviewResultPayload,
   TogglePayload
@@ -126,6 +127,12 @@ export async function bulkCreateDeckCards(
 
 export async function getTodayReviewQueue(session: AuthSession) {
   return request<ReviewQueuePayload>("/review/today", {
+    headers: withAuth(session)
+  });
+}
+
+export async function getReviewFeedback(session: AuthSession) {
+  return request<ReviewFeedbackPayload>("/review/feedback", {
     headers: withAuth(session)
   });
 }

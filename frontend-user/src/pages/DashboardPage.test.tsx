@@ -269,13 +269,13 @@ describe("DashboardPage", () => {
     );
 
     expect(await screen.findByText("2 张卡片等待复习")).toBeInTheDocument();
-    expect(screen.getByText("DFS 的时间复杂度？")).toBeInTheDocument();
+    expect(screen.getAllByText("DFS 的时间复杂度？").length).toBeGreaterThan(0);
     expect(screen.getByText("1 条草稿待确认")).toBeInTheDocument();
     expect(screen.getByText("什么时候使用 DFS？")).toBeInTheDocument();
     expect(screen.getByText("笔记生成卡片草稿")).toBeInTheDocument();
     expect(screen.getByText("进行中")).toBeInTheDocument();
     expect(screen.getByText("2 张卡片需要回补")).toBeInTheDocument();
-    expect(screen.getByText("DFS 的时间复杂度？")).toBeInTheDocument();
-    expect(screen.getByText("BFS 的典型用途？")).toBeInTheDocument();
+    expect(screen.getAllByText("DFS 的时间复杂度？").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("BFS 的典型用途？").length).toBeGreaterThan(1);
   });
 });

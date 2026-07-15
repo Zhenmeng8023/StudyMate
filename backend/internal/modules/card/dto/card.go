@@ -106,6 +106,27 @@ type ReviewQueuePayload struct {
 	Items    []ReviewQueueItemPayload `json:"items"`
 }
 
+type ReviewFeedbackCardPayload struct {
+	CardID          string         `json:"cardId"`
+	DeckID          string         `json:"deckId"`
+	DeckTitle       string         `json:"deckTitle"`
+	Front           string         `json:"front"`
+	SourceType      string         `json:"sourceType,omitempty"`
+	SourceID        string         `json:"sourceId,omitempty"`
+	SourceMetadata  map[string]any `json:"sourceMetadata,omitempty"`
+	DueAt           string         `json:"dueAt"`
+	LapseCount      int            `json:"lapseCount"`
+	RepetitionCount int            `json:"repetitionCount"`
+	State           string         `json:"state"`
+}
+
+type ReviewFeedbackPayload struct {
+	DueCount      int64                       `json:"dueCount"`
+	LearningCount int64                       `json:"learningCount"`
+	WeakCardCount int64                       `json:"weakCardCount"`
+	WeakCards     []ReviewFeedbackCardPayload `json:"weakCards"`
+}
+
 type ReviewResultPayload struct {
 	ReviewID string              `json:"reviewId"`
 	Schedule CardSchedulePayload `json:"schedule"`

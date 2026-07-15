@@ -167,6 +167,53 @@ func (s *Service) TodayQueue(ownerUserID string) (*carddto.ReviewQueuePayload, e
 	}, nil
 }
 
+func (s *Service) ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPayload, error) {
+	now := s.now().UTC()
+	dueCount, err := s.repository.CountDueCards(ownerUserID, now)
+	if err != nil {
+		return nil, apperrors.Internal("读取复习反馈统计失败")
+	}
+
+	learningCount, err := s.repository.CountLearningCards(ownerUserID)
+	if err != nil {
+		return nil, apperrors.Internal("读取复习反馈统计失败")
+	}
+
+	weakCardCount, err := s.repository.CountWeakCards(ownerUserID)
+	if err != nil {
+		return nil, apperrors.Internal("读取复习反馈统计失败")
+	}
+
+	rows, err := s.repository.ListWeakCards(ownerUserID, 5)
+	if err != nil {
+		return nil, apperrors.Internal("读取复习反馈卡片失败")
+	}
+
+	weakCards := make([]carddto.ReviewFeedbackCardPayload, 0, len(rows))
+	for _, row := range rows {
+		weakCards = append(weakCards, carddto.ReviewFeedbackCardPayload{
+			CardID:          row.Card.ID,
+			DeckID:          row.Deck.ID,
+			DeckTitle:       row.Deck.Title,
+			Front:           row.Card.Front,
+			SourceType:      row.Card.SourceType,
+			SourceID:        row.Card.SourceID,
+			SourceMetadata:  cardrepo.ParseSourceMetadata(row.Card.SourceMetadata),
+			DueAt:           row.Schedule.DueAt.Format(time.RFC3339),
+			LapseCount:      row.Schedule.LapseCount,
+			RepetitionCount: row.Schedule.RepetitionCount,
+			State:           row.Schedule.State,
+		})
+	}
+
+	return &carddto.ReviewFeedbackPayload{
+		DueCount:      dueCount,
+		LearningCount: learningCount,
+		WeakCardCount: weakCardCount,
+		WeakCards:     weakCards,
+	}, nil
+}
+
 func (s *Service) ReviewCard(ownerUserID string, cardID string, request carddto.ReviewCardRequest) (*carddto.ReviewResultPayload, error) {
 	card, err := s.requireOwnerCard(ownerUserID, cardID)
 	if err != nil {
