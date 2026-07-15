@@ -108,6 +108,7 @@ describe("adminWorkspaceFeatureAdapter", () => {
         clearError: vi.fn(),
         clearWorkspaceState: vi.fn(),
         hasSession: () => true,
+        readActiveView: () => "dashboard",
         readSession: () => createSession(),
         readSessionInvalidation: () => null,
         setActiveView: vi.fn(),
@@ -231,6 +232,7 @@ describe("adminWorkspaceFeatureAdapter", () => {
         clearError: vi.fn(),
         clearWorkspaceState: vi.fn(),
         hasSession: () => true,
+        readActiveView: () => "dashboard",
         readSession,
         readSessionInvalidation,
         setActiveView: vi.fn(),
@@ -268,6 +270,7 @@ describe("adminWorkspaceFeatureAdapter", () => {
     expect(startRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
         loadActiveView: readAdapter.loadActiveView,
+        readActiveView: expect.any(Function),
         readSession,
         readSessionInvalidation,
         refreshProfile: readAdapter.refreshProfile

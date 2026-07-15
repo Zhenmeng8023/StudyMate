@@ -21,6 +21,7 @@ type GovernanceView = Exclude<AdminRouteKey, "dashboard" | "moderation">;
 
 export interface CreateAdminWorkspaceStateAdapterOptions {
   initialNotice: string;
+  initialView?: AdminRouteKey;
   clearSessionInvalidation?: () => void;
   readSession?: () => AdminSessionPayload | null;
   readSessionInvalidation?: () => SessionInvalidationState | null;
@@ -52,7 +53,8 @@ export function createAdminWorkspaceStateAdapter<Overview>(
   const governanceErrorStatus = ref<number | null>(null);
   const notice = ref(options.initialNotice);
   const activeView = ref<AdminRouteKey>(
-    options.resolveLocationView(typeof window === "undefined" ? null : window.location)
+    options.initialView ??
+      options.resolveLocationView(typeof window === "undefined" ? null : window.location)
   );
   const recordQuery = ref("");
   const moderationQuery = ref("");

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import AdminWorkspaceView from "./views/AdminWorkspaceView.vue";
+import { RouterView } from "vue-router";
 </script>
 
 <template>
-  <AdminWorkspaceView />
+  <RouterView v-slot="{ Component }">
+    <component :is="Component" />
+  </RouterView>
 </template>

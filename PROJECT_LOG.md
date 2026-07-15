@@ -1,3 +1,27 @@
+## 2026-07-15 20:24:00 +08:00 | v1.1.0-alpha.284 | 推进 ADM-010 / FE-041 管理端真实路由页面边界
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041 / ADM-010`，这一轮不新增治理功能，而是把后台工作台从“手工同步 URL 的单页容器”继续推进到“真正由 Vue Router 挂载的路由页边界”。
+- 目标是让 `frontend-admin` 真正具备应用级 router、route page 包装层，以及 route-aware 的 workspace page feature，而不是继续只靠 `window.history` 在单组件内模拟路由。
+### 实际变更
+
+- 新增 `frontend-admin/src/router/appRouter.ts`，集中承接后台应用级路由表与 `createAdminAppRouter()`。
+- 新增 `frontend-admin/src/pages/AdminRouteWorkspacePage.vue`，作为 `/admin/*` 路由页包装层，把 `routeView` 和 `router.push/replace` 显式注入 `AdminWorkspaceView`。
+- 更新 `frontend-admin/src/App.vue` 与 `frontend-admin/src/main.ts`，让后台入口改为 `RouterView + app.use(createAdminAppRouter())`。
+- 更新 `frontend-admin/src/router/index.ts`，保留纯路由 key/path/helper 出口，避免和 `AdminWorkspaceView -> pageFeature -> location` 形成循环依赖。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`、`adminWorkspacePageFeature.ts`、`adminWorkspaceStateAdapter.ts` 与 `adminWorkspaceRuntime.ts`，补上 `initialView`、router 驱动的 `navigate(...)` 与可关闭的 `popstate` 监听，让工作台在真实路由页模式下也能复用既有 page feature。
+- 新增/更新 `frontend-admin/src/App.test.ts`、`frontend-admin/src/router/index.test.ts`、`frontend-admin/src/views/adminWorkspaceFeatureAdapter.test.ts` 与 `frontend-admin/src/views/adminWorkspaceRuntime.test.ts`，锁定新的真实路由与 route-aware runtime 契约。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/App.test.ts src/router/index.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/App.test.ts src/router/index.test.ts src/views/AdminWorkspaceView.test.ts src/views/adminWorkspacePageFeature.test.ts src/views/AdminWorkspacePageSurface.test.ts src/views/modules/AdminWorkspaceModuleHost.test.ts src/views/adminWorkspaceFeatureAdapter.test.ts src/views/adminWorkspaceRuntime.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+### 后续影响
+
+- `ADM-010` 现在已经从“可刷新 URL”推进到“真实 Vue Router 入口 + route page 包装层”，后续更适合继续把 users / materials / ai / audit 等治理页做成更清晰的 page / feature 落点。
+- `FE-041` 后续可以继续把壳层通知、模块动作状态和更细的治理交互往 route-level feature 边界推进，而不需要再回到 `AdminWorkspaceView.vue` 扩张单页逻辑。
+
 ## 2026-07-15 20:08:20 +08:00 | v1.1.0-alpha.283 | 推进 FE-041 管理端 workspace page feature 接线
 ### 任务内容
 

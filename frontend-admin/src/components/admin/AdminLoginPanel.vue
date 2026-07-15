@@ -19,7 +19,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="admin-login">
+  <section class="admin-login" data-admin-login-panel="true">
     <section class="admin-login__brand">
       <span class="admin-login__mark">S</span>
       <div>

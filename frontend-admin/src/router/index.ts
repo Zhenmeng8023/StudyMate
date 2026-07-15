@@ -1,4 +1,13 @@
-export type AdminRouteKey = "dashboard" | "moderation" | "materials" | "community" | "users" | "graph" | "ai" | "system" | "audit";
+export type AdminRouteKey =
+  | "dashboard"
+  | "moderation"
+  | "materials"
+  | "community"
+  | "users"
+  | "graph"
+  | "ai"
+  | "system"
+  | "audit";
 
 export const defaultAdminRouteKey: AdminRouteKey = "dashboard";
 
@@ -8,7 +17,7 @@ export const adminRoutes: Array<{ key: AdminRouteKey; label: string; path: strin
   { key: "materials", label: "资料治理", path: "/admin/materials" },
   { key: "community", label: "举报处理", path: "/admin/community" },
   { key: "users", label: "用户治理", path: "/admin/users" },
-  { key: "graph", label: "标签治理", path: "/admin/graph" },
+  { key: "graph", label: "模板治理", path: "/admin/graph" },
   { key: "ai", label: "AI 任务", path: "/admin/ai" },
   { key: "system", label: "文件治理", path: "/admin/system" },
   { key: "audit", label: "审计日志", path: "/admin/audit" }

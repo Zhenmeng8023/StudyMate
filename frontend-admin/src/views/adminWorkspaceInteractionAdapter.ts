@@ -12,6 +12,7 @@ interface AdminWorkspaceInteractionAdapterRunners {
 export interface CreateAdminWorkspaceInteractionAdapterOptions {
   clearWorkspaceState: (keys?: AdminWorkspaceResetKey[]) => void;
   loadActiveView: (view: AdminRouteKey) => void;
+  routeNavigationOnly?: boolean;
   runners?: Partial<AdminWorkspaceInteractionAdapterRunners>;
   setActiveView: (view: AdminRouteKey) => void;
   setSelectedRecord: (record: GovernanceRecord) => void;
@@ -32,6 +33,11 @@ export function createAdminWorkspaceInteractionAdapter(
     },
     switchView(view: AdminRouteKey) {
       const plan = runners.buildViewSwitchPlan(view);
+      if (options.routeNavigationOnly) {
+        options.syncLocation(plan.nextView, plan.syncMode);
+        return;
+      }
+
       runners.runViewSwitch(plan, {
         clearWorkspaceState: options.clearWorkspaceState,
         loadActiveView: options.loadActiveView,

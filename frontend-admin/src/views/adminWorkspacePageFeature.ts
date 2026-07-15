@@ -8,6 +8,7 @@ import {
   subscribeSession
 } from "../api/sessionStore";
 import type { AdminAuthUser } from "../api/sessionStore";
+import type { AdminRouteKey } from "../router";
 import { createAdminWorkspaceConfirmAdapter } from "./adminWorkspaceConfirmAdapter";
 import { createAdminWorkspaceFeatureAdapter } from "./adminWorkspaceFeatureAdapter";
 import { createAdminWorkspaceInteractionAdapter } from "./adminWorkspaceInteractionAdapter";
@@ -20,6 +21,8 @@ import {
   getAdminLogoutNotice,
   getAdminModerationLoadedNotice
 } from "./adminWorkspaceNotice";
+import { buildAdminWorkspacePopstatePlan } from "./adminWorkspaceLifecycle";
+import { runAdminWorkspacePopstate } from "./adminWorkspacePopstate";
 import { createAdminWorkspaceStateAdapter } from "./adminWorkspaceStateAdapter";
 import { createAdminWorkspaceSurfaceAdapter } from "./adminWorkspaceSurfaceAdapter";
 
@@ -33,6 +36,9 @@ interface AdminWorkspacePageFeatureFactories {
 
 export interface CreateAdminWorkspacePageFeatureOptions {
   initialNotice: string;
+  initialView?: AdminRouteKey;
+  listenToPopstate?: boolean;
+  navigate?: (view: AdminRouteKey, mode: "push" | "replace") => void;
   runners?: Partial<AdminWorkspacePageFeatureFactories>;
 }
 
@@ -50,6 +56,7 @@ export function createAdminWorkspacePageFeature<Overview>(
 
   const state = factories.createStateAdapter<Overview>({
     initialNotice: options.initialNotice,
+    initialView: options.initialView,
     resolveLocationView: resolveAdminWorkspaceLocationView
   });
 
@@ -128,6 +135,8 @@ export function createAdminWorkspacePageFeature<Overview>(
       hasSession: () => Boolean(state.session.value),
       readSession: readStoredAdminSession,
       readSessionInvalidation: readStoredSessionInvalidation,
+      readActiveView: () => state.activeView.value,
+      listenToPopstate: options.listenToPopstate ?? true,
       setActiveView: state.setActiveView,
       setNotice: state.setNotice,
       setProfile: state.setProfile,
@@ -173,9 +182,14 @@ export function createAdminWorkspacePageFeature<Overview>(
   const interactions = factories.createInteractionAdapter({
     clearWorkspaceState: state.clearWorkspaceState,
     loadActiveView: feature.read.loadActiveView,
+    routeNavigationOnly: Boolean(options.navigate),
     setActiveView: state.setActiveView,
     setSelectedRecord: state.setSelectedRecord,
     syncLocation: (view, syncMode) => {
+      if (options.navigate) {
+        options.navigate(view, syncMode);
+        return;
+      }
       syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
     }
   });
@@ -220,6 +234,18 @@ export function createAdminWorkspacePageFeature<Overview>(
   state.initializeResetController(confirm.resetAll);
 
   return {
+    applyRouteView(view: AdminRouteKey) {
+      if (state.activeView.value === view) {
+        return;
+      }
+
+      const plan = buildAdminWorkspacePopstatePlan(view, Boolean(state.session.value));
+      runAdminWorkspacePopstate(plan, {
+        clearWorkspaceState: state.clearWorkspaceState,
+        loadActiveView: feature.read.loadActiveView,
+        setActiveView: state.setActiveView
+      });
+    },
     startRuntime: feature.startRuntime,
     surface
   };

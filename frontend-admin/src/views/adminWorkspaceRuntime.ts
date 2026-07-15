@@ -20,7 +20,9 @@ export interface StartAdminWorkspaceRuntimeOptions {
   clearError: () => void;
   clearWorkspaceState: (keys?: AdminWorkspaceResetKey[]) => void;
   hasSession: () => boolean;
+  listenToPopstate?: boolean;
   loadActiveView: (view: AdminRouteKey) => void;
+  readActiveView: () => AdminRouteKey;
   readSession: () => AdminSessionPayload | null;
   readSessionInvalidation: () => SessionInvalidationState | null;
   refreshProfile: () => Promise<void>;
@@ -61,10 +63,12 @@ export function startAdminWorkspaceRuntime(options: StartAdminWorkspaceRuntimeOp
   };
 
   const unsubscribeSession = options.subscribeSession(syncSession);
-  options.window.addEventListener("popstate", handlePopstate);
+  if (options.listenToPopstate !== false) {
+    options.window.addEventListener("popstate", handlePopstate);
+  }
 
   const mountPlan = buildAdminWorkspaceMountPlan(
-    normalizeAdminWorkspaceLocation(options.window.location, options.window.history),
+    options.readActiveView(),
     options.hasSession()
   );
   runAdminWorkspaceMountBootstrap(mountPlan, {
@@ -74,7 +78,9 @@ export function startAdminWorkspaceRuntime(options: StartAdminWorkspaceRuntimeOp
   });
 
   return () => {
-    options.window.removeEventListener("popstate", handlePopstate);
+    if (options.listenToPopstate !== false) {
+      options.window.removeEventListener("popstate", handlePopstate);
+    }
     unsubscribeSession();
   };
 }

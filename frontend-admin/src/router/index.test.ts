@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createAdminAppRouter } from "./index";
+import { createMemoryHistory } from "vue-router";
+import { createAdminAppRouter } from "./appRouter";
 
 describe("createAdminAppRouter", () => {
   it("redirects the root path to the default dashboard route", async () => {
-    const router = createAdminAppRouter();
+    const router = createAdminAppRouter(createMemoryHistory());
 
     await router.push("/");
     await router.isReady();
@@ -12,7 +13,7 @@ describe("createAdminAppRouter", () => {
   });
 
   it("resolves governance routes to the matching admin path", async () => {
-    const router = createAdminAppRouter();
+    const router = createAdminAppRouter(createMemoryHistory());
 
     await router.push("/admin/users");
     await router.isReady();

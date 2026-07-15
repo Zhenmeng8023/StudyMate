@@ -85,6 +85,39 @@
 | WB-053 | TODO | Go 代码分析图 MVP | WB-051 | analysis jobs/graph | 路由图、ERD、模块依赖图至少一项可生成。 |
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
+### 执行记录：ADM-010 / FE-041（管理端真实路由页面边界）
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 待提交
+- 实际变更：
+  - 新增 `frontend-admin/src/router/appRouter.ts`
+  - 新增 `frontend-admin/src/router/index.test.ts`
+  - 新增 `frontend-admin/src/pages/AdminRouteWorkspacePage.vue`
+  - 更新 `frontend-admin/src/router/index.ts`
+  - 更新 `frontend-admin/src/App.vue`
+  - 更新 `frontend-admin/src/App.test.ts`
+  - 更新 `frontend-admin/src/main.ts`
+  - 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`
+  - 更新 `frontend-admin/src/views/adminWorkspacePageFeature.ts`
+  - 更新 `frontend-admin/src/views/adminWorkspaceRuntime.ts`
+  - 更新 `frontend-admin/src/views/adminWorkspaceStateAdapter.ts`
+  - 更新 `frontend-admin/src/views/adminWorkspaceFeatureAdapter.test.ts`
+  - 更新 `frontend-admin/src/views/adminWorkspaceRuntime.test.ts`
+  - 更新 `frontend-admin/src/components/admin/AdminLoginPanel.vue`
+- 完成证据：
+  - `frontend-admin` 现在不再直接由 `App.vue -> AdminWorkspaceView.vue` 挂载，而是通过真正的 `createAdminAppRouter()` 和 `RouterView` 进入后台工作台。
+  - 新增 `AdminRouteWorkspacePage.vue` 作为路由页包装层，把 `routeView`、`router.push/replace` 和 `AdminWorkspaceView` 之间的导航边界显式固定下来。
+  - `AdminWorkspaceView.vue` 继续保持薄 route container 角色，但现在可接收 `initialView`、`navigate` 与 `listenToPopstate`，因此既兼容原有直接挂载测试，也能作为真实路由页的可复用工作台容器。
+  - `adminWorkspacePageFeature.ts`、`adminWorkspaceStateAdapter.ts` 与 `adminWorkspaceRuntime.ts` 已补上 route-aware 入口：初始化 view 可直接来自 route，导航可切到 router，路由页模式下可关闭 `popstate` 监听，避免和 Vue Router 重复协调历史状态。
+  - 新增的 App/router 测试锁定了两条最小真实路由契约：`/` 会通过 router 重定向到 `/admin/dashboard`，`/admin/users` 这类治理路径由应用级路由表直接承接。
+- 已执行验证：
+  - RED：`npm --workspace frontend-admin run test -- src/App.test.ts src/router/index.test.ts`
+  - `npm --workspace frontend-admin run test -- src/App.test.ts src/router/index.test.ts src/views/AdminWorkspaceView.test.ts src/views/adminWorkspacePageFeature.test.ts src/views/AdminWorkspacePageSurface.test.ts src/views/modules/AdminWorkspaceModuleHost.test.ts src/views/adminWorkspaceFeatureAdapter.test.ts src/views/adminWorkspaceRuntime.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+- 后续影响：
+  - `ADM-010` 现在已经从“URL 状态语义”推进到“真实 router 入口 + route page 包装层”，下一步更适合继续把 users / materials / ai / audit 等治理页做成更清晰的 page/feature 落点。
+  - `FE-041` 后续可以继续把壳层通知、模块动作状态和更细的治理交互往 route-level feature 边界推进，而不需要再回到 `AdminWorkspaceView.vue` 扩张单页逻辑。
+
 ### 执行记录：FE-041（管理端 workspace page feature 接线）
 - 执行日期：2026-07-15
 - 执行分支/提交：`master` / 待提交
