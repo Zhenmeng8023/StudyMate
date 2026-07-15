@@ -94,6 +94,15 @@ func (s *fakeCardService) ReviewFeedback(ownerUserID string) (*carddto.ReviewFee
 			State:           "relearning",
 			DueAt:           "2026-06-02T12:00:00Z",
 		}},
+		WeakSources: []carddto.ReviewFeedbackSourcePayload{{
+			SourceType:      "graph",
+			SourceID:        "node-1",
+			WeakCardCount:   2,
+			DueCount:        1,
+			LearningCount:   1,
+			MaxLapseCount:   2,
+			SampleCardFronts: []string{"什么是图谱？"},
+		}},
 	}, nil
 }
 
@@ -256,6 +265,9 @@ func TestReviewFeedbackReturnsWeakCards(t *testing.T) {
 	}
 	if payload.Data.WeakCards[0].DeckTitle != "期末复习" || payload.Data.WeakCards[0].State != "relearning" {
 		t.Fatalf("unexpected weak card payload: %#v", payload.Data.WeakCards[0])
+	}
+	if len(payload.Data.WeakSources) != 1 || payload.Data.WeakSources[0].SourceType != "graph" || payload.Data.WeakSources[0].SourceID != "node-1" {
+		t.Fatalf("unexpected weak source payload: %#v", payload.Data.WeakSources)
 	}
 }
 

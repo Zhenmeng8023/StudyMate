@@ -63,12 +63,14 @@ function renderPanel(overrides: Partial<Parameters<typeof GraphWorkspaceSelectio
     onNodeSizePresetChange: vi.fn(),
     onNodeTitleChange: vi.fn(),
     onNodeToneChange: vi.fn(),
+    onOpenReviewWorkspace: vi.fn(),
     onOpenSource: vi.fn(),
     onOrganizeSelectedNodesBySource: vi.fn(),
     onToggleGroupCollapse: vi.fn(),
     selectedEdge: null,
     selectedNode: null,
     selectedNodeIds: [],
+    selectedNodeReviewFeedback: null,
     selectedNodeSourceBacklink: null,
     selectedNodes: [],
     selectedSourceSummary: [],
@@ -110,6 +112,39 @@ describe("GraphWorkspaceSelectionPanel", () => {
 
     await user.click(screen.getByRole("button", { name: "回到阅读器" }));
     expect(props.onOpenSource).toHaveBeenCalledWith("/reader/material-1");
+  });
+
+  it("renders source-linked review feedback for the selected node", async () => {
+    const user = userEvent.setup();
+    const props = renderPanel({
+      selectedNode: urlNode,
+      selectedNodes: [urlNode],
+      selectedNodeIds: [urlNode.id],
+      selectedNodeSourceBacklink: {
+        target: "/reader/material-1",
+        actionLabel: "回到阅读器",
+        sourceTypeLabel: "资料",
+        sourceId: "material-1",
+        learningStepLabel: "资料阅读",
+        description: "回到原始资料确认上下文，再从图谱节点生成卡片草稿进入复习。"
+      },
+      selectedNodeReviewFeedback: {
+        weakCardCount: 2,
+        dueCount: 1,
+        learningCount: 2,
+        maxLapseCount: 3,
+        sampleCardFronts: ["资料卡片 A", "资料卡片 B"]
+      }
+    });
+
+    expect(screen.getByText("复习反馈")).toBeInTheDocument();
+    expect(screen.getByText("关联 2 张待回补卡片，其中 1 张已经到期。")).toBeInTheDocument();
+    expect(screen.getByText("2 张仍在学习中 · 最高遗忘 3 次")).toBeInTheDocument();
+    expect(screen.getByText("资料卡片 A")).toBeInTheDocument();
+    expect(screen.getByText("资料卡片 B")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "打开复习工作台" }));
+    expect(props.onOpenReviewWorkspace).toHaveBeenCalled();
   });
 
   it("delegates edge label and kind editing", async () => {

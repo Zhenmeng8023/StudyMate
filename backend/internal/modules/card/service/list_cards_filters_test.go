@@ -270,6 +270,21 @@ func TestReviewFeedbackSummarizesWeakCardsAndLearningCounts(t *testing.T) {
 	if feedback.WeakCards[1].CardID != learningCard.ID || feedback.WeakCards[1].State != "learning" {
 		t.Fatalf("expected learning card second, got %#v", feedback.WeakCards[1])
 	}
+	if len(feedback.WeakSources) != 2 {
+		t.Fatalf("expected two weak source summaries, got %d", len(feedback.WeakSources))
+	}
+	if feedback.WeakSources[0].SourceType != "graph" || feedback.WeakSources[0].SourceID != "node-1" {
+		t.Fatalf("expected graph source summary first, got %#v", feedback.WeakSources[0])
+	}
+	if feedback.WeakSources[0].WeakCardCount != 1 || feedback.WeakSources[0].DueCount != 1 || feedback.WeakSources[0].LearningCount != 1 || feedback.WeakSources[0].MaxLapseCount != 2 {
+		t.Fatalf("unexpected graph source summary counts: %#v", feedback.WeakSources[0])
+	}
+	if len(feedback.WeakSources[0].SampleCardFronts) != 1 || feedback.WeakSources[0].SampleCardFronts[0] != "Graph concept card" {
+		t.Fatalf("unexpected graph source summary samples: %#v", feedback.WeakSources[0])
+	}
+	if feedback.WeakSources[1].SourceType != "note" || feedback.WeakSources[1].SourceID != "note-1" {
+		t.Fatalf("expected note source summary second, got %#v", feedback.WeakSources[1])
+	}
 }
 
 func TestExportDeckBuildsPortableJsonAndCsvArtifacts(t *testing.T) {
