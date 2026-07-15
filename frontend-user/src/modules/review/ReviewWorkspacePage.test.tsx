@@ -836,7 +836,11 @@ describe("ReviewWorkspacePage", () => {
       );
     });
     expect(await screen.findByText("确认导入 1 张卡片？")).toBeInTheDocument();
-    expect(screen.getAllByText("预检完成：可导入 1 张，已发现 1 张重复、1 行失败。").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("预检完成：可导入 1 张，已发现 1 张重复、1 行失败。")).toBeInTheDocument();
+    expect(screen.getByText("重复卡片 1 条")).toBeInTheDocument();
+    expect(screen.getByText("第 1 行 · Existing front")).toBeInTheDocument();
+    expect(screen.getByText("失败记录 1 条")).toBeInTheDocument();
+    expect(screen.getByText("第 3 行 · Broken front")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "确认导入" }));
 

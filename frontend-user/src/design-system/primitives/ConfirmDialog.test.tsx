@@ -26,4 +26,26 @@ describe("ConfirmDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
+
+  it("renders rich description content when the caller passes structured details", () => {
+    render(
+      <ConfirmDialog
+        description={
+          <div>
+            <p>预检完成：可导入 1 张卡片。</p>
+            <ul>
+              <li>第 1 行 · Existing front</li>
+            </ul>
+          </div>
+        }
+        isOpen
+        onCancel={() => {}}
+        onConfirm={() => {}}
+        title="确认导入 1 张卡片？"
+      />,
+    );
+
+    expect(screen.getByText("预检完成：可导入 1 张卡片。")).toBeInTheDocument();
+    expect(screen.getByText("第 1 行 · Existing front")).toBeInTheDocument();
+  });
 });
