@@ -1,3 +1,27 @@
+## 2026-07-16 03:46:06 +08:00 | v1.1.0-alpha.290 | 推进 WB-033 / LC-010 复习评分后回到图谱查看反馈
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-033 / LC-010`，这一轮不直接切入 mastery 持久化，而是把已经存在的图谱反馈读链路和复习评分链路真正接成一个用户可走完的最小闭环。
+- 目标是让用户在 graph 来源卡片评分完成后，不必再手动翻回卡片列表找来源入口，而是能立刻回到图谱焦点并验证节点侧反馈。
+### 实际变更
+
+- 先补 RED：更新 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx` 与 `e2e/v1-review-flow.spec.ts`，锁定 graph 来源卡片在评分后应出现“回到图谱查看反馈”入口，并能跳回图谱节点看到 mastery 文案。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，在评分成功后的提示条里新增基于最近一次评分卡片的图谱回链；当评分队列里的卡片来源上下文不完整时，会回退到当前卡片管理列表里的同卡来源信息。
+- 更新 `frontend-user/src/styles/studio-workspaces.css`，为提示条内的“回到图谱查看反馈 + 撤销上一次评分”动作补齐并排布局，避免提示区退化成单按钮堆叠。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把这次“复习评分后回到图谱查看反馈”的切片补回 `WB-033 / LC-010` 执行记录与阶段描述。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- RED：`npx playwright test e2e/v1-review-flow.spec.ts --grep "updated graph feedback"`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+- `npm run build:user`
+- GREEN：`npx playwright test e2e/v1-review-flow.spec.ts --grep "updated graph feedback"`
+### 后续影响
+
+- `WB-033 / LC-010` 现在除了“图谱节点可看反馈”“graph 来源卡片可回到图谱”之外，也补齐了“复习完成后立刻回图谱验证反馈”的会话级闭环，主演示路径更完整了一步。
+- 这一轮仍然没有新增 mastery 持久字段，也没有做复习后图谱页面的即时推送刷新；如果继续推进，更适合优先补即时刷新语义或正式持久化出口，而不是再扩更多孤立入口。
+
 ## 2026-07-16 03:33:33 +08:00 | v1.1.0-alpha.289 | 推进 WB-033 / LC-010 图谱详情内嵌 mastery 摘要
 ### 任务内容
 

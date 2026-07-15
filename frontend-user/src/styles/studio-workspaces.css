@@ -122,6 +122,14 @@
   flex: 1 1 auto;
 }
 
+.review-focus-message-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .reader-studio,
 .notes-studio,
 .review-focus {

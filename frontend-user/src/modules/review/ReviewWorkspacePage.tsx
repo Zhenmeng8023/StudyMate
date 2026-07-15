@@ -397,6 +397,30 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const reviewedCount = completedCount;
   const queuePreview = useMemo(() => queue.slice(0, 3), [queue]);
   const canStartReview = Boolean(currentItem) && !loading;
+  const latestReviewedCard = useMemo(() => {
+    if (!undoableReview) {
+      return null;
+    }
+
+    const reviewedCard = undoableReview.item.card;
+    if (reviewedCard.sourceType?.trim() && reviewedCard.sourceId?.trim()) {
+      return reviewedCard;
+    }
+
+    return cards.find((card) => card.id === reviewedCard.id) ?? reviewedCard;
+  }, [cards, undoableReview]);
+  const latestReviewBacklink = useMemo(
+    () => buildReviewSourceBacklink(latestReviewedCard),
+    [latestReviewedCard]
+  );
+  const latestReviewBacklinkLabel = useMemo(() => {
+    if (!latestReviewBacklink) {
+      return "";
+    }
+
+    const sourceType = latestReviewedCard?.sourceType?.trim().toLowerCase();
+    return sourceType === "graph" ? "回到图谱查看反馈" : latestReviewBacklink.actionLabel;
+  }, [latestReviewBacklink, latestReviewedCard]);
   const reviewState: ReviewWorkspaceState = useMemo(() => {
     if (loading && queue.length === 0) {
       return {
@@ -1564,10 +1588,17 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
           <div className="review-focus-message-row">
             {message ? <p className="review-focus-message" role="status">{message}</p> : <div />}
             {undoableReview ? (
-              <button className="secondary-button" disabled={busy} onClick={() => void handleUndoLastReview()} type="button">
-                <RotateCcw size={16} />
-                撤销上一次评分
-              </button>
+              <div className="review-focus-message-actions">
+                {latestReviewBacklink ? (
+                  <Link className="secondary-button" to={latestReviewBacklink.target}>
+                    {latestReviewBacklinkLabel}
+                  </Link>
+                ) : null}
+                <button className="secondary-button" disabled={busy} onClick={() => void handleUndoLastReview()} type="button">
+                  <RotateCcw size={16} />
+                  撤销上一次评分
+                </button>
+              </div>
             ) : null}
           </div>
         ) : null}
