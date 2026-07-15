@@ -85,6 +85,33 @@
 | WB-053 | TODO | Go 代码分析图 MVP | WB-051 | analysis jobs/graph | 路由图、ERD、模块依赖图至少一项可生成。 |
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
+### 执行记录：FE-041（管理端 confirm adapter 接线）
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 待提交
+- 实际变更：
+  - 新增 `frontend-admin/src/views/adminWorkspaceConfirmAdapter.ts`
+  - 新增 `frontend-admin/src/views/adminWorkspaceConfirmAdapter.test.ts`
+  - 更新 `frontend-admin/src/views/adminWorkspaceConfirmController.ts`
+  - 更新 `frontend-admin/src/views/adminWorkspaceInteractionAdapter.ts`
+  - 更新 `frontend-admin/src/views/adminWorkspaceInteractionAdapter.test.ts`
+  - 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 后台工作台现已新增共享 `adminWorkspaceConfirmAdapter`，把 confirm controller 的创建、`cancel / confirm / resetAll` 三组页面确认流入口统一收口到更稳定的 adapter，而不是继续由 `AdminWorkspaceView.vue` 直接同时持有 controller 与 keyed handler 分发。
+  - `adminWorkspaceInteractionAdapter` 现已同步瘦身为只承接 `switchView(...)` 与 `selectRecord(...)` 两组页面交互，confirm 编排与导航交互不再混在同一出口里。
+  - `AdminWorkspaceView.vue` 现在通过 `workspaceConfirm` 驱动 `AdminConfirmStack` 和 reset 协调，页面壳层进一步回到响应式状态拼装角色，文件当前降到 619 行。
+- 已执行验证：
+  - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceConfirmAdapter.test.ts src/views/adminWorkspaceInteractionAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+  - `npm run verify:docs`
+  - `npx playwright test e2e/v1-admin-governance.spec.ts`
+  - `git diff --check`
+- 后续影响：
+  - `FE-041` 现在继续从 interaction adapter 推进到 confirm adapter，后台工作台页面壳层里围绕确认栈的 keyed handler 编排进一步变薄。
+  - 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估 reset 协调、login/shell/module 组合装配与派生状态是否继续进入更稳定的工作台 feature 边界，而不是重新把 confirm controller 的组装写回 `AdminWorkspaceView.vue`。
+
 ### 执行记录：FE-041（管理端 interaction adapter 接线）
 - 执行日期：2026-07-15
 - 执行分支/提交：`master` / 待提交

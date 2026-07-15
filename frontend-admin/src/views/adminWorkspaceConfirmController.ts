@@ -16,7 +16,7 @@ type PendingUserAction = { action: "disable" | "activate"; record: GovernanceRec
 type PendingAITaskAction = { action: "retry" | "cancel"; record: GovernanceRecord } | null;
 type PendingTemplateAction = { action: "publish" | "unpublish"; record: GovernanceRecord } | null;
 
-export function createAdminWorkspaceConfirmController(options: {
+export interface CreateAdminWorkspaceConfirmControllerOptions {
   applyAITaskAction: (record: GovernanceRecord, action: "retry" | "cancel") => Promise<void> | void;
   applyModerationAction: (
     item: AdminWorkspaceModerationItem,
@@ -46,7 +46,11 @@ export function createAdminWorkspaceConfirmController(options: {
   setTemplateError: (value: string) => void;
   setUserAction: (value: PendingUserAction) => void;
   setUserError: (value: string) => void;
-}) {
+}
+
+export function createAdminWorkspaceConfirmController(
+  options: CreateAdminWorkspaceConfirmControllerOptions
+) {
   const resetHandlers = buildAdminWorkspaceConfirmResetHandlers({
     setAITaskAction: options.setAITaskAction,
     setAITaskError: options.setAITaskError,

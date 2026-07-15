@@ -19,7 +19,7 @@ import AdminShellFrame from "../components/admin/AdminShellFrame.vue";
 import { getGovernanceColumns, type GovernanceRecord } from "../components/admin/governanceRecord";
 import type { AdminRouteKey } from "../router";
 import { type ConfirmDialogKey } from "./adminConfirmDialogState";
-import { createAdminWorkspaceConfirmController } from "./adminWorkspaceConfirmController";
+import { createAdminWorkspaceConfirmAdapter } from "./adminWorkspaceConfirmAdapter";
 import { createAdminWorkspaceResetController } from "./adminWorkspaceResetController";
 import { createAdminWorkspaceInteractionAdapter } from "./adminWorkspaceInteractionAdapter";
 import { buildAdminWorkspaceLoginPanelEvents } from "./adminWorkspaceLoginPanelEvents";
@@ -293,7 +293,7 @@ const moderationBuckets = computed(() => splitModerationItems(moderationItems.va
 const pendingPosts = computed(() => moderationBuckets.value.pendingPosts);
 const pendingMaterials = computed(() => moderationBuckets.value.pendingMaterials);
 const profileInitial = computed(() => profile.value?.displayName?.trim().slice(0, 1) || "A");
-const confirmController = createAdminWorkspaceConfirmController({
+const workspaceConfirm = createAdminWorkspaceConfirmAdapter({
   applyAITaskAction: workspaceMutations.applyAITaskAction,
   applyModerationAction: workspaceMutations.applyModerationAction,
   applyReportAction: workspaceMutations.applyReportAction,
@@ -341,19 +341,16 @@ const confirmController = createAdminWorkspaceConfirmController({
     userConfirmError.value = value;
   }
 });
-const confirmDialogs = computed(() => confirmController.buildDialogs());
+const confirmDialogs = computed(() => workspaceConfirm.buildDialogs());
 const workspaceInteractions = createAdminWorkspaceInteractionAdapter({
   clearWorkspaceState,
   loadActiveView: workspaceRead.loadActiveView,
-  readLoading: () => loading.value,
-  resetConfirmHandlers: confirmController.resetHandlers,
   setActiveView: (view) => {
     activeView.value = view;
   },
   setSelectedRecord: (record) => {
     selectedRecord.value = record;
   },
-  submitConfirmHandlers: confirmController.submitHandlers,
   syncLocation: (view, syncMode) => {
     syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
   }
@@ -505,7 +502,7 @@ workspaceResetController = createAdminWorkspaceResetController({
   moderationStatusFilter,
   overview,
   recordQuery,
-  resetConfirmState: confirmController.resetAll,
+  resetConfirmState: workspaceConfirm.resetAll,
   selectedRecord
 });
 
@@ -521,11 +518,11 @@ onBeforeUnmount(() => {
 });
 
 function handleConfirmDialogCancel(key: ConfirmDialogKey) {
-  workspaceInteractions.cancelConfirmDialog(key);
+  workspaceConfirm.cancelDialog(key);
 }
 
 async function handleConfirmDialogConfirm(key: ConfirmDialogKey) {
-  await workspaceInteractions.confirmDialog(key);
+  await workspaceConfirm.confirmDialog(key);
 }
 
 

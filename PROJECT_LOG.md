@@ -1,3 +1,29 @@
+## 2026-07-15 19:20:00 +08:00 | v1.1.0-alpha.276 | 推进 FE-041 管理端 confirm adapter 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041`，这一轮不新增治理功能，而是继续收口后台工作台里 interaction adapter 接线后仍停留在页面层的确认流编排。
+- 目标是把 confirm controller 的创建、`cancel / confirm / resetAll` 三组入口统一收口成一个更稳定的 confirm adapter，避免 `AdminWorkspaceView.vue` 继续同时持有 controller、本地 handler 和 keyed 分发。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceConfirmAdapter.ts`，提供 `createAdminWorkspaceConfirmAdapter(...)` 出口，统一组合 confirm controller 与 confirm dialog keyed handler 分发。
+- 新增并补齐 `frontend-admin/src/views/adminWorkspaceConfirmAdapter.test.ts`，锁定 loading 中 cancel 不会误触发 reset、confirm 会按 key 分发、`resetAll()` 会透传到底层 controller 三组组合契约。
+- 更新 `frontend-admin/src/views/adminWorkspaceConfirmController.ts`，显式导出 controller options 接口，供新的 confirm adapter 复用。
+- 更新 `frontend-admin/src/views/adminWorkspaceInteractionAdapter.ts` 与 `adminWorkspaceInteractionAdapter.test.ts`，让 interaction adapter 回到只承接 `switchView(...)` 和 `selectRecord(...)` 这组页面交互职责。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，改为通过 `workspaceConfirm` 驱动 `AdminConfirmStack` 和 reset 协调，并删除页面层直接持有 confirm controller keyed handler 的编排。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 confirm adapter 已接线”这一层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceConfirmAdapter.test.ts src/views/adminWorkspaceInteractionAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `npx playwright test e2e/v1-admin-governance.spec.ts`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在不只是在拆 `runtime / action / read / mutation / feature / interaction` 这几组装配，后台工作台里围绕确认栈的页面编排也开始进入共享 confirm adapter，`AdminWorkspaceView.vue` 进一步回到响应式状态拼装与展示角色。
+- 这一轮仍然只收口确认流壳层；如果继续推进 `FE-041 / ADM-010`，更适合优先评估 reset 协调、shell/module 组合装配和派生状态是否继续纳入更稳定的工作台 feature 边界，而不是立刻切去新的治理业务。
+
 ## 2026-07-15 14:05:00 +08:00 | v1.1.0-alpha.275 | 推进 FE-041 管理端 interaction adapter 接线
 ### 任务内容
 
