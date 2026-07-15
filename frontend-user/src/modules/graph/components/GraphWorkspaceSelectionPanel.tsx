@@ -24,6 +24,7 @@ import {
   type GraphNodeMetadataField
 } from "../lib/graphNodeMetadata";
 import type { GraphSourceBacklink } from "../lib/graphSourceBacklinks";
+import type { GraphSourceReviewFeedback } from "../lib/graphSourceReviewFeedback";
 import { buildNodeTitle, getNodeSourceLabel, type SourceOrganizerMode } from "../lib/workspaceControllerHelpers";
 
 export function GraphWorkspaceSelectionPanel(props: {
@@ -50,12 +51,14 @@ export function GraphWorkspaceSelectionPanel(props: {
   onNodeSizePresetChange: (preset: GraphNodeSizePreset) => void;
   onNodeTitleChange: (title: string) => void;
   onNodeToneChange: (tone: GraphNodeTone) => void;
+  onOpenReviewWorkspace: () => void;
   onOpenSource: (target: string) => void;
   onOrganizeSelectedNodesBySource: (mode: SourceOrganizerMode) => void;
   onToggleGroupCollapse: (groupId: string) => void;
   selectedEdge: GraphEdgePayload | null;
   selectedNode: GraphNodePayload | null;
   selectedNodeIds: string[];
+  selectedNodeReviewFeedback: GraphSourceReviewFeedback | null;
   selectedNodeSourceBacklink: GraphSourceBacklink | null;
   selectedNodes: GraphNodePayload[];
   selectedSourceSummary: Array<{ label: string; count: number }>;
@@ -106,8 +109,10 @@ export function GraphWorkspaceSelectionPanel(props: {
           onNodeSizePresetChange={props.onNodeSizePresetChange}
           onNodeTitleChange={props.onNodeTitleChange}
           onNodeToneChange={props.onNodeToneChange}
+          onOpenReviewWorkspace={props.onOpenReviewWorkspace}
           onOpenSource={props.onOpenSource}
           selectedNode={selectedNode}
+          selectedNodeReviewFeedback={props.selectedNodeReviewFeedback}
           selectedNodeSourceBacklink={selectedNodeSourceBacklink}
         />
       ) : null}
@@ -313,8 +318,10 @@ function GraphSingleNodePanel(props: {
   onNodeSizePresetChange: (preset: GraphNodeSizePreset) => void;
   onNodeTitleChange: (title: string) => void;
   onNodeToneChange: (tone: GraphNodeTone) => void;
+  onOpenReviewWorkspace: () => void;
   onOpenSource: (target: string) => void;
   selectedNode: GraphNodePayload;
+  selectedNodeReviewFeedback: GraphSourceReviewFeedback | null;
   selectedNodeSourceBacklink: GraphSourceBacklink | null;
 }) {
   const { selectedNode } = props;
@@ -394,6 +401,30 @@ function GraphSingleNodePanel(props: {
           </>
         ) : null}
       </div>
+      {props.selectedNodeReviewFeedback ? (
+        <article className="graph-meta-card">
+          <strong>复习反馈</strong>
+          <p>{`关联 ${props.selectedNodeReviewFeedback.weakCardCount} 张待回补卡片，其中 ${props.selectedNodeReviewFeedback.dueCount} 张已经到期。`}</p>
+          <div className="graph-source-summary-list">
+            <span className="graph-source-summary-pill">{`${props.selectedNodeReviewFeedback.learningCount} 张仍在学习中`}</span>
+            <span className="graph-source-summary-pill">{`最高遗忘 ${props.selectedNodeReviewFeedback.maxLapseCount} 次`}</span>
+          </div>
+          {props.selectedNodeReviewFeedback.sampleCardFronts.length ? (
+            <div className="graph-source-summary-list">
+              {props.selectedNodeReviewFeedback.sampleCardFronts.map((front) => (
+                <span className="graph-source-summary-pill" key={front}>
+                  {front}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          <div className="graph-inline-actions">
+            <button className="secondary-button" onClick={props.onOpenReviewWorkspace} type="button">
+              打开复习工作台
+            </button>
+          </div>
+        </article>
+      ) : null}
       <GraphNodeMetadataSummary selectedNode={selectedNode} />
     </div>
   );

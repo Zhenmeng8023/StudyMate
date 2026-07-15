@@ -260,6 +260,10 @@ func (s *Service) ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPay
 	if err != nil {
 		return nil, apperrors.Internal("读取复习反馈卡片失败")
 	}
+	allWeakRows, err := s.repository.ListWeakCards(ownerUserID, 0)
+	if err != nil {
+		return nil, apperrors.Internal("读取复习反馈来源摘要失败")
+	}
 
 	weakCards := make([]carddto.ReviewFeedbackCardPayload, 0, len(rows))
 	for _, row := range rows {
@@ -283,6 +287,7 @@ func (s *Service) ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPay
 		LearningCount: learningCount,
 		WeakCardCount: weakCardCount,
 		WeakCards:     weakCards,
+		WeakSources:   buildWeakSourceSummaries(allWeakRows, now),
 	}, nil
 }
 

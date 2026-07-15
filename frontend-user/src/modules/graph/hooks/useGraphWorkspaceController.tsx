@@ -18,11 +18,13 @@ import {
   GraphValidationIssuePayload,
   MaterialPayload,
   NotePayload,
+  ReviewFeedbackPayload,
   commitGraphCardDrafts,
   createGraph,
   deleteGraph,
   generateGraphCardDrafts,
   getGraph,
+  getReviewFeedback,
   listDecks,
   listDiagramTemplates,
   listGraphs,
@@ -116,6 +118,7 @@ import {
 import { buildSnapshotListFailureState } from "../lib/graphPersistenceState";
 import { buildGraphSettingsSections } from "../lib/graphSettingsPanel";
 import { buildGraphSourceBacklink } from "../lib/graphSourceBacklinks";
+import { resolveGraphSourceReviewFeedback } from "../lib/graphSourceReviewFeedback";
 import { buildGraphTemplateImportDraft } from "../lib/graphTemplateApplication";
 import {
   applyGraphConflictResolutionDrafts,
@@ -200,6 +203,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
   const [notes, setNotes] = useState<NotePayload[]>([]);
   const [diagramTemplates, setDiagramTemplates] = useState<DiagramTemplatePayload[]>([]);
+  const [reviewFeedback, setReviewFeedback] = useState<ReviewFeedbackPayload | null>(null);
   const [validationIssues, setValidationIssues] = useState<GraphValidationIssuePayload[]>([]);
   const [cardDrafts, setCardDrafts] = useState<GraphCardDraftPayload[]>([]);
   const [graphDetail, setGraphDetail] = useState<GraphDetailPayload | null>(null);
@@ -322,6 +326,10 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   }, [selectedNodes]);
   const selectedEdge = selectedEdgeId ? document?.edges.find((edge) => edge.id === selectedEdgeId) ?? null : null;
   const selectedNodeSourceBacklink = selectedNode ? buildGraphSourceBacklink(selectedNode) : null;
+  const selectedNodeReviewFeedback = useMemo(
+    () => (selectedNode ? resolveGraphSourceReviewFeedback(selectedNode, reviewFeedback?.weakSources ?? []) : null),
+    [reviewFeedback?.weakSources, selectedNode]
+  );
   const contextMenuNode = contextMenu?.nodeId ? nodeMap.get(contextMenu.nodeId) ?? null : null;
   const contextMenuSourceBacklink = contextMenuNode ? buildGraphSourceBacklink(contextMenuNode) : null;
   const visibleNodes = useMemo(
@@ -932,6 +940,25 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   useEffect(() => {
     void loadGraphWorkspace();
   }, [props.session, requestedGraphId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getReviewFeedback(props.session)
+      .then((payload) => {
+        if (!cancelled) {
+          setReviewFeedback(payload);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReviewFeedback(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [props.session]);
 
   async function openGraph(graphId: string) {
     if (detailRef.current?.id === graphId) {
@@ -2342,12 +2369,14 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                         })
                       : undefined
                   }
+                  onOpenReviewWorkspace={() => navigate("/review")}
                   onOpenSource={(target) => navigate(target)}
                   onOrganizeSelectedNodesBySource={organizeSelectedNodesBySource}
                   onToggleGroupCollapse={toggleGroupCollapse}
                   selectedEdge={selectedEdge}
                   selectedNode={selectedNode}
                   selectedNodeIds={selectedNodeIds}
+                  selectedNodeReviewFeedback={selectedNodeReviewFeedback}
                   selectedNodeSourceBacklink={selectedNodeSourceBacklink}
                   selectedNodes={selectedNodes}
                   selectedSourceSummary={selectedSourceSummary}

@@ -139,7 +139,8 @@ describe("GraphWorkspaceSelectionPanel", () => {
 
     expect(screen.getByText("复习反馈")).toBeInTheDocument();
     expect(screen.getByText("关联 2 张待回补卡片，其中 1 张已经到期。")).toBeInTheDocument();
-    expect(screen.getByText("2 张仍在学习中 · 最高遗忘 3 次")).toBeInTheDocument();
+    expect(screen.getByText("2 张仍在学习中")).toBeInTheDocument();
+    expect(screen.getByText("最高遗忘 3 次")).toBeInTheDocument();
     expect(screen.getByText("资料卡片 A")).toBeInTheDocument();
     expect(screen.getByText("资料卡片 B")).toBeInTheDocument();
 

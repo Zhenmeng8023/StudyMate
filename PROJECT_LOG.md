@@ -1,3 +1,28 @@
+## 2026-07-15 20:37:43 +08:00 | v1.1.0-alpha.285 | 推进 ANKI-060 / LC-010 图谱节点来源级复习反馈
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先把主学习闭环跑通”的优先级推进 `ANKI-060 / LC-010`，这一轮不先做更重的图谱熟练度持久化，而是先把复习反馈从 dashboard 摘要继续接回图谱语义入口。
+- 目标是让图谱选中节点在来源能匹配到复习薄弱反馈时，直接显示来源级“待回补卡片 / 到期 / 学习中 / 遗忘次数”摘要，并给出回到复习工作台的最小入口。
+### 实际变更
+
+- 更新 `backend/internal/modules/card/dto/card.go`，为现有 `ReviewFeedbackPayload` 新增来源级 `weakSources` 结构。
+- 新增 `backend/internal/modules/card/service/review_feedback.go`，把 `review/feedback` 里的弱项卡片按 `sourceType + sourceId` 聚合为来源级摘要，保留待回补卡片数、到期数、学习中数、最高遗忘次数和示例卡片正面。
+- 更新 `backend/internal/modules/card/service/service.go`、`backend/internal/modules/card/service/list_cards_filters_test.go` 与 `backend/internal/modules/card/handler/handler_test.go`，锁定 `weakSources` 的服务端聚合和 API 返回契约。
+- 更新 `frontend-user/src/api/types.ts`，补前端消费 `weakSources` 所需的类型边界。
+- 新增 `frontend-user/src/modules/graph/lib/graphSourceReviewFeedback.ts`，统一把图谱节点来源和 `review/feedback` 里的来源级摘要做匹配。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 与 `frontend-user/src/modules/graph/components/GraphWorkspaceSelectionPanel.tsx`，让图谱工作区以容错方式单独读取复习反馈，并在选中节点来源命中时显示来源级复习反馈与“打开复习工作台”入口。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceSelectionPanel.test.tsx`，锁定节点检查器里的反馈展示与入口行为。
+### 验证结果
+
+- RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceSelectionPanel.test.tsx`
+- GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceSelectionPanel.test.tsx`
+### 后续影响
+
+- `ANKI-060 / LC-010` 现在已经从 dashboard 的卡片级反馈，继续推进到图谱节点的来源级反馈入口，学习闭环不再只停留在首页摘要。
+- 下一步更适合继续沿 `WB-033` 做节点熟练度或来源级 mastery 的持久回写，或者补复习工作台里更精确的来源过滤回补，而不是回到只加新的摘要卡片。
+
 ## 2026-07-15 20:24:00 +08:00 | v1.1.0-alpha.284 | 推进 ADM-010 / FE-041 管理端真实路由页面边界
 ### 任务内容
 

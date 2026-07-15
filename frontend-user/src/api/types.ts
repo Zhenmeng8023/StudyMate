@@ -361,11 +361,23 @@ export interface ReviewFeedbackCardPayload {
   state: string;
 }
 
+export interface ReviewFeedbackSourcePayload {
+  sourceType?: string;
+  sourceId?: string;
+  sourceMetadata?: Record<string, unknown>;
+  weakCardCount: number;
+  dueCount: number;
+  learningCount: number;
+  maxLapseCount: number;
+  sampleCardFronts?: string[];
+}
+
 export interface ReviewFeedbackPayload {
   dueCount: number;
   learningCount: number;
   weakCardCount: number;
   weakCards: ReviewFeedbackCardPayload[];
+  weakSources?: ReviewFeedbackSourcePayload[];
 }
 
 export interface DeckExportPayload {
