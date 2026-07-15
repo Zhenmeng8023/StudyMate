@@ -10,12 +10,9 @@ import {
   subscribeSession
 } from "../api/sessionStore";
 import type { AdminAuthUser } from "../api/sessionStore";
-import AdminConfirmStack from "../components/admin/AdminConfirmStack.vue";
-import AdminLoginPanel from "../components/admin/AdminLoginPanel.vue";
-import AdminShellFrame from "../components/admin/AdminShellFrame.vue";
 import type { GovernanceRecord } from "../components/admin/governanceRecord";
 import type { AdminRouteKey } from "../router";
-import { type ConfirmDialogKey } from "./adminConfirmDialogState";
+import AdminWorkspacePageSurface from "./AdminWorkspacePageSurface.vue";
 import { createAdminWorkspaceConfirmAdapter } from "./adminWorkspaceConfirmAdapter";
 import { createAdminWorkspaceInteractionAdapter } from "./adminWorkspaceInteractionAdapter";
 import { getAdminRequestErrorMessage, getAdminRequestErrorStatus } from "./adminRequestError";
@@ -32,7 +29,6 @@ import {
 import { createAdminWorkspaceSurfaceAdapter } from "./adminWorkspaceSurfaceAdapter";
 import { createAdminWorkspaceStateAdapter } from "./adminWorkspaceStateAdapter";
 import { createAdminWorkspaceFeatureAdapter } from "./adminWorkspaceFeatureAdapter";
-import AdminWorkspaceModuleHost from "./modules/AdminWorkspaceModuleHost.vue";
 
 interface OverviewPayload {
   userCount: number;
@@ -42,7 +38,6 @@ interface OverviewPayload {
   pendingModerationCount: number;
 }
 
-type AdminView = AdminRouteKey;
 const initialAdminWorkspaceNotice = "\u767b\u5f55\u540e\u4f1a\u540c\u6b65\u5f53\u524d\u6cbb\u7406\u961f\u5217\u4e0e\u8fd0\u8425\u6570\u636e\u3002";
 
 const workspaceState = createAdminWorkspaceStateAdapter<OverviewPayload>({
@@ -283,14 +278,6 @@ const workspaceSurface = computed(() =>
     workspaceInteractions
   })
 );
-const confirmDialogs = computed(() => workspaceSurface.value.confirmDialogs);
-const loggedIn = computed(() => workspaceSurface.value.loggedIn);
-const loginPanelProps = computed(() => workspaceSurface.value.loginPanelProps);
-const loginPanelEvents = computed(() => workspaceSurface.value.loginPanelEvents);
-const shellProps = computed(() => workspaceSurface.value.shellProps);
-const shellEvents = computed(() => workspaceSurface.value.shellEvents);
-const moduleProps = computed(() => workspaceSurface.value.moduleProps);
-const moduleEvents = computed(() => workspaceSurface.value.moduleEvents);
 
 workspaceState.initializeResetController(workspaceConfirm.resetAll);
 
@@ -305,14 +292,6 @@ onBeforeUnmount(() => {
   stopRuntime = null;
 });
 
-function handleConfirmDialogCancel(key: ConfirmDialogKey) {
-  workspaceSurface.value.cancelConfirmDialog(key);
-}
-
-async function handleConfirmDialogConfirm(key: ConfirmDialogKey) {
-  await workspaceSurface.value.confirmConfirmDialog(key);
-}
-
 
 async function get<T>(path: string, query?: { limit?: number }) {
   return adminGet<T>(path, session.value, query);
@@ -325,48 +304,5 @@ async function post<T>(path: string, body: ApiRequestInit["body"]) {
 </script>
 
 <template>
-  <main>
-    <AdminConfirmStack
-      :dialogs="confirmDialogs"
-      @cancel="handleConfirmDialogCancel($event as ConfirmDialogKey)"
-      @confirm="handleConfirmDialogConfirm($event as ConfirmDialogKey)"
-    />
-
-    <AdminLoginPanel
-      v-if="!loggedIn"
-      :error-message="loginPanelProps.errorMessage"
-      :loading="loginPanelProps.loading"
-      :notice="loginPanelProps.notice"
-      :login-prompt="loginPanelProps.loginPrompt"
-      :login-value="loginPanelProps.loginValue"
-      :password-value="loginPanelProps.passwordValue"
-      @submit="loginPanelEvents.submit()"
-      @update:login-value="loginPanelEvents.updateLoginValue($event)"
-      @update:password-value="loginPanelEvents.updatePasswordValue($event)"
-    />
-
-    <AdminShellFrame
-      v-else
-      :active-description="shellProps.activeDescription"
-      :active-group="shellProps.activeGroup"
-      :active-title="shellProps.activeTitle"
-      :active-view="shellProps.activeView"
-      :count-label="shellProps.countLabel"
-      :error-message="shellProps.errorMessage"
-      :loading="shellProps.loading"
-      :nav-groups="shellProps.navGroups"
-      :notice="shellProps.notice"
-      :profile="shellProps.profile"
-      :profile-initial="shellProps.profileInitial"
-      @logout="shellEvents.logout()"
-      @refresh="shellEvents.refresh()"
-      @switch-view="shellEvents.switchView($event as AdminView)"
-    >
-      <AdminWorkspaceModuleHost
-        :active-view="activeView"
-        :module-events="moduleEvents"
-        :module-props="moduleProps"
-      />
-    </AdminShellFrame>
-  </main>
+  <AdminWorkspacePageSurface :surface="workspaceSurface" />
 </template>

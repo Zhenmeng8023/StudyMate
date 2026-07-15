@@ -1,3 +1,26 @@
+## 2026-07-15 19:58:10 +08:00 | v1.1.0-alpha.282 | 推进 FE-041 管理端 workspace page surface 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041 / ADM-010`，这一轮不新增治理功能，而是把 `AdminWorkspaceView.vue` 里剩余的确认栈、登录分支和已登录壳层模板继续从页面本体抽离出去。
+- 目标是新增一个统一的 `workspace page surface`，让工作台页面只保留状态、feature 和 runtime 组装，把页面展示职责集中到独立组件里。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/AdminWorkspacePageSurface.vue`，直接消费 `workspaceSurface`，统一承接 `AdminConfirmStack`、`AdminLoginPanel`、`AdminShellFrame` 与 `AdminWorkspaceModuleHost`。
+- 新增 `frontend-admin/src/views/AdminWorkspacePageSurface.test.ts`，锁定未登录分支的确认/登录事件透传，以及已登录分支的壳层导航、刷新、退出和 governance 模块查询/治理动作透传。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，移除页面层里围绕 `confirmDialogs / loggedIn / loginPanelProps / shellProps / moduleProps` 的二次 computed 和局部 confirm handler，改为只把 `workspaceSurface` 交给 page surface。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 workspace page surface 已接线”这一层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/AdminWorkspacePageSurface.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `npx playwright test e2e/v1-admin-governance.spec.ts`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在继续从 module host 推进到 page surface，后台工作台页面本体已经基本只剩状态、feature 与 runtime 组合职责，`AdminWorkspaceView.vue` 进一步降到 308 行。
+- 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估 route-level page feature 或真正的 Router 页面拆分，而不是把登录/壳层模板重新写回 `AdminWorkspaceView.vue`。
 ## 2026-07-15 19:52:30 +08:00 | v1.1.0-alpha.281 | 推进 FE-041 管理端 workspace module host 接线
 ### 任务内容
 
