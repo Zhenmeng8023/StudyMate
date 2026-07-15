@@ -85,6 +85,26 @@
 | WB-053 | TODO | Go 代码分析图 MVP | WB-051 | analysis jobs/graph | 路由图、ERD、模块依赖图至少一项可生成。 |
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
+### 执行记录：FE-041（管理端 workspace surface adapter 接线）
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 待提交
+- 实际变更：
+  - 新增 `frontend-admin/src/views/adminWorkspaceSurfaceAdapter.ts`
+  - 新增 `frontend-admin/src/views/adminWorkspaceSurfaceAdapter.test.ts`
+  - 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 后台工作台现已新增统一 `adminWorkspaceSurfaceAdapter`，把 `confirm / chrome / module` 三组装配继续上收为单一 surface 出口，页面层不再分别维护 `chromeBindings`、`moduleBindings` 与确认弹层绑定。
+  - `AdminWorkspaceView.vue` 现在通过 `workspaceSurface` 统一消费 `confirmDialogs / loggedIn / loginPanelProps / shellProps / moduleProps` 与对应 events，壳层职责进一步回到状态拼装与展示。
+  - 本轮显式保留“有 session 即视为已登录”的页面语义，避免在 profile 自举尚未完成时因为 adapter 收口而回退到登录面板。
+  - 新增 surface adapter 单测，锁定“统一 surface 会透传登录、壳层、治理与确认动作”这组跨 adapter 组合契约。
+- 已执行验证：
+  - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceSurfaceAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+- 后续影响：
+  - `FE-041` 现在继续从 workspace state adapter 推进到更高一层的 workspace surface adapter，后台工作台页面层围绕多组 adapter 的手工拼装进一步变薄。
+  - 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估剩余模板分支是否继续并入更稳定的 page surface 或 route-level feature 出口，而不是把新的壳层绑定重新写回 `AdminWorkspaceView.vue`。
 ### 执行记录：FE-041（管理端 workspace state adapter 接线）
 - 执行日期：2026-07-15
 - 执行分支/提交：`master` / 待提交

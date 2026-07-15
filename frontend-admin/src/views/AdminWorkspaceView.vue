@@ -17,8 +17,6 @@ import type { GovernanceRecord } from "../components/admin/governanceRecord";
 import type { AdminRouteKey } from "../router";
 import { type ConfirmDialogKey } from "./adminConfirmDialogState";
 import { createAdminWorkspaceConfirmAdapter } from "./adminWorkspaceConfirmAdapter";
-import { createAdminWorkspaceChromeAdapter } from "./adminWorkspaceChromeAdapter";
-import { createAdminWorkspaceModuleAdapter } from "./adminWorkspaceModuleAdapter";
 import { createAdminWorkspaceInteractionAdapter } from "./adminWorkspaceInteractionAdapter";
 import { getAdminRequestErrorMessage, getAdminRequestErrorStatus } from "./adminRequestError";
 import {
@@ -31,6 +29,7 @@ import {
   getAdminLogoutNotice,
   getAdminModerationLoadedNotice,
 } from "./adminWorkspaceNotice";
+import { createAdminWorkspaceSurfaceAdapter } from "./adminWorkspaceSurfaceAdapter";
 import { createAdminWorkspaceStateAdapter } from "./adminWorkspaceStateAdapter";
 import { createAdminWorkspaceFeatureAdapter } from "./adminWorkspaceFeatureAdapter";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
@@ -213,7 +212,6 @@ const workspaceRead = workspaceFeature.read;
 const workspaceMutations = workspaceFeature.mutations;
 const workspaceActions = workspaceFeature.actions;
 
-const loggedIn = computed(() => Boolean(session.value));
 const workspaceConfirm = createAdminWorkspaceConfirmAdapter({
   applyAITaskAction: workspaceMutations.applyAITaskAction,
   applyModerationAction: workspaceMutations.applyModerationAction,
@@ -242,7 +240,6 @@ const workspaceConfirm = createAdminWorkspaceConfirmAdapter({
   setUserAction,
   setUserError: setUserConfirmError
 });
-const confirmDialogs = computed(() => workspaceConfirm.buildDialogs());
 const workspaceInteractions = createAdminWorkspaceInteractionAdapter({
   clearWorkspaceState,
   loadActiveView: workspaceRead.loadActiveView,
@@ -252,61 +249,50 @@ const workspaceInteractions = createAdminWorkspaceInteractionAdapter({
     syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
   }
 });
-const chromeBindings = computed(() =>
-  createAdminWorkspaceChromeAdapter({
+const workspaceSurface = computed(() =>
+  createAdminWorkspaceSurfaceAdapter({
     activeView: activeView.value,
     errorMessage: errorMessage.value,
     formLogin: form.login,
     formPassword: form.password,
-    governanceRowCount: governanceRows.value.length,
-    initialNotice: initialAdminWorkspaceNotice,
-    loading: loading.value,
-    loggedIn: loggedIn.value,
-    moderationItemCount: moderationItems.value.length,
-    notice: notice.value,
-    onLogin: () => workspaceActions.login(),
-    onLogout: () => workspaceActions.logout(),
-    onRefreshActiveView: () => workspaceActions.refreshActiveView(),
-    onSwitchView: workspaceInteractions.switchView,
-    profile: profile.value,
-    sessionInvalidation: sessionInvalidation.value,
-    setLoginValue,
-    setPasswordValue
-  })
-);
-const loginPanelProps = computed(() => chromeBindings.value.loginPanelProps);
-const loginPanelEvents = computed(() => chromeBindings.value.loginPanelEvents);
-const shellProps = computed(() => chromeBindings.value.shellProps);
-const shellEvents = computed(() => chromeBindings.value.shellEvents);
-const moduleBindings = computed(() =>
-  createAdminWorkspaceModuleAdapter({
-    activeLabel: shellProps.value.activeTitle,
-    activeView: activeView.value,
-    errorMessage: errorMessage.value,
     governanceErrorStatus: governanceErrorStatus.value,
     governanceQuery: recordQuery.value,
     governanceRows: governanceRows.value,
     governanceStatusFilter: governanceStatusFilter.value,
     governanceSummary: governanceSummary.value,
+    initialNotice: initialAdminWorkspaceNotice,
     loading: loading.value,
+    loggedIn: Boolean(session.value),
     moderationErrorStatus: moderationErrorStatus.value,
     moderationItems: moderationItems.value,
     moderationQuery: moderationQuery.value,
     moderationStatusFilter: moderationStatusFilter.value,
+    notice: notice.value,
     overview: overview.value,
+    profile: profile.value,
     requestGovernanceAction: workspaceMutations.requestGovernanceAction,
     requestModerationAction: workspaceMutations.requestModerationAction,
     selectedRecord: selectedRecord.value,
-    selectRecord: workspaceInteractions.selectRecord,
+    sessionInvalidation: sessionInvalidation.value,
     setGovernanceQuery,
     setGovernanceStatusFilter,
+    setLoginValue,
     setModerationQuery,
     setModerationStatusFilter,
-    switchView: workspaceInteractions.switchView
+    setPasswordValue,
+    workspaceActions,
+    workspaceConfirm,
+    workspaceInteractions
   })
 );
-const moduleProps = computed(() => moduleBindings.value.moduleProps);
-const moduleEvents = computed(() => moduleBindings.value.moduleEvents);
+const confirmDialogs = computed(() => workspaceSurface.value.confirmDialogs);
+const loggedIn = computed(() => workspaceSurface.value.loggedIn);
+const loginPanelProps = computed(() => workspaceSurface.value.loginPanelProps);
+const loginPanelEvents = computed(() => workspaceSurface.value.loginPanelEvents);
+const shellProps = computed(() => workspaceSurface.value.shellProps);
+const shellEvents = computed(() => workspaceSurface.value.shellEvents);
+const moduleProps = computed(() => workspaceSurface.value.moduleProps);
+const moduleEvents = computed(() => workspaceSurface.value.moduleEvents);
 
 workspaceState.initializeResetController(workspaceConfirm.resetAll);
 
@@ -322,11 +308,11 @@ onBeforeUnmount(() => {
 });
 
 function handleConfirmDialogCancel(key: ConfirmDialogKey) {
-  workspaceConfirm.cancelDialog(key);
+  workspaceSurface.value.cancelConfirmDialog(key);
 }
 
 async function handleConfirmDialogConfirm(key: ConfirmDialogKey) {
-  await workspaceConfirm.confirmDialog(key);
+  await workspaceSurface.value.confirmConfirmDialog(key);
 }
 
 

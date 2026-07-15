@@ -1,3 +1,22 @@
+## 2026-07-15 19:40:03 +08:00 | v1.1.0-alpha.280 | 推进 FE-041 管理端 workspace surface adapter 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041`，这一轮不新增治理功能，而是把后台工作台里已经拆出的 confirm、chrome、module 三组装配继续往上收口。
+- 目标是新增一个统一的 `workspace surface adapter`，让 `AdminWorkspaceView.vue` 直接消费登录面板、壳层、治理模块和确认弹层的完整 surface，同时保留现有“有 session 即视为已登录”的页面语义。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceSurfaceAdapter.ts`，提供 `createAdminWorkspaceSurfaceAdapter(...)` 出口，统一组合 confirm、chrome 与 module 三组装配结果。
+- 新增并补齐 `frontend-admin/src/views/adminWorkspaceSurfaceAdapter.test.ts`，锁定登录事件、壳层切换、治理动作与确认弹层 handler 都会按统一 surface 透传。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，改为通过 `workspaceSurface` 消费 `confirmDialogs / loggedIn / loginPanelProps / shellProps / moduleProps` 与对应 events，并删除页面层原有的 `chromeBindings / moduleBindings` 手工拼装。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 workspace surface adapter 已接线”这一层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceSurfaceAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+### 后续影响
+
+- `FE-041` 现在继续从 workspace state adapter 推进到 workspace surface adapter，后台工作台页面壳层围绕多组 adapter 的绑定编排进一步变薄。
+- 这一轮显式保留了 session 驱动的已登录判定，避免 profile 自举尚未完成时因为 adapter 收口导致工作台短暂回退到登录页。
 ## 2026-07-15 19:33:52 +08:00 | v1.1.0-alpha.279 | 推进 FE-041 管理端 workspace state adapter 接线
 ### 任务内容
 
