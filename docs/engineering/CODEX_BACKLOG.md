@@ -85,6 +85,30 @@
 | WB-053 | TODO | Go 代码分析图 MVP | WB-051 | analysis jobs/graph | 路由图、ERD、模块依赖图至少一项可生成。 |
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
+### 执行记录：FE-041（管理端 mutation adapter 接线）
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / 待提交
+- 实际变更：
+  - 新增 `frontend-admin/src/views/adminWorkspaceMutationAdapter.ts`
+  - 新增 `frontend-admin/src/views/adminWorkspaceMutationAdapter.test.ts`
+  - 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - `AdminWorkspaceView.vue` 里原本停留在页面层的 `applyModerationAction / applyReportAction / applyUserAction / applyAITaskAction / applyTemplateAction / requestModerationAction / requestGovernanceAction` 已统一收口到共享 `adminWorkspaceMutationAdapter`。
+  - adapter 复用了既有 `adminWorkspaceMutationState`、`adminWorkspacePendingAction` 与治理提交 runner，让确认流、提交流和刷新流开始以同一组 mutation 出口接线，而不是继续散落在工作台页面层。
+  - 新增 adapter 单测，锁定“无 session 时跳过审核提交”“审核 mutation 会透传当前 active view”“治理 request 会复用共享 pending-action 分发”“治理 mutation 会透传匹配的 domain key”四条契约。
+- 已执行验证：
+  - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceMutationAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+  - `npm run verify:docs`
+  - `npx playwright test e2e/v1-admin-governance.spec.ts`
+  - `git diff --check`
+- 后续影响：
+  - `FE-041` 现在继续从共享 runtime / action / read 推进到共享 mutation adapter，后台工作台页面层里剩余的治理动作编排进一步变薄。
+  - 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估 mutation / runtime / action / read 这几组出口是否继续汇总为更完整的 workspace feature adapter，而不是把新的治理动作分支重新写回 `AdminWorkspaceView.vue`。
+
 ### 执行记录：FE-041（管理端 read adapter 接线）
 - 执行日期：2026-07-15
 - 执行分支/提交：master / 待提交

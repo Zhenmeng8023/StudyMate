@@ -1,6 +1,6 @@
 ﻿<script setup lang="ts">
 import "../components/admin/admin.css";
-import { computed, onBeforeUnmount, onMounted, reactive, ref, type Ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import type { ApiRequestInit } from "@studymate/api-client";
 import { getSessionInvalidationPrompt } from "@studymate/api-client";
 import { adminGet, adminPost } from "../api/client";
@@ -39,14 +39,6 @@ import { resolveGovernanceDataState, resolveModerationDataState } from "./adminV
 import { getAdminRequestErrorMessage, getAdminRequestErrorStatus } from "./adminRequestError";
 import { createAdminWorkspaceActionAdapter } from "./adminWorkspaceActionAdapter";
 import {
-  runAdminWorkspaceGovernanceAction,
-  runAdminWorkspaceModerationAction
-} from "./adminWorkspaceMutationState";
-import {
-  requestAdminWorkspaceGovernanceAction,
-  requestAdminWorkspaceModerationAction
-} from "./adminWorkspacePendingAction";
-import {
   buildGovernanceStatusOptions,
   buildModerationStatusOptions,
   filterGovernanceRows,
@@ -69,7 +61,7 @@ import {
 import {
   getGovernanceModuleConfig,
 } from "./adminGovernanceConfig";
-import type { GovernanceMutationKey } from "./adminGovernanceMutationMeta";
+import { createAdminWorkspaceMutationAdapter } from "./adminWorkspaceMutationAdapter";
 import { createAdminWorkspaceReadAdapter } from "./adminWorkspaceReadAdapter";
 import { startAdminWorkspaceRuntime } from "./adminWorkspaceRuntime";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
@@ -124,6 +116,108 @@ const pendingAITaskAction = ref<{ action: AITaskAction; record: GovernanceRecord
 const aiTaskConfirmError = ref("");
 const pendingTemplateAction = ref<{ action: TemplateAction; record: GovernanceRecord } | null>(null);
 const templateConfirmError = ref("");
+const workspaceRead = createAdminWorkspaceReadAdapter<
+  AdminAuthUser,
+  OverviewPayload,
+  AdminWorkspaceModerationItem
+>({
+  get,
+  getGovernanceLoadedNotice: getAdminGovernanceLoadedNotice,
+  getModerationLoadedNotice: getAdminModerationLoadedNotice,
+  hasSession: () => Boolean(session.value),
+  readGovernanceRows: () => governanceRows.value,
+  readGovernanceRowsView: () => governanceRowsView.value,
+  readStatus: getAdminRequestErrorStatus,
+  resolveErrorMessage: getAdminRequestErrorMessage,
+  setError: (message) => {
+    errorMessage.value = message;
+  },
+  setGovernanceRows: (rows) => {
+    governanceRows.value = rows;
+  },
+  setGovernanceRowsView: (view) => {
+    governanceRowsView.value = view;
+  },
+  setGovernanceSelectedRecord: (record) => {
+    selectedRecord.value = record;
+  },
+  setGovernanceStatus: (status) => {
+    governanceErrorStatus.value = status;
+  },
+  setGovernanceSummary: (summary) => {
+    governanceSummary.value = summary;
+  },
+  setLoading: (nextLoading) => {
+    loading.value = nextLoading;
+  },
+  setModerationItems: (items) => {
+    moderationItems.value = items;
+  },
+  setModerationStatus: (status) => {
+    moderationErrorStatus.value = status;
+  },
+  setNotice: (nextNotice) => {
+    notice.value = nextNotice;
+  },
+  setOverview: (nextOverview) => {
+    overview.value = nextOverview;
+  },
+  setProfile: (nextProfile) => {
+    profile.value = nextProfile;
+  }
+});
+const workspaceMutations = createAdminWorkspaceMutationAdapter({
+  hasSession: () => Boolean(session.value),
+  loadGovernance: workspaceRead.loadGovernance,
+  loadModeration: workspaceRead.loadModeration,
+  loadOverview: workspaceRead.loadOverview,
+  post,
+  readActiveView: () => activeView.value,
+  readStatus: getAdminRequestErrorStatus,
+  resolveErrorMessage: getAdminRequestErrorMessage,
+  setAITaskAction: (value) => {
+    pendingAITaskAction.value = value;
+  },
+  setAITaskError: (value) => {
+    aiTaskConfirmError.value = value;
+  },
+  setError: (message) => {
+    errorMessage.value = message;
+  },
+  setGovernanceStatus: (status) => {
+    governanceErrorStatus.value = status;
+  },
+  setLoading: (nextLoading) => {
+    loading.value = nextLoading;
+  },
+  setModerationAction: (value) => {
+    pendingModerationAction.value = value;
+  },
+  setModerationConfirmError: (value) => {
+    moderationConfirmError.value = value;
+  },
+  setNotice: (nextNotice) => {
+    notice.value = nextNotice;
+  },
+  setReportAction: (value) => {
+    pendingReportAction.value = value;
+  },
+  setReportConfirmError: (value) => {
+    reportConfirmError.value = value;
+  },
+  setTemplateAction: (value) => {
+    pendingTemplateAction.value = value;
+  },
+  setTemplateConfirmError: (value) => {
+    templateConfirmError.value = value;
+  },
+  setUserAction: (value) => {
+    pendingUserAction.value = value;
+  },
+  setUserConfirmError: (value) => {
+    userConfirmError.value = value;
+  }
+});
 
 const loggedIn = computed(() => Boolean(session.value));
 const moderationBuckets = computed(() => splitModerationItems(moderationItems.value));
@@ -131,11 +225,11 @@ const pendingPosts = computed(() => moderationBuckets.value.pendingPosts);
 const pendingMaterials = computed(() => moderationBuckets.value.pendingMaterials);
 const profileInitial = computed(() => profile.value?.displayName?.trim().slice(0, 1) || "A");
 const confirmController = createAdminWorkspaceConfirmController({
-  applyAITaskAction,
-  applyModerationAction,
-  applyReportAction,
-  applyTemplateAction,
-  applyUserAction,
+  applyAITaskAction: workspaceMutations.applyAITaskAction,
+  applyModerationAction: workspaceMutations.applyModerationAction,
+  applyReportAction: workspaceMutations.applyReportAction,
+  applyTemplateAction: workspaceMutations.applyTemplateAction,
+  applyUserAction: workspaceMutations.applyUserAction,
   readAITaskAction: () => pendingAITaskAction.value,
   readAITaskError: () => aiTaskConfirmError.value,
   readLoading: () => loading.value,
@@ -291,8 +385,8 @@ const moduleProps = computed(() =>
 );
 const moduleEvents = computed(() =>
   buildAdminWorkspaceModuleEvents({
-    requestGovernanceAction,
-    requestModerationAction,
+    requestGovernanceAction: workspaceMutations.requestGovernanceAction,
+    requestModerationAction: workspaceMutations.requestModerationAction,
     selectRecord,
     setGovernanceQuery: (value) => {
       recordQuery.value = value;
@@ -333,56 +427,6 @@ const workspaceResetController = createAdminWorkspaceResetController({
 });
 
 const clearWorkspaceState = (keys?: AdminWorkspaceResetKey[]) => workspaceResetController.clearState(keys);
-const workspaceRead = createAdminWorkspaceReadAdapter<
-  AdminAuthUser,
-  OverviewPayload,
-  AdminWorkspaceModerationItem
->({
-  get,
-  getGovernanceLoadedNotice: getAdminGovernanceLoadedNotice,
-  getModerationLoadedNotice: getAdminModerationLoadedNotice,
-  hasSession: () => Boolean(session.value),
-  readGovernanceRows: () => governanceRows.value,
-  readGovernanceRowsView: () => governanceRowsView.value,
-  readStatus: getAdminRequestErrorStatus,
-  resolveErrorMessage: getAdminRequestErrorMessage,
-  setError: (message) => {
-    errorMessage.value = message;
-  },
-  setGovernanceRows: (rows) => {
-    governanceRows.value = rows;
-  },
-  setGovernanceRowsView: (view) => {
-    governanceRowsView.value = view;
-  },
-  setGovernanceSelectedRecord: (record) => {
-    selectedRecord.value = record;
-  },
-  setGovernanceStatus: (status) => {
-    governanceErrorStatus.value = status;
-  },
-  setGovernanceSummary: (summary) => {
-    governanceSummary.value = summary;
-  },
-  setLoading: (nextLoading) => {
-    loading.value = nextLoading;
-  },
-  setModerationItems: (items) => {
-    moderationItems.value = items;
-  },
-  setModerationStatus: (status) => {
-    moderationErrorStatus.value = status;
-  },
-  setNotice: (nextNotice) => {
-    notice.value = nextNotice;
-  },
-  setOverview: (nextOverview) => {
-    overview.value = nextOverview;
-  },
-  setProfile: (nextProfile) => {
-    profile.value = nextProfile;
-  }
-});
 
 let stopRuntime: (() => void) | null = null;
 const workspaceActions = createAdminWorkspaceActionAdapter({
@@ -464,131 +508,6 @@ onBeforeUnmount(() => {
   stopRuntime?.();
   stopRuntime = null;
 });
-
-async function applyModerationAction(item: AdminWorkspaceModerationItem, action: ModerationAction) {
-  if (!session.value) return;
-  await runAdminWorkspaceModerationAction(activeView.value, item, action, {
-    loadGovernance: workspaceRead.loadGovernance,
-    loadModeration: workspaceRead.loadModeration,
-    loadOverview: workspaceRead.loadOverview,
-    post: (path, body) => post<{ status: string }>(path, body),
-    readStatus: getAdminRequestErrorStatus,
-    resetDialog: () => {
-      pendingModerationAction.value = null;
-    },
-    resolveErrorMessage: getAdminRequestErrorMessage,
-    setConfirmError: (message) => {
-      moderationConfirmError.value = message;
-    },
-    setError: (message) => {
-      errorMessage.value = message;
-    },
-    setGovernanceStatus: (status) => {
-      governanceErrorStatus.value = status;
-    },
-    setLoading: (nextLoading) => {
-      loading.value = nextLoading;
-    },
-    setNotice: (nextNotice) => {
-      notice.value = nextNotice;
-    }
-  });
-}
-
-async function applyGovernanceRecordAction(
-  key: GovernanceMutationKey,
-  record: GovernanceRecord,
-  action: string,
-  confirmError: Ref<string>
-) {
-  if (!session.value) return;
-  await runAdminWorkspaceGovernanceAction(key, record, action, {
-    readStatus: getAdminRequestErrorStatus,
-    reloadView: workspaceRead.loadGovernance,
-    request: (path) => post<{ status: string }>(path, {}),
-    resetDialog: (dialogKey) => {
-      runAdminConfirmDialogHandler(dialogKey, confirmResetHandlers);
-    },
-    resolveErrorMessage: (error, fallbackMessage) =>
-      getAdminRequestErrorMessage(error, fallbackMessage),
-    setConfirmError: (message) => {
-      confirmError.value = message;
-    },
-    setError: (message) => {
-      errorMessage.value = message;
-    },
-    setGovernanceStatus: (status) => {
-      governanceErrorStatus.value = status;
-    },
-    setLoading: (nextLoading) => {
-      loading.value = nextLoading;
-    },
-    setNotice: (nextNotice) => {
-      notice.value = nextNotice;
-    }
-  });
-}
-
-async function applyReportAction(record: GovernanceRecord, action: ReportAction) {
-  await applyGovernanceRecordAction("report", record, action, reportConfirmError);
-}
-
-async function applyUserAction(record: GovernanceRecord, action: UserAction) {
-  await applyGovernanceRecordAction("user", record, action, userConfirmError);
-}
-
-async function applyAITaskAction(record: GovernanceRecord, action: AITaskAction) {
-  await applyGovernanceRecordAction("aiTask", record, action, aiTaskConfirmError);
-}
-
-async function applyTemplateAction(record: GovernanceRecord, action: TemplateAction) {
-  await applyGovernanceRecordAction("template", record, action, templateConfirmError);
-}
-
-function requestModerationAction(item: AdminWorkspaceModerationItem, action: ModerationAction) {
-  requestAdminWorkspaceModerationAction(item, action, {
-    setModerationAction: (value) => {
-      pendingModerationAction.value = value;
-    },
-    setModerationError: (value) => {
-      moderationConfirmError.value = value;
-    }
-  });
-}
-
-function requestGovernanceAction(payload: { action: string; record: GovernanceRecord }) {
-  requestAdminWorkspaceGovernanceAction(activeView.value, payload, {
-    clearAITaskError: () => {
-      aiTaskConfirmError.value = "";
-    },
-    clearReportError: () => {
-      reportConfirmError.value = "";
-    },
-    clearTemplateError: () => {
-      templateConfirmError.value = "";
-    },
-    clearUserError: () => {
-      userConfirmError.value = "";
-    },
-    invalidFallbackMessage: "\u65e0\u6cd5\u63d0\u4ea4\u6cbb\u7406\u52a8\u4f5c\u3002",
-    requestModerationAction,
-    setAITaskAction: (value) => {
-      pendingAITaskAction.value = value;
-    },
-    setError: (message) => {
-      errorMessage.value = message;
-    },
-    setReportAction: (value) => {
-      pendingReportAction.value = value;
-    },
-    setTemplateAction: (value) => {
-      pendingTemplateAction.value = value;
-    },
-    setUserAction: (value) => {
-      pendingUserAction.value = value;
-    }
-  });
-}
 
 function handleConfirmDialogCancel(key: ConfirmDialogKey) {
   if (loading.value) return;

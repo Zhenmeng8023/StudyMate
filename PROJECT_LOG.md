@@ -1,3 +1,27 @@
+## 2026-07-15 13:32:00 +08:00 | v1.1.0-alpha.273 | 推进 FE-041 管理端 mutation adapter 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041`，这一轮不新增治理功能，而是收口后台工作台里仍然停留在页面层的治理 mutation 编排。
+- 目标是把 `AdminWorkspaceView.vue` 里围绕 `applyModerationAction / applyReportAction / applyUserAction / applyAITaskAction / applyTemplateAction / requestModerationAction / requestGovernanceAction` 的壳层动作统一收口到更高一层的 mutation adapter，避免这些提交与确认流继续各自直接拼装共享 helper。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceMutationAdapter.ts`，提供 `createAdminWorkspaceMutationAdapter(...)` 出口，统一接线共享 `adminWorkspaceMutationState`、`adminWorkspacePendingAction` 与治理提交 runner。
+- 新增并补齐 `frontend-admin/src/views/adminWorkspaceMutationAdapter.test.ts`，锁定审核提交、治理 request 分发和治理 mutation 透传 domain key 的关键契约。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让确认 controller 与模块事件改为直接走 `workspaceMutations`，并删除页面层原有的七条 mutation/request 函数。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 mutation adapter 已接线”这一层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceMutationAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `npx playwright test e2e/v1-admin-governance.spec.ts`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在不只是在拆 runtime、action 和 read，后台工作台里围绕治理提交、确认与刷新联动的高频 mutation 也开始进入共享 adapter，页面壳层继续变薄。
+- 这一轮仍然只补了 mutation 适配层；如果继续推进 `FE-041 / ADM-010`，更适合优先评估 mutation / runtime / action / read 是否继续汇总为更完整的 workspace feature adapter，而不是立刻切去新的治理业务。
+
 ## 2026-07-15 13:05:00 +08:00 | v1.1.0-alpha.272 | 推进 FE-041 管理端 read adapter 接线
 ### 任务内容
 

@@ -97,7 +97,7 @@ export function createAdminWorkspaceReadAdapter<Profile, Overview, ModerationIte
     });
   };
 
-  const loadGovernance = async (view: AdminRouteKey) => {
+  const loadGovernance = async (view: GovernanceModuleView) => {
     if (!options.hasSession()) return;
 
     await runners.runGovernanceLoad(view, {
