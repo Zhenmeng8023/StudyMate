@@ -10,12 +10,15 @@ export function buildReviewSourceBacklink(card: CardSourceLike): GraphSourceBack
     return null;
   }
 
-  return buildGraphSourceBacklinkFromSource({
-    type: sourceType,
-    id: sourceId,
-    label: "",
-    excerpt: ""
-  }, card?.sourceMetadata);
+  return buildGraphSourceBacklinkFromSource(
+    {
+      type: sourceType,
+      id: sourceId,
+      label: "",
+      excerpt: ""
+    },
+    card?.sourceMetadata
+  );
 }
 
 export function formatReviewSourceReference(card: CardSourceLike) {
@@ -40,6 +43,8 @@ function getReviewSourceTypeLabel(sourceType: string) {
       return "资料";
     case "card":
       return "卡片";
+    case "graph":
+      return "图谱";
     case "annotation":
       return "批注";
     case "pdf-anchor":

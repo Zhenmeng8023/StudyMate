@@ -58,6 +58,22 @@ export function buildGraphSourceBacklinkFromSource(
     };
   }
 
+  if (sourceType === "graph") {
+    const target = buildGraphWorkspaceTarget(metadata);
+    if (!target) {
+      return null;
+    }
+
+    return {
+      target,
+      actionLabel: "回到图谱",
+      sourceTypeLabel: "图谱",
+      sourceId,
+      learningStepLabel: "图谱整理",
+      description: "回到图谱节点的上下文位置，继续整理知识关系并结合复习反馈修正理解。"
+    };
+  }
+
   if (sourceType === "annotation") {
     const materialId = readMetadataString(metadata, "materialId") || readMetadataString(metadata, "sourceMaterialId");
     if (!materialId) {
@@ -144,9 +160,58 @@ function appendReaderQuery(basePath: string, metadata: Record<string, unknown> |
   return query ? `${basePath}?${query}` : basePath;
 }
 
+function buildGraphWorkspaceTarget(metadata: Record<string, unknown> | null | undefined) {
+  const graphId = readMetadataString(metadata, "graphId");
+  if (!graphId) {
+    return "";
+  }
+
+  const params = new URLSearchParams();
+  params.set("graphId", graphId);
+
+  const focusX = readMetadataNumberString(metadata, "focusX", true);
+  const focusY = readMetadataNumberString(metadata, "focusY", true);
+  const focusWidth = readMetadataNumberString(metadata, "focusWidth");
+  const focusHeight = readMetadataNumberString(metadata, "focusHeight");
+  const focusLabel = readMetadataString(metadata, "focusLabel");
+
+  if (focusX) {
+    params.set("focusX", focusX);
+  }
+  if (focusY) {
+    params.set("focusY", focusY);
+  }
+  if (focusWidth) {
+    params.set("focusWidth", focusWidth);
+  }
+  if (focusHeight) {
+    params.set("focusHeight", focusHeight);
+  }
+  if (focusLabel) {
+    params.set("focusLabel", focusLabel);
+  }
+
+  return `/graph?${params.toString()}`;
+}
+
 function readMetadataString(metadata: Record<string, unknown> | null | undefined, key: string) {
   const value = metadata?.[key];
   return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function readMetadataNumberString(metadata: Record<string, unknown> | null | undefined, key: string, allowZero = false) {
+  const value = metadata?.[key];
+  if (typeof value === "number" && Number.isFinite(value) && (allowZero ? value >= 0 : value > 0)) {
+    return String(value);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    const parsed = Number(trimmed);
+    if (trimmed && Number.isFinite(parsed) && (allowZero ? parsed >= 0 : parsed > 0)) {
+      return trimmed;
+    }
+  }
+  return "";
 }
 
 function readMetadataNumber(metadata: Record<string, unknown> | null | undefined, key: string) {

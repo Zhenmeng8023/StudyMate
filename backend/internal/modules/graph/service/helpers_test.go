@@ -415,6 +415,60 @@ func TestBuildCardCreateRequestsPreservesSourceMetadataForReaderBacklinks(t *tes
 	}
 }
 
+func TestBuildCardCreateRequestsPreservesSourceMetadataForGraphBacklinks(t *testing.T) {
+	document := graphdto.GraphDocumentPayload{
+		GraphID: "graph-1",
+		Nodes: []graphdto.GraphNodePayload{
+			{
+				ID:     "node-1",
+				Type:   "concept",
+				Title:  "Binary Tree",
+				X:      420,
+				Y:      320,
+				Width:  220,
+				Height: 120,
+				Source: &graphdto.GraphNodeSourcePayload{
+					Type: "graph",
+					ID:   "node-1",
+				},
+			},
+		},
+	}
+
+	requests, err := BuildCardCreateRequests(document, []graphdto.GraphCardDraftPayload{
+		{
+			ID:           "draft-1",
+			SourceNodeID: "node-1",
+			Front:        "What is a binary tree?",
+			Back:         "A tree where each node has at most two children.",
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if len(requests) != 1 {
+		t.Fatalf("expected 1 request, got %d", len(requests))
+	}
+	if requests[0].SourceType != "graph" || requests[0].SourceID != "node-1" {
+		t.Fatalf("expected graph/node-1 source, got %#v", requests[0])
+	}
+	if requests[0].SourceMetadata == nil {
+		t.Fatalf("expected graph source metadata to be preserved")
+	}
+	for key, want := range map[string]any{
+		"graphId":      "graph-1",
+		"focusX":       420.0,
+		"focusY":       320.0,
+		"focusWidth":   220.0,
+		"focusHeight":  120.0,
+		"focusLabel":   "Binary Tree",
+	} {
+		if got := requests[0].SourceMetadata[key]; got != want {
+			t.Fatalf("expected source metadata %s=%#v, got %#v", key, want, got)
+		}
+	}
+}
+
 func TestBuildCardCreateRequestsInfersPdfAnchorSourceFromNodeMetadata(t *testing.T) {
 	document := graphdto.GraphDocumentPayload{
 		Nodes: []graphdto.GraphNodePayload{

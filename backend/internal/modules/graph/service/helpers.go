@@ -493,7 +493,7 @@ func BuildCardCreateRequests(document graphdto.GraphDocumentPayload, drafts []gr
 			Front:    front,
 			Back:     back,
 		}
-		if sourceType, sourceID, sourceMetadata := resolveCardSourceContext(node); sourceType != "" && sourceID != "" {
+		if sourceType, sourceID, sourceMetadata := resolveCardSourceContext(document.GraphID, node); sourceType != "" && sourceID != "" {
 			request.SourceType = sourceType
 			request.SourceID = sourceID
 			request.SourceMetadata = sourceMetadata
@@ -504,12 +504,12 @@ func BuildCardCreateRequests(document graphdto.GraphDocumentPayload, drafts []gr
 	return requests, nil
 }
 
-func resolveCardSourceContext(node graphdto.GraphNodePayload) (string, string, map[string]any) {
+func resolveCardSourceContext(graphID string, node graphdto.GraphNodePayload) (string, string, map[string]any) {
 	if node.Source != nil {
 		sourceType := strings.TrimSpace(node.Source.Type)
 		sourceID := strings.TrimSpace(node.Source.ID)
 		if sourceType != "" && sourceID != "" {
-			return sourceType, sourceID, buildCardSourceMetadata(node.Metadata, sourceType, sourceID)
+			return sourceType, sourceID, buildCardSourceMetadata(graphID, node, sourceType, sourceID)
 		}
 	}
 
@@ -518,7 +518,7 @@ func resolveCardSourceContext(node graphdto.GraphNodePayload) (string, string, m
 		return "", "", nil
 	}
 
-	return sourceType, sourceID, buildCardSourceMetadata(node.Metadata, sourceType, sourceID)
+	return sourceType, sourceID, buildCardSourceMetadata(graphID, node, sourceType, sourceID)
 }
 
 func inferCardSourceFromNode(node graphdto.GraphNodePayload) (string, string) {
@@ -560,7 +560,8 @@ func inferCardSourceFromMetadata(metadata map[string]any) (string, string) {
 	return "", ""
 }
 
-func buildCardSourceMetadata(metadata map[string]any, sourceType string, sourceID string) map[string]any {
+func buildCardSourceMetadata(graphID string, node graphdto.GraphNodePayload, sourceType string, sourceID string) map[string]any {
+	metadata := node.Metadata
 	result := map[string]any{}
 
 	for _, key := range []string{"materialId", "sourceMaterialId", "materialUrl", "noteId", "cardId", "deckId", "aiDraftId", "aiTaskId", "diagramSourceId"} {
@@ -597,6 +598,17 @@ func buildCardSourceMetadata(metadata map[string]any, sourceType string, sourceI
 		}
 		if anchorID != "" {
 			result["anchorId"] = anchorID
+		}
+	case "graph":
+		if strings.TrimSpace(graphID) != "" {
+			result["graphId"] = strings.TrimSpace(graphID)
+		}
+		result["focusX"] = node.X
+		result["focusY"] = node.Y
+		result["focusWidth"] = node.Width
+		result["focusHeight"] = node.Height
+		if title := strings.TrimSpace(node.Title); title != "" {
+			result["focusLabel"] = title
 		}
 	}
 

@@ -105,6 +105,30 @@ function buildPdfAnchorCard(): CardPayload {
   };
 }
 
+function buildGraphCard(): CardPayload {
+  return {
+    id: "card-graph-1",
+    deckId: "deck-1",
+    ownerUserId: "user-1",
+    cardType: "basic",
+    front: "Linked graph card",
+    back: "Return to the graph workspace focus",
+    sourceType: "graph",
+    sourceId: "node-1",
+    sourceMetadata: {
+      graphId: "graph-1",
+      focusX: 420,
+      focusY: 320,
+      focusWidth: 220,
+      focusHeight: 120,
+      focusLabel: "Binary Tree"
+    },
+    status: "active",
+    createdAt: "2026-06-02T12:00:00Z",
+    updatedAt: "2026-06-02T12:00:00Z"
+  };
+}
+
 function buildQueue(card: CardPayload): ReviewQueuePayload {
   return {
     dueCount: 1,
@@ -197,6 +221,28 @@ describe("ReviewWorkspacePage source links", () => {
       expect(links).toHaveLength(2);
       for (const link of links) {
         expect(link).toHaveAttribute("href", "/reader/material-1?page=8&anchor=anchor-1");
+      }
+    });
+  });
+
+  it("renders graph source links with graph focus query context", async () => {
+    const deck = buildDeck();
+    const card = buildGraphCard();
+    listDecksMock.mockResolvedValue([deck]);
+    listDeckCardsMock.mockResolvedValue([card]);
+    getTodayReviewQueueMock.mockResolvedValue(buildQueue(card));
+
+    renderPage("/review?card=card-graph-1");
+
+    expect(await screen.findByText("Linked graph card")).toBeInTheDocument();
+    await waitFor(() => {
+      const links = screen.getAllByRole("link", { name: "回到图谱" });
+      expect(links).toHaveLength(2);
+      for (const link of links) {
+        expect(link).toHaveAttribute(
+          "href",
+          "/graph?graphId=graph-1&focusX=420&focusY=320&focusWidth=220&focusHeight=120&focusLabel=Binary+Tree"
+        );
       }
     });
   });

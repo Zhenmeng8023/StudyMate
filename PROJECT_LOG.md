@@ -8437,3 +8437,34 @@
 
 - `FE-041` 现在不只是在拆 runtime、props 和 events，后台工作台里围绕登录、自举、刷新与退出的高频动作也开始进入共享 action adapter，页面壳层继续变薄。
 - 这一轮仍然只补了三条壳层动作路径；如果继续推进 `FE-041 / ADM-010`，更适合优先评估 profile/overview/loadActiveView 这类读取链路是否也继续汇总为更完整的 workspace feature adapter，而不是立刻切去新的治理业务。
+## 2026-07-16 03:13:00 +08:00 | v1.1.0-alpha.288 | 推进 WB-033 / LC-010 graph 来源卡片回到图谱工作区
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先把主学习闭环补成可演示双向链路”的优先级推进 `WB-033 / LC-010`，这次不去扩新的反馈面板，而是把已经存在的 graph 来源卡片补上从复习页精确回到图谱节点的反向深链。
+- 目标是让 `graph -> card -> review -> graph` 这一小段真正闭环，避免复习页里出现“知道卡片来自图谱，但回不去具体节点”的断链。
+
+### 实际变更
+
+- 更新 `backend/internal/modules/graph/service/helpers.go`，让图谱节点生成 `sourceType=graph` 卡片时，把 `graphId`、`focusX`、`focusY`、`focusWidth`、`focusHeight` 与 `focusLabel` 一并写入 `sourceMetadata`。
+- 更新 `backend/internal/modules/graph/service/helpers_test.go`，先用 RED/GREEN 锁定 graph 来源卡片会保留上述图谱焦点元数据。
+- 重写 `frontend-user/src/modules/graph/lib/graphSourceBacklinks.ts` 与 `frontend-user/src/modules/review/reviewSourceBacklinks.ts` 的相关分支，补上 `graph` 来源回链，并继续保留 note/material/annotation/pdf-anchor/AI 等现有来源回跳。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`，锁定复习页会渲染两处“回到图谱”链接，且都指向 `/graph?graphId=...&focus...`。
+- 更新 `e2e/v1-review-flow.spec.ts`，补上浏览器级验收：graph 来源卡片会从复习页跳回图谱工作区并显示焦点预览，同时把既有复习写回 smoke 对齐到当前“先进入工作台再开始复习”的真实交互。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把这次 `WB-033 / LC-010` 的 graph 反链切片记回执行记录。
+
+### 验证结果
+
+- RED：`go test ./internal/modules/graph/service`
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+- GREEN：`go test ./internal/modules/graph/service`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx src/modules/graph/lib/graphSourceBacklinks.test.ts`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run build:admin`
+- `npx playwright test e2e/v1-review-flow.spec.ts`
+
+### 后续影响
+
+- `WB-033 / LC-010` 现在除了“图谱节点带过滤条件跳回复习工作台”，也已经具备“复习中的 graph 来源卡片精确回到图谱焦点区域”的最小反链，主学习闭环的双向可追溯更完整了一步。
+- 这一步仍然没有把 mastery 持久回写进图谱文档或节点字段；后续更适合继续补 `WB-033` 的节点/来源级持久化，或者把 graph/review/source 深链进一步归并成统一的 SourceLink 契约。

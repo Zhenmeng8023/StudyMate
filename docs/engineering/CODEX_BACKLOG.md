@@ -3187,3 +3187,31 @@
 - 后续影响：
   - `FE-041` 现在继续从共享 runtime 协调推进到共享 action adapter，后台工作台页面层里围绕登录、自举、刷新与退出的壳层动作进一步变薄。
   - 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估 overview/profile/loadActiveView 这类读取链路是否也继续向更完整的 workspace feature adapter 收口，而不是把新的动作分支重新写回 `AdminWorkspaceView.vue`。
+### 执行记录：WB-033 / LC-010（graph 来源卡片回到图谱工作区）
+- 执行日期：2026-07-16
+- 执行分支/提交：`master` / 待提交
+- 实际变更：
+  - 更新 `backend/internal/modules/graph/service/helpers.go`
+  - 更新 `backend/internal/modules/graph/service/helpers_test.go`
+  - 更新 `frontend-user/src/modules/graph/lib/graphSourceBacklinks.ts`
+  - 更新 `frontend-user/src/modules/review/reviewSourceBacklinks.ts`
+  - 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+  - 更新 `e2e/v1-review-flow.spec.ts`
+- 完成证据：
+  - 图谱节点生成的 `sourceType=graph` 卡片现在会保留 `graphId`、`focusX`、`focusY`、`focusWidth`、`focusHeight` 与 `focusLabel`，复习页因此可以定位回具体图谱焦点区域。
+  - 复习页来源回链现在新增 `graph` 分支；当卡片来源是图谱节点且具备焦点元数据时，会渲染“回到图谱”链接并跳到 `/graph?graphId=...&focus...`。
+  - 这条回链沿用了图谱工作区现有的 focus preview 查询参数契约，没有新增新的路由或后端接口。
+  - 浏览器级验收已覆盖这条反链：graph 来源卡片会从复习页跳回图谱工作区并显示焦点预览；既有复习写回 smoke 也已对齐当前“先进入工作台再开始复习”的真实交互。
+- 已执行验证：
+  - RED：`go test ./internal/modules/graph/service`
+  - RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+  - GREEN：`go test ./internal/modules/graph/service`
+  - GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+  - `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx src/modules/graph/lib/graphSourceBacklinks.test.ts`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm run build:user`
+  - `npm run build:admin`
+  - `npx playwright test e2e/v1-review-flow.spec.ts`
+- 后续影响：
+  - `WB-033 / LC-010` 现在不只支持“图谱节点 -> 复习回补”，也开始支持“复习卡片 -> 图谱节点”的最小反链，主学习闭环的双向可追溯又补了一段。
+  - 下一步更适合继续补 `WB-033` 的持久 mastery 回写，或把这类 graph/review/source 深链继续收口成更统一的 SourceLink 契约，而不是扩更多孤立入口。
