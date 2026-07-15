@@ -1,3 +1,31 @@
+## 2026-07-15 10:14:19 +08:00 | v1.1.0-alpha.264 | 推进 ANKI-070 导入预检与失败报告
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把全局主路径做成能用版，再逐步细化”方向推进 `ANKI-070`，这轮聚焦在把卡组导入从“文件上传后直接写入”推进到“先预检、再确认”的更可信闭环。
+- 目标是补齐三块最影响可用性的缺口：导入预检、重复卡片检测，以及逐条失败摘要，避免一次坏行或整批重复让导入体验过于黑盒。
+### 实际变更
+
+- 后端更新 `backend/internal/modules/card/dto/card.go`、`backend/internal/modules/card/service/import_export.go` 与 `backend/internal/modules/card/service/service.go`，让 `POST /api/v1/decks/:id/import` 支持 `previewOnly` 预检模式，并返回 `totalCount / readyCount / duplicateCount / failedCount` 及重复/失败样本。
+- 服务端导入逻辑现在会先分析整个文件，再区分“可导入 / 与现有卡片重复 / 与本批前序记录重复 / 行内容无效”；真正导入时只创建可用卡片，并把跳过统计写回响应和审计日志。
+- 前端更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，上传卡片文件后先请求预检，再通过确认弹层决定是否真正导入；确认导入后仍会刷新当前卡组与今日队列。
+- 扩展 `backend/internal/modules/card/service/list_cards_filters_test.go`、`backend/internal/modules/card/handler/handler_test.go` 与 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，锁定服务端预检摘要、重复/失败计数，以及前端“先预检再确认”的双阶段调用。
+- 顺手修正 `packages/ui/src/ConfirmDialog.tsx` 中 `danger={false}` 带来的 DOM 属性告警，避免新的确认弹层引入额外测试噪声。
+### 验证结果
+
+- RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- GREEN：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
+- `go test ./internal/modules/card/...`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `ANKI-070` 现在不再只是一条“能导入文件”的通路，而是开始具备最基础的导入可信度：用户能在落库前看到这批文件里到底有多少会成功、多少会被跳过。
+- 这一轮仍然只做了轻量预检与摘要，没有独立导入结果面板、更细粒度的修复建议，也没有进入 `.apkg`、媒体或模板同步；后续更适合继续把导入结果展示做厚，再评估更强的 Anki 兼容。
+
 ## 2026-07-15 09:55:44 +08:00 | v1.1.0-alpha.263 | 推进 ANKI-070 后端导入导出接口起步
 ### 任务内容
 

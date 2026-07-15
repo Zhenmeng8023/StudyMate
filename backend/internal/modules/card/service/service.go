@@ -3,7 +3,6 @@ package service
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -177,31 +176,40 @@ func (s *Service) ImportDeck(ownerUserID string, deckID string, request carddto.
 		return nil, err
 	}
 
-	cards, err := parseDeckImportRequest(request)
+	existingCards, err := s.repository.ListCardsByDeck(deck.ID, ownerUserID, cardrepo.ListCardsFilter{})
+	if err != nil {
+		return nil, apperrors.Internal("读取卡组卡片失败")
+	}
+	analysis, err := analyzeDeckImportRequest(request, existingCards)
 	if err != nil {
 		return nil, err
 	}
-	if len(cards) == 0 {
+	if analysis.TotalCount == 0 {
 		return nil, apperrors.New(http.StatusBadRequest, "empty_deck_import", "导入文件中没有可用卡片")
 	}
-	if len(cards) > 200 {
+	if analysis.TotalCount > 200 {
 		return nil, apperrors.New(http.StatusBadRequest, "deck_import_too_large", "单次最多导入 200 张卡片")
 	}
+	if request.PreviewOnly {
+		return buildDeckImportPayload(true, analysis, 0), nil
+	}
+	if len(analysis.ReadyCards) == 0 {
+		return buildDeckImportPayload(false, analysis, 0), nil
+	}
 
-	created, err := s.createCardsForDeck(ownerUserID, deck, cards)
+	created, err := s.createCardsForDeck(ownerUserID, deck, analysis.ReadyCards)
 	if err != nil {
 		return nil, err
 	}
 
 	_ = s.auditLogs.Create(ownerUserID, "card.deck.import", "deck", map[string]any{
-		"deckId": deck.ID,
-		"count":  len(created),
+		"deckId":         deck.ID,
+		"count":          len(created),
+		"duplicateCount": len(analysis.DuplicateSamples),
+		"failedCount":    len(analysis.FailureSamples),
 	})
 
-	return &carddto.DeckImportPayload{
-		ImportedCount: len(created),
-		StatusMessage: "已导入 " + strconv.Itoa(len(created)) + " 张卡片到当前卡组。",
-	}, nil
+	return buildDeckImportPayload(false, analysis, len(created)), nil
 }
 
 func (s *Service) TodayQueue(ownerUserID string) (*carddto.ReviewQueuePayload, error) {

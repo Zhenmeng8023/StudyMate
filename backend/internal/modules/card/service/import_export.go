@@ -35,6 +35,25 @@ type portableDeckMeta struct {
 	CardCount int    `json:"cardCount"`
 }
 
+type portableImportRow struct {
+	RowNumber int
+	Raw       any
+}
+
+type deckImportCandidate struct {
+	Request     carddto.CreateCardRequest
+	RowNumber   int
+	Front       string
+	Signature   string
+}
+
+type deckImportAnalysis struct {
+	TotalCount       int
+	ReadyCards       []carddto.CreateCardRequest
+	DuplicateSamples []carddto.DeckImportIssuePayload
+	FailureSamples   []carddto.DeckImportIssuePayload
+}
+
 func buildDeckExportArtifact(deckTitle string, cards []carddto.CardPayload, format string, exportedAt time.Time) (*carddto.DeckExportPayload, error) {
 	portableCards := make([]portableDeckCard, 0, len(cards))
 	for _, card := range cards {
@@ -86,7 +105,7 @@ func buildDeckExportArtifact(deckTitle string, cards []carddto.CardPayload, form
 	}, nil
 }
 
-func parseDeckImportRequest(request carddto.ImportDeckRequest) ([]carddto.CreateCardRequest, error) {
+func analyzeDeckImportRequest(request carddto.ImportDeckRequest, existingCards []carddto.CardPayload) (*deckImportAnalysis, error) {
 	filename := strings.TrimSpace(request.Filename)
 	content := request.Content
 	if filename == "" {
@@ -96,14 +115,84 @@ func parseDeckImportRequest(request carddto.ImportDeckRequest) ([]carddto.Create
 		return nil, apperrors.New(http.StatusBadRequest, "invalid_deck_import_content", "导入文件内容不能为空")
 	}
 
+	var rows []portableImportRow
 	switch detectDeckImportKind(filename, content) {
 	case "json":
-		return parseDeckJSONCards(content)
+		parsedRows, err := parseDeckJSONRows(content)
+		if err != nil {
+			return nil, err
+		}
+		rows = parsedRows
 	case "csv":
-		return parseDeckCSVCards(content)
+		parsedRows, err := parseDeckCSVRows(content)
+		if err != nil {
+			return nil, err
+		}
+		rows = parsedRows
 	default:
 		return nil, apperrors.New(http.StatusBadRequest, "invalid_deck_import_kind", "只支持 JSON 或 CSV 卡片文件")
 	}
+
+	analysis := &deckImportAnalysis{
+		TotalCount: rowsToImportCount(rows),
+		ReadyCards: make([]carddto.CreateCardRequest, 0, len(rows)),
+	}
+	if len(rows) == 0 {
+		return analysis, nil
+	}
+
+	existingSignatures := make(map[string]struct{}, len(existingCards))
+	for _, card := range existingCards {
+		existingSignatures[buildDeckImportSignature(carddto.CreateCardRequest{
+			CardType:   card.CardType,
+			Front:      card.Front,
+			Back:       card.Back,
+			SourceType: card.SourceType,
+			SourceID:   card.SourceID,
+		})] = struct{}{}
+	}
+
+	seenImportSignatures := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		card, err := normalizePortableImportCard(row.Raw)
+		if err != nil {
+			analysis.FailureSamples = append(analysis.FailureSamples, carddto.DeckImportIssuePayload{
+				RowNumber: row.RowNumber,
+				Front:     extractPortableFrontPreview(row.Raw),
+				Message:   err.Error(),
+			})
+			continue
+		}
+
+		signature := buildDeckImportSignature(card)
+		candidate := deckImportCandidate{
+			Request:   card,
+			RowNumber: row.RowNumber,
+			Front:     summarizePortableImportFront(card.Front),
+			Signature: signature,
+		}
+		if _, exists := existingSignatures[candidate.Signature]; exists {
+			analysis.DuplicateSamples = append(analysis.DuplicateSamples, carddto.DeckImportIssuePayload{
+				RowNumber: candidate.RowNumber,
+				Front:     candidate.Front,
+				Message:   "与当前卡组中的现有卡片重复",
+			})
+			continue
+		}
+		if _, exists := seenImportSignatures[candidate.Signature]; exists {
+			analysis.DuplicateSamples = append(analysis.DuplicateSamples, carddto.DeckImportIssuePayload{
+				RowNumber: candidate.RowNumber,
+				Front:     candidate.Front,
+				Message:   "与本次导入文件中的前序卡片重复",
+			})
+			continue
+		}
+
+		seenImportSignatures[candidate.Signature] = struct{}{}
+		analysis.ReadyCards = append(analysis.ReadyCards, candidate.Request)
+	}
+
+	return analysis, nil
 }
 
 func sanitizeDeckExportFilename(title string) string {
@@ -156,7 +245,7 @@ func detectDeckImportKind(filename string, content string) string {
 	return "csv"
 }
 
-func parseDeckJSONCards(content string) ([]carddto.CreateCardRequest, error) {
+func parseDeckJSONRows(content string) ([]portableImportRow, error) {
 	var parsed any
 	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
 		return nil, apperrors.New(http.StatusBadRequest, "invalid_deck_import_json", "JSON 卡片文件格式无效")
@@ -172,18 +261,17 @@ func parseDeckJSONCards(content string) ([]carddto.CreateCardRequest, error) {
 		}
 	}
 
-	result := make([]carddto.CreateCardRequest, 0, len(rawCards))
+	result := make([]portableImportRow, 0, len(rawCards))
 	for index, raw := range rawCards {
-		card, err := normalizePortableImportCard(raw, index+1)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, card)
+		result = append(result, portableImportRow{
+			RowNumber: index + 1,
+			Raw:       raw,
+		})
 	}
 	return result, nil
 }
 
-func parseDeckCSVCards(content string) ([]carddto.CreateCardRequest, error) {
+func parseDeckCSVRows(content string) ([]portableImportRow, error) {
 	rows := parseCSVRows(content)
 	if len(rows) == 0 {
 		return nil, nil
@@ -204,33 +292,32 @@ func parseDeckCSVCards(content string) ([]carddto.CreateCardRequest, error) {
 		return nil, apperrors.New(http.StatusBadRequest, "invalid_deck_import_csv", "CSV 必须包含 front 和 back 列")
 	}
 
-	result := make([]carddto.CreateCardRequest, 0, len(rows)-1)
+	result := make([]portableImportRow, 0, len(rows)-1)
 	for index, row := range rows[1:] {
 		if isEmptyCSVRow(row) {
 			continue
 		}
-		card, err := normalizePortableImportCard(map[string]any{
-			"front":      csvValueAt(row, frontIndex),
-			"back":       csvValueAt(row, backIndex),
-			"cardType":   csvValueAt(row, cardTypeIndex),
-			"tags":       splitPortableTags(csvValueAt(row, tagsIndex)),
-			"sourceType": csvValueAt(row, sourceTypeIndex),
-			"sourceId":   csvValueAt(row, sourceIDIndex),
-		}, index+2)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, card)
+		result = append(result, portableImportRow{
+			RowNumber: index + 2,
+			Raw: map[string]any{
+				"front":      csvValueAt(row, frontIndex),
+				"back":       csvValueAt(row, backIndex),
+				"cardType":   csvValueAt(row, cardTypeIndex),
+				"tags":       splitPortableTags(csvValueAt(row, tagsIndex)),
+				"sourceType": csvValueAt(row, sourceTypeIndex),
+				"sourceId":   csvValueAt(row, sourceIDIndex),
+			},
+		})
 	}
 	return result, nil
 }
 
-func normalizePortableImportCard(raw any, rowNumber int) (carddto.CreateCardRequest, error) {
+func normalizePortableImportCard(raw any) (carddto.CreateCardRequest, error) {
 	record, _ := raw.(map[string]any)
 	front := strings.TrimSpace(stringValue(record["front"]))
 	back := strings.TrimSpace(stringValue(record["back"]))
 	if front == "" || back == "" {
-		return carddto.CreateCardRequest{}, apperrors.New(http.StatusBadRequest, "invalid_deck_import_card", "导入失败：第 "+strconv.Itoa(rowNumber)+" 行缺少 front 或 back")
+		return carddto.CreateCardRequest{}, apperrors.New(http.StatusBadRequest, "invalid_deck_import_card", "缺少 front 或 back")
 	}
 
 	cardType := defaultPortableCardType(stringValue(record["cardType"]))
@@ -258,6 +345,90 @@ func normalizePortableImportCard(raw any, rowNumber int) (carddto.CreateCardRequ
 		SourceID:       strings.TrimSpace(stringValue(record["sourceId"])),
 		SourceMetadata: sourceMetadata,
 	}, nil
+}
+
+func rowsToImportCount(rows []portableImportRow) int {
+	count := 0
+	for _, row := range rows {
+		if row.RowNumber > 0 {
+			count++
+		}
+	}
+	return count
+}
+
+func buildDeckImportSignature(card carddto.CreateCardRequest) string {
+	return strings.Join([]string{
+		normalizeCardType(card.CardType),
+		strings.TrimSpace(card.Front),
+		strings.TrimSpace(card.Back),
+		strings.TrimSpace(card.SourceType),
+		strings.TrimSpace(card.SourceID),
+	}, "\x1f")
+}
+
+func summarizePortableImportFront(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if len(trimmed) <= 40 {
+		return trimmed
+	}
+	return trimmed[:40] + "..."
+}
+
+func extractPortableFrontPreview(raw any) string {
+	record, _ := raw.(map[string]any)
+	return summarizePortableImportFront(stringValue(record["front"]))
+}
+
+func buildDeckImportPayload(preview bool, analysis *deckImportAnalysis, importedCount int) *carddto.DeckImportPayload {
+	return &carddto.DeckImportPayload{
+		Preview:          preview,
+		TotalCount:       analysis.TotalCount,
+		ReadyCount:       len(analysis.ReadyCards),
+		ImportedCount:    importedCount,
+		DuplicateCount:   len(analysis.DuplicateSamples),
+		FailedCount:      len(analysis.FailureSamples),
+		DuplicateSamples: analysis.DuplicateSamples,
+		FailureSamples:   analysis.FailureSamples,
+		StatusMessage:    buildDeckImportStatusMessage(preview, len(analysis.ReadyCards), importedCount, len(analysis.DuplicateSamples), len(analysis.FailureSamples)),
+	}
+}
+
+func buildDeckImportStatusMessage(preview bool, readyCount int, importedCount int, duplicateCount int, failedCount int) string {
+	if preview {
+		if readyCount == 0 {
+			if duplicateCount == 0 && failedCount == 0 {
+				return "预检完成：导入文件中没有可用卡片。"
+			}
+			return "预检完成：没有可导入卡片，" + buildDeckImportSkipSummary(duplicateCount, failedCount) + "。"
+		}
+		if duplicateCount == 0 && failedCount == 0 {
+			return "预检完成：可导入 " + strconv.Itoa(readyCount) + " 张卡片。"
+		}
+		return "预检完成：可导入 " + strconv.Itoa(readyCount) + " 张，已发现 " + buildDeckImportSkipSummary(duplicateCount, failedCount) + "。"
+	}
+
+	if importedCount == 0 {
+		if duplicateCount == 0 && failedCount == 0 {
+			return "没有导入新卡片。"
+		}
+		return "没有导入新卡片，已跳过 " + buildDeckImportSkipSummary(duplicateCount, failedCount) + "。"
+	}
+	if duplicateCount == 0 && failedCount == 0 {
+		return "已导入 " + strconv.Itoa(importedCount) + " 张卡片到当前卡组。"
+	}
+	return "已导入 " + strconv.Itoa(importedCount) + " 张卡片到当前卡组，已跳过 " + buildDeckImportSkipSummary(duplicateCount, failedCount) + "。"
+}
+
+func buildDeckImportSkipSummary(duplicateCount int, failedCount int) string {
+	parts := make([]string, 0, 2)
+	if duplicateCount > 0 {
+		parts = append(parts, strconv.Itoa(duplicateCount)+" 张重复卡片")
+	}
+	if failedCount > 0 {
+		parts = append(parts, strconv.Itoa(failedCount)+" 行无效内容")
+	}
+	return strings.Join(parts, "和")
 }
 
 func defaultPortableCardType(value string) string {

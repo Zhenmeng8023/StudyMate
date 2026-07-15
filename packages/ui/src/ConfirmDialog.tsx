@@ -45,7 +45,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
             {props.cancelLabel ?? "取消"}
           </Button>
           <Button
-            danger={props.confirmTone === "danger"}
+            danger={props.confirmTone === "danger" ? true : undefined}
             disabled={props.confirming || props.confirmDisabled}
             onClick={props.onConfirm}
             variant="primary"

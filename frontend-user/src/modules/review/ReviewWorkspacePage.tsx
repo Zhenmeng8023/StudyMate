@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   AuthSession,
   CardPayload,
+  DeckImportPayload,
   DeckPayload,
   ReviewQueueItemPayload,
   createDeck,
@@ -17,7 +18,7 @@ import {
   undoReviewCard,
   updateCardStatus
 } from "../../api/client";
-import { DataState, Select } from "../../design-system/primitives";
+import { ConfirmDialog, DataState, Select } from "../../design-system/primitives";
 import { buildReviewSourceBacklink, formatReviewSourceReference } from "./reviewSourceBacklinks";
 
 type ReviewWorkspacePageProps = {
@@ -38,6 +39,13 @@ type UndoableReviewState = {
   item: ReviewQueueItemPayload;
   previousDueCount: number;
   previousCompletedCount: number;
+};
+
+type PendingDeckImportState = {
+  content: string;
+  deckId: string;
+  filename: string;
+  preview: DeckImportPayload;
 };
 
 type ManagedCardStatusFilter = "all" | "active" | "suspended" | "buried";
@@ -162,6 +170,13 @@ function downloadArtifact(artifact: { filename: string; mimeType: string; conten
   URL.revokeObjectURL(url);
 }
 
+function buildDeckImportPreviewTitle(preview: DeckImportPayload) {
+  if (preview.readyCount <= 0) {
+    return "没有可导入的卡片";
+  }
+  return `确认导入 ${preview.readyCount} 张卡片？`;
+}
+
 function ReviewSourceSummary(props: { card: Pick<CardPayload, "sourceType" | "sourceId">; compact?: boolean }) {
   const sourceReference = formatReviewSourceReference(props.card);
   if (!sourceReference) {
@@ -202,6 +217,8 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [message, setMessage] = useState("");
   const [workspaceErrorMessage, setWorkspaceErrorMessage] = useState("");
   const [undoableReview, setUndoableReview] = useState<UndoableReviewState | null>(null);
+  const [pendingImport, setPendingImport] = useState<PendingDeckImportState | null>(null);
+  const [importConfirmError, setImportConfirmError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [managementOpen, setManagementOpen] = useState(false);
@@ -674,15 +691,58 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
 
     setBusy(true);
     setMessage("");
+    setImportConfirmError("");
+    setPendingImport(null);
     try {
+      const content = await file.text();
       const result = await importDeckCards(props.session, selectedDeckId, {
         filename: file.name,
-        content: await file.text()
+        content,
+        previewOnly: true
       });
-      await Promise.all([refreshCards(selectedDeckId), refreshAll()]);
       setMessage(result.statusMessage);
+      if (result.readyCount <= 0) {
+        return;
+      }
+      setPendingImport({
+        deckId: selectedDeckId,
+        filename: file.name,
+        content,
+        preview: result
+      });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "导入卡片失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleCancelImportPreview() {
+    if (busy) {
+      return;
+    }
+    setImportConfirmError("");
+    setPendingImport(null);
+  }
+
+  async function handleConfirmImportPreview() {
+    if (!pendingImport) {
+      return;
+    }
+
+    setBusy(true);
+    setImportConfirmError("");
+    try {
+      const result = await importDeckCards(props.session, pendingImport.deckId, {
+        filename: pendingImport.filename,
+        content: pendingImport.content,
+        previewOnly: false
+      });
+      await Promise.all([refreshCards(pendingImport.deckId), refreshAll()]);
+      setPendingImport(null);
+      setMessage(result.statusMessage);
+    } catch (error) {
+      setImportConfirmError(error instanceof Error ? error.message : "导入卡片失败");
     } finally {
       setBusy(false);
     }
@@ -789,7 +849,8 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   }
 
   return (
-    <section className={managementOpen ? "review-focus review-focus--management-open" : "review-focus"}>
+    <>
+      <section className={managementOpen ? "review-focus review-focus--management-open" : "review-focus"}>
       <header className="review-focus-commandbar">
         <div className="review-focus-commandbar__leading">
           <span className="review-focus-commandbar__eyebrow">今日复习</span>
@@ -1183,12 +1244,25 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         </aside>
       </div>
 
-      <footer className="review-focus-footer">
-        <span>快捷键：空格 / Enter 翻面；S 跳过当前卡片；P 暂停当前卡片；B 埋藏当前卡片；答案显示后按 1–4 评分。</span>
-        <button className="ghost-button" onClick={() => openManagement("decks")} type="button">
-          <ChevronLeft size={15} /> 管理卡组 <ChevronRight size={15} />
-        </button>
-      </footer>
-    </section>
+        <footer className="review-focus-footer">
+          <span>快捷键：空格 / Enter 翻面；S 跳过当前卡片；P 暂停当前卡片；B 埋藏当前卡片；答案显示后按 1–4 评分。</span>
+          <button className="ghost-button" onClick={() => openManagement("decks")} type="button">
+            <ChevronLeft size={15} /> 管理卡组 <ChevronRight size={15} />
+          </button>
+        </footer>
+      </section>
+      <ConfirmDialog
+        confirmDisabled={busy}
+        confirmLabel="确认导入"
+        confirming={busy}
+        confirmingLabel="正在导入..."
+        description={pendingImport?.preview.statusMessage}
+        errorMessage={importConfirmError || undefined}
+        isOpen={Boolean(pendingImport)}
+        onCancel={handleCancelImportPreview}
+        onConfirm={() => void handleConfirmImportPreview()}
+        title={pendingImport ? buildDeckImportPreviewTitle(pendingImport.preview) : "确认导入卡片？"}
+      />
+    </>
   );
 }

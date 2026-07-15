@@ -836,7 +836,7 @@ describe("ReviewWorkspacePage", () => {
       );
     });
     expect(await screen.findByText("确认导入 1 张卡片？")).toBeInTheDocument();
-    expect(screen.getByText("预检完成：可导入 1 张，已发现 1 张重复、1 行失败。")).toBeInTheDocument();
+    expect(screen.getAllByText("预检完成：可导入 1 张，已发现 1 张重复、1 行失败。").length).toBeGreaterThanOrEqual(1);
 
     await user.click(screen.getByRole("button", { name: "确认导入" }));
 
