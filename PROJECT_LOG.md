@@ -1,3 +1,26 @@
+## 2026-07-15 10:45:54 +08:00 | v1.1.0-alpha.267 | 推进 ANKI-040 批量加标签与去标签
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把全局主路径做成能用版，再逐步细化”方向推进 `ANKI-040`，这轮不切去新的 Note/Card 模型或更重的后端批量协议，而是把卡片浏览器里已经明显缺口的标签管理先补成可用闭环。
+- 目标是让复习工作区不只支持按标签筛选和创建时写标签，还能在同一张卡片浏览器里直接对选中卡片批量加标签、去标签，减少必须逐张重建卡片的阻力。
+### 实际变更
+
+- 先用 RED/GREEN 扩展 `backend/internal/modules/card/handler/handler_test.go`、`backend/internal/modules/card/service/status_test.go`、`frontend-user/src/api/reviewAi.test.ts` 与 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，锁定“独立标签更新接口 + 批量加标签/去标签交互”这条缺口。
+- 后端更新 `backend/internal/modules/card/dto/card.go`、`backend/internal/modules/card/handler/handler.go`、`backend/internal/modules/card/router/router.go` 与 `backend/internal/modules/card/service/service.go`，新增 `PATCH /api/v1/cards/:id/tags`，让标签更新成为 `card` 域内的独立动作，并复用现有归属校验、标签去重归一化和审计日志。
+- 前端更新 `frontend-user/src/api/review.ts` 与 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，把卡片浏览器接上“批量添加标签 / 批量移除标签”输入与按钮；动作会按选中卡片逐条调用新接口，并在本地同步标签结果、焦点和反馈文案。
+- 更新 `frontend-user/src/styles/studio-workspaces.css`，补卡片浏览器批量标签工具条的最小布局，让新增控件继续贴合现有复习工作区。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-040` 当前边界推进到“批量加标签/去标签已可用”这一层。
+### 验证结果
+
+- RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- GREEN：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
+### 后续影响
+
+- `ANKI-040` 现在不只是在卡片创建时能写标签、在浏览器里能看标签，而是已经开始具备最小可用的标签批量管理能力，复习工作区更接近真实可用的卡片浏览器。
+- 这一轮仍然只补了“逐卡 PATCH + 前端批量编排”这一层：还没有批量失败明细、确认弹层、跨牌组操作视图或后端侧 add/remove diff 语义；如果继续推进 `ANKI-040`，更适合优先补跨牌组分页/统计与批量删除、移动牌组，而不是立刻引入更重的标签系统。
+
 ## 2026-07-15 10:35:59 +08:00 | v1.1.0-alpha.266 | 推进 ANKI-070 最近一次导入结果面板
 ### 任务内容
 

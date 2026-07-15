@@ -26,6 +26,7 @@ type cardService interface {
 	ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPayload, error)
 	ReviewCard(ownerUserID string, cardID string, request carddto.ReviewCardRequest) (*carddto.ReviewResultPayload, error)
 	UpdateCardStatus(ownerUserID string, cardID string, request carddto.UpdateCardStatusRequest) (*carddto.CardPayload, error)
+	UpdateCardTags(ownerUserID string, cardID string, request carddto.UpdateCardTagsRequest) (*carddto.CardPayload, error)
 	UndoReview(ownerUserID string, cardID string, request carddto.UndoReviewRequest) (*carddto.UndoReviewResultPayload, error)
 }
 
@@ -185,6 +186,22 @@ func (h *Handler) UpdateCardStatus(ctx *gin.Context) {
 	}
 
 	result, err := h.service.UpdateCardStatus(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), request)
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}
+
+func (h *Handler) UpdateCardTags(ctx *gin.Context) {
+	var request carddto.UpdateCardTagsRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	result, err := h.service.UpdateCardTags(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), request)
 	if err != nil {
 		response.Error(ctx, err)
 		return

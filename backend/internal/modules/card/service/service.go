@@ -361,6 +361,33 @@ func (s *Service) UpdateCardStatus(ownerUserID string, cardID string, request ca
 	return &payload, nil
 }
 
+func (s *Service) UpdateCardTags(ownerUserID string, cardID string, request carddto.UpdateCardTagsRequest) (*carddto.CardPayload, error) {
+	card, err := s.requireOwnerCard(ownerUserID, cardID)
+	if err != nil {
+		return nil, err
+	}
+
+	tags := normalizeCardTags(request.Tags)
+	if sameNormalizedTags(cardrepo.DecodeTags(card.Tags), tags) {
+		payload := cardrepo.BuildCardPayload(*card)
+		return &payload, nil
+	}
+
+	card.Tags = cardrepo.EncodeTags(tags)
+	if err := s.repository.SaveCard(card); err != nil {
+		return nil, apperrors.Internal("更新卡片标签失败")
+	}
+
+	_ = s.auditLogs.Create(ownerUserID, "card.tags.update", "card", map[string]any{
+		"cardId": card.ID,
+		"tags":   tags,
+		"count":  len(tags),
+	})
+
+	payload := cardrepo.BuildCardPayload(*card)
+	return &payload, nil
+}
+
 func (s *Service) UndoReview(ownerUserID string, cardID string, request carddto.UndoReviewRequest) (*carddto.UndoReviewResultPayload, error) {
 	card, err := s.requireOwnerCard(ownerUserID, cardID)
 	if err != nil {
@@ -661,4 +688,16 @@ func normalizeCardTags(values []string) []string {
 	}
 
 	return normalized
+}
+
+func sameNormalizedTags(left []string, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
 }

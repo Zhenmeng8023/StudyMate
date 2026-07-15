@@ -153,6 +153,21 @@ func (s *fakeCardService) UpdateCardStatus(ownerUserID string, cardID string, re
 	}, nil
 }
 
+func (s *fakeCardService) UpdateCardTags(ownerUserID string, cardID string, request carddto.UpdateCardTagsRequest) (*carddto.CardPayload, error) {
+	s.ownerID = ownerUserID
+	s.cardID = cardID
+	s.tagReq = request
+	return &carddto.CardPayload{
+		ID:          cardID,
+		DeckID:      "deck-1",
+		OwnerUserID: ownerUserID,
+		Front:       "什么是图谱？",
+		Back:        "节点和关系。",
+		Tags:        request.Tags,
+		Status:      "active",
+	}, nil
+}
+
 func (s *fakeCardService) UndoReview(ownerUserID string, cardID string, request carddto.UndoReviewRequest) (*carddto.UndoReviewResultPayload, error) {
 	s.ownerID = ownerUserID
 	s.cardID = cardID
@@ -230,7 +245,7 @@ func TestReviewFeedbackReturnsWeakCards(t *testing.T) {
 		t.Fatalf("expected 200, got %d", recorder.Code)
 	}
 	var payload struct {
-		Success bool                           `json:"success"`
+		Success bool                          `json:"success"`
 		Data    carddto.ReviewFeedbackPayload `json:"data"`
 	}
 	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {

@@ -68,7 +68,7 @@
 | ANKI-010 | TODO | Note / Card 分离与模板生成 | ANKI-000 | backend card models/dto/service、frontend review types | 支持一条 CardNote 通过模板生成一张或多张 Card；首批模板覆盖 Basic、Basic Reverse、Cloze；旧 `front/back` 卡片有兼容读取或迁移策略。 |
 | ANKI-020 | TODO | Anki 式调度与队列模型 | ANKI-000 | card schedule service/repository/review API | 支持 new / learning / review / relearning / suspended / buried 状态、学习步进、每日新卡/复习上限、重新学习路径；继续保留 `again / hard / good / easy` 评分语义。 |
 | ANKI-030 | IN_PROGRESS | Anki 式复习会话体验 | ANKI-010, ANKI-020 | `frontend-user/src/modules/review/`、review API | 复习会话已支持翻面、1-4 评分、来源卡片深链定位、复习页内对笔记/资料/卡片等可直达来源的回看入口、下一次间隔预估、键盘路径、“跳过当前卡片”并将其顺延到当前内存队列末尾，以及“暂停当前卡片”“埋藏当前卡片”从今日活跃队列移除、并可在管理面板恢复；本轮已补“撤销上一次评分”，可恢复评分前 schedule 并把卡片放回今日队列；后续继续确保失败状态不丢当前会话上下文。 |
-| ANKI-040 | IN_PROGRESS | 卡片浏览器与批量管理 | ANKI-010, ANKI-020 | review/card browser UI + backend list/filter APIs | 复习管理面板已支持卡片浏览器服务端关键词/状态/来源/到期时间/标签筛选，卡片创建链路也开始保留标签并在浏览器中展示；批量暂停、埋藏、恢复选中卡片仍会同步今日队列计数与反馈；后续继续补跨牌组分页、批量移动牌组/加标签/删除与审计追溯。 |
+| ANKI-040 | IN_PROGRESS | 卡片浏览器与批量管理 | ANKI-010, ANKI-020 | review/card browser UI + backend list/filter APIs | 复习管理面板已支持卡片浏览器服务端关键词/状态/来源/到期时间/标签筛选，卡片创建链路也开始保留标签并在浏览器中展示；批量暂停、埋藏、恢复、加标签、移除标签选中卡片都已可用，其中标签更新通过后端单卡动作接口承接；后续继续补跨牌组分页、批量移动牌组/删除与审计追溯。 |
 | ANKI-050 | IN_PROGRESS | 来源驱动制卡闭环 | ANKI-010, WB-030 | reader/note/graph/ai/card | 批注来源卡片现已补齐 `sourceMetadata` 通路，图谱节点转卡也开始保留 reader/PDF 锚点上下文，AI 草稿确认页与 AI 任务历史里的来源回跳也已接入同一套 reader 精确定位规则，能在草稿确认、AI 工作台深链定位、卡片创建与复习队列中回跳原批注、PDF 页或指定 AI 草稿/任务；后续继续补更通用的图谱节点与 SourceLink 抽象。 |
 | ANKI-060 | IN_PROGRESS | 复习反馈回写学习图谱 | ANKI-020, ANKI-050 | graph/card/review/dashboard | 当前已起步补上 `GET /review/feedback` 摘要接口，并让 dashboard 直接展示薄弱卡片、学习中卡片与到期卡片数量，作为学习反馈入口；后续继续把复习结果回写到图谱节点熟练度、笔记学习状态和更完整的工作台反馈。 |
 | ANKI-070 | IN_PROGRESS | 闪卡导入导出与 Anki 兼容预研 | ANKI-010 | card import/export docs/tools | 复习工作区现已支持当前卡组的 JSON / CSV 导入导出入口，后端也已起步提供 `GET /decks/:id/export` 与 `POST /decks/:id/import` 统一承接可移植卡片文件；当前已补上服务端导入预检、重复卡片检测、逐条失败摘要、前端确认弹层里的重复/失败明细展示，以及复习工作区的“最近一次导入结果”持久面板，后续继续评估 `.apkg` 兼容与更细粒度的修复建议。 |
@@ -2679,3 +2679,40 @@
   - `sourceType` 选项目前仍由当前结果集派生，后续如果要做更稳定的筛选体验，更适合继续补固定 facet/统计接口，而不是再把更多筛选语义留在页面层猜测。
 - 下一建议任务：
   - `ANKI-040` 继续补标签筛选与批量动作的后端承接
+### 执行记录：ANKI-040（批量加标签与去标签）
+
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / `test: 为批量标签管理补 RED 用例`
+- 实际变更：
+  - 更新 `backend/internal/modules/card/dto/card.go`
+  - 更新 `backend/internal/modules/card/handler/handler.go`
+  - 更新 `backend/internal/modules/card/handler/handler_test.go`
+  - 更新 `backend/internal/modules/card/router/router.go`
+  - 更新 `backend/internal/modules/card/service/service.go`
+  - 更新 `backend/internal/modules/card/service/status_test.go`
+  - 更新 `frontend-user/src/api/review.ts`
+  - 更新 `frontend-user/src/api/reviewAi.test.ts`
+  - 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`
+  - 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`
+  - 更新 `frontend-user/src/styles/studio-workspaces.css`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 后端新增 `PATCH /cards/:id/tags`，允许在不改卡片正文和状态的前提下独立更新标签，并沿用 `card` 域内的归属校验、标签去重归一化和审计日志链路。
+  - 复习工作区卡片浏览器新增“批量添加标签 / 批量移除标签”入口，会按选中卡片逐条调用标签更新接口，并在前端本地同步标签结果、焦点和反馈文案。
+  - 批量标签动作保持最小安全边界：队列计数、来源回跳、现有状态管理与导入导出链路都不退化，也没有额外引入后端批量写接口。
+- 已执行验证：
+  - RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+  - RED：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
+  - GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+  - GREEN：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
+- 未执行验证及原因：
+  - 尚未运行更大范围 `go test ./internal/modules/card/...`、`npm --workspace frontend-user run typecheck`、`npm run build:user` 与文档校验：将在本工作包收尾阶段统一执行，避免在功能未转绿前重复消耗验证时间。
+- 兼容性/迁移说明：
+  - 本工作包没有替换现有 `create card`、`list cards` 或 `status` 路由，只是新增了独立 `tags` 更新入口；旧调用方不需要迁移。
+  - 标签更新接口接受完整标签数组，前端批量“加/去标签”是在客户端算出下一版标签后逐卡提交，不依赖新的批量写入协议。
+- 已知风险：
+  - 当前批量标签仍是“逐卡 PATCH”的最小原型，没有批量失败明细、确认弹层或跨牌组统一操作视图。
+  - 标签更新目前只支持整数组替换，不支持后端侧的 add/remove diff 语义；如果后续要补审计粒度或高并发保护，更适合继续在 `card` 域内升级动作模型。
+- 下一建议任务：
+  - `ANKI-040` 继续补跨牌组分页/统计与批量删除、移动牌组的后端承接

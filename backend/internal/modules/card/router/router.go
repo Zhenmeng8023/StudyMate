@@ -18,4 +18,5 @@ func RegisterRoutes(group *gin.RouterGroup, handler *cardhandler.Handler) {
 	group.POST("/cards/:id/review", handler.ReviewCard)
 	group.POST("/cards/:id/review/undo", handler.UndoReview)
 	group.PATCH("/cards/:id/status", handler.UpdateCardStatus)
+	group.PATCH("/cards/:id/tags", handler.UpdateCardTags)
 }

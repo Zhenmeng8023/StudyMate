@@ -48,6 +48,10 @@ type UpdateCardStatusRequest struct {
 	Status string `json:"status" binding:"required"`
 }
 
+type UpdateCardTagsRequest struct {
+	Tags []string `json:"tags"`
+}
+
 type UndoReviewRequest struct {
 	ReviewID         string              `json:"reviewId" binding:"required"`
 	PreviousSchedule CardSchedulePayload `json:"previousSchedule" binding:"required"`

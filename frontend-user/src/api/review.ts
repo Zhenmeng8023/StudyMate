@@ -218,3 +218,17 @@ export async function updateCardStatus(
     body: input
   });
 }
+
+export async function updateCardTags(
+  session: AuthSession,
+  cardId: string,
+  input: {
+    tags: string[];
+  }
+) {
+  return request<CardPayload>(`/cards/${cardId}/tags`, {
+    method: "PATCH",
+    headers: withAuth(session),
+    body: input
+  });
+}

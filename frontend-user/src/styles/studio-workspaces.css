@@ -869,6 +869,7 @@
 
 .review-card-browser__summary,
 .review-card-browser__batch-actions,
+.review-card-browser__tag-actions,
 .review-managed-card__head,
 .review-managed-card__selection,
 .review-managed-card__title {
@@ -879,12 +880,14 @@
 
 .review-card-browser__summary,
 .review-card-browser__batch-actions,
+.review-card-browser__tag-actions,
 .review-managed-card__head {
   justify-content: space-between;
 }
 
 .review-card-browser__summary,
-.review-card-browser__batch-actions {
+.review-card-browser__batch-actions,
+.review-card-browser__tag-actions {
   flex-wrap: wrap;
 }
 
@@ -898,6 +901,14 @@
   justify-content: flex-start;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.review-card-browser__tag-actions {
+  gap: 12px;
+}
+
+.review-card-browser__tag-actions .review-card-browser__field {
+  flex: 1 1 220px;
 }
 
 .review-card-browser__toggle-all {
@@ -1190,6 +1201,7 @@
 
   .review-card-browser__summary,
   .review-card-browser__batch-actions,
+  .review-card-browser__tag-actions,
   .review-managed-card__head,
   .review-managed-card__title,
   .review-import-result-card__header {
@@ -1197,7 +1209,8 @@
     flex-direction: column;
   }
 
-  .review-card-browser__batch-buttons {
+  .review-card-browser__batch-buttons,
+  .review-card-browser__tag-actions .secondary-button {
     width: 100%;
   }
 }

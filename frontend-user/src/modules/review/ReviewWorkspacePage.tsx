@@ -16,6 +16,7 @@ import {
   listDecks,
   reviewCard,
   undoReviewCard,
+  updateCardTags,
   updateCardStatus
 } from "../../api/client";
 import { ConfirmDialog, DataState, Select } from "../../design-system/primitives";
@@ -149,6 +150,26 @@ function parseCardTags(value: string) {
         .filter(Boolean)
     )
   );
+}
+
+function mergeCardTags(existing: string[] | undefined, incoming: string[]) {
+  return Array.from(new Set([...(existing ?? []), ...incoming]));
+}
+
+function removeCardTags(existing: string[] | undefined, removing: string[]) {
+  if (!existing?.length) {
+    return [];
+  }
+  const removingSet = new Set(removing);
+  return existing.filter((tag) => !removingSet.has(tag));
+}
+
+function sameCardTags(left: string[] | undefined, right: string[]) {
+  const normalizedLeft = left ?? [];
+  if (normalizedLeft.length !== right.length) {
+    return false;
+  }
+  return normalizedLeft.every((tag, index) => tag === right[index]);
 }
 
 function prioritizeRequestedQueueItem(items: ReviewQueueItemPayload[], cardId: string) {
@@ -306,6 +327,8 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [cardSourceFilter, setCardSourceFilter] = useState<ManagedCardSourceFilter>("all");
   const [cardDueFilter, setCardDueFilter] = useState<ManagedCardDueFilter>("all");
   const [cardTagFilter, setCardTagFilter] = useState("");
+  const [batchAddTagsInput, setBatchAddTagsInput] = useState("");
+  const [batchRemoveTagsInput, setBatchRemoveTagsInput] = useState("");
   const [selectedManagedCardIds, setSelectedManagedCardIds] = useState<string[]>([]);
   const [deckForm, setDeckForm] = useState({
     title: "",
@@ -929,6 +952,102 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     }
   }
 
+  async function handleBatchAddManagedCardTags() {
+    if (!selectedManagedCards.length) {
+      return;
+    }
+
+    const tagsToAdd = parseCardTags(batchAddTagsInput);
+    if (!tagsToAdd.length) {
+      setMessage("请至少输入一个要添加的标签。");
+      return;
+    }
+
+    const updates = selectedManagedCards
+      .map((card) => ({
+        card,
+        tags: mergeCardTags(card.tags, tagsToAdd)
+      }))
+      .filter(({ card, tags }) => !sameCardTags(card.tags, tags));
+    if (!updates.length) {
+      setMessage("选中的卡片已经包含这些标签。");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+    try {
+      await Promise.all(
+        updates.map(({ card, tags }) => updateCardTags(props.session, card.id, { tags }))
+      );
+
+      const updatedTagsById = new Map(updates.map(({ card, tags }) => [card.id, tags]));
+      setCards((items) =>
+        items.map((card) =>
+          updatedTagsById.has(card.id)
+            ? { ...card, tags: updatedTagsById.get(card.id) }
+            : card
+        )
+      );
+      setFocusedManagedCardId(updates[0]?.card.id ?? "");
+      setSelectedManagedCardIds([]);
+      setBatchAddTagsInput("");
+      setMessage(`已为 ${updates.length} 张卡片添加标签。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "批量添加标签失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleBatchRemoveManagedCardTags() {
+    if (!selectedManagedCards.length) {
+      return;
+    }
+
+    const tagsToRemove = parseCardTags(batchRemoveTagsInput);
+    if (!tagsToRemove.length) {
+      setMessage("请至少输入一个要移除的标签。");
+      return;
+    }
+
+    const updates = selectedManagedCards
+      .map((card) => ({
+        card,
+        tags: removeCardTags(card.tags, tagsToRemove)
+      }))
+      .filter(({ card, tags }) => !sameCardTags(card.tags, tags));
+    if (!updates.length) {
+      setMessage("选中的卡片里没有这些标签。");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+    try {
+      await Promise.all(
+        updates.map(({ card, tags }) => updateCardTags(props.session, card.id, { tags }))
+      );
+
+      const updatedTagsById = new Map(updates.map(({ card, tags }) => [card.id, tags]));
+      setCards((items) =>
+        items.map((card) =>
+          updatedTagsById.has(card.id)
+            ? { ...card, tags: updatedTagsById.get(card.id) }
+            : card
+        )
+      );
+      setFocusedManagedCardId(updates[0]?.card.id ?? "");
+      setSelectedManagedCardIds([]);
+      setBatchRemoveTagsInput("");
+      setMessage(`已从 ${updates.length} 张卡片移除标签。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "批量移除标签失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function openManagement(tab: ReviewManagementTab) {
     setManagementTab(tab);
     setManagementOpen(true);
@@ -1219,6 +1338,44 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                           批量恢复选中卡片
                         </button>
                       </div>
+                    </div>
+                    <div className="review-card-browser__tag-actions">
+                      <label className="review-card-browser__field">
+                        <span>批量添加标签</span>
+                        <input
+                          aria-label="批量添加标签"
+                          disabled={busy || !selectedManagedCards.length}
+                          onChange={(event) => setBatchAddTagsInput(event.target.value)}
+                          placeholder="例如：core, exam"
+                          value={batchAddTagsInput}
+                        />
+                      </label>
+                      <button
+                        className="secondary-button"
+                        disabled={busy || !selectedManagedCards.length || !batchAddTagsInput.trim()}
+                        onClick={() => void handleBatchAddManagedCardTags()}
+                        type="button"
+                      >
+                        为选中卡片添加标签
+                      </button>
+                      <label className="review-card-browser__field">
+                        <span>批量移除标签</span>
+                        <input
+                          aria-label="批量移除标签"
+                          disabled={busy || !selectedManagedCards.length}
+                          onChange={(event) => setBatchRemoveTagsInput(event.target.value)}
+                          placeholder="例如：graph"
+                          value={batchRemoveTagsInput}
+                        />
+                      </label>
+                      <button
+                        className="secondary-button"
+                        disabled={busy || !selectedManagedCards.length || !batchRemoveTagsInput.trim()}
+                        onClick={() => void handleBatchRemoveManagedCardTags()}
+                        type="button"
+                      >
+                        从选中卡片移除标签
+                      </button>
                     </div>
                     <div className="review-card-browser__import-export">
                       <button className="secondary-button" disabled={busy || !selectedDeckId} onClick={() => void handleExportCards("json")} type="button">
