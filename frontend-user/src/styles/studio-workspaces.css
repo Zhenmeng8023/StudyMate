@@ -928,6 +928,49 @@
   max-width: 220px;
 }
 
+.review-import-preview-dialog {
+  width: min(100%, 520px);
+}
+
+.review-import-preview {
+  display: grid;
+  gap: 14px;
+}
+
+.review-import-preview__summary {
+  margin: 0;
+}
+
+.review-import-preview__section {
+  display: grid;
+  gap: 8px;
+}
+
+.review-import-preview__section h3 {
+  margin: 0;
+  color: var(--text-0);
+  font-size: 14px;
+}
+
+.review-import-preview__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.review-import-preview__item-label {
+  display: block;
+  color: var(--text-0);
+  font-weight: 600;
+}
+
+.review-import-preview__item-message {
+  display: block;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
 .review-managed-card__selection {
   color: var(--text-1);
   font-size: 12px;

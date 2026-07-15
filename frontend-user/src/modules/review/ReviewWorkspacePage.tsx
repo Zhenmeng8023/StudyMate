@@ -48,6 +48,14 @@ type PendingDeckImportState = {
   preview: DeckImportPayload;
 };
 
+type DeckImportPreviewDetail = {
+  heading: string;
+  items: Array<{
+    label: string;
+    message?: string;
+  }>;
+};
+
 type ManagedCardStatusFilter = "all" | "active" | "suspended" | "buried";
 type ManagedCardSourceFilter = "all" | "none" | string;
 type ManagedCardDueFilter = "all" | "due" | "upcoming";
@@ -175,6 +183,60 @@ function buildDeckImportPreviewTitle(preview: DeckImportPayload) {
     return "没有可导入的卡片";
   }
   return `确认导入 ${preview.readyCount} 张卡片？`;
+}
+
+function formatDeckImportIssueLabel(rowNumber: number, front?: string) {
+  const normalizedFront = front?.trim();
+  return `\u7b2c ${rowNumber} \u884c \u00b7 ${normalizedFront || "\u672a\u547d\u540d\u5361\u7247"}`;
+}
+
+function buildDeckImportPreviewDetails(preview: DeckImportPayload): DeckImportPreviewDetail[] {
+  const details: DeckImportPreviewDetail[] = [];
+
+  if (preview.duplicateSamples?.length) {
+    details.push({
+      heading: `\u91cd\u590d\u5361\u7247 ${preview.duplicateCount} \u6761`,
+      items: preview.duplicateSamples.map((sample) => ({
+        label: formatDeckImportIssueLabel(sample.rowNumber, sample.front),
+        message: sample.message
+      }))
+    });
+  }
+
+  if (preview.failureSamples?.length) {
+    details.push({
+      heading: `\u5931\u8d25\u8bb0\u5f55 ${preview.failedCount} \u6761`,
+      items: preview.failureSamples.map((sample) => ({
+        label: formatDeckImportIssueLabel(sample.rowNumber, sample.front),
+        message: sample.message
+      }))
+    });
+  }
+
+  return details;
+}
+
+function buildDeckImportPreviewDescription(preview: DeckImportPayload) {
+  const details = buildDeckImportPreviewDetails(preview);
+
+  return (
+    <div className="review-import-preview">
+      <p className="review-import-preview__summary">{preview.statusMessage}</p>
+      {details.map((detail) => (
+        <section className="review-import-preview__section" key={detail.heading}>
+          <h3>{detail.heading}</h3>
+          <ul className="review-import-preview__list">
+            {detail.items.map((item) => (
+              <li key={`${detail.heading}-${item.label}`}>
+                <span className="review-import-preview__item-label">{item.label}</span>
+                {item.message ? <span className="review-import-preview__item-message">{item.message}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
 }
 
 function ReviewSourceSummary(props: { card: Pick<CardPayload, "sourceType" | "sourceId">; compact?: boolean }) {
@@ -700,8 +762,8 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         content,
         previewOnly: true
       });
-      setMessage(result.statusMessage);
       if (result.readyCount <= 0) {
+        setMessage(result.statusMessage);
         return;
       }
       setPendingImport({
@@ -1252,11 +1314,12 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         </footer>
       </section>
       <ConfirmDialog
+        className="review-import-preview-dialog"
         confirmDisabled={busy}
         confirmLabel="确认导入"
         confirming={busy}
         confirmingLabel="正在导入..."
-        description={pendingImport?.preview.statusMessage}
+        description={pendingImport ? buildDeckImportPreviewDescription(pendingImport.preview) : undefined}
         errorMessage={importConfirmError || undefined}
         isOpen={Boolean(pendingImport)}
         onCancel={handleCancelImportPreview}

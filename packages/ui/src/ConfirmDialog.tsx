@@ -9,7 +9,7 @@ export type ConfirmDialogProps = {
   confirmTone?: "default" | "danger";
   confirming?: boolean;
   confirmingLabel?: string;
-  description?: string;
+  description?: React.ReactNode;
   errorMessage?: string;
   isOpen: boolean;
   onCancel: () => void;
@@ -25,11 +25,12 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
   const confirmText = props.confirming ? props.confirmingLabel ?? props.confirmLabel ?? "确认中..." : props.confirmLabel ?? "确认";
   const titleId = "confirm-dialog-title";
   const descriptionId = "confirm-dialog-description";
+  const hasDescription = props.description !== undefined && props.description !== null;
 
   return (
     <div className="confirm-dialog-backdrop">
       <section
-        aria-describedby={props.description || props.errorMessage ? descriptionId : undefined}
+        aria-describedby={hasDescription || props.errorMessage ? descriptionId : undefined}
         aria-labelledby={titleId}
         aria-modal="true"
         className={["confirm-dialog", props.className ?? ""].filter(Boolean).join(" ")}
@@ -37,7 +38,13 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
       >
         <div className="confirm-dialog__body">
           <h2 id={titleId}>{props.title}</h2>
-          {props.description ? <p id={descriptionId}>{props.description}</p> : props.errorMessage ? <p id={descriptionId} /> : null}
+          {hasDescription ? (
+            <div className="confirm-dialog__description" id={descriptionId}>
+              {props.description}
+            </div>
+          ) : props.errorMessage ? (
+            <div className="confirm-dialog__description" id={descriptionId} />
+          ) : null}
           {props.errorMessage ? <p className="confirm-dialog__error" role="alert">{props.errorMessage}</p> : null}
         </div>
         <div className="confirm-dialog__footer">

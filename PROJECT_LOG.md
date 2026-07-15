@@ -1,3 +1,28 @@
+## 2026-07-15 10:27:20 +08:00 | v1.1.0-alpha.265 | 推进 ANKI-070 导入预检明细展示
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把全局主路径做成能用版，再逐步细化”方向推进 `ANKI-070`，这轮不再扩张到新的导入协议，而是收口上一轮已经接好的“预检 -> 确认 -> 导入”流程可读性。
+- 目标是把导入预检从“只有一条摘要计数”推进到“用户在确认前就能直接看懂哪些是重复、哪些失败、分别落在哪几行”的可操作状态，减少预检结果依然偏黑盒的问题。
+### 实际变更
+
+- 更新 `packages/ui/src/ConfirmDialog.tsx`，让共享确认弹层支持结构化 `description` 内容，不再只接受纯文本说明。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，把导入预检结果组织成摘要、重复卡片明细和失败记录明细三层内容，并直接渲染进确认弹层。
+- 调整预检阶段的消息策略：只有“没有可导入卡片”时才在页内消息区回显摘要；存在可导入卡片时，由确认弹层独占展示预检摘要与明细，避免同一句提示重复出现。
+- 更新 `frontend-user/src/styles/ui-redesign.css` 与 `frontend-user/src/styles/studio-workspaces.css`，补共享确认弹层富内容布局和导入预检明细的最小可读样式。
+- 扩展定向测试，锁定共享 `ConfirmDialog` 可以渲染结构化描述内容，以及复习工作区预检弹层会展示“重复卡片 1 条 / 失败记录 1 条”和对应行号明细。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-070` 当前边界推进到“预检明细已可直接阅读和确认”这一层。
+### 验证结果
+
+- GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/ConfirmDialog.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `ANKI-070` 现在不只是在导入前告诉用户“有多少会成功/失败”，而是把最关键的重复项和失败项样本直接放进确认动作前，导入预检的可解释性明显更接近真实可用产品。
+- 这一轮仍然只补了弹层内的轻量结果展示：还没有独立导入结果中心、更细粒度的修复建议、批量忽略策略或 `.apkg` 兼容；如果后续继续推进 `ANKI-070`，更适合优先做独立结果面板和逐条修复引导，而不是直接扩到更重的导入协议。
+
 ## 2026-07-15 10:14:19 +08:00 | v1.1.0-alpha.264 | 推进 ANKI-070 导入预检与失败报告
 ### 任务内容
 

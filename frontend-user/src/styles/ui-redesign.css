@@ -53,10 +53,20 @@ select:focus-visible {
   font-size: 20px;
 }
 
-.confirm-dialog__body p {
-  margin: 0;
+.confirm-dialog__description {
+  display: grid;
+  gap: 10px;
   color: var(--text-2);
   line-height: 1.6;
+}
+
+.confirm-dialog__description p {
+  margin: 0;
+}
+
+.confirm-dialog__description ul {
+  margin: 0;
+  padding-left: 18px;
 }
 
 .confirm-dialog__error {
