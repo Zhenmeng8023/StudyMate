@@ -17,6 +17,7 @@ type fakeCardService struct {
 	deckID        string
 	cardID        string
 	createDeckReq carddto.CreateDeckRequest
+	listCardsReq  carddto.ListCardsQuery
 	reviewReq     carddto.ReviewCardRequest
 	statusReq     carddto.UpdateCardStatusRequest
 	undoReq       carddto.UndoReviewRequest
@@ -41,9 +42,10 @@ func (s *fakeCardService) CreateDeck(ownerUserID string, request carddto.CreateD
 	}, nil
 }
 
-func (s *fakeCardService) ListCards(ownerUserID string, deckID string) ([]carddto.CardPayload, error) {
+func (s *fakeCardService) ListCards(ownerUserID string, deckID string, request carddto.ListCardsQuery) ([]carddto.CardPayload, error) {
 	s.ownerID = ownerUserID
 	s.deckID = deckID
+	s.listCardsReq = request
 	return []carddto.CardPayload{}, nil
 }
 
@@ -160,6 +162,27 @@ func TestTodayQueueReturnsDueItems(t *testing.T) {
 	}
 	if !payload.Success || payload.Data.DueCount != 1 || payload.Data.Items[0].Card.ID != "card-1" {
 		t.Fatalf("unexpected queue payload: %#v", payload)
+	}
+}
+
+func TestListCardsReadsServerSideFiltersFromQuery(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCardService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.GET("/decks/:id/cards", withUser(handler.ListCards))
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/decks/deck-1/cards?q=note&status=suspended&sourceType=note&dueBucket=upcoming", nil))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if service.deckID != "deck-1" || service.ownerID != "user-1" {
+		t.Fatalf("unexpected request binding: owner=%q deck=%q", service.ownerID, service.deckID)
+	}
+	if service.listCardsReq.Query != "note" || service.listCardsReq.Status != "suspended" || service.listCardsReq.SourceType != "note" || service.listCardsReq.DueBucket != "upcoming" {
+		t.Fatalf("unexpected list cards query: %#v", service.listCardsReq)
 	}
 }
 

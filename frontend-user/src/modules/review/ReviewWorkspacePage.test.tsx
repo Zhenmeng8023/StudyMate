@@ -515,7 +515,7 @@ describe("ReviewWorkspacePage", () => {
   });
 
   it("filters cards locally inside the deck browser by keyword, status, and source", async () => {
-    listDeckCardsMock.mockResolvedValueOnce([
+    const allCards = [
       {
         id: "card-1",
         deckId: "deck-1",
@@ -526,6 +526,17 @@ describe("ReviewWorkspacePage", () => {
         sourceType: "graph",
         sourceId: "graph-1",
         status: "active",
+        schedule: {
+          cardId: "card-1",
+          userId: "user-1",
+          dueAt: "2026-06-15T08:00:00Z",
+          intervalDays: 0,
+          easeFactor: 2.5,
+          repetitionCount: 0,
+          lapseCount: 0,
+          state: "review",
+          updatedAt: "2026-06-02T12:00:00Z"
+        },
         createdAt: "2026-06-02T12:00:00Z",
         updatedAt: "2026-06-02T12:00:00Z"
       },
@@ -539,6 +550,17 @@ describe("ReviewWorkspacePage", () => {
         sourceType: "note",
         sourceId: "note-1",
         status: "suspended",
+        schedule: {
+          cardId: "card-2",
+          userId: "user-1",
+          dueAt: "2026-06-20T08:00:00Z",
+          intervalDays: 3,
+          easeFactor: 2.5,
+          repetitionCount: 1,
+          lapseCount: 0,
+          state: "learning",
+          updatedAt: "2026-06-02T12:00:00Z"
+        },
         createdAt: "2026-06-02T12:00:00Z",
         updatedAt: "2026-06-02T12:00:00Z"
       },
@@ -550,10 +572,36 @@ describe("ReviewWorkspacePage", () => {
         front: "Detached fact",
         back: "No source linked",
         status: "buried",
+        schedule: {
+          cardId: "card-3",
+          userId: "user-1",
+          dueAt: "2026-06-18T08:00:00Z",
+          intervalDays: 2,
+          easeFactor: 2.5,
+          repetitionCount: 1,
+          lapseCount: 0,
+          state: "new",
+          updatedAt: "2026-06-02T12:00:00Z"
+        },
         createdAt: "2026-06-02T12:00:00Z",
         updatedAt: "2026-06-02T12:00:00Z"
       }
-    ]);
+    ];
+    listDeckCardsMock.mockImplementation(async (_session, _deckId, filters) => {
+      if (filters?.query === "note") {
+        return [allCards[1]];
+      }
+      if (filters?.status === "buried") {
+        return [allCards[2]];
+      }
+      if (filters?.sourceType === "none") {
+        return [allCards[2]];
+      }
+      if (filters?.dueBucket === "upcoming") {
+        return [allCards[1], allCards[2]];
+      }
+      return allCards;
+    });
 
     const user = userEvent.setup();
     renderPage();
@@ -566,29 +614,49 @@ describe("ReviewWorkspacePage", () => {
     const keywordInput = screen.getByLabelText("\u7b5b\u9009\u5361\u7247\u5173\u952e\u8bcd");
     const statusFilter = screen.getByLabelText("\u5361\u7247\u72b6\u6001\u7b5b\u9009");
     const sourceFilter = screen.getByLabelText("\u5361\u7247\u6765\u6e90\u7c7b\u578b\u7b5b\u9009");
+    const dueFilter = screen.getByLabelText("\u5230\u671f\u65f6\u95f4\u7b5b\u9009");
 
-    expect(screen.getByText("3 / 3 \u5f20\u5361\u7247")).toBeInTheDocument();
+    expect(screen.getByText("3 张卡片")).toBeInTheDocument();
 
     await user.type(keywordInput, "note");
 
-    expect(screen.getByText("Note summary card")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(listDeckCardsMock).toHaveBeenLastCalledWith(session, "deck-1", expect.objectContaining({ query: "note" }));
+    });
+    expect(await screen.findByText("Note summary card")).toBeInTheDocument();
     expect(screen.queryByText("Graph node card")).not.toBeInTheDocument();
     expect(screen.queryByText("Detached fact")).not.toBeInTheDocument();
-    expect(screen.getByText("1 / 3 \u5f20\u5361\u7247")).toBeInTheDocument();
+    expect(screen.getByText("1 张卡片")).toBeInTheDocument();
 
     await user.clear(keywordInput);
     await user.selectOptions(statusFilter, "buried");
 
-    expect(screen.getByText("Detached fact")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(listDeckCardsMock).toHaveBeenLastCalledWith(session, "deck-1", expect.objectContaining({ status: "buried" }));
+    });
+    expect(await screen.findByText("Detached fact")).toBeInTheDocument();
     expect(screen.queryByText("Graph node card")).not.toBeInTheDocument();
     expect(screen.queryByText("Note summary card")).not.toBeInTheDocument();
 
     await user.selectOptions(statusFilter, "all");
     await user.selectOptions(sourceFilter, "none");
 
-    expect(screen.getByText("Detached fact")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(listDeckCardsMock).toHaveBeenLastCalledWith(session, "deck-1", expect.objectContaining({ sourceType: "none" }));
+    });
+    expect(await screen.findByText("Detached fact")).toBeInTheDocument();
     expect(screen.queryByText("Graph node card")).not.toBeInTheDocument();
     expect(screen.queryByText("Note summary card")).not.toBeInTheDocument();
+
+    await user.selectOptions(sourceFilter, "all");
+    await user.selectOptions(dueFilter, "upcoming");
+
+    await waitFor(() => {
+      expect(listDeckCardsMock).toHaveBeenLastCalledWith(session, "deck-1", expect.objectContaining({ dueBucket: "upcoming" }));
+    });
+    expect(await screen.findByText("Note summary card")).toBeInTheDocument();
+    expect(screen.getByText("Detached fact")).toBeInTheDocument();
+    expect(screen.queryByText("Graph node card")).not.toBeInTheDocument();
   });
 
   it("batch updates the selected cards from the deck browser", async () => {
