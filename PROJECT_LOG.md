@@ -7960,3 +7960,26 @@
 
 - `ANKI-040` 现在不再只是“有卡片列表可点”，复习管理面板已经开始具备一个更接近真实卡片浏览器的最小入口，能在不离开复习上下文的前提下完成筛选、批量选择和状态管理。
 - 这一轮仍然只覆盖当前牌组上的前端本地筛选与最小批量动作；后续更适合继续沿 `ANKI-040 / ANKI-020 / LC-010` 补后端列表/过滤 API、标签与到期时间筛选、批量确认/失败明细和审计追溯，而不是继续把更重的数据能力都留在前端内存态里。
+## 2026-07-15 11:55:00 +08:00 | v1.1.0-alpha.268 | 推进 FE-041 管理端 runtime 协调 helper
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041`，这一轮不新增治理功能，而是收口后台工作台里仍然停留在页面层的运行时编排。
+- 目标是把上一轮已经明确留下的 `popstate + subscribe + mount` 组合缺口补成统一 helper，减少 `AdminWorkspaceView.vue` 继续承担路由、会话订阅和挂载自举三段胶水逻辑。
+### 实际变更
+
+- 先用 RED 新增 `frontend-admin/src/views/adminWorkspaceRuntime.test.ts`，锁定 runtime helper 需要承担的三条契约：挂载时按 URL 解析 view 并触发初始加载、session 订阅触发时读取最新 store 值并走统一同步、以及 `popstate` 时重算目标 view 并按需回刷。
+- 新增 `frontend-admin/src/views/adminWorkspaceRuntime.ts`，把 `mount + popstate + subscribeSession(...)` 运行时编排统一收口到 `startAdminWorkspaceRuntime(...)`，内部复用既有 `adminWorkspaceMountBootstrap`、`adminWorkspacePopstate` 与 `adminWorkspaceSessionSync` helper。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，页面层不再内联 `handleAdminPopstate`、`unsubscribeSession` 和 mount bootstrap 拼装，而是只在 `onMounted/onBeforeUnmount` 间持有 `stopRuntime` 清理句柄。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“后台工作台 runtime 协调已抽离”这一层。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/views/adminWorkspaceRuntime.test.ts src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/adminWorkspaceRuntime.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在不只是在拆 props、events 和局部 controller，后台工作台里最容易继续回涨的 runtime 协调层也开始进入共享 helper。
+- 这一轮仍然只补了 `mount / popstate / subscribeSession` 这条壳层运行时路径；如果继续推进 `FE-041 / ADM-010`，更适合优先评估登录、自举、刷新与退出是否进一步汇总为更完整的 workspace feature adapter，而不是立刻切去新的治理业务。

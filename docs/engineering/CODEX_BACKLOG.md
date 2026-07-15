@@ -26,37 +26,6 @@
 | FE-040 | IN_PROGRESS | 设计 token 单一来源与页面状态协议 | FE-010 | `packages/design-tokens` 或等价包、`packages/ui`、`frontend-user/src/styles/`、`frontend-admin/src/` | `app.css` 与 `ui-redesign.css` 的同名 token 漂移被收口；所有数据页统一声明 Loading / Empty / Error / Unauthorized / Stale / Conflict 状态语义。当前管理端模块页已接入 `loading / error / empty / stale / unauthorized / conflict` 的真实状态入口，用户端 `SearchWorkspacePage`、`DashboardPage`、`CommunityPage`、`MaterialsPage`、`ReviewWorkspacePage`、`NotesPage`、`ReaderPage`、`AiPage`、`SettingsPage`、`GraphWorkspacePage` 与 `SharePage` 已接入首批共享页面状态，其中首页已不再只覆盖资料/笔记/社区区块，而是把“今日复习”“AI 工作台”两组入口也接入共享 `loading / empty / error / unauthorized` 状态语义；社区页、资料库、复习工作区、笔记工作区、阅读工作区、AI 工作台、设置页、图谱工作台和分享页也都已补上真实 `error / stale / loading` 落点；后续继续补更多用户端页面与跨端状态落点。 |
 | FE-041 | IN_PROGRESS | `@studymate/ui` 基础组件契约出壳 | FE-040 | `packages/ui`、用户端 design-system、管理端 shared UI | `DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 已收口到共享包并保留用户端兼容出口，且 `IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog` 都已接到真实页面或图谱骨架；其中共享 `Select` 已覆盖笔记页、阅读页、复习工作区、图谱工作区与 AI 草稿中心里的高频下拉，共享 `PageHeader` 已覆盖主工作区页面、搜索工作区与图谱工作区，共享 `ConfirmDialog` 已覆盖笔记删除、图谱工作区的重载/删除确认，以及管理端审核队列里的通过/驳回/隐藏确认层；管理端也已新增 `AdminButton` / `AdminInput` / `AdminSelect` / `AdminPageHeader` / `AdminSearchToolbar` / `AdminCommandBar` / `AdminMetricCard` / `AdminDataCardHeader` / `AdminRecordInspector` / `AdminNavItem` / `AdminNavGroup` / `AdminActionBar` / `AdminTag` / `AdminFeatureCard` Vue 适配层，并接入登录、壳层、dashboard、审核与治理模块，其中审核/治理页已通过共享 `AdminSelect` 承载状态筛选，后台壳层顶部条已通过共享 `AdminCommandBar` 暴露统一 breadcrumb / 同步状态 / actions 契约，dashboard 与治理摘要区已通过共享 `AdminMetricCard` 收口重复卡片骨架，审核与治理模块的数据卡片标题区已通过共享 `AdminDataCardHeader` 暴露统一标题/说明骨架，治理记录详情区已通过共享 `AdminRecordInspector` 收口字段展示与动作区骨架，后台侧边导航项已通过共享 `AdminNavItem` 收口 active / badge / icon / press 契约，后台侧边导航分组也已通过共享 `AdminNavGroup` 收口标题与槽位骨架，审核行操作与治理详情动作则已通过共享 `AdminActionBar` 收口按钮组骨架，审核类型/状态标签与治理记录状态标签也已通过共享 `AdminTag` 收口 badge 语义，dashboard 的 priority/status 复合运营卡片也已通过共享 `AdminFeatureCard` 收口骨架，`AdminWorkspaceView.vue` 里的审核/治理数据区状态判定已收口到共享 `adminViewDataState` helper，加载请求失败状态和 403 清理已收口到共享 `adminViewLoadRequest` helper，dashboard 概览卡片已收口到共享 `adminOverviewCards` helper，治理模块描述/空态/加载配置已收口到共享 `getGovernanceModuleConfig(...)` 出口，profile/overview 简单读取链路已收口到共享 `adminViewReadRequest` helper，工作台里剩余的 profile/overview/moderation/governance 四条数据加载与状态落点也已收口到共享 `adminWorkspaceDataLoad` helper，moderation/governance 动作提交时的 loading、notice、confirm error、409 conflict 与 reload state adapter 也已收口到共享 `adminWorkspaceMutationState` helper，确认弹层 reset/submit 映射表也已收口到共享 `adminWorkspaceConfirmState` helper，pending action 的打开逻辑也已收口到共享 `adminWorkspacePendingAction` helper，确认弹层的 copy 解析与 dialog metadata 装配也已收口到共享 `adminWorkspaceConfirmDialogs` helper，五组确认状态的 dialogs/reset/submit 编排现已进一步收口到共享 `adminWorkspaceConfirmController` helper，并把 `AdminWorkspaceView.vue` 压回 800 行以内；本轮又把 `workspaceResetHandlers / clearWorkspaceState` 收口到共享 `adminWorkspaceResetController` helper，令 `AdminWorkspaceView.vue` 进一步降到 787 行。dashboard / moderation / governance 三组模块 props 装配也已收口到共享 `adminWorkspaceModuleProps` helper，dashboard / moderation / governance 三组模块事件装配也已收口到共享 `adminWorkspaceModuleEvents` helper，后台壳层 `AdminShellFrame` 的 props 装配也已收口到共享 `adminWorkspaceShellProps` helper，后台壳层 `AdminShellFrame` 的事件装配也已收口到共享 `adminWorkspaceShellEvents` helper，后台登录面板 `AdminLoginPanel` 的 props 装配也已收口到共享 `adminWorkspaceLoginPanelProps` helper，后台登录面板 `AdminLoginPanel` 的事件装配也已收口到共享 `adminWorkspaceLoginPanelEvents` helper，dashboard 主操作卡片 copy 和审核概览摘要规则已收口到共享 `adminDashboardMeta` helper，请求错误的 status/message/fallback 解析已收口到共享 `adminRequestError` helper，五组确认弹层 metadata 组装已收口到共享 `adminConfirmDialogs` helper，工作台提示文案已收口到共享 `adminWorkspaceNotice` helper，审核/治理派生数据拆分、筛选与状态选项已收口到共享 `adminWorkspaceDerivedData` helper，工作台 URL 解析、归一化与历史同步已收口到共享 `adminWorkspaceLocation` helper，挂载自举、`popstate`、导航切换、会话失效回退与退出计划已收口到共享 `adminWorkspaceLifecycle` helper，视图级 overview/moderation/governance 加载编排也已收口到共享 `adminWorkspaceViewLoad` helper，登录成功后的 session 持久化、profile 刷新与当前 view 加载顺序也已收口到共享 `adminWorkspaceBootstrap` helper，登录时的 loading/error/sessionInvalidation 清理、bootstrap 调度与成功提示同步也已收口到共享 `adminWorkspaceLogin` helper，治理动作请求分发、确认错误清理、pending action 打开与 invalid/noop 兜底也已收口到共享 `adminGovernanceActionRequest` helper，审核动作的 path、成功提示、资料治理回刷与 409 conflict 特例也已收口到共享 `adminModerationMutationMeta` helper，四组治理动作共用的提交执行、dialog reset、reload view 与 conflict 信号也已收口到共享 `adminGovernanceMutationFlow` helper，挂载时的目标 view 应用、profile 刷新与初始 view 加载顺序也已收口到共享 `adminWorkspaceMountBootstrap` helper，会话被清空后的工作台 reset、默认 view 回退、URL replace、错误清理与提示同步也已收口到共享 `adminWorkspaceSessionCleared` helper，本轮新增的 `adminWorkspaceSessionSync` helper 又把 session 订阅后的本地状态同步与会话清空协同从视图层抽离出来；浏览器 `popstate` 触发时的查询重置、目标 view 应用与按需加载顺序也已收口到共享 `adminWorkspacePopstate` helper，导航切换时的 reset、目标 view 应用、URL push 与按需加载顺序也已收口到共享 `adminWorkspaceViewSwitch` helper，退出时的 session/profile 清理、工作台 reset、默认 view 回退、无效化提示清空、持久化会话清除与退出提示同步也已收口到共享 `adminWorkspaceLogout` helper，刷新当前 active view 的 refresh plan 与执行 helper 也已进入共享 `adminWorkspaceLifecycle` / `adminWorkspaceRefresh` 出口，后续继续推进更多后台治理动作与跨端状态语义。 |
 
-### 执行记录：FE-041（管理端 session 同步编排 helper 接线）
-
-- 执行日期：2026-07-15
-- 执行分支/提交：`master` / `test: 增加后台 session 同步编排用例`（RED）
-- 实际变更：
-  - 新增 `frontend-admin/src/views/adminWorkspaceSessionSync.ts`
-  - 新增 `frontend-admin/src/views/adminWorkspaceSessionSync.test.ts`
-  - 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`
-- 完成证据：
-  - 工作台现在把 `subscribeSession(...)` 触发后的 `session / sessionInvalidation / profile` 同步与 “session 被清空后执行 reset + notice + URL replace” 协同收口到共享 `adminWorkspaceSessionSync` helper。
-  - `AdminWorkspaceView.vue` 不再内联维护这段 session 变更分支，视图层只保留 ref setter 与 location sync 绑定。
-  - 新增专门单测锁定两条行为：session 仍有效时只同步本地状态；session 被清空时触发默认 view 回退、错误清理与结束提示。
-- 已执行验证：
-  - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceSessionSync.test.ts`
-  - `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
-  - `npm --workspace frontend-admin run typecheck`
-  - `npm run build:admin`
-  - `npm run verify:docs`
-  - `git diff --check`
-- 未执行验证及原因：
-  - 无
-- 后续影响：
-  - `FE-041` 现在继续从共享 `adminWorkspaceSessionCleared` 推进到共享 `adminWorkspaceSessionSync`，后台工作台壳层里围绕 session 订阅的状态协同进一步变薄。
-  - 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估 `popstate + subscribe + mount` 的更高层 runtime 协调出口，而不是把新的 session 分支重新写回页面层。
-| API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
-| API-011 | IN_PROGRESS | Token refresh 与统一会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；请求阶段直接收到 `403 user_disabled` 时也会统一清 session 并给出禁用提示；补 HttpOnly Refresh Token 迁移说明。 |
-| DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
-| SEC-010 | DONE | 依赖安全基线收口 | DEV-010 | `package-lock.json`、前台/后台 package manifest、`backend/go.mod`、CI、开发文档 | 锁定 `vite` / `esbuild` / `undici` / `glob` 与 Go toolchain / `golang.org/x/net` / `quic-go` 安全下限；`npm run verify:deps` 通过并纳入默认 CI。 |
-| SEC-011 | DONE | 默认 secret scan 门禁收口 | SEC-010 | 根 `package.json`、`.github/workflows/ci.yml`、`scripts/`、发布/开发文档 | 新增 `npm run verify:secrets`、仓库级扫描脚本与基线测试；默认 CI 执行 secret scan，并对 placeholder 示例值保持低误报。 |
-| QA-010 | DONE | 默认覆盖率基线门禁收口 | DEV-010, SEC-011 | 根 `package.json`、`.github/workflows/ci.yml`、`scripts/`、发布/开发文档 | 新增 `npm run verify:coverage`、覆盖率基线测试与统一解析脚本；默认 CI 阻断前后台、graph-core 与后端覆盖率回退，同时保留 `npm run test:coverage` 作为发布前详细汇总。 |
-
 ## P1：在 P0 稳定后推进
 
 | ID | 状态 | 任务 | 依赖 | 主要影响范围 | 验收标准 |
@@ -96,6 +65,38 @@
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
 
 ## 执行记录
+
+### 执行记录：FE-041（管理端 session 同步编排 helper 接线）
+
+- 执行日期：2026-07-15
+- 执行分支/提交：`master` / `test: 增加后台 session 同步编排用例`（RED）
+- 实际变更：
+  - 新增 `frontend-admin/src/views/adminWorkspaceSessionSync.ts`
+  - 新增 `frontend-admin/src/views/adminWorkspaceSessionSync.test.ts`
+  - 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`
+- 完成证据：
+  - 工作台现在把 `subscribeSession(...)` 触发后的 `session / sessionInvalidation / profile` 同步与 “session 被清空后执行 reset + notice + URL replace” 协同收口到共享 `adminWorkspaceSessionSync` helper。
+  - `AdminWorkspaceView.vue` 不再内联维护这段 session 变更分支，视图层只保留 ref setter 与 location sync 绑定。
+  - 新增专门单测锁定两条行为：session 仍有效时只同步本地状态；session 被清空时触发默认 view 回退、错误清理与结束提示。
+- 已执行验证：
+  - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceSessionSync.test.ts`
+  - `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+  - `npm run verify:docs`
+  - `git diff --check`
+- 未执行验证及原因：
+  - 无
+- 后续影响：
+  - `FE-041` 现在继续从共享 `adminWorkspaceSessionCleared` 推进到共享 `adminWorkspaceSessionSync`，后台工作台壳层里围绕 session 订阅的状态协同进一步变薄。
+  - 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估 `popstate + subscribe + mount` 的更高层 runtime 协调出口，而不是把新的 session 分支重新写回页面层。
+| API-010 | IN_PROGRESS | 前后台共享 API client core | WB-014, FE-040 | `packages/api-client`、`frontend-user/src/api`、`frontend-admin/src/` | request/error/pagination/upload 基础能力沉入共享包；新代码不再在页面组件里手写 fetch、错误解析和分页解析。 |
+| API-011 | IN_PROGRESS | Token refresh 与统一会话生命周期 | API-010 | `packages/api-client`、auth 模块、前后台会话入口 | Access Token 过期后只刷新一次并重放原请求；刷新失败统一退出、清理本地状态并记录会话失效原因；请求阶段直接收到 `403 user_disabled` 时也会统一清 session 并给出禁用提示；补 HttpOnly Refresh Token 迁移说明。 |
+| DEV-010 | DONE | 工程可复现性二次核验与工具链收口 | WB-003 | 根 workspace、lockfile、CI、graph-core 测试脚本、开发文档 | 在真实仓库基础上固定 Node/Go 版本、bootstrap 命令、依赖审计入口；`@studymate/graph-core` 改为显式 `--experimental-strip-types` 运行 `.ts` 测试，并新增运行时基线校验。 |
+| SEC-010 | DONE | 依赖安全基线收口 | DEV-010 | `package-lock.json`、前台/后台 package manifest、`backend/go.mod`、CI、开发文档 | 锁定 `vite` / `esbuild` / `undici` / `glob` 与 Go toolchain / `golang.org/x/net` / `quic-go` 安全下限；`npm run verify:deps` 通过并纳入默认 CI。 |
+| SEC-011 | DONE | 默认 secret scan 门禁收口 | SEC-010 | 根 `package.json`、`.github/workflows/ci.yml`、`scripts/`、发布/开发文档 | 新增 `npm run verify:secrets`、仓库级扫描脚本与基线测试；默认 CI 执行 secret scan，并对 placeholder 示例值保持低误报。 |
+| QA-010 | DONE | 默认覆盖率基线门禁收口 | DEV-010, SEC-011 | 根 `package.json`、`.github/workflows/ci.yml`、`scripts/`、发布/开发文档 | 新增 `npm run verify:coverage`、覆盖率基线测试与统一解析脚本；默认 CI 阻断前后台、graph-core 与后端覆盖率回退，同时保留 `npm run test:coverage` 作为发布前详细汇总。 |
+
 
 ### 执行记录：FE-041（管理端 workspace reset controller 接线）
 
@@ -2716,3 +2717,25 @@
   - 标签更新目前只支持整数组替换，不支持后端侧的 add/remove diff 语义；如果后续要补审计粒度或高并发保护，更适合继续在 `card` 域内升级动作模型。
 - 下一建议任务：
   - `ANKI-040` 继续补跨牌组分页/统计与批量删除、移动牌组的后端承接
+### 执行记录：FE-041（管理端 runtime 协调 helper 接线）
+- 执行日期：2026-07-15
+- 关联提交：`329958e`（RED）
+- 实际变更：
+  - 新增 `frontend-admin/src/views/adminWorkspaceRuntime.ts`
+  - 新增 `frontend-admin/src/views/adminWorkspaceRuntime.test.ts`
+  - 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+- 完成证据：
+  - 工作台现已把 `mount + popstate + subscribeSession(...)` 这组三段运行时编排收口到共享 `adminWorkspaceRuntime` helper，而不再由 `AdminWorkspaceView.vue` 在页面层分别手拼。
+  - 新增 runtime 单测，锁定三条关键契约：挂载时应用 URL 解析后的 view 并完成初始加载、session 订阅触发时读取最新 store 值并走统一同步出口、以及 `popstate` 触发时按当前路径重算目标 view 并按需回刷模块。
+  - `AdminWorkspaceView.vue` 现在只在生命周期里持有 `stopRuntime` 清理句柄，`popstate` handler、session 订阅 callback 与 mount bootstrap 协调都已从页面层抽离。
+- 已执行验证：
+  - RED：`npm --workspace frontend-admin run test -- src/views/adminWorkspaceRuntime.test.ts src/views/AdminWorkspaceView.test.ts`
+  - GREEN：`npm --workspace frontend-admin run test -- src/views/adminWorkspaceRuntime.test.ts src/views/AdminWorkspaceView.test.ts`
+  - `npm --workspace frontend-admin run typecheck`
+  - `npm run build:admin`
+  - `npm run verify:docs`
+  - `git diff --check`
+- 后续影响：
+  - `FE-041` 现在继续从共享 `adminWorkspaceSessionSync` 推进到更高一层的 `adminWorkspaceRuntime`，后台工作台壳层里围绕路由、订阅与挂载的 runtime 协调进一步变薄。
+  - 后续继续沿 `FE-041 / ADM-010` 推进时，更适合优先评估登录、自举、刷新与退出这几条页面层动作是否继续汇总为更完整的 workspace feature adapter，而不是把新的运行时分支重新写回 `AdminWorkspaceView.vue`。

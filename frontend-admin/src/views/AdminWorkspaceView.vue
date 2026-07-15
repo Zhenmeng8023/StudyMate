@@ -68,18 +68,13 @@ import {
 } from "./adminWorkspaceLocation";
 import {
   buildAdminWorkspaceLogoutPlan,
-  buildAdminWorkspaceMountPlan,
-  buildAdminWorkspacePopstatePlan,
   buildAdminWorkspaceRefreshPlan,
   buildAdminWorkspaceViewSwitchPlan
 } from "./adminWorkspaceLifecycle";
 import { runAdminWorkspaceViewLoad } from "./adminWorkspaceViewLoad";
-import { runAdminWorkspaceMountBootstrap } from "./adminWorkspaceMountBootstrap";
-import { runAdminWorkspacePopstate } from "./adminWorkspacePopstate";
 import { runAdminWorkspaceRefresh } from "./adminWorkspaceRefresh";
 import { runAdminWorkspaceLogin } from "./adminWorkspaceLogin";
 import { runAdminWorkspaceLogout } from "./adminWorkspaceLogout";
-import { runAdminWorkspaceSessionCleared } from "./adminWorkspaceSessionCleared";
 import { runAdminWorkspaceViewSwitch } from "./adminWorkspaceViewSwitch";
 import {
   getAdminGovernanceLoadedNotice,
@@ -87,7 +82,6 @@ import {
   getAdminLogoutNotice,
   getAdminModerationLoadedNotice,
 } from "./adminWorkspaceNotice";
-import { runAdminWorkspaceSessionSync } from "./adminWorkspaceSessionSync";
 import {
   type AdminWorkspaceResetKey
 } from "./adminWorkspaceState";
@@ -95,6 +89,7 @@ import {
   getGovernanceModuleConfig,
 } from "./adminGovernanceConfig";
 import type { GovernanceMutationKey } from "./adminGovernanceMutationMeta";
+import { startAdminWorkspaceRuntime } from "./adminWorkspaceRuntime";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
 import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
 import AdminModerationModule from "./modules/AdminModerationModule.vue";
@@ -365,28 +360,19 @@ function loadActiveView(view: AdminView) {
   });
 }
 
-function handleAdminPopstate() {
-  const plan = buildAdminWorkspacePopstatePlan(
-    normalizeAdminWorkspaceLocation(window.location, window.history),
-    Boolean(session.value)
-  );
-  runAdminWorkspacePopstate(plan, {
-    clearWorkspaceState,
-    loadActiveView,
-    setActiveView: (view) => {
-      activeView.value = view;
-    }
-  });
-}
+let stopRuntime: (() => void) | null = null;
 
-const unsubscribeSession = subscribeSession(() => {
-  const nextSession = readStoredAdminSession();
-  const nextInvalidation = readStoredSessionInvalidation();
-  runAdminWorkspaceSessionSync(nextSession, nextInvalidation, {
+onMounted(() => {
+  stopRuntime = startAdminWorkspaceRuntime({
     clearError: () => {
       errorMessage.value = "";
     },
     clearWorkspaceState,
+    hasSession: () => Boolean(session.value),
+    loadActiveView,
+    readSession: readStoredAdminSession,
+    readSessionInvalidation: readStoredSessionInvalidation,
+    refreshProfile,
     setActiveView: (view) => {
       activeView.value = view;
     },
@@ -402,30 +388,17 @@ const unsubscribeSession = subscribeSession(() => {
     setSessionInvalidation: (nextValue) => {
       sessionInvalidation.value = nextValue;
     },
+    subscribeSession,
     syncLocation: (view, syncMode) => {
       syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
-    }
-  });
-});
-
-onMounted(() => {
-  const plan = buildAdminWorkspaceMountPlan(
-    normalizeAdminWorkspaceLocation(window.location, window.history),
-    Boolean(session.value)
-  );
-  window.addEventListener("popstate", handleAdminPopstate);
-  runAdminWorkspaceMountBootstrap(plan, {
-    loadActiveView,
-    refreshProfile,
-    setActiveView: (view) => {
-      activeView.value = view;
-    }
+    },
+    window
   });
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener("popstate", handleAdminPopstate);
-  unsubscribeSession();
+  stopRuntime?.();
+  stopRuntime = null;
 });
 
 async function login() {

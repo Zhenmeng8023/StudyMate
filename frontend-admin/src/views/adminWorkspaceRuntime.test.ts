@@ -61,7 +61,7 @@ function createWindowStub(initialPathname = "/admin/dashboard") {
       history,
       location,
       removeEventListener
-    } as Pick<Window, "addEventListener" | "removeEventListener" | "location" | "history">
+    } as unknown as Pick<Window, "addEventListener" | "removeEventListener" | "location" | "history">
   };
 }
 
