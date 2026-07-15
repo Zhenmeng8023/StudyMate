@@ -48,6 +48,11 @@ type PendingDeckImportState = {
   preview: DeckImportPayload;
 };
 
+type DeckImportResultState = {
+  filename: string;
+  result: DeckImportPayload;
+};
+
 type DeckImportPreviewDetail = {
   heading: string;
   items: Array<{
@@ -239,6 +244,16 @@ function buildDeckImportPreviewDescription(preview: DeckImportPayload) {
   );
 }
 
+function buildDeckImportResultLabel(importResult: DeckImportResultState) {
+  return `${importResult.filename} · ${importResult.result.preview ? "预检结果" : "导入结果"}`;
+}
+
+function buildDeckImportResultSummary(result: DeckImportPayload) {
+  const primaryLabel = result.preview ? "可导入" : "已导入";
+  const primaryCount = result.preview ? result.readyCount : result.importedCount;
+  return `总计 ${result.totalCount} 张 · ${primaryLabel} ${primaryCount} 张 · 重复 ${result.duplicateCount} 张 · 失败 ${result.failedCount} 行`;
+}
+
 function ReviewSourceSummary(props: { card: Pick<CardPayload, "sourceType" | "sourceId">; compact?: boolean }) {
   const sourceReference = formatReviewSourceReference(props.card);
   if (!sourceReference) {
@@ -280,6 +295,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [workspaceErrorMessage, setWorkspaceErrorMessage] = useState("");
   const [undoableReview, setUndoableReview] = useState<UndoableReviewState | null>(null);
   const [pendingImport, setPendingImport] = useState<PendingDeckImportState | null>(null);
+  const [latestImportResult, setLatestImportResult] = useState<DeckImportResultState | null>(null);
   const [importConfirmError, setImportConfirmError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -762,6 +778,10 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         content,
         previewOnly: true
       });
+      setLatestImportResult({
+        filename: file.name,
+        result
+      });
       if (result.readyCount <= 0) {
         setMessage(result.statusMessage);
         return;
@@ -799,6 +819,10 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         filename: pendingImport.filename,
         content: pendingImport.content,
         previewOnly: false
+      });
+      setLatestImportResult({
+        filename: pendingImport.filename,
+        result
       });
       await Promise.all([refreshCards(pendingImport.deckId), refreshAll()]);
       setPendingImport(null);
@@ -1214,6 +1238,34 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                         />
                       </label>
                     </div>
+                    {latestImportResult ? (
+                      <section className="review-import-result-card">
+                        <div className="review-import-result-card__header">
+                          <h3>最近一次导入结果</h3>
+                          <span>{buildDeckImportResultLabel(latestImportResult)}</span>
+                        </div>
+                        <p className="review-import-result-card__summary">
+                          {buildDeckImportResultSummary(latestImportResult.result)}
+                        </p>
+                        {!pendingImport && buildDeckImportPreviewDetails(latestImportResult.result).length ? (
+                          <div className="review-import-preview">
+                            {buildDeckImportPreviewDetails(latestImportResult.result).map((detail) => (
+                              <section className="review-import-preview__section" key={`${latestImportResult.filename}-${detail.heading}`}>
+                                <h3>{detail.heading}</h3>
+                                <ul className="review-import-preview__list">
+                                  {detail.items.map((item) => (
+                                    <li key={`${detail.heading}-${item.label}`}>
+                                      <span className="review-import-preview__item-label">{item.label}</span>
+                                      {item.message ? <span className="review-import-preview__item-message">{item.message}</span> : null}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </section>
+                            ))}
+                          </div>
+                        ) : null}
+                      </section>
+                    ) : null}
                   </section>
                 ) : null}
                 {selectedDeckId ? (

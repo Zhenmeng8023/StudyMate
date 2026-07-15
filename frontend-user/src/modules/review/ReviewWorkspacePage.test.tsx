@@ -841,6 +841,9 @@ describe("ReviewWorkspacePage", () => {
     expect(screen.getByText("第 1 行 · Existing front")).toBeInTheDocument();
     expect(screen.getByText("失败记录 1 条")).toBeInTheDocument();
     expect(screen.getByText("第 3 行 · Broken front")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "最近一次导入结果" })).toBeInTheDocument();
+    expect(screen.getByText("cards.json · 预检结果")).toBeInTheDocument();
+    expect(screen.getByText("总计 3 张 · 可导入 1 张 · 重复 1 张 · 失败 1 行")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "确认导入" }));
 
@@ -857,6 +860,8 @@ describe("ReviewWorkspacePage", () => {
       );
     });
     expect(await screen.findByText("已导入 1 张卡片到当前卡组，已跳过 1 张重复卡片和 1 行无效内容。")).toBeInTheDocument();
+    expect(screen.getByText("cards.json · 导入结果")).toBeInTheDocument();
+    expect(screen.getByText("总计 3 张 · 已导入 1 张 · 重复 1 张 · 失败 1 行")).toBeInTheDocument();
   });
 
   it("exports the selected deck cards as json", async () => {

@@ -1,3 +1,28 @@
+## 2026-07-15 10:35:59 +08:00 | v1.1.0-alpha.266 | 推进 ANKI-070 最近一次导入结果面板
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把全局主路径做成能用版，再逐步细化”方向推进 `ANKI-070`，这轮不切去新的导入协议或后端能力，而是把已经接好的“预检 -> 确认 -> 导入”链路补成可回看的闭环。
+- 目标是让用户在确认导入之后，不必再依赖瞬时提示或重新上传文件，仍能在复习工作区直接回看最近一次导入的阶段、摘要和明细。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，新增“最近一次导入结果”状态与展示区，在卡组导入区持久展示文件名、预检/导入阶段和结构化摘要。
+- 让预检阶段的持久面板只保留摘要，避免与确认弹层里的重复/失败明细重复渲染；确认导入完成后，结果面板会继续保留最终导入结果与明细。
+- 扩展 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，锁定 `cards.json · 预检结果` 与 `cards.json · 导入结果` 两种页面状态。
+- 更新 `frontend-user/src/styles/studio-workspaces.css`，补结果面板头部、摘要和移动端布局的最小样式。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-070` 当前边界推进到“最近一次导入结果可持久回看”这一层。
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run test -- src/design-system/primitives/ConfirmDialog.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+- `git diff --check`
+### 后续影响
+
+- `ANKI-070` 现在不只是在确认前能看预检明细，确认后也能直接回看最近一次导入结果，导入链路的可追溯性更接近真实可用产品。
+- 这一轮仍然只补了“最近一次结果”这一层：还没有结果历史、逐条修复建议、批量忽略策略或 `.apkg` 兼容；如果继续推进 `ANKI-070`，更适合优先补结果历史和修复引导，而不是立刻扩到更重的导入协议。
+
 ## 2026-07-15 10:27:20 +08:00 | v1.1.0-alpha.265 | 推进 ANKI-070 导入预检明细展示
 ### 任务内容
 
