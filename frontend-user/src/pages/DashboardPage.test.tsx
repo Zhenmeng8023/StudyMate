@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { listMaterials, listNotes, listPosts } from "../api/client";
 import type { AuthSession } from "../api/client";
 import { listAiDrafts, listAiTasks } from "../api/ai";
-import { getTodayReviewQueue } from "../api/review";
+import { getReviewFeedback, getTodayReviewQueue } from "../api/review";
 import { DashboardPage } from "./DashboardPage";
 
 vi.mock("../api/client", async () => {
@@ -18,6 +18,7 @@ vi.mock("../api/client", async () => {
 });
 
 vi.mock("../api/review", () => ({
+  getReviewFeedback: vi.fn(),
   getTodayReviewQueue: vi.fn()
 }));
 
@@ -43,6 +44,7 @@ const listMaterialsMock = vi.mocked(listMaterials);
 const listNotesMock = vi.mocked(listNotes);
 const listPostsMock = vi.mocked(listPosts);
 const getTodayReviewQueueMock = vi.mocked(getTodayReviewQueue);
+const getReviewFeedbackMock = vi.mocked(getReviewFeedback);
 const listAiDraftsMock = vi.mocked(listAiDrafts);
 const listAiTasksMock = vi.mocked(listAiTasks);
 
@@ -56,6 +58,7 @@ describe("DashboardPage", () => {
     listNotesMock.mockReset();
     listPostsMock.mockReset();
     getTodayReviewQueueMock.mockReset();
+    getReviewFeedbackMock.mockReset();
     listAiDraftsMock.mockReset();
     listAiTasksMock.mockReset();
 
@@ -65,6 +68,12 @@ describe("DashboardPage", () => {
     getTodayReviewQueueMock.mockResolvedValue({
       dueCount: 0,
       items: []
+    });
+    getReviewFeedbackMock.mockResolvedValue({
+      dueCount: 0,
+      learningCount: 0,
+      weakCardCount: 0,
+      weakCards: []
     });
     listAiDraftsMock.mockResolvedValue([]);
     listAiTasksMock.mockResolvedValue([]);
@@ -107,6 +116,7 @@ describe("DashboardPage", () => {
     expect(screen.getByText("登录后继续回到你最近的阅读笔记与整理上下文。")).toBeInTheDocument();
     expect(listNotesMock).not.toHaveBeenCalled();
     expect(getTodayReviewQueueMock).not.toHaveBeenCalled();
+    expect(getReviewFeedbackMock).not.toHaveBeenCalled();
     expect(listAiDraftsMock).not.toHaveBeenCalled();
     expect(listAiTasksMock).not.toHaveBeenCalled();
   });
@@ -186,6 +196,37 @@ describe("DashboardPage", () => {
         }
       ]
     });
+    getReviewFeedbackMock.mockResolvedValue({
+      dueCount: 2,
+      learningCount: 1,
+      weakCardCount: 2,
+      weakCards: [
+        {
+          cardId: "card-1",
+          deckId: "deck-1",
+          deckTitle: "算法基础",
+          front: "DFS 的时间复杂度？",
+          sourceType: "note",
+          sourceId: "note-1",
+          state: "relearning",
+          lapseCount: 2,
+          repetitionCount: 1,
+          dueAt: "2026-07-15T08:00:00Z"
+        },
+        {
+          cardId: "card-2",
+          deckId: "deck-1",
+          deckTitle: "算法基础",
+          front: "BFS 的典型用途？",
+          sourceType: "note",
+          sourceId: "note-1",
+          state: "learning",
+          lapseCount: 0,
+          repetitionCount: 0,
+          dueAt: "2026-07-15T08:05:00Z"
+        }
+      ]
+    });
     listAiDraftsMock.mockResolvedValue([
       {
         id: "draft-1",
@@ -233,5 +274,8 @@ describe("DashboardPage", () => {
     expect(screen.getByText("什么时候使用 DFS？")).toBeInTheDocument();
     expect(screen.getByText("笔记生成卡片草稿")).toBeInTheDocument();
     expect(screen.getByText("进行中")).toBeInTheDocument();
+    expect(screen.getByText("2 张卡片需要回补")).toBeInTheDocument();
+    expect(screen.getByText("DFS 的时间复杂度？")).toBeInTheDocument();
+    expect(screen.getByText("BFS 的典型用途？")).toBeInTheDocument();
   });
 });

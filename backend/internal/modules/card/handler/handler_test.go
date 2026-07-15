@@ -73,6 +73,27 @@ func (s *fakeCardService) TodayQueue(ownerUserID string) (*carddto.ReviewQueuePa
 	}, nil
 }
 
+func (s *fakeCardService) ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPayload, error) {
+	s.ownerID = ownerUserID
+	return &carddto.ReviewFeedbackPayload{
+		DueCount:      2,
+		LearningCount: 1,
+		WeakCardCount: 2,
+		WeakCards: []carddto.ReviewFeedbackCardPayload{{
+			CardID:          "card-1",
+			DeckID:          "deck-1",
+			DeckTitle:       "期末复习",
+			Front:           "什么是图谱？",
+			SourceType:      "graph",
+			SourceID:        "node-1",
+			LapseCount:      2,
+			RepetitionCount: 1,
+			State:           "relearning",
+			DueAt:           "2026-06-02T12:00:00Z",
+		}},
+	}, nil
+}
+
 func (s *fakeCardService) ReviewCard(ownerUserID string, cardID string, request carddto.ReviewCardRequest) (*carddto.ReviewResultPayload, error) {
 	s.ownerID = ownerUserID
 	s.cardID = cardID
@@ -162,6 +183,34 @@ func TestTodayQueueReturnsDueItems(t *testing.T) {
 	}
 	if !payload.Success || payload.Data.DueCount != 1 || payload.Data.Items[0].Card.ID != "card-1" {
 		t.Fatalf("unexpected queue payload: %#v", payload)
+	}
+}
+
+func TestReviewFeedbackReturnsWeakCards(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCardService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.GET("/review/feedback", withUser(handler.ReviewFeedback))
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/review/feedback", nil))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Code)
+	}
+	var payload struct {
+		Success bool                           `json:"success"`
+		Data    carddto.ReviewFeedbackPayload `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.WeakCardCount != 2 || len(payload.Data.WeakCards) != 1 {
+		t.Fatalf("unexpected feedback payload: %#v", payload)
+	}
+	if payload.Data.WeakCards[0].DeckTitle != "期末复习" || payload.Data.WeakCards[0].State != "relearning" {
+		t.Fatalf("unexpected weak card payload: %#v", payload.Data.WeakCards[0])
 	}
 }
 

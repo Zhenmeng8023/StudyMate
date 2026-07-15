@@ -3,6 +3,7 @@ import {
   bulkCreateDeckCards,
   commitGraphChangeDraftSelection,
   createDeck,
+  getReviewFeedback,
   getAiUsageSummary,
   getTodayReviewQueue,
   listAiDrafts,
@@ -136,6 +137,21 @@ describe("review API clients", () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       rating: "good",
       elapsedMs: 1200
+    });
+  });
+
+  it("reads review feedback summaries with auth headers", async () => {
+    const fetchMock = mockApiResponse({
+      dueCount: 2,
+      learningCount: 1,
+      weakCardCount: 2,
+      weakCards: []
+    });
+
+    await getReviewFeedback(session);
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/review/feedback");
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+      Authorization: "Bearer access-token"
     });
   });
 

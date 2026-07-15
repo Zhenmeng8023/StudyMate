@@ -152,3 +152,121 @@ func TestListCardsSupportsServerSideFiltersAndSchedulePayload(t *testing.T) {
 		t.Fatalf("expected only graph-tagged card, got %#v", tagFiltered)
 	}
 }
+
+func TestReviewFeedbackSummarizesWeakCardsAndLearningCounts(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite db: %v", err)
+	}
+
+	if err := db.AutoMigrate(&adminmodel.AuditLog{}, &cardmodel.Deck{}, &cardmodel.Card{}, &cardmodel.CardSchedule{}, &cardmodel.CardReview{}); err != nil {
+		t.Fatalf("migrate sqlite schema: %v", err)
+	}
+
+	repository := cardrepo.NewRepository(db)
+	service := NewService(repository, adminrepo.NewAuditLogRepository(db), nil)
+	fixedNow := time.Date(2026, 7, 15, 8, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return fixedNow }
+
+	deck := &cardmodel.Deck{
+		ID:          "deck-1",
+		OwnerUserID: "user-1",
+		Title:       "Feedback deck",
+		Description: "Dashboard feedback should show weak cards",
+		Visibility:  "private",
+		CardCount:   0,
+	}
+	if err := repository.CreateDeck(deck); err != nil {
+		t.Fatalf("create deck: %v", err)
+	}
+
+	relearningCard, err := service.CreateCard("user-1", deck.ID, carddto.CreateCardRequest{
+		CardType:   "basic",
+		Front:      "Graph concept card",
+		Back:       "Needs relearning",
+		SourceType: "graph",
+		SourceID:   "node-1",
+	})
+	if err != nil {
+		t.Fatalf("create relearning card: %v", err)
+	}
+
+	learningCard, err := service.CreateCard("user-1", deck.ID, carddto.CreateCardRequest{
+		CardType:   "basic",
+		Front:      "Note concept card",
+		Back:       "Still learning",
+		SourceType: "note",
+		SourceID:   "note-1",
+	})
+	if err != nil {
+		t.Fatalf("create learning card: %v", err)
+	}
+
+	stableCard, err := service.CreateCard("user-1", deck.ID, carddto.CreateCardRequest{
+		CardType: "basic",
+		Front:    "Stable review card",
+		Back:     "Already remembered",
+	})
+	if err != nil {
+		t.Fatalf("create stable card: %v", err)
+	}
+
+	relearningSchedule, err := repository.FindSchedule(relearningCard.ID, "user-1")
+	if err != nil {
+		t.Fatalf("find relearning schedule: %v", err)
+	}
+	relearningSchedule.DueAt = fixedNow.Add(-1 * time.Hour)
+	relearningSchedule.State = "relearning"
+	relearningSchedule.LapseCount = 2
+	relearningSchedule.RepetitionCount = 1
+	if err := repository.SaveSchedule(relearningSchedule); err != nil {
+		t.Fatalf("save relearning schedule: %v", err)
+	}
+
+	learningSchedule, err := repository.FindSchedule(learningCard.ID, "user-1")
+	if err != nil {
+		t.Fatalf("find learning schedule: %v", err)
+	}
+	learningSchedule.DueAt = fixedNow.Add(12 * time.Hour)
+	learningSchedule.State = "learning"
+	learningSchedule.LapseCount = 0
+	learningSchedule.RepetitionCount = 0
+	if err := repository.SaveSchedule(learningSchedule); err != nil {
+		t.Fatalf("save learning schedule: %v", err)
+	}
+
+	stableSchedule, err := repository.FindSchedule(stableCard.ID, "user-1")
+	if err != nil {
+		t.Fatalf("find stable schedule: %v", err)
+	}
+	stableSchedule.DueAt = fixedNow.Add(24 * time.Hour)
+	stableSchedule.State = "review"
+	stableSchedule.LapseCount = 0
+	stableSchedule.RepetitionCount = 4
+	if err := repository.SaveSchedule(stableSchedule); err != nil {
+		t.Fatalf("save stable schedule: %v", err)
+	}
+
+	feedback, err := service.ReviewFeedback("user-1")
+	if err != nil {
+		t.Fatalf("review feedback: %v", err)
+	}
+	if feedback.DueCount != 1 {
+		t.Fatalf("expected due count 1, got %d", feedback.DueCount)
+	}
+	if feedback.LearningCount != 2 {
+		t.Fatalf("expected learning count 2, got %d", feedback.LearningCount)
+	}
+	if feedback.WeakCardCount != 2 {
+		t.Fatalf("expected weak card count 2, got %d", feedback.WeakCardCount)
+	}
+	if len(feedback.WeakCards) != 2 {
+		t.Fatalf("expected two weak cards, got %d", len(feedback.WeakCards))
+	}
+	if feedback.WeakCards[0].CardID != relearningCard.ID || feedback.WeakCards[0].LapseCount != 2 || feedback.WeakCards[0].DeckTitle != "Feedback deck" {
+		t.Fatalf("expected relearning card first, got %#v", feedback.WeakCards[0])
+	}
+	if feedback.WeakCards[1].CardID != learningCard.ID || feedback.WeakCards[1].State != "learning" {
+		t.Fatalf("expected learning card second, got %#v", feedback.WeakCards[1])
+	}
+}
