@@ -1,3 +1,26 @@
+## 2026-07-16 04:09:33 +08:00 | v1.1.0-alpha.291 | 推进 WB-033 / LC-010 图谱侧刷新学习反馈并保留本地草稿
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-033 / LC-010`，这一轮不直接切入 mastery 持久化，而是把上一轮已经补上的“复习后回到图谱”闭环真正补成可即时验证反馈变化的工作面。
+- 目标是让用户在 graph 来源卡片评分完成后，回到图谱工作区时不必整页重载，也不会因为刷新学习反馈而丢掉正在编辑但尚未保存的图谱草稿。
+### 实际变更
+
+- 先补 RED：更新 `frontend-user/src/modules/graph/lib/graphSourceReviewFeedback.test.ts` 与 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，锁定“最新来源级反馈应覆盖节点旧快照”“刷新反馈后仍保留本地脏编辑”两个边界。
+- 更新 `frontend-user/src/modules/graph/lib/graphSourceReviewFeedback.ts`，让图谱侧在命中同一来源节点时优先消费最新 `sourceSummaries / weakSources`，只有没有新摘要时才回退到节点内嵌的 `metadata.reviewFeedback`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 与 `frontend-user/src/modules/graph/components/GraphWorkspaceSelectionPanel.tsx`，在节点检查器的学习反馈卡片里补上“刷新学习反馈”动作、请求中状态和成功/失败提示，并通过独立 `reviewFeedback` 读模型刷新图谱侧反馈而不改写 graph document。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把这次“图谱侧刷新学习反馈并保留本地草稿”的切片补回 `WB-033 / LC-010` 执行记录与阶段描述。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphSourceReviewFeedback.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphSourceReviewFeedback.test.ts src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+### 后续影响
+
+- `WB-033 / LC-010` 现在不只支持“复习完成后回到图谱看反馈”，也支持“回到图谱后主动刷新最新 mastery 摘要且不丢本地草稿”，这让主学习闭环的即时验证路径更接近真实使用。
+- 这一轮仍然没有把 mastery 正式持久化为图谱领域字段，也没有做跨端推送或统一失效策略；如果继续推进，更适合优先补反馈持久化边界、刷新失效语义和冲突提示，而不是继续把运行时反馈堆在更多页面局部状态里。
+
 ## 2026-07-16 03:46:06 +08:00 | v1.1.0-alpha.290 | 推进 WB-033 / LC-010 复习评分后回到图谱查看反馈
 ### 任务内容
 

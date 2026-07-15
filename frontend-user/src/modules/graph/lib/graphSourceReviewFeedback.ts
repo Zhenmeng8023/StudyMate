@@ -17,11 +17,23 @@ export function resolveGraphSourceReviewFeedback(
   node: Pick<GraphNodePayload, "source" | "metadata"> | null | undefined,
   summaries: ReviewFeedbackSourcePayload[]
 ): GraphSourceReviewFeedback | null {
+  const matched = findMatchingSourceSummary(node, summaries);
+  if (matched) {
+    return toGraphSourceReviewFeedback(matched);
+  }
+
   const embedded = toGraphSourceReviewFeedback(readEmbeddedReviewFeedback(node));
   if (embedded) {
     return embedded;
   }
 
+  return null;
+}
+
+function findMatchingSourceSummary(
+  node: Pick<GraphNodePayload, "source"> | null | undefined,
+  summaries: ReviewFeedbackSourcePayload[]
+) {
   const sourceType = normalizeSourceType(node?.source?.type);
   const sourceId = node?.source?.id?.trim();
   if (!sourceType || !sourceId || summaries.length === 0) {
@@ -35,7 +47,7 @@ export function resolveGraphSourceReviewFeedback(
     return null;
   }
 
-  return toGraphSourceReviewFeedback(matched);
+  return matched;
 }
 
 function normalizeSourceType(sourceType: string | undefined) {

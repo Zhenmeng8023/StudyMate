@@ -63,9 +63,11 @@ export function GraphWorkspaceSelectionPanel(props: {
   onNodeTitleChange: (title: string) => void;
   onNodeToneChange: (tone: GraphNodeTone) => void;
   onOpenReviewWorkspace: (filters: { sourceType: string; sourceId: string }) => void;
+  onRefreshReviewFeedback?: () => void;
   onOpenSource: (target: string) => void;
   onOrganizeSelectedNodesBySource: (mode: SourceOrganizerMode) => void;
   onToggleGroupCollapse: (groupId: string) => void;
+  reviewFeedbackRefreshPending?: boolean;
   selectedEdge: GraphEdgePayload | null;
   selectedNode: GraphNodePayload | null;
   selectedNodeIds: string[];
@@ -121,7 +123,9 @@ export function GraphWorkspaceSelectionPanel(props: {
           onNodeTitleChange={props.onNodeTitleChange}
           onNodeToneChange={props.onNodeToneChange}
           onOpenReviewWorkspace={props.onOpenReviewWorkspace}
+          onRefreshReviewFeedback={props.onRefreshReviewFeedback}
           onOpenSource={props.onOpenSource}
+          reviewFeedbackRefreshPending={props.reviewFeedbackRefreshPending}
           selectedNode={selectedNode}
           selectedNodeReviewFeedback={props.selectedNodeReviewFeedback}
           selectedNodeSourceBacklink={selectedNodeSourceBacklink}
@@ -330,7 +334,9 @@ function GraphSingleNodePanel(props: {
   onNodeTitleChange: (title: string) => void;
   onNodeToneChange: (tone: GraphNodeTone) => void;
   onOpenReviewWorkspace: (filters: { sourceType: string; sourceId: string }) => void;
+  onRefreshReviewFeedback?: () => void;
   onOpenSource: (target: string) => void;
+  reviewFeedbackRefreshPending?: boolean;
   selectedNode: GraphNodePayload;
   selectedNodeReviewFeedback: GraphSourceReviewFeedback | null;
   selectedNodeSourceBacklink: GraphSourceBacklink | null;
@@ -438,6 +444,14 @@ function GraphSingleNodePanel(props: {
             </div>
           ) : null}
           <div className="graph-inline-actions">
+            <button
+              className="ghost-button"
+              disabled={props.reviewFeedbackRefreshPending}
+              onClick={() => props.onRefreshReviewFeedback?.()}
+              type="button"
+            >
+              {props.reviewFeedbackRefreshPending ? "正在刷新..." : "刷新学习反馈"}
+            </button>
             <button
               className="secondary-button"
               onClick={() => {

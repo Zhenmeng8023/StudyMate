@@ -7,6 +7,7 @@ import {
   createGraph,
   deleteGraph,
   getGraph,
+  getReviewFeedback,
   listDecks,
   listDiagramTemplates,
   listGraphSnapshots,
@@ -16,7 +17,7 @@ import {
   restoreGraphSnapshot,
   validateGraph
 } from "../../api/client";
-import type { AuthSession, GraphDetailPayload, GraphSummaryPayload } from "../../api/client";
+import type { AuthSession, GraphDetailPayload, GraphSummaryPayload, ReviewFeedbackPayload } from "../../api/client";
 import { GraphWorkspacePage } from "./GraphWorkspacePage";
 import { buildGraphWorkspaceConcurrencyStorageKey } from "./lib/graphWorkspaceConcurrencySignal";
 import { buildGraphWorkspaceDraftStorageKey } from "./lib/graphWorkspaceDraftRecovery";
@@ -29,6 +30,7 @@ vi.mock("../../api/client", async () => {
     createGraph: vi.fn(),
     deleteGraph: vi.fn(),
     getGraph: vi.fn(),
+    getReviewFeedback: vi.fn(),
     listDecks: vi.fn(),
     listDiagramTemplates: vi.fn(),
     listGraphs: vi.fn(),
@@ -84,8 +86,17 @@ const graphDetail: GraphDetailPayload = {
   }
 };
 
+const emptyReviewFeedback: ReviewFeedbackPayload = {
+  dueCount: 0,
+  learningCount: 0,
+  weakCardCount: 0,
+  weakCards: [],
+  sourceSummaries: []
+};
+
 const listGraphsMock = vi.mocked(listGraphs);
 const getGraphMock = vi.mocked(getGraph);
+const getReviewFeedbackMock = vi.mocked(getReviewFeedback);
 const listDecksMock = vi.mocked(listDecks);
 const listMaterialsMock = vi.mocked(listMaterials);
 const listNotesMock = vi.mocked(listNotes);
@@ -163,6 +174,7 @@ describe("GraphWorkspacePage persistence states", () => {
     });
     listGraphsMock.mockResolvedValue([graphSummary]);
     getGraphMock.mockResolvedValue(graphDetail);
+    getReviewFeedbackMock.mockResolvedValue(emptyReviewFeedback);
     listDecksMock.mockResolvedValue([]);
     listMaterialsMock.mockResolvedValue([]);
     listNotesMock.mockResolvedValue([]);
@@ -811,6 +823,113 @@ describe("GraphWorkspacePage persistence states", () => {
       title: "Updated URL",
       metadata: { content: { url: "https://new.example.test/lesson" } }
     });
+  });
+
+  it("refreshes selected node review feedback without discarding dirty local edits", async () => {
+    const user = userEvent.setup();
+    const detailWithNode: GraphDetailPayload = {
+      ...graphDetail,
+      nodeCount: 1,
+      document: {
+        ...graphDetail.document,
+        nodes: [
+          {
+            id: "node-1",
+            type: "url",
+            title: "Original URL",
+            x: 100,
+            y: 100,
+            width: 250,
+            height: 132,
+            source: { type: "material", id: "material-1", label: "璧勬枡 A" },
+            metadata: {
+              content: { url: "https://old.example.test" },
+              reviewFeedback: {
+                sourceType: "material",
+                sourceId: "material-1",
+                totalCardCount: 3,
+                reviewCardCount: 1,
+                masteredCardCount: 1,
+                masteryLevel: "building",
+                masteryScore: 33,
+                weakCardCount: 2,
+                dueCount: 1,
+                learningCount: 2,
+                maxLapseCount: 3,
+                sampleCardFronts: ["Old card"]
+              }
+            }
+          }
+        ]
+      }
+    };
+    listGraphsMock.mockResolvedValue([{ ...graphSummary, nodeCount: 1 }]);
+    getGraphMock.mockResolvedValue(detailWithNode);
+    getReviewFeedbackMock
+      .mockResolvedValueOnce({
+        dueCount: 1,
+        learningCount: 2,
+        weakCardCount: 2,
+        weakCards: [],
+        sourceSummaries: [
+          {
+            sourceType: "material",
+            sourceId: "material-1",
+            totalCardCount: 3,
+            reviewCardCount: 1,
+            masteredCardCount: 1,
+            masteryLevel: "building",
+            masteryScore: 33,
+            weakCardCount: 2,
+            dueCount: 1,
+            learningCount: 2,
+            maxLapseCount: 3,
+            sampleCardFronts: ["Old card"]
+          }
+        ]
+      })
+      .mockResolvedValueOnce({
+        dueCount: 0,
+        learningCount: 0,
+        weakCardCount: 0,
+        weakCards: [],
+        sourceSummaries: [
+          {
+            sourceType: "material",
+            sourceId: "material-1",
+            totalCardCount: 3,
+            reviewCardCount: 3,
+            masteredCardCount: 3,
+            masteryLevel: "solid",
+            masteryScore: 100,
+            weakCardCount: 0,
+            dueCount: 0,
+            learningCount: 0,
+            maxLapseCount: 0,
+            sampleCardFronts: ["New card"]
+          }
+        ]
+      });
+
+    renderWorkspace();
+
+    await user.click(await screen.findByRole("button", { name: /Original URL/ }));
+    await expect(screen.findByText(/33%/)).resolves.toBeInTheDocument();
+
+    const titleInput = screen.getByDisplayValue("Original URL");
+    await user.clear(titleInput);
+    await user.type(titleInput, "Updated URL");
+    expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "刷新学习反馈" }));
+
+    await expect(screen.findByText(/掌握度 100%/)).resolves.toBeInTheDocument();
+    expect(screen.getByText("New card")).toBeInTheDocument();
+    expect(screen.queryByText("Old card")).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue("Updated URL")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("https://old.example.test")).toBeInTheDocument();
+    expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
+    expect(getReviewFeedbackMock).toHaveBeenCalledTimes(2);
   });
 
   it("edits selected edge label and curve style before saving", async () => {

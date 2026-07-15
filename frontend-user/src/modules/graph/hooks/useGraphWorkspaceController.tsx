@@ -204,6 +204,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [notes, setNotes] = useState<NotePayload[]>([]);
   const [diagramTemplates, setDiagramTemplates] = useState<DiagramTemplatePayload[]>([]);
   const [reviewFeedback, setReviewFeedback] = useState<ReviewFeedbackPayload | null>(null);
+  const [reviewFeedbackRefreshPending, setReviewFeedbackRefreshPending] = useState(false);
   const [validationIssues, setValidationIssues] = useState<GraphValidationIssuePayload[]>([]);
   const [cardDrafts, setCardDrafts] = useState<GraphCardDraftPayload[]>([]);
   const [graphDetail, setGraphDetail] = useState<GraphDetailPayload | null>(null);
@@ -963,6 +964,20 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       cancelled = true;
     };
   }, [props.session]);
+
+  async function refreshReviewFeedback() {
+    setReviewFeedbackRefreshPending(true);
+    setWorkspaceStatusMessage("正在刷新学习反馈...");
+    try {
+      const payload = await getReviewFeedback(props.session);
+      setReviewFeedback(payload);
+      setWorkspaceStatusMessage("已刷新学习反馈");
+    } catch (error) {
+      setWorkspaceStatusMessage(error instanceof Error ? error.message : "刷新学习反馈失败");
+    } finally {
+      setReviewFeedbackRefreshPending(false);
+    }
+  }
 
   async function openGraph(graphId: string) {
     if (detailRef.current?.id === graphId) {
@@ -2382,9 +2397,11 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                     params.set("sourceId", filters.sourceId);
                     navigate(`/review?${params.toString()}`);
                   }}
+                  onRefreshReviewFeedback={() => void refreshReviewFeedback()}
                   onOpenSource={(target) => navigate(target)}
                   onOrganizeSelectedNodesBySource={organizeSelectedNodesBySource}
                   onToggleGroupCollapse={toggleGroupCollapse}
+                  reviewFeedbackRefreshPending={reviewFeedbackRefreshPending}
                   selectedEdge={selectedEdge}
                   selectedNode={selectedNode}
                   selectedNodeIds={selectedNodeIds}
