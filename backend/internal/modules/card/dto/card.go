@@ -34,8 +34,9 @@ type BulkCreateCardsRequest struct {
 }
 
 type ImportDeckRequest struct {
-	Filename string `json:"filename" binding:"required"`
-	Content  string `json:"content" binding:"required"`
+	Filename    string `json:"filename" binding:"required"`
+	Content     string `json:"content" binding:"required"`
+	PreviewOnly bool   `json:"previewOnly"`
 }
 
 type ReviewCardRequest struct {
@@ -145,9 +146,22 @@ type DeckExportPayload struct {
 	ExportedAt string `json:"exportedAt"`
 }
 
+type DeckImportIssuePayload struct {
+	RowNumber int    `json:"rowNumber"`
+	Front     string `json:"front,omitempty"`
+	Message   string `json:"message"`
+}
+
 type DeckImportPayload struct {
-	ImportedCount int    `json:"importedCount"`
-	StatusMessage string `json:"statusMessage"`
+	Preview          bool                     `json:"preview"`
+	TotalCount       int                      `json:"totalCount"`
+	ReadyCount       int                      `json:"readyCount"`
+	ImportedCount    int                      `json:"importedCount"`
+	DuplicateCount   int                      `json:"duplicateCount"`
+	FailedCount      int                      `json:"failedCount"`
+	DuplicateSamples []DeckImportIssuePayload `json:"duplicateSamples,omitempty"`
+	FailureSamples   []DeckImportIssuePayload `json:"failureSamples,omitempty"`
+	StatusMessage    string                   `json:"statusMessage"`
 }
 
 type ReviewResultPayload struct {

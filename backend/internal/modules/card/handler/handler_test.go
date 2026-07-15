@@ -115,6 +115,9 @@ func (s *fakeCardService) ImportDeck(ownerUserID string, deckID string, request 
 	s.deckID = deckID
 	s.importDeckReq = request
 	return &carddto.DeckImportPayload{
+		Preview:       request.PreviewOnly,
+		TotalCount:    1,
+		ReadyCount:    1,
 		ImportedCount: 1,
 		StatusMessage: "已导入 1 张卡片到当前卡组。",
 	}, nil
@@ -258,14 +261,14 @@ func TestExportDeckReadsFormatQuery(t *testing.T) {
 	}
 }
 
-func TestImportDeckWritesFilenameAndContent(t *testing.T) {
+func TestImportDeckWritesFilenameContentAndPreviewFlag(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	service := &fakeCardService{}
 	handler := NewHandler(service)
 	router := gin.New()
 	router.POST("/decks/:id/import", withUser(handler.ImportDeck))
 
-	body := bytes.NewBufferString(`{"filename":"cards.json","content":"{\"cards\":[{\"front\":\"Q\",\"back\":\"A\"}]}"}`)
+	body := bytes.NewBufferString(`{"filename":"cards.json","content":"{\"cards\":[{\"front\":\"Q\",\"back\":\"A\"}]}","previewOnly":true}`)
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/decks/deck-1/import", body))
 
@@ -275,7 +278,7 @@ func TestImportDeckWritesFilenameAndContent(t *testing.T) {
 	if service.ownerID != "user-1" || service.deckID != "deck-1" {
 		t.Fatalf("unexpected import request binding: owner=%q deck=%q", service.ownerID, service.deckID)
 	}
-	if service.importDeckReq.Filename != "cards.json" || service.importDeckReq.Content == "" {
+	if service.importDeckReq.Filename != "cards.json" || service.importDeckReq.Content == "" || !service.importDeckReq.PreviewOnly {
 		t.Fatalf("unexpected import request payload: %#v", service.importDeckReq)
 	}
 }

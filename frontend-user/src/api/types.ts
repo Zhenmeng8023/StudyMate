@@ -377,8 +377,21 @@ export interface DeckExportPayload {
   exportedAt: string;
 }
 
+export interface DeckImportIssuePayload {
+  rowNumber: number;
+  front?: string;
+  message: string;
+}
+
 export interface DeckImportPayload {
+  preview: boolean;
+  totalCount: number;
+  readyCount: number;
   importedCount: number;
+  duplicateCount: number;
+  failedCount: number;
+  duplicateSamples?: DeckImportIssuePayload[];
+  failureSamples?: DeckImportIssuePayload[];
   statusMessage: string;
 }
 

@@ -397,3 +397,92 @@ func TestImportDeckParsesPortableJsonAndCsvContent(t *testing.T) {
 		t.Fatalf("expected one imported json card in %#v", cards)
 	}
 }
+
+func TestImportDeckPreviewReportsDuplicatesAndFailures(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite db: %v", err)
+	}
+
+	if err := db.AutoMigrate(&adminmodel.AuditLog{}, &cardmodel.Deck{}, &cardmodel.Card{}, &cardmodel.CardSchedule{}, &cardmodel.CardReview{}); err != nil {
+		t.Fatalf("migrate sqlite schema: %v", err)
+	}
+
+	repository := cardrepo.NewRepository(db)
+	service := NewService(repository, adminrepo.NewAuditLogRepository(db), nil)
+	deck := &cardmodel.Deck{
+		ID:          "deck-1",
+		OwnerUserID: "user-1",
+		Title:       "Previewable deck",
+		Description: "Duplicate checks",
+		Visibility:  "private",
+		CardCount:   0,
+	}
+	if err := repository.CreateDeck(deck); err != nil {
+		t.Fatalf("create deck: %v", err)
+	}
+
+	if _, err := service.CreateCard("user-1", deck.ID, carddto.CreateCardRequest{
+		CardType: "basic",
+		Front:    "Existing front",
+		Back:     "Existing back",
+	}); err != nil {
+		t.Fatalf("seed existing card: %v", err)
+	}
+
+	request := carddto.ImportDeckRequest{
+		Filename:    "cards.json",
+		PreviewOnly: true,
+		Content: `{"app":"StudyMate","kind":"deck-cards","cards":[
+			{"front":"Existing front","back":"Existing back","cardType":"basic"},
+			{"front":"Fresh front","back":"Fresh back","cardType":"basic"},
+			{"front":"Broken front","back":"","cardType":"basic"},
+			{"front":"Fresh front","back":"Fresh back","cardType":"basic"}
+		]}`,
+	}
+
+	preview, err := service.ImportDeck("user-1", deck.ID, request)
+	if err != nil {
+		t.Fatalf("preview deck import: %v", err)
+	}
+	if !preview.Preview || preview.TotalCount != 4 || preview.ReadyCount != 1 || preview.ImportedCount != 0 {
+		t.Fatalf("unexpected preview summary: %#v", preview)
+	}
+	if preview.DuplicateCount != 2 || preview.FailedCount != 1 {
+		t.Fatalf("expected 2 duplicates and 1 failure, got %#v", preview)
+	}
+	if len(preview.DuplicateSamples) != 2 || preview.DuplicateSamples[0].RowNumber != 1 || preview.DuplicateSamples[1].RowNumber != 4 {
+		t.Fatalf("unexpected duplicate samples: %#v", preview.DuplicateSamples)
+	}
+	if len(preview.FailureSamples) != 1 || preview.FailureSamples[0].RowNumber != 3 {
+		t.Fatalf("unexpected failure samples: %#v", preview.FailureSamples)
+	}
+
+	cardsAfterPreview, err := service.ListCards("user-1", deck.ID, carddto.ListCardsQuery{})
+	if err != nil {
+		t.Fatalf("list cards after preview: %v", err)
+	}
+	if len(cardsAfterPreview) != 1 {
+		t.Fatalf("preview should not create cards, got %d", len(cardsAfterPreview))
+	}
+
+	request.PreviewOnly = false
+	imported, err := service.ImportDeck("user-1", deck.ID, request)
+	if err != nil {
+		t.Fatalf("import deck after preview: %v", err)
+	}
+	if imported.Preview || imported.ImportedCount != 1 || imported.ReadyCount != 1 {
+		t.Fatalf("unexpected import summary: %#v", imported)
+	}
+	if imported.DuplicateCount != 2 || imported.FailedCount != 1 {
+		t.Fatalf("expected skip summary to survive import, got %#v", imported)
+	}
+
+	cardsAfterImport, err := service.ListCards("user-1", deck.ID, carddto.ListCardsQuery{})
+	if err != nil {
+		t.Fatalf("list cards after import: %v", err)
+	}
+	if len(cardsAfterImport) != 2 {
+		t.Fatalf("expected 2 cards after import, got %d", len(cardsAfterImport))
+	}
+}

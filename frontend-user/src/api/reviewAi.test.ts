@@ -176,13 +176,19 @@ describe("review API clients", () => {
 
   it("posts portable deck import payload with filename and content", async () => {
     const fetchMock = mockApiResponse({
+      preview: true,
+      totalCount: 2,
+      readyCount: 1,
       importedCount: 1,
+      duplicateCount: 0,
+      failedCount: 1,
       statusMessage: "已导入 1 张卡片到当前卡组。"
     });
 
     await importDeckCards(session, "deck-1", {
       filename: "cards.json",
-      content: "{\"cards\":[]}"
+      content: "{\"cards\":[]}",
+      previewOnly: true
     });
 
     const [path, init] = fetchMock.mock.calls[0];
@@ -190,7 +196,8 @@ describe("review API clients", () => {
     expect(init?.method).toBe("POST");
     expect(JSON.parse(String(init?.body))).toEqual({
       filename: "cards.json",
-      content: "{\"cards\":[]}"
+      content: "{\"cards\":[]}",
+      previewOnly: true
     });
   });
 

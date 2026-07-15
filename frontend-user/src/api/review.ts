@@ -143,6 +143,7 @@ export async function importDeckCards(
   input: {
     filename: string;
     content: string;
+    previewOnly?: boolean;
   }
 ) {
   return request<DeckImportPayload>(`/decks/${deckId}/import`, {

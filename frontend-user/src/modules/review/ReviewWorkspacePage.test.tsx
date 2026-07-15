@@ -215,7 +215,12 @@ describe("ReviewWorkspacePage", () => {
       exportedAt: "2026-06-02T12:00:00Z"
     });
     importDeckCardsMock.mockResolvedValue({
+      preview: false,
+      totalCount: 1,
+      readyCount: 1,
       importedCount: 1,
+      duplicateCount: 0,
+      failedCount: 0,
       statusMessage: "已导入 1 张卡片到当前卡组。"
     });
 
@@ -764,8 +769,31 @@ describe("ReviewWorkspacePage", () => {
     });
   });
 
-  it("imports a local json card file into the selected deck", async () => {
+  it("prechecks a local json card file before importing it into the selected deck", async () => {
     const user = userEvent.setup();
+    importDeckCardsMock
+      .mockResolvedValueOnce({
+        preview: true,
+        totalCount: 3,
+        readyCount: 1,
+        importedCount: 0,
+        duplicateCount: 1,
+        failedCount: 1,
+        duplicateSamples: [{ rowNumber: 1, front: "Existing front", message: "与当前卡组中的现有卡片重复" }],
+        failureSamples: [{ rowNumber: 3, front: "Broken front", message: "缺少 front 或 back" }],
+        statusMessage: "预检完成：可导入 1 张，已发现 1 张重复、1 行失败。"
+      })
+      .mockResolvedValueOnce({
+        preview: false,
+        totalCount: 3,
+        readyCount: 1,
+        importedCount: 1,
+        duplicateCount: 1,
+        failedCount: 1,
+        duplicateSamples: [{ rowNumber: 1, front: "Existing front", message: "与当前卡组中的现有卡片重复" }],
+        failureSamples: [{ rowNumber: 3, front: "Broken front", message: "缺少 front 或 back" }],
+        statusMessage: "已导入 1 张卡片到当前卡组，已跳过 1 张重复卡片和 1 行无效内容。"
+      });
     renderPage();
 
     expect(await screen.findByText("什么是图谱？")).toBeInTheDocument();
@@ -802,11 +830,29 @@ describe("ReviewWorkspacePage", () => {
         "deck-1",
         expect.objectContaining({
           filename: "cards.json",
-          content: expect.stringContaining("Imported front")
+          content: expect.stringContaining("Imported front"),
+          previewOnly: true
         })
       );
     });
-    expect(await screen.findByText("已导入 1 张卡片到当前卡组。")).toBeInTheDocument();
+    expect(await screen.findByText("确认导入 1 张卡片？")).toBeInTheDocument();
+    expect(screen.getByText("预检完成：可导入 1 张，已发现 1 张重复、1 行失败。")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "确认导入" }));
+
+    await waitFor(() => {
+      expect(importDeckCardsMock).toHaveBeenNthCalledWith(
+        2,
+        session,
+        "deck-1",
+        expect.objectContaining({
+          filename: "cards.json",
+          content: expect.stringContaining("Imported front"),
+          previewOnly: false
+        })
+      );
+    });
+    expect(await screen.findByText("已导入 1 张卡片到当前卡组，已跳过 1 张重复卡片和 1 行无效内容。")).toBeInTheDocument();
   });
 
   it("exports the selected deck cards as json", async () => {
