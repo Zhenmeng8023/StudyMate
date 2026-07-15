@@ -2,7 +2,6 @@
 import "../components/admin/admin.css";
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import type { ApiRequestInit } from "@studymate/api-client";
-import { getSessionInvalidationPrompt } from "@studymate/api-client";
 import { adminGet, adminPost } from "../api/client";
 import type { AdminDataStatePayload } from "../components/admin/dataState";
 import {
@@ -20,21 +19,11 @@ import { getGovernanceColumns, type GovernanceRecord } from "../components/admin
 import type { AdminRouteKey } from "../router";
 import { type ConfirmDialogKey } from "./adminConfirmDialogState";
 import { createAdminWorkspaceConfirmAdapter } from "./adminWorkspaceConfirmAdapter";
+import { createAdminWorkspaceChromeAdapter } from "./adminWorkspaceChromeAdapter";
 import { createAdminWorkspaceResetController } from "./adminWorkspaceResetController";
 import { createAdminWorkspaceInteractionAdapter } from "./adminWorkspaceInteractionAdapter";
-import { buildAdminWorkspaceLoginPanelEvents } from "./adminWorkspaceLoginPanelEvents";
-import { buildAdminWorkspaceLoginPanelProps } from "./adminWorkspaceLoginPanelProps";
 import { buildAdminWorkspaceModuleEvents } from "./adminWorkspaceModuleEvents";
 import { buildAdminWorkspaceModuleProps } from "./adminWorkspaceModuleProps";
-import { buildAdminWorkspaceShellEvents } from "./adminWorkspaceShellEvents";
-import { buildAdminWorkspaceShellProps } from "./adminWorkspaceShellProps";
-import {
-  buildAdminNavItems,
-  getAdminActiveCountLabel,
-  getAdminViewDescription,
-  groupAdminNavItems,
-  type AdminNavItem
-} from "./adminViewMeta";
 import { buildAdminOverviewCards } from "./adminOverviewCards";
 import { resolveGovernanceDataState, resolveModerationDataState } from "./adminViewDataState";
 import { getAdminRequestErrorMessage, getAdminRequestErrorStatus } from "./adminRequestError";
@@ -56,9 +45,6 @@ import {
 import {
   type AdminWorkspaceResetKey
 } from "./adminWorkspaceState";
-import {
-  getGovernanceModuleConfig,
-} from "./adminGovernanceConfig";
 import { createAdminWorkspaceFeatureAdapter } from "./adminWorkspaceFeatureAdapter";
 import AdminDashboardModule from "./modules/AdminDashboardModule.vue";
 import AdminGovernanceModule from "./modules/AdminGovernanceModule.vue";
@@ -292,7 +278,6 @@ const loggedIn = computed(() => Boolean(session.value));
 const moderationBuckets = computed(() => splitModerationItems(moderationItems.value));
 const pendingPosts = computed(() => moderationBuckets.value.pendingPosts);
 const pendingMaterials = computed(() => moderationBuckets.value.pendingMaterials);
-const profileInitial = computed(() => profile.value?.displayName?.trim().slice(0, 1) || "A");
 const workspaceConfirm = createAdminWorkspaceConfirmAdapter({
   applyAITaskAction: workspaceMutations.applyAITaskAction,
   applyModerationAction: workspaceMutations.applyModerationAction,
@@ -355,64 +340,36 @@ const workspaceInteractions = createAdminWorkspaceInteractionAdapter({
     syncAdminWorkspaceLocation(view, window.location, window.history, syncMode);
   }
 });
-
-const navItems = computed<AdminNavItem[]>(() => buildAdminNavItems(moderationItems.value.length));
-const navGroups = computed(() => groupAdminNavItems(navItems.value));
-const activeMeta = computed(() => navItems.value.find((item) => item.key === activeView.value) ?? navItems.value[0]);
-const loginPrompt = computed(() => getSessionInvalidationPrompt(sessionInvalidation.value, "admin"));
-const loginNotice = computed(() => {
-  if (loggedIn.value || loginPrompt.value || notice.value === initialAdminWorkspaceNotice) {
-    return "";
-  }
-  return notice.value;
-});
-const loginPanelProps = computed(() =>
-  buildAdminWorkspaceLoginPanelProps({
+const chromeBindings = computed(() =>
+  createAdminWorkspaceChromeAdapter({
+    activeView: activeView.value,
     errorMessage: errorMessage.value,
+    formLogin: form.login,
+    formPassword: form.password,
+    governanceRowCount: governanceRows.value.length,
+    initialNotice: initialAdminWorkspaceNotice,
     loading: loading.value,
-    loginPrompt: loginPrompt.value,
-    loginValue: form.login,
-    notice: loginNotice.value,
-    passwordValue: form.password
-  })
-);
-const loginPanelEvents = computed(() =>
-  buildAdminWorkspaceLoginPanelEvents({
-    login: () => workspaceActions.login(),
-    setLoginValue: (value) => {
+    loggedIn: loggedIn.value,
+    moderationItemCount: moderationItems.value.length,
+    notice: notice.value,
+    onLogin: () => workspaceActions.login(),
+    onLogout: () => workspaceActions.logout(),
+    onRefreshActiveView: () => workspaceActions.refreshActiveView(),
+    onSwitchView: workspaceInteractions.switchView,
+    profile: profile.value,
+    sessionInvalidation: sessionInvalidation.value,
+    setLoginValue: (value: string) => {
       form.login = value;
     },
-    setPasswordValue: (value) => {
+    setPasswordValue: (value: string) => {
       form.password = value;
     }
   })
 );
-const activeDescription = computed(() => getAdminViewDescription(activeView.value, getGovernanceModuleConfig(activeView.value)?.description ?? ""));
-const activeCountLabel = computed(() =>
-  getAdminActiveCountLabel(activeView.value, moderationItems.value.length, governanceRows.value.length)
-);
-const shellProps = computed(() =>
-  buildAdminWorkspaceShellProps({
-    activeDescription: activeDescription.value,
-    activeGroup: activeMeta.value.group,
-    activeTitle: activeMeta.value.label,
-    activeView: activeView.value,
-    countLabel: activeCountLabel.value,
-    errorMessage: errorMessage.value,
-    loading: loading.value,
-    navGroups: navGroups.value,
-    notice: notice.value,
-    profile: profile.value,
-    profileInitial: profileInitial.value
-  })
-);
-const shellEvents = computed(() =>
-  buildAdminWorkspaceShellEvents({
-    logout: () => workspaceActions.logout(),
-    refreshActiveView: () => workspaceActions.refreshActiveView(),
-    switchView: workspaceInteractions.switchView
-  })
-);
+const loginPanelProps = computed(() => chromeBindings.value.loginPanelProps);
+const loginPanelEvents = computed(() => chromeBindings.value.loginPanelEvents);
+const shellProps = computed(() => chromeBindings.value.shellProps);
+const shellEvents = computed(() => chromeBindings.value.shellEvents);
 const moderationDataState = computed<AdminDataStatePayload | null>(() =>
   resolveModerationDataState({
     errorMessage: errorMessage.value,
@@ -424,7 +381,7 @@ const moderationDataState = computed<AdminDataStatePayload | null>(() =>
 const governanceDataState = computed<AdminDataStatePayload | null>(() => {
   if (activeView.value === "dashboard" || activeView.value === "moderation") return null;
   return resolveGovernanceDataState({
-    activeLabel: activeMeta.value.label,
+    activeLabel: shellProps.value.activeTitle,
     errorMessage: errorMessage.value,
     errorStatus: governanceErrorStatus.value,
     loading: loading.value,

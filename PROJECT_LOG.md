@@ -1,3 +1,27 @@
+## 2026-07-15 19:35:00 +08:00 | v1.1.0-alpha.277 | 推进 FE-041 管理端 chrome adapter 接线
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的 P0 路线推进 `FE-041`，这一轮不新增治理功能，而是继续收口后台工作台里确认流接线后仍停留在页面层的外壳绑定编排。
+- 目标是把登录面板和后台壳层的 `props / events` 以及它们依赖的导航、提示和计数派生状态统一收口成一个更稳定的 chrome adapter，避免 `AdminWorkspaceView.vue` 继续分别维护多组外壳绑定 computed。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceChromeAdapter.ts`，提供 `createAdminWorkspaceChromeAdapter(...)` 出口，统一组合 login panel props/events、shell props/events、导航分组、会话提示和计数文案。
+- 新增并补齐 `frontend-admin/src/views/adminWorkspaceChromeAdapter.test.ts`，锁定会话失效提示/notice fallback 与壳层导航/动作透传两组组合契约。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，改为通过 `chromeBindings` 消费 `loginPanelProps / loginPanelEvents / shellProps / shellEvents`；同时移除页面层原有的 `navItems / navGroups / activeMeta / loginPrompt / loginNotice / activeDescription / activeCountLabel` 等外壳辅助 computed。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 chrome adapter 已接线”这一层。
+### 验证结果
+
+- `npm --workspace frontend-admin run test -- src/views/adminWorkspaceChromeAdapter.test.ts src/views/AdminWorkspaceView.test.ts`
+- `npm --workspace frontend-admin run typecheck`
+- `npm run build:admin`
+- `npm run verify:docs`
+- `npx playwright test e2e/v1-admin-governance.spec.ts`
+- `git diff --check`
+### 后续影响
+
+- `FE-041` 现在不只是在拆 `runtime / action / read / mutation / feature / interaction / confirm` 这几组装配，后台工作台里围绕登录与壳层骨架的外壳绑定也开始进入共享 chrome adapter，`AdminWorkspaceView.vue` 进一步回到响应式状态拼装与展示角色。
+- 这一轮仍然只收口外壳绑定；如果继续推进 `FE-041 / ADM-010`，更适合优先评估模块 props/events、页面派生状态与 reset 协调是否继续纳入更稳定的工作台 feature 边界，而不是立刻切去新的治理业务。
+
 ## 2026-07-15 19:20:00 +08:00 | v1.1.0-alpha.276 | 推进 FE-041 管理端 confirm adapter 接线
 ### 任务内容
 
