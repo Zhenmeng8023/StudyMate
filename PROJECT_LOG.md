@@ -1,69 +1,102 @@
-## 2026-07-15 07:55:10 +08:00 | v1.1.0-alpha.257 | 鎺ㄨ繘 FE-041 绠＄悊绔?session 鍚屾缂栨帓 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+## 2026-07-15 07:55:10 +08:00 | v1.1.0-alpha.257 | 推进 FE-041 管理端 session 同步编排 helper 接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?`subscribeSession(...)` 瑙﹀彂鍚庣殑鏈湴鐘舵€佸悓姝ヤ笌浼氳瘽娓呯┖鍗忓悓銆?- 鐩爣鏄妸 `session / sessionInvalidation / profile` 鏇存柊锛屼互鍙?session 琚竻绌哄悗榛樿瑙嗗浘鍥為€€銆侀敊璇竻鐞嗐€乶otice 鍚屾杩欎竴娈靛３灞傜紪鎺掓娊鍒板叡浜?helper锛岄伩鍏嶅畠缁х画鐣欏湪椤甸潰灞傚唴鑱旂淮鎶ゃ€?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `subscribeSession(...)` 触发后的本地状态同步与会话清空协同。
+- 目标是把 `session / sessionInvalidation / profile` 更新，以及 session 被清空后默认视图回退、错误清理、notice 同步这一段壳层编排抽到共享 helper，避免它继续留在页面层内联维护。
+### 实际变更
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceSessionSync.ts` 涓?`adminWorkspaceSessionSync.test.ts`锛屾妸 session 浠嶆湁鏁堟椂鐨勬湰鍦扮姸鎬佸悓姝ワ紝浠ュ強 session 琚竻绌烘椂鐨?`reset + default view + replace URL + notice` 鍗忓悓鏀跺彛鍒板叡浜?helper銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `subscribeSession(...)` 鍥炶皟鏀逛负鐩存帴娑堣垂鍏变韩 `runAdminWorkspaceSessionSync(...)`锛岄〉闈㈠眰鍙繚鐣?ref setter 涓?location sync 缁戝畾銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙 session 璁㈤槄鍚庣殑鐘舵€佸悓姝ヤ笌娓呯┖鍗忓悓涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?### 楠岃瘉缁撴灉
+- 新增 `frontend-admin/src/views/adminWorkspaceSessionSync.ts` 与 `adminWorkspaceSessionSync.test.ts`，把 session 仍有效时的本地状态同步，以及 session 被清空时的 `reset + default view + replace URL + notice` 协同收口到共享 helper。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `subscribeSession(...)` 回调改为直接消费共享 `runAdminWorkspaceSessionSync(...)`，页面层只保留 ref setter 与 location sync 绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 session 订阅后的状态同步与清空协同也已进入共享 helper 出口”。
+### 验证结果
 
-- RED锛歚npm --workspace frontend-admin run test -- src/views/adminWorkspaceSessionSync.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/adminWorkspaceSessionSync.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- RED：`npm --workspace frontend-admin run test -- src/views/adminWorkspaceSessionSync.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/adminWorkspaceSessionSync.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜?`adminWorkspaceSessionCleared` 鎺ㄨ繘鍒板叡浜?`adminWorkspaceSessionSync`锛屽悗鍙板伐浣滃彴閲屽洿缁?session 璁㈤槄鐨勭姸鎬佸崗鍚屼篃寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｄ簡 session 鍙樺寲鍚庣殑鍚屾涓庢竻绌鸿矾寰勶紱濡傛灉鍚庣画缁х画鎺ㄨ繘 `FE-041 / ADM-010`锛屾洿閫傚悎璇勪及 `popstate + subscribe + mount` 鐨勬洿楂樺眰 runtime 鍗忚皟 helper锛岃€屼笉鏄妸鏇村 session 鍒嗘敮閲嶆柊鍐欏洖椤甸潰灞傘€?
-## 2026-07-15 07:44:09 +08:00 | v1.1.0-alpha.256 | 鎺ㄨ繘 SE-020 鎼滅储鍒嗙粍缁х画鍔犺浇
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享 `adminWorkspaceSessionCleared` 推进到共享 `adminWorkspaceSessionSync`，后台工作台里围绕 session 订阅的状态协同也开始复用统一出口。
+- 这一轮仍然只先收口了 session 变化后的同步与清空路径；如果后续继续推进 `FE-041 / ADM-010`，更适合评估 `popstate + subscribe + mount` 的更高层 runtime 协调 helper，而不是把更多 session 分支重新写回页面层。
 
-- 閬垮厤缁х画鍦ㄥ崟涓€鍚庡彴澹冲眰閲屾繁鎸栵紝杩欎竴杞敼涓烘帹杩涙洿璐磋繎鏁寸増鍙敤鎬х殑 `SE-020` 灏忓垏鐗囷細鎶婃悳绱㈤〉鐜版湁鐨?`nextOffset` 鑳藉姏浠庘€滃崟涓€绫诲瀷绛涢€夊彲缁彇鈥濇斁寮€鍒扳€滃叏閮ㄧ被鍨嬭鍥句笅鐨勪换鎰忓垎缁勯兘鍙洿鎺ョ画鍙栤€濄€?- 鐩爣鏄湪涓嶆敼鎼滅储 API grouped contract 鐨勫墠鎻愪笅锛岃鐢ㄦ埛鍦ㄦ€昏瑙嗗浘閲屼篃鑳界洿鎺ユ妸鏌愪釜缁撴灉鍒嗙粍缁х画灞曞紑锛岃€屼笉鏄繀椤诲厛鍒囧埌鍗曚竴绫诲瀷鍐嶅姞杞芥洿澶氥€?### 瀹為檯鍙樻洿
+## 2026-07-15 07:44:09 +08:00 | v1.1.0-alpha.256 | 推进 SE-020 搜索分组继续加载
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx`锛屾柊澧為〉闈㈢骇 RED/GREEN 鍥炲綊锛岄攣瀹氣€滃叏閮ㄧ被鍨嬧€濊鍥鹃噷鍥捐氨鍒嗙粍浠嶆湁 `nextOffset` 鏃讹紝鍙互鐩存帴鏄剧ず鈥滅户缁姞杞芥洿澶氬浘璋辩粨鏋溾€濆苟鎶婂悗缁粨鏋滆拷鍔犲埌褰撳墠缁勩€?- 鏇存柊 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`锛屾斁寮€ `handleLoadMore(...)` 瀵瑰崟涓€绫诲瀷瑙嗗浘鐨勯檺鍒讹紝骞惰鍒嗙粍缁х画鍔犺浇鎸夐挳鎸?`group.nextOffset !== null` 鐩存帴鍦ㄥ搴斿垎缁勫睍绀恒€?- 鍚屾鏇存柊 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/DEVELOPMENT.md` 涓?`README.md`锛屾妸鎼滅储鍒嗛〉杈圭晫浠庘€滃崟涓€绫诲瀷缁彇鈥濅慨姝ｄ负鈥滄寜鍒嗙粍鐙珛缁彇锛屼絾浠嶄笉鏄畬鏁村悗绔湡鍒嗛〉鈥濄€?### 楠岃瘉缁撴灉
+- 避免继续在单一后台壳层里深挖，这一轮改为推进更贴近整版可用性的 `SE-020` 小切片：把搜索页现有的 `nextOffset` 能力从“单一类型筛选可续取”放开到“全部类型视图下的任意分组都可直接续取”。
+- 目标是在不改搜索 API grouped contract 的前提下，让用户在总览视图里也能直接把某个结果分组继续展开，而不是必须先切到单一类型再加载更多。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx`，新增页面级 RED/GREEN 回归，锁定“全部类型”视图里图谱分组仍有 `nextOffset` 时，可以直接显示“继续加载更多图谱结果”并把后续结果追加到当前组。
+- 更新 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`，放开 `handleLoadMore(...)` 对单一类型视图的限制，并让分组继续加载按钮按 `group.nextOffset !== null` 直接在对应分组展示。
+- 同步更新 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/DEVELOPMENT.md` 与 `README.md`，把搜索分页边界从“单一类型续取”修正为“按分组独立续取，但仍不是完整后端真分页”。
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鎼滅储椤电幇鍦ㄥ湪鈥滃叏閮ㄧ被鍨嬧€濊鍥句笅涔熻兘鐩存帴鎶婃煇涓垎缁勭户缁睍寮€锛宍SE-020` 鐨?`offset / nextOffset` 鑳藉姏缁堜簬涓嶅啀鍙仠鐣欏湪鍒囨崲鍒板崟涓€绫诲瀷鍚庣殑闅愯棌鍏ュ彛銆?- 杩欎竴杞粛鐒舵病鏈夋妸 grouped search 鍗囩骇鎴愬畬鏁寸殑鏈嶅姟绔粺涓€鍒嗛〉锛涗笅涓€姝ユ洿閫傚悎琛?grouped cursor銆佹帓搴忚涔夊拰绌虹粨鏋滃缓璁紝鑰屼笉鏄洖閫€鍒版棫鐨勫崟涓€绫诲瀷缁彇闄愬埗銆?
-## 2026-07-15 07:36:36 +08:00 | v1.1.0-alpha.255 | 鎺ㄨ繘 FE-041 绠＄悊绔?workspace reset controller 鎺ョ嚎
-### 浠诲姟鍐呭
+- 搜索页现在在“全部类型”视图下也能直接把某个分组继续展开，`SE-020` 的 `offset / nextOffset` 能力终于不再只停留在切换到单一类型后的隐藏入口。
+- 这一轮仍然没有把 grouped search 升级成完整的服务端统一分页；下一步更适合补 grouped cursor、排序语义和空结果建议，而不是回退到旧的单一类型续取限制。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屼粛鐒跺唴鑱旂淮鎶ょ殑 `workspaceResetHandlers / clearWorkspaceState` 杩欎竴缁勫伐浣滃彴 reset 缂栨帓銆?- 鐩爣鏄ˉ涓€灞傚叡浜?`reset-controller` helper锛岃鍚庡彴宸ヤ綔鍙板湪鏌ヨ銆佺瓫閫夈€佸鏍告暟鎹€佹不鐞嗘暟鎹笌纭鐘舵€佺殑澶嶄綅璺緞涓婁篃澶嶇敤缁熶竴鍏ュ彛锛屽苟缁х画鎶婅鍥炬枃浠剁ǔ瀹氬帇鍦ㄤ粨搴撶害鏉熺嚎鍐呫€?### 瀹為檯鍙樻洿
+## 2026-07-15 07:36:36 +08:00 | v1.1.0-alpha.255 | 推进 FE-041 管理端 workspace reset controller 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceResetController.ts` 涓?`adminWorkspaceResetController.test.ts`锛屾妸宸ヤ綔鍙颁簲缁?reset 鍒囩墖鐨?handlers 缁勮鍜?`clearState(keys?)` 鍏ュ彛鏀跺彛鍒板叡浜?controller銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃椤甸潰灞傛敼涓虹洿鎺ユ秷璐瑰叡浜?`workspaceResetController`锛屼笉鍐嶅湪瑙嗗浘閲岀淮鎶や竴鏁存 reset handlers 涓庢竻鐞嗙紪鎺掋€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙 workspace reset 涔熷凡杩涘叆鍏变韩 controller helper 鍑哄彛鈥濄€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里仍然内联维护的 `workspaceResetHandlers / clearWorkspaceState` 这一组工作台 reset 编排。
+- 目标是补一层共享 `reset-controller` helper，让后台工作台在查询、筛选、审核数据、治理数据与确认状态的复位路径上也复用统一入口，并继续把视图文件稳定压在仓库约束线内。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceResetController.ts` 与 `adminWorkspaceResetController.test.ts`，把工作台五组 reset 切片的 handlers 组装和 `clearState(keys?)` 入口收口到共享 controller。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让页面层改为直接消费共享 `workspaceResetController`，不再在视图里维护一整段 reset handlers 与清理编排。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 workspace reset 也已进入共享 controller helper 出口”。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceResetController.test.ts src/views/AdminWorkspaceView.test.ts src/views/adminWorkspaceState.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜‘璁ょ紪鎺?controller 鎺ㄨ繘鍒板叡浜?workspace reset controller锛屽悗鍙板伐浣滃彴澹冲眰閲岀殑 reset 璺緞杩涗竴姝ュ彉钖勶紝`AdminWorkspaceView.vue` 涔熺户缁敹鍙ｅ埌 787 琛屻€?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙?reset 缁勫悎鍏ュ彛锛涙洿杩涗竴姝ョ殑娌荤悊鍔ㄤ綔鍖呰銆佸伐浣滃彴 feature adapter 涓?page/feature 杈圭晫锛屼粛閫傚悎缁х画娌?`FE-041 / ADM-010` 寰€鍓嶆帹杩涖€?
-## 2026-07-15 07:31:30 +08:00 | v1.1.0-alpha.254 | 鎺ㄨ繘 FE-041 绠＄悊绔‘璁ょ紪鎺?controller helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享确认编排 controller 推进到共享 workspace reset controller，后台工作台壳层里的 reset 路径进一步变薄，`AdminWorkspaceView.vue` 也继续收口到 787 行。
+- 这一轮仍然只先收口 reset 组合入口；更进一步的治理动作包装、工作台 feature adapter 与 page/feature 边界，仍适合继续沿 `FE-041 / ADM-010` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屼粛鐒跺垎鏁ｇ淮鎶ょ殑浜旂粍纭寮瑰眰缂栨帓銆?- 鐩爣鏄ˉ涓€灞傚叡浜?`confirm-controller` helper锛岃鍚庡彴宸ヤ綔鍙板湪纭娴佷笂鐨?`dialogs / reset / submit` 缁勫悎鍏ュ彛缁х画澶嶇敤缁熶竴鍑哄彛锛屽苟鎶婅秴鍑?800 琛岀殑瑙嗗浘鏂囦欢鍘嬪洖浠撳簱绾︽潫鍐呫€?### 瀹為檯鍙樻洿
+## 2026-07-15 07:31:30 +08:00 | v1.1.0-alpha.254 | 推进 FE-041 管理端确认编排 controller helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceConfirmController.ts` 涓?`adminWorkspaceConfirmController.test.ts`锛屾敹鍙ｄ簲缁勭‘璁ゅ脊灞傜殑 dialog 缁勮銆乺eset handler 澶嶇敤鍜?submit handler 鍒嗗彂銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃椤甸潰灞傛敼涓烘秷璐瑰叡浜?`confirmController`锛屼笉鍐嶅湪瑙嗗浘閲屽唴鑱旀暣娈电‘璁ょ紪鎺掋€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙纭缂栨帓涔熷凡杩涘叆鍏变韩 controller helper 鍑哄彛鈥濄€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里仍然分散维护的五组确认弹层编排。
+- 目标是补一层共享 `confirm-controller` helper，让后台工作台在确认流上的 `dialogs / reset / submit` 组合入口继续复用统一出口，并把超出 800 行的视图文件压回仓库约束内。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceConfirmController.ts` 与 `adminWorkspaceConfirmController.test.ts`，收口五组确认弹层的 dialog 组装、reset handler 复用和 submit handler 分发。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让页面层改为消费共享 `confirmController`，不再在视图里内联整段确认编排。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端确认编排也已进入共享 controller helper 出口”。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceConfirmController.test.ts src/views/AdminWorkspaceView.test.ts src/views/adminWorkspaceConfirmState.test.ts src/views/adminWorkspaceConfirmDialogs.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜櫥褰曢潰鏉夸簨浠惰閰嶉摼鎺ㄨ繘鍒板叡浜‘璁ょ紪鎺?controller锛屽悗鍙板伐浣滃彴澹冲眰閲屾畫鐣欑殑纭娴佺粍瑁呰繘涓€姝ュ彉钖勶紝`AdminWorkspaceView.vue` 涔熷凡鍥炲埌 800 琛屼互鍐呫€?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｇ‘璁ょ紪鎺掓渶灏忕粍鍚堝叆鍙ｏ紱鏇磋繘涓€姝ョ殑 `workspaceResetHandlers`銆佹洿瀹屾暣鐨勫伐浣滃彴 feature adapter 涓庢不鐞嗘ā鍧?page/feature 杈圭晫锛屼粛閫傚悎缁х画娌?`FE-041 / ADM-010` 寰€鍓嶆帹杩涖€?## 2026-07-14 02:08:34 +08:00 | v1.1.0-alpha.238 | 鎺ㄨ繘 FE-041 绠＄悊绔３灞?props 瑁呴厤 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享登录面板事件装配链推进到共享确认编排 controller，后台工作台壳层里残留的确认流组装进一步变薄，`AdminWorkspaceView.vue` 也已回到 800 行以内。
+- 这一轮仍然只先收口确认编排最小组合入口；更进一步的 `workspaceResetHandlers`、更完整的工作台 feature adapter 与治理模块 page/feature 边界，仍适合继续沿 `FE-041 / ADM-010` 往前推进。
+## 2026-07-14 02:08:34 +08:00 | v1.1.0-alpha.238 | 推进 FE-041 管理端壳层 props 装配 helper 接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屼紶缁?`AdminShellFrame` 鐨勫３灞?props 瑁呴厤閫昏緫銆?- 鐩爣鏄ˉ涓€灞傚叡浜?shell-props helper锛岃鍚庡彴宸ヤ綔鍙板３灞傝緭鍏ョ户缁鐢ㄧ粺涓€鍑哄彛锛岃€屼笉鏄妸杩欏眰妯℃澘绾ч珮棰?props 缁戝畾缁х画鐣欏湪澹冲眰缁勪欢閲屻€?
-### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里传给 `AdminShellFrame` 的壳层 props 装配逻辑。
+- 目标是补一层共享 shell-props helper，让后台工作台壳层输入继续复用统一出口，而不是把这层模板级高频 props 绑定继续留在壳层组件里。
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceShellProps.ts` 涓?`adminWorkspaceShellProps.test.ts`锛屾敹鍙?active view銆佹弿杩般€佽鏁般€乶av groups銆乶otice銆乴oading銆乸rofile 绛夊３灞?props 鐨勮閰嶃€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `AdminShellFrame` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceShellProps` helper锛岄〉闈㈠眰鍙繚鐣?state銆乧omputed 鏁版嵁婧愪笌 helper 鍏ュ弬缁戝畾銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙澹冲眰 props 涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceShellProps.ts` 与 `adminWorkspaceShellProps.test.ts`，收口 active view、描述、计数、nav groups、notice、loading、profile 等壳层 props 的装配。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `AdminShellFrame` 改为消费共享 `adminWorkspaceShellProps` helper，页面层只保留 state、computed 数据源与 helper 入参绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端壳层 props 也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceShellProps.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -71,17 +104,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜ā鍧椾簨浠惰閰嶉摼鎺ㄨ繘鍒板叡浜３灞?props 瑁呴厤閾撅紝鍚庡彴宸ヤ綔鍙版ā鏉垮眰閲岀殑楂橀杈撳叆缁戝畾杩涗竴姝ュ彉钖勩€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?shell-props helper锛涙洿杩涗竴姝ョ殑鐧诲綍闈㈡澘 props 鎴栨洿瀹屾暣鐨勫３灞?feature adapter锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-14 02:00:43 +08:00 | v1.1.0-alpha.237 | 鎺ㄨ繘 FE-041 绠＄悊绔ā鍧椾簨浠惰閰?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享模块事件装配链推进到共享壳层 props 装配链，后台工作台模板层里的高频输入绑定进一步变薄。
+- 这次仍然只先收口了 shell-props helper；更进一步的登录面板 props 或更完整的壳层 feature adapter，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?dashboard / moderation / governance 涓夌粍妯″潡浜嬩欢鐨勮浆鍙戦€昏緫銆?- 鐩爣鏄ˉ涓€灞傚叡浜?module-events helper锛岃鍚庡彴宸ヤ綔鍙扮殑妯″潡浜嬩欢缁х画澶嶇敤缁熶竴鍑哄彛锛岃€屼笉鏄妸杩欏眰妯″潡绾?event binding 缂栨帓缁х画鐣欏湪澹冲眰缁勪欢閲屻€?
-### 瀹為檯鍙樻洿
+## 2026-07-14 02:00:43 +08:00 | v1.1.0-alpha.237 | 推进 FE-041 管理端模块事件装配 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceModuleEvents.ts` 涓?`adminWorkspaceModuleEvents.test.ts`锛屾敹鍙?dashboard 鎵撳紑瀹℃牳銆乵oderation 鍔ㄤ綔/绛涢€夛紝浠ュ強 governance 鍔ㄤ綔/閫変腑/绛涢€変簨浠剁殑杞彂銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 dashboard / moderation / governance 涓夌粍妯″潡浜嬩欢鏀逛负娑堣垂鍏变韩 `adminWorkspaceModuleEvents` helper锛岄〉闈㈠眰鍙繚鐣?state銆乤ction 鍑芥暟涓?helper 鍏ュ弬缁戝畾銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙妯″潡浜嬩欢涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 dashboard / moderation / governance 三组模块事件的转发逻辑。
+- 目标是补一层共享 module-events helper，让后台工作台的模块事件继续复用统一出口，而不是把这层模块级 event binding 编排继续留在壳层组件里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceModuleEvents.ts` 与 `adminWorkspaceModuleEvents.test.ts`，收口 dashboard 打开审核、moderation 动作/筛选，以及 governance 动作/选中/筛选事件的转发。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 dashboard / moderation / governance 三组模块事件改为消费共享 `adminWorkspaceModuleEvents` helper，页面层只保留 state、action 函数与 helper 入参绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端模块事件也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceModuleEvents.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -89,17 +129,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜ā鍧?props 瑁呴厤閾炬帹杩涘埌鍏变韩妯″潡浜嬩欢瑁呴厤閾撅紝鍚庡彴宸ヤ綔鍙板３灞傞噷鐨勬ā鍧楃骇 event binding 缂栨帓杩涗竴姝ュ彉钖勩€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?module-events helper锛涙洿杩涗竴姝ョ殑妯″潡绾?feature adapter锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-14 01:56:14 +08:00 | v1.1.0-alpha.236 | 鎺ㄨ繘 FE-041 绠＄悊绔ā鍧?props 瑁呴厤 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享模块 props 装配链推进到共享模块事件装配链，后台工作台壳层里的模块级 event binding 编排进一步变薄。
+- 这次仍然只先收口了 module-events helper；更进一步的模块级 feature adapter，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?dashboard / moderation / governance 涓夌粍妯″潡 props 鐨勮閰嶉€昏緫銆?- 鐩爣鏄ˉ涓€灞傚叡浜?module-props helper锛岃鍚庡彴宸ヤ綔鍙扮殑妯″潡杈撳叆缁х画澶嶇敤缁熶竴鍑哄彛锛岃€屼笉鏄妸杩欏眰妯″潡绾?binding 缂栨帓缁х画鐣欏湪澹冲眰缁勪欢閲屻€?
-### 瀹為檯鍙樻洿
+## 2026-07-14 01:56:14 +08:00 | v1.1.0-alpha.236 | 推进 FE-041 管理端模块 props 装配 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceModuleProps.ts` 涓?`adminWorkspaceModuleProps.test.ts`锛屾敹鍙?dashboard 缁熻鍗°€乵oderation 鍒楄〃 props锛屼互鍙?governance 鍔ㄤ綔/绌烘€?绛涢€?props 鐨勮閰嶃€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 dashboard / moderation / governance 涓夌粍妯″潡 props 鏀逛负娑堣垂鍏变韩 `adminWorkspaceModuleProps` helper锛岄〉闈㈠眰鍙繚鐣?state銆乧omputed 鏁版嵁婧愪笌浜嬩欢缁戝畾銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙妯″潡 props 涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 dashboard / moderation / governance 三组模块 props 的装配逻辑。
+- 目标是补一层共享 module-props helper，让后台工作台的模块输入继续复用统一出口，而不是把这层模块级 binding 编排继续留在壳层组件里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceModuleProps.ts` 与 `adminWorkspaceModuleProps.test.ts`，收口 dashboard 统计卡、moderation 列表 props，以及 governance 动作/空态/筛选 props 的装配。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 dashboard / moderation / governance 三组模块 props 改为消费共享 `adminWorkspaceModuleProps` helper，页面层只保留 state、computed 数据源与事件绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端模块 props 也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceModuleProps.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -107,17 +154,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜‘璁ゅ脊灞傝閰嶉摼鎺ㄨ繘鍒板叡浜ā鍧?props 瑁呴厤閾撅紝鍚庡彴宸ヤ綔鍙板３灞傞噷鐨勬ā鍧楃骇 binding 缂栨帓杩涗竴姝ュ彉钖勩€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?module-props helper锛涙洿杩涗竴姝ョ殑妯″潡绾?feature adapter 鎴栦簨浠惰閰嶏紝浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-14 01:49:58 +08:00 | v1.1.0-alpha.235 | 鎺ㄨ繘 FE-041 绠＄悊绔‘璁ゅ脊灞傝閰?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享确认弹层装配链推进到共享模块 props 装配链，后台工作台壳层里的模块级 binding 编排进一步变薄。
+- 这次仍然只先收口了 module-props helper；更进一步的模块级 feature adapter 或事件装配，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?5 缁勭‘璁ゅ脊灞傜殑 copy 瑙ｆ瀽涓?dialog metadata 瑁呴厤閫昏緫銆?- 鐩爣鏄ˉ涓€灞傚叡浜?confirm-dialog assembly helper锛岃鍚庡彴宸ヤ綔鍙扮殑纭鏂囨涓?dialog stack 缁х画澶嶇敤缁熶竴鍑哄彛锛岃€屼笉鏄妸杩欏眰 computed / copy 缂栨帓缁х画鐣欏湪澹冲眰缁勪欢閲屻€?
-### 瀹為檯鍙樻洿
+## 2026-07-14 01:49:58 +08:00 | v1.1.0-alpha.235 | 推进 FE-041 管理端确认弹层装配 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceConfirmDialogs.ts` 涓?`adminWorkspaceConfirmDialogs.test.ts`锛屾敹鍙?moderation銆乺eport銆乤iTask銆乼emplate銆乽ser 浜旂粍 pending state 鍒板叡浜?dialog stack 鐨勮閰嶃€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃纭寮瑰眰浠庣洿鎺ョ淮鎶?5 缁?copy computed 涓?`buildAdminConfirmDialogs(...)` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceConfirmDialogs` helper锛岄〉闈㈠眰鍙繚鐣?pending state銆乪rror state 涓?helper 鍏ュ弬缁戝畾銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙纭寮瑰眰 copy / dialog metadata 涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 5 组确认弹层的 copy 解析与 dialog metadata 装配逻辑。
+- 目标是补一层共享 confirm-dialog assembly helper，让后台工作台的确认文案与 dialog stack 继续复用统一出口，而不是把这层 computed / copy 编排继续留在壳层组件里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceConfirmDialogs.ts` 与 `adminWorkspaceConfirmDialogs.test.ts`，收口 moderation、report、aiTask、template、user 五组 pending state 到共享 dialog stack 的装配。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让确认弹层从直接维护 5 组 copy computed 与 `buildAdminConfirmDialogs(...)` 改为消费共享 `adminWorkspaceConfirmDialogs` helper，页面层只保留 pending state、error state 与 helper 入参绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端确认弹层 copy / dialog metadata 也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceConfirmDialogs.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -125,17 +179,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜緟纭鍔ㄤ綔鎵撳紑閾炬帹杩涘埌鍏变韩纭寮瑰眰瑁呴厤閾撅紝鍚庡彴宸ヤ綔鍙板３灞傞噷鐨?confirm copy/computed 缂栨帓杩涗竴姝ュ彉钖勩€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?confirm-dialog assembly helper锛涙洿杩涗竴姝ョ殑妯″潡绾?feature adapter 鎴栨ā鍧?props 瑁呴厤锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-14 01:43:00 +08:00 | v1.1.0-alpha.234 | 鎺ㄨ繘 FE-041 绠＄悊绔緟纭鍔ㄤ綔 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享待确认动作打开链推进到共享确认弹层装配链，后台工作台壳层里的 confirm copy/computed 编排进一步变薄。
+- 这次仍然只先收口了 confirm-dialog assembly helper；更进一步的模块级 feature adapter 或模块 props 装配，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?`requestModerationAction(...)` 涓?`requestGovernanceAction(...)` 杩欑粍 pending action 鎵撳紑閫昏緫銆?- 鐩爣鏄ˉ涓€灞傚叡浜?pending-action helper锛岃鍚庡彴宸ヤ綔鍙扮殑纭鍓嶆墦寮€璺緞缁х画澶嶇敤缁熶竴鍑哄彛锛岃€屼笉鏄妸杩欏眰 request/open 缂栨帓缁х画鐣欏湪澹冲眰缁勪欢閲屻€?
-### 瀹為檯鍙樻洿
+## 2026-07-14 01:43:00 +08:00 | v1.1.0-alpha.234 | 推进 FE-041 管理端待确认动作 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspacePendingAction.ts` 涓?`adminWorkspacePendingAction.test.ts`锛屾敹鍙?moderation 鎵撳紑銆佹不鐞嗗姩浣滃垎鍙戝埌 report/material 璺緞锛屼互鍙?invalid dispatch 鐨勯敊璇洖鍐欍€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `requestModerationAction(...)` 涓?`requestGovernanceAction(...)` 鏀逛负娑堣垂鍏变韩 `adminWorkspacePendingAction` helper锛岄〉闈㈠眰鍙繚鐣?pending state銆乪rror state 鍜屽叡浜?helper 鐨勫弬鏁扮粦瀹氥€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙寰呯‘璁ゅ姩浣滄墦寮€閾句篃宸茶繘鍏ュ叡浜?helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `requestModerationAction(...)` 与 `requestGovernanceAction(...)` 这组 pending action 打开逻辑。
+- 目标是补一层共享 pending-action helper，让后台工作台的确认前打开路径继续复用统一出口，而不是把这层 request/open 编排继续留在壳层组件里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspacePendingAction.ts` 与 `adminWorkspacePendingAction.test.ts`，收口 moderation 打开、治理动作分发到 report/material 路径，以及 invalid dispatch 的错误回写。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `requestModerationAction(...)` 与 `requestGovernanceAction(...)` 改为消费共享 `adminWorkspacePendingAction` helper，页面层只保留 pending state、error state 和共享 helper 的参数绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端待确认动作打开链也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspacePendingAction.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -143,17 +204,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜‘璁ょ姸鎬侀摼鎺ㄨ繘鍒板叡浜緟纭鍔ㄤ綔鎵撳紑閾撅紝鍚庡彴宸ヤ綔鍙板３灞傞噷鐨?request/open 缂栨帓杩涗竴姝ュ彉钖勩€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?pending-action helper锛涙洿杩涗竴姝ョ殑 confirm dialog copy/computed 缁勮涓庢ā鍧楃骇 feature adapter锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-14 01:36:00 +08:00 | v1.1.0-alpha.233 | 鎺ㄨ繘 FE-041 绠＄悊绔‘璁ょ姸鎬?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享确认状态链推进到共享待确认动作打开链，后台工作台壳层里的 request/open 编排进一步变薄。
+- 这次仍然只先收口了 pending-action helper；更进一步的 confirm dialog copy/computed 组装与模块级 feature adapter，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲岀‘璁ゅ脊灞?reset/submit 鏄犲皠琛ㄨ繖娈典粛鐩存帴缁存姢鐨勫３灞傜紪鎺掋€?- 鐩爣鏄ˉ涓€灞傚叡浜?confirm-state helper锛岃鍚庡彴宸ヤ綔鍙扮殑纭寮瑰眰閲嶇疆涓庢寜 key 鎻愪氦娴佺▼缁х画澶嶇敤缁熶竴鍑哄彛锛岃€屼笉鏄妸杩欑粍鏄犲皠琛ㄧ户缁暀鍦ㄥ３灞傜粍浠堕噷銆?
-### 瀹為檯鍙樻洿
+## 2026-07-14 01:36:00 +08:00 | v1.1.0-alpha.233 | 推进 FE-041 管理端确认状态 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceConfirmState.ts` 涓?`adminWorkspaceConfirmState.test.ts`锛屾敹鍙ｇ‘璁ゅ脊灞傜殑 reset/submit 鏄犲皠琛ㄥ拰 pending 涓虹┖鏃剁殑 noop 閫昏緫銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `confirmResetHandlers` 涓?`confirmSubmitHandlers` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceConfirmState` helper锛岄〉闈㈠眰鍙繚鐣?pending state銆乪rror state 鍜岀湡瀹炲姩浣滃嚱鏁般€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙纭鐘舵€侀摼涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里确认弹层 reset/submit 映射表这段仍直接维护的壳层编排。
+- 目标是补一层共享 confirm-state helper，让后台工作台的确认弹层重置与按 key 提交流程继续复用统一出口，而不是把这组映射表继续留在壳层组件里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceConfirmState.ts` 与 `adminWorkspaceConfirmState.test.ts`，收口确认弹层的 reset/submit 映射表和 pending 为空时的 noop 逻辑。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `confirmResetHandlers` 与 `confirmSubmitHandlers` 改为消费共享 `adminWorkspaceConfirmState` helper，页面层只保留 pending state、error state 和真实动作函数。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端确认状态链也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceConfirmState.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -161,17 +229,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜不鐞嗗姩浣滅姸鎬侀摼鎺ㄨ繘鍒板叡浜‘璁ょ姸鎬侀摼锛屽悗鍙板伐浣滃彴澹冲眰閲岀殑 confirm 缂栨帓杩涗竴姝ュ彉钖勩€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?confirm-state helper锛涙洿杩涗竴姝ョ殑 pending action open state 涓庢ā鍧楃骇 feature adapter锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-14 01:28:00 +08:00 | v1.1.0-alpha.232 | 鎺ㄨ繘 FE-041 绠＄悊绔不鐞嗗姩浣滅姸鎬?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享治理动作状态链推进到共享确认状态链，后台工作台壳层里的 confirm 编排进一步变薄。
+- 这次仍然只先收口了 confirm-state helper；更进一步的 pending action open state 与模块级 feature adapter，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?moderation/governance 鍔ㄤ綔鎻愪氦鏃朵粛鐩存帴缁存姢鐨?loading銆乶otice銆乧onfirm error銆?09 conflict 涓?reload 缂栨帓銆?- 鐩爣鏄ˉ涓€灞傚叡浜?mutation-state helper锛岃鍚庡彴宸ヤ綔鍙扮殑娌荤悊鍔ㄤ綔鐘舵€佸垏鎹㈢户缁鐢ㄧ粺涓€鍑哄彛锛岃€屼笉鏄妸杩欎簺鍓綔鐢ㄧ紪鎺掔户缁暀鍦ㄥ３灞傜粍浠堕噷銆?
-### 瀹為檯鍙樻洿
+## 2026-07-14 01:28:00 +08:00 | v1.1.0-alpha.232 | 推进 FE-041 管理端治理动作状态 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceMutationState.ts` 涓?`adminWorkspaceMutationState.test.ts`锛屾敹鍙?moderation/governance 鍔ㄤ綔鎻愪氦鏃剁殑 loading銆乶otice銆乧onfirm error銆?09 conflict 涓?reload 鐘舵€佺紪鎺掋€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `applyModerationAction(...)` 涓?`applyGovernanceRecordAction(...)` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceMutationState` helper锛岄〉闈㈠眰鍙繚鐣?state 缁戝畾鍜?request adapter銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙娌荤悊鍔ㄤ綔鐘舵€侀摼涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 moderation/governance 动作提交时仍直接维护的 loading、notice、confirm error、409 conflict 与 reload 编排。
+- 目标是补一层共享 mutation-state helper，让后台工作台的治理动作状态切换继续复用统一出口，而不是把这些副作用编排继续留在壳层组件里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceMutationState.ts` 与 `adminWorkspaceMutationState.test.ts`，收口 moderation/governance 动作提交时的 loading、notice、confirm error、409 conflict 与 reload 状态编排。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `applyModerationAction(...)` 与 `applyGovernanceRecordAction(...)` 改为消费共享 `adminWorkspaceMutationState` helper，页面层只保留 state 绑定和 request adapter。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端治理动作状态链也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceMutationState.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -179,17 +254,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜暟鎹姞杞介摼鎺ㄨ繘鍒板叡浜不鐞嗗姩浣滅姸鎬侀摼锛屽悗鍙板伐浣滃彴澹冲眰閲岀殑鍔ㄤ綔鍓綔鐢ㄨ繘涓€姝ュ彉钖勩€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?mutation-state helper锛涙洿杩涗竴姝ョ殑纭寮瑰眰 open/reset state 涓庢ā鍧楃骇 feature adapter锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-14 01:20:00 +08:00 | v1.1.0-alpha.231 | 鎺ㄨ繘 FE-041 绠＄悊绔暟鎹姞杞?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享数据加载链推进到共享治理动作状态链，后台工作台壳层里的动作副作用进一步变薄。
+- 这次仍然只先收口了 mutation-state helper；更进一步的确认弹层 open/reset state 与模块级 feature adapter，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屼粛鐩存帴缁存姢鐨?`refreshProfile()`銆乣loadOverview()`銆乣loadModeration()`銆乣loadGovernance()` 鍥涙潯璇诲彇/鍔犺浇閾捐矾銆?- 鐩爣鏄ˉ涓€灞傚叡浜?data-load helper锛岃鍚庡彴宸ヤ綔鍙扮殑鏁版嵁璇诲彇銆佸壇浣滅敤鐘舵€佸垏鎹笌 403 娓呯┖瑙勫垯缁х画澶嶇敤缁熶竴鍑哄彛锛岃€屼笉鏄妸杩欎簺璇锋眰鍒嗘敮缁х画鐣欏湪澹冲眰缁勪欢閲屻€?
-### 瀹為檯鍙樻洿
+## 2026-07-14 01:20:00 +08:00 | v1.1.0-alpha.231 | 推进 FE-041 管理端数据加载 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceDataLoad.ts` 涓?`adminWorkspaceDataLoad.test.ts`锛屾敹鍙?profile/overview 绠€鍗曡鍙栵紝浠ュ強 moderation/governance 鐨?loading銆乪rror銆?03 娓呯┖銆佸悓 view 鍒锋柊淇濈暀鏃ф暟鎹瓑琛屼负銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `refreshProfile()`銆乣loadOverview()`銆乣loadModeration()`銆乣loadGovernance()` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceDataLoad` helper锛岄〉闈㈠眰鍙繚鐣?state 缁戝畾鍜?request adapter銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙鍓╀綑鏁版嵁鍔犺浇閾句篃宸茶繘鍏ュ叡浜?helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里仍直接维护的 `refreshProfile()`、`loadOverview()`、`loadModeration()`、`loadGovernance()` 四条读取/加载链路。
+- 目标是补一层共享 data-load helper，让后台工作台的数据读取、副作用状态切换与 403 清空规则继续复用统一出口，而不是把这些请求分支继续留在壳层组件里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceDataLoad.ts` 与 `adminWorkspaceDataLoad.test.ts`，收口 profile/overview 简单读取，以及 moderation/governance 的 loading、error、403 清空、同 view 刷新保留旧数据等行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `refreshProfile()`、`loadOverview()`、`loadModeration()`、`loadGovernance()` 改为消费共享 `adminWorkspaceDataLoad` helper，页面层只保留 state 绑定和 request adapter。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端剩余数据加载链也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceDataLoad.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -197,17 +279,25 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜?lifecycle / refresh / popstate 鎵ц閾炬帹杩涘埌鍏变韩鏁版嵁鍔犺浇閾撅紝鍚庡彴宸ヤ綔鍙板３灞傞噷鐨勮鍙栧壇浣滅敤杩涗竴姝ュ彉钖勩€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?data-load helper锛涙洿杩涗竴姝ョ殑纭寮瑰眰鐘舵€併€佹不鐞嗗姩浣?state adapter 涓?page / feature 杈圭晫锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-14 00:17:34 +08:00 | v1.1.0-alpha.230 | 鎺ㄨ繘 FE-041 绠＄悊绔?popstate 鎵ц helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享 lifecycle / refresh / popstate 执行链推进到共享数据加载链，后台工作台壳层里的读取副作用进一步变薄。
+- 这次仍然只先收口了 data-load helper；更进一步的确认弹层状态、治理动作 state adapter 与 page / feature 边界，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?`handleAdminPopstate()` 杩欐潯娴忚鍣ㄥ悗閫€/鍓嶈繘瑙﹀彂鏃朵粛鐩存帴缁存姢鏌ヨ閲嶇疆銆佺洰鏍?view 搴旂敤涓庢寜闇€鍔犺浇椤哄簭鐨勫３灞傚叆鍙ｃ€?- 鐩爣鏄ˉ涓€灞傚叡浜?popstate execution helper锛岃鍚庡彴宸ヤ綔鍙板湪娴忚鍣?`popstate` 鍒囨崲鍒扮洰鏍囩鐞嗚矾寰勬椂锛屼篃澶嶇敤缁熶竴鍑哄彛锛岃€屼笉鏄户缁妸杩欐潯鎵ц閾剧暀鍦ㄧ粍浠跺眰銆?
-### 瀹為檯鍙樻洿
+## 2026-07-14 00:17:34 +08:00 | v1.1.0-alpha.230 | 推进 FE-041 管理端 popstate 执行 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspacePopstate.ts` 涓?`adminWorkspacePopstate.test.ts`锛屾敹鍙ｆ祻瑙堝櫒 `popstate` 瑙﹀彂鏃剁殑鏌ヨ閲嶇疆銆佺洰鏍?view 搴旂敤涓庢寜闇€鍔犺浇椤哄簭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.test.ts`锛岃ˉ涓€鏉￠〉闈㈢骇鍥炲綊锛岄攣瀹氭祻瑙堝櫒璺緞閫氳繃 `popstate` 鍒囧埌 `/admin/audit` 鏃朵細閲嶆柊鍔犺浇鐩爣娌荤悊妯″潡銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `handleAdminPopstate()` 鏀逛负娑堣垂鍏变韩 `runAdminWorkspacePopstate(...)` helper锛岃€屼笉鏄户缁洿鎺ョ淮鎶?reset / set view / load 鐨勬墽琛屽彛銆?- 鏈疆涓嶆敼 URL 瑙ｆ瀽鍗忚銆佹不鐞嗚姹傚疄鐜版垨 session 鍗忚锛屽彧鎶婂凡绋冲畾鐨勬祻瑙堝櫒瀵艰埅鎵ц閾剧户缁粠澹冲眰缁勪欢涓嬫矇鍒板叡浜?helper銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `handleAdminPopstate()` 这条浏览器后退/前进触发时仍直接维护查询重置、目标 view 应用与按需加载顺序的壳层入口。
+- 目标是补一层共享 popstate execution helper，让后台工作台在浏览器 `popstate` 切换到目标管理路径时，也复用统一出口，而不是继续把这条执行链留在组件层。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspacePopstate.ts` 与 `adminWorkspacePopstate.test.ts`，收口浏览器 `popstate` 触发时的查询重置、目标 view 应用与按需加载顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，补一条页面级回归，锁定浏览器路径通过 `popstate` 切到 `/admin/audit` 时会重新加载目标治理模块。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `handleAdminPopstate()` 改为消费共享 `runAdminWorkspacePopstate(...)` helper，而不是继续直接维护 reset / set view / load 的执行口。
+- 本轮不改 URL 解析协议、治理请求实现或 session 协议，只把已稳定的浏览器导航执行链继续从壳层组件下沉到共享 helper。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspacePopstate.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -215,17 +305,25 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜?refresh execution 鎺ㄨ繘鍒板叡浜?popstate execution锛屽悗鍙板伐浣滃彴鍦ㄦ祻瑙堝櫒鍚庨€€/鍓嶈繘鍒囨崲璺緞鏃朵篃寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜?popstate helper锛涙洿杩涗竴姝ョ殑 `loadActiveView(...)` 涓庢洿娣卞眰鍔犺浇鍗忚皟鍣紝浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-14 00:12:04 +08:00 | v1.1.0-alpha.229 | 鎺ㄨ繘 FE-041 绠＄悊绔埛鏂版墽琛?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享 refresh execution 推进到共享 popstate execution，后台工作台在浏览器后退/前进切换路径时也开始复用统一出口。
+- 这次仍然只先收口了 popstate helper；更进一步的 `loadActiveView(...)` 与更深层加载协调器，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?`refreshActiveView()` 杩欐潯浠嶇洿鎺ュ唴鑱旇皟鐢ㄥ綋鍓?active view 鍒锋柊鐨勫３灞傚叆鍙ｃ€?- 鐩爣鏄ˉ涓€灞傚叡浜?refresh plan 涓?refresh execution helper锛岃鍚庡彴宸ヤ綔鍙颁粠椤堕儴鈥滃埛鏂版暟鎹€濆叆鍙ｈЕ鍙戝綋鍓嶈鍥鹃噸杞芥椂锛屼篃澶嶇敤缁熶竴鍑哄彛锛岃€屼笉鏄户缁妸杩欐鎵ц鍙ｇ暀鍦ㄧ粍浠跺眰銆?
-### 瀹為檯鍙樻洿
+## 2026-07-14 00:12:04 +08:00 | v1.1.0-alpha.229 | 推进 FE-041 管理端刷新执行 helper 接线
+### 任务内容
 
-- 鏇存柊 `frontend-admin/src/views/adminWorkspaceLifecycle.ts` 涓?`adminWorkspaceLifecycle.test.ts`锛屾柊澧炲叡浜?`buildAdminWorkspaceRefreshPlan(...)`锛屾妸褰撳墠 active view 鐨勫埛鏂拌鍒掔撼鍏ョ粺涓€ lifecycle 鍑哄彛銆?- 鏂板 `frontend-admin/src/views/adminWorkspaceRefresh.ts` 涓?`adminWorkspaceRefresh.test.ts`锛屾敹鍙ｅ埛鏂版椂鏄惁瑙﹀彂褰撳墠瑙嗗浘閲嶈浇鐨勬渶灏忔墽琛岄摼銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `refreshActiveView()` 鏀逛负娑堣垂鍏变韩 refresh plan 涓?refresh helper锛岃€屼笉鏄户缁洿鎺ヨ皟鐢?`loadActiveView(activeView.value)`銆?- 鏈疆涓嶆敼瀹℃牳/娌荤悊鍔犺浇鍗忚銆乁RL 璇箟鎴?session 鍗忚锛屽彧鎶婂凡绋冲畾鐨勫埛鏂板３灞傚叆鍙ｇ户缁粠缁勪欢灞備笅娌夊埌鍏变韩 helper銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `refreshActiveView()` 这条仍直接内联调用当前 active view 刷新的壳层入口。
+- 目标是补一层共享 refresh plan 与 refresh execution helper，让后台工作台从顶部“刷新数据”入口触发当前视图重载时，也复用统一出口，而不是继续把这段执行口留在组件层。
+
+### 实际变更
+
+- 更新 `frontend-admin/src/views/adminWorkspaceLifecycle.ts` 与 `adminWorkspaceLifecycle.test.ts`，新增共享 `buildAdminWorkspaceRefreshPlan(...)`，把当前 active view 的刷新计划纳入统一 lifecycle 出口。
+- 新增 `frontend-admin/src/views/adminWorkspaceRefresh.ts` 与 `adminWorkspaceRefresh.test.ts`，收口刷新时是否触发当前视图重载的最小执行链。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `refreshActiveView()` 改为消费共享 refresh plan 与 refresh helper，而不是继续直接调用 `loadActiveView(activeView.value)`。
+- 本轮不改审核/治理加载协议、URL 语义或 session 协议，只把已稳定的刷新壳层入口继续从组件层下沉到共享 helper。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLifecycle.test.ts src/views/adminWorkspaceRefresh.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -233,17 +331,25 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜?logout execution 鎺ㄨ繘鍒板叡浜?refresh plan / execution锛屽悗鍙板伐浣滃彴椤堕儴鈥滃埛鏂版暟鎹€濆叆鍙ｄ篃寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜?refresh helper锛涙洿杩涗竴姝ョ殑 `loadActiveView(...)` 鍗忚皟鍣ㄥ強鍏舵洿娣卞眰鍔犺浇瀹炵幇锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-14 00:04:12 +08:00 | v1.1.0-alpha.228 | 鎺ㄨ繘 FE-041 绠＄悊绔€€鍑烘墽琛?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享 logout execution 推进到共享 refresh plan / execution，后台工作台顶部“刷新数据”入口也开始复用统一出口。
+- 这次仍然只先收口了 refresh helper；更进一步的 `loadActiveView(...)` 协调器及其更深层加载实现，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?`logout()` 鍦ㄩ€€鍑烘椂浠嶅唴鑱旂淮鎶ょ殑 session/profile 娓呯悊銆佸伐浣滃彴 reset銆侀粯璁?view 鍥為€€銆佹棤鏁堝寲鎻愮ず娓呯┖銆佹寔涔呭寲浼氳瘽娓呴櫎涓庨€€鍑烘彁绀哄悓姝ャ€?- 鐩爣鏄ˉ涓€灞傚叡浜?logout execution helper锛屽苟璁╁悗鍙板伐浣滃彴鍦ㄩ€€鍑烘椂鐨勬渶灏忔墽琛岄摼澶嶇敤缁熶竴鍑哄彛锛屽悓鏃舵妸鈥滃悗鍙颁細璇濆凡娓呯┖銆傗€濇彁绀虹ǔ瀹氬甫鍥炵櫥褰曟€佽鍥俱€?
-### 瀹為檯鍙樻洿
+## 2026-07-14 00:04:12 +08:00 | v1.1.0-alpha.228 | 推进 FE-041 管理端退出执行 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceLogout.ts` 涓?`adminWorkspaceLogout.test.ts`锛屾敹鍙?`runAdminWorkspaceLogout(...)` 鍑哄彛锛岀粺涓€澶勭悊閫€鍑烘椂鐨?session/profile 娓呯悊銆佸伐浣滃彴 reset銆侀粯璁?view 鍥為€€銆佹棤鏁堝寲鎻愮ず娓呯┖銆佹寔涔呭寲浼氳瘽娓呴櫎涓?notice 鍚屾椤哄簭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `logout()` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceLogout` helper锛屽苟琛ヤ笂鐧诲綍鎬?`notice` 閫忎紶閫昏緫锛岄伩鍏嶉€€鍑哄悗鎻愮ず涓㈠け銆?- 鏇存柊 `frontend-admin/src/components/admin/AdminLoginPanel.vue` 涓?`AdminLoginPanel.test.ts`锛屼负鐧诲綍鎬佽鍥捐ˉ鍏呴潪閿欒鍨?notice 灞曠ず鍑哄彛銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙閫€鍑烘墽琛屼篃宸茶繘鍏ュ叡浜?helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `logout()` 在退出时仍内联维护的 session/profile 清理、工作台 reset、默认 view 回退、无效化提示清空、持久化会话清除与退出提示同步。
+- 目标是补一层共享 logout execution helper，并让后台工作台在退出时的最小执行链复用统一出口，同时把“后台会话已清空。”提示稳定带回登录态视图。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceLogout.ts` 与 `adminWorkspaceLogout.test.ts`，收口 `runAdminWorkspaceLogout(...)` 出口，统一处理退出时的 session/profile 清理、工作台 reset、默认 view 回退、无效化提示清空、持久化会话清除与 notice 同步顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `logout()` 改为消费共享 `adminWorkspaceLogout` helper，并补上登录态 `notice` 透传逻辑，避免退出后提示丢失。
+- 更新 `frontend-admin/src/components/admin/AdminLoginPanel.vue` 与 `AdminLoginPanel.test.ts`，为登录态视图补充非错误型 notice 展示出口。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端退出执行也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLogout.test.ts src/views/AdminWorkspaceView.test.ts src/components/admin/AdminLoginPanel.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -251,17 +357,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠?view-switch execution 鎺ㄨ繘鍒板叡浜?logout execution锛屽悗鍙板伐浣滃彴鍦ㄩ€€鍑烘椂鐨勬竻鐞嗐€佸洖閫€鍜屾彁绀哄紑濮嬪鐢ㄧ粺涓€鍑哄彛锛岀櫥褰曟€侀〉闈篃涓嶅啀涓㈠け閫€鍑烘彁绀恒€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?logout helper锛涙洿杩涗竴姝ョ殑 `refreshActiveView()` 鍏变韩鍒锋柊璁″垝锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 23:55:37 +08:00 | v1.1.0-alpha.227 | 鎺ㄨ繘 FE-041 绠＄悊绔鍥惧垏鎹㈡墽琛?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从 view-switch execution 推进到共享 logout execution，后台工作台在退出时的清理、回退和提示开始复用统一出口，登录态页面也不再丢失退出提示。
+- 这次仍然只先收口了 logout helper；更进一步的 `refreshActiveView()` 共享刷新计划，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?`switchView(...)` 鍦ㄥ鑸垏鎹㈡椂浠嶅唴鑱旂淮鎶ょ殑宸ヤ綔鍙?reset銆佺洰鏍?view 搴旂敤銆乁RL push 涓庢寜闇€鍔犺浇椤哄簭銆?- 鐩爣鏄ˉ涓€灞傚叡浜?view-switch execution helper锛屽苟璁╁悗鍙板伐浣滃彴鍦ㄥ鑸垏鎹㈡椂鐨勬渶灏忔墽琛岄摼澶嶇敤缁熶竴鍑哄彛锛屽噺灏戠粍浠剁户缁墜鍐欒繖娈电ǔ瀹氱紪鎺掋€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 23:55:37 +08:00 | v1.1.0-alpha.227 | 推进 FE-041 管理端视图切换执行 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceViewSwitch.ts` 涓?`adminWorkspaceViewSwitch.test.ts`锛屾敹鍙?`runAdminWorkspaceViewSwitch(...)` 鍑哄彛锛岀粺涓€澶勭悊瑙嗗浘鍒囨崲鏃剁殑宸ヤ綔鍙?reset銆佺洰鏍?view 搴旂敤銆乁RL push/replace 涓庢寜闇€鍔犺浇椤哄簭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `switchView(...)` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceViewSwitch` helper锛岃€屼笉鏄户缁湪缁勪欢閲屽唴鑱旇繖娈垫墽琛岄摼銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙瑙嗗浘鍒囨崲鎵ц涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `switchView(...)` 在导航切换时仍内联维护的工作台 reset、目标 view 应用、URL push 与按需加载顺序。
+- 目标是补一层共享 view-switch execution helper，并让后台工作台在导航切换时的最小执行链复用统一出口，减少组件继续手写这段稳定编排。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceViewSwitch.ts` 与 `adminWorkspaceViewSwitch.test.ts`，收口 `runAdminWorkspaceViewSwitch(...)` 出口，统一处理视图切换时的工作台 reset、目标 view 应用、URL push/replace 与按需加载顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `switchView(...)` 改为消费共享 `adminWorkspaceViewSwitch` helper，而不是继续在组件里内联这段执行链。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端视图切换执行也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceViewSwitch.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -269,17 +382,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠?session-cleared execution 鎺ㄨ繘鍒板叡浜?view-switch execution锛屽悗鍙板伐浣滃彴鍦ㄥ鑸垏鎹㈡椂鐨?reset銆乁RL push 鍜屾寜闇€鍔犺浇寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜?view-switch helper锛涙洿杩涗竴姝ョ殑 `refreshActiveView()` 鍏变韩鍒锋柊璁″垝锛屾垨 logout 鍒嗘敮鐨勬墽琛岄摼锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 23:48:01 +08:00 | v1.1.0-alpha.226 | 鎺ㄨ繘 FE-041 绠＄悊绔細璇濇竻绌烘墽琛?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从 session-cleared execution 推进到共享 view-switch execution，后台工作台在导航切换时的 reset、URL push 和按需加载开始复用统一出口。
+- 这次仍然只先收口了 view-switch helper；更进一步的 `refreshActiveView()` 共享刷新计划，或 logout 分支的执行链，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?`subscribeSession(...)` 鍦ㄤ細璇濊娓呯┖鏃朵粛鍐呰仈缁存姢鐨勫伐浣滃彴 reset銆侀粯璁?view 鍥為€€銆乁RL replace銆侀敊璇竻鐞嗕笌鎻愮ず鍚屾銆?- 鐩爣鏄ˉ涓€灞傚叡浜?session-cleared execution helper锛屽苟璁╁悗鍙板伐浣滃彴鍦ㄤ細璇濆け鏁堟垨琚姩娓?session 鍚庣殑鏈€灏忓洖閫€椤哄簭澶嶇敤缁熶竴鍑哄彛锛屽噺灏戠粍浠剁户缁墜鍐欒繖娈电ǔ瀹氱紪鎺掋€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 23:48:01 +08:00 | v1.1.0-alpha.226 | 推进 FE-041 管理端会话清空执行 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceSessionCleared.ts` 涓?`adminWorkspaceSessionCleared.test.ts`锛屾敹鍙?`runAdminWorkspaceSessionCleared(...)` 鍑哄彛锛岀粺涓€澶勭悊浼氳瘽琚竻绌哄悗鐨勫伐浣滃彴 reset銆侀粯璁?view 鍥為€€銆乁RL replace銆侀敊璇竻鐞嗕笌 notice 鍚屾椤哄簭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `subscribeSession(...)` 涓殑 session-cleared 鍒嗘敮鏀逛负娑堣垂鍏变韩 `adminWorkspaceSessionCleared` helper锛岃€屼笉鏄户缁湪缁勪欢閲屽唴鑱旇繖娈垫墽琛岄摼銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙浼氳瘽娓呯┖鎵ц涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `subscribeSession(...)` 在会话被清空时仍内联维护的工作台 reset、默认 view 回退、URL replace、错误清理与提示同步。
+- 目标是补一层共享 session-cleared execution helper，并让后台工作台在会话失效或被动清 session 后的最小回退顺序复用统一出口，减少组件继续手写这段稳定编排。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceSessionCleared.ts` 与 `adminWorkspaceSessionCleared.test.ts`，收口 `runAdminWorkspaceSessionCleared(...)` 出口，统一处理会话被清空后的工作台 reset、默认 view 回退、URL replace、错误清理与 notice 同步顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `subscribeSession(...)` 中的 session-cleared 分支改为消费共享 `adminWorkspaceSessionCleared` helper，而不是继续在组件里内联这段执行链。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端会话清空执行也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceSessionCleared.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -287,15 +407,22 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庢寕杞借嚜涓炬墽琛屾帹杩涘埌鍏变韩 session-cleared execution锛屽悗鍙板伐浣滃彴鍦ㄤ細璇濆け鏁堛€乺efresh 澶辫触鎴?`user_disabled` 绛夎鍔ㄦ竻 session 鍦烘櫙涓嬬殑 reset銆佸洖閫€涓庢彁绀哄紑濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜?session-cleared helper锛涙洿杩涗竴姝ョ殑 `refreshActiveView()` 鍏变韩鍒锋柊璁″垝锛屾垨 session 鍙樺寲涓嬪叾浣欏崗璋冮€昏緫锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 22:25:40 +08:00 | v1.1.0-alpha.225 | 鎺ㄨ繘 FE-041 绠＄悊绔寕杞借嚜涓?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从挂载自举执行推进到共享 session-cleared execution，后台工作台在会话失效、refresh 失败或 `user_disabled` 等被动清 session 场景下的 reset、回退与提示开始复用统一出口。
+- 这次仍然只先收口了 session-cleared helper；更进一步的 `refreshActiveView()` 共享刷新计划，或 session 变化下其余协调逻辑，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屾寕杞芥椂浠嶅唴鑱旂淮鎶ょ殑鐩爣 view 搴旂敤銆乸rofile 鍒锋柊涓庡垵濮?view 鍔犺浇椤哄簭銆?- 鐩爣鏄ˉ涓€灞傚叡浜?mount bootstrap helper锛屽苟璁╁悗鍙板伐浣滃彴鎸傝浇鏃剁殑鏈€灏忔墽琛岄『搴忓鐢ㄧ粺涓€鍑哄彛锛屽噺灏戝伐浣滃彴缁勪欢缁х画鎵嬪啓杩欐绋冲畾娴佺▼銆?### 瀹為檯鍙樻洿
+## 2026-07-13 22:25:40 +08:00 | v1.1.0-alpha.225 | 推进 FE-041 管理端挂载自举 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceMountBootstrap.ts` 涓?`adminWorkspaceMountBootstrap.test.ts`锛屾敹鍙?`runAdminWorkspaceMountBootstrap(...)` 鍑哄彛锛岀粺涓€澶勭悊鎸傝浇鏃剁殑鐩爣 view 搴旂敤銆乸rofile 鍒锋柊涓庡垵濮?view 鍔犺浇椤哄簭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `onMounted()` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceMountBootstrap` helper锛岃€屼笉鏄户缁湪缁勪欢閲岀洿鎺ヤ覆鑱旀寕杞芥椂鐨勮嚜涓炬墽琛屾楠ゃ€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙鎸傝浇鑷妇鎵ц涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里挂载时仍内联维护的目标 view 应用、profile 刷新与初始 view 加载顺序。
+- 目标是补一层共享 mount bootstrap helper，并让后台工作台挂载时的最小执行顺序复用统一出口，减少工作台组件继续手写这段稳定流程。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceMountBootstrap.ts` 与 `adminWorkspaceMountBootstrap.test.ts`，收口 `runAdminWorkspaceMountBootstrap(...)` 出口，统一处理挂载时的目标 view 应用、profile 刷新与初始 view 加载顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `onMounted()` 改为消费共享 `adminWorkspaceMountBootstrap` helper，而不是继续在组件里直接串联挂载时的自举执行步骤。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端挂载自举执行也已进入共享 helper 出口”。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceMountBootstrap.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -303,15 +430,22 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜不鐞嗗姩浣滄彁浜ゆ祦绋嬫帹杩涘埌鍏变韩鎸傝浇鑷妇鎵ц锛屽悗鍙板伐浣滃彴鎸傝浇鏃剁殑鐩爣 view 搴旂敤銆乸rofile 鍒锋柊涓庡垵濮?view 鍔犺浇椤哄簭寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜?mount bootstrap helper锛涙洿杩涗竴姝ョ殑 active view 鍒锋柊璁″垝涓?session 鍙樻洿鍗忓悓浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 22:21:20 +08:00 | v1.1.0-alpha.224 | 鎺ㄨ繘 FE-041 绠＄悊绔不鐞嗗姩浣滄彁浜ゆ祦绋?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享治理动作提交流程推进到共享挂载自举执行，后台工作台挂载时的目标 view 应用、profile 刷新与初始 view 加载顺序开始复用统一出口。
+- 这次仍然只先收口了 mount bootstrap helper；更进一步的 active view 刷新计划与 session 变更协同仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屽洓缁勬不鐞嗗姩浣滄彁浜ゅ悗浠嶅唴鑱旂淮鎶ょ殑鎵ц璇锋眰銆乨ialog reset銆佹不鐞嗚鍥惧洖鍒蜂笌 conflict 鍒嗘敮銆?- 鐩爣鏄ˉ涓€灞傚叡浜?governance mutation flow helper锛屽苟璁╁悗鍙版不鐞嗗姩浣滅殑鏈€灏忔彁浜ょ紪鎺掑鐢ㄧ粺涓€鍑哄彛锛屽噺灏戝伐浣滃彴缁勪欢缁х画鎵嬪啓杩欐绋冲畾娴佺▼銆?### 瀹為檯鍙樻洿
+## 2026-07-13 22:21:20 +08:00 | v1.1.0-alpha.224 | 推进 FE-041 管理端治理动作提交流程 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminGovernanceMutationFlow.ts` 涓?`adminGovernanceMutationFlow.test.ts`锛屾敹鍙?`runAdminGovernanceMutation(...)` 鍑哄彛锛岀粺涓€澶勭悊娌荤悊鍔ㄤ綔鐨勬彁浜よ姹傘€乨ialog reset銆乺eload view 涓?409 conflict 淇″彿銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `applyGovernanceRecordAction(...)` 鏀逛负娑堣垂鍏变韩 `adminGovernanceMutationFlow` helper锛岃€屼笉鏄户缁湪缁勪欢閲岀洿鎺ヤ覆鑱?mutation meta銆佹彁浜よ姹傚拰娌荤悊瑙嗗浘鍥炲埛銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙娌荤悊鍔ㄤ綔鎻愪氦娴佺▼涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里四组治理动作提交后仍内联维护的执行请求、dialog reset、治理视图回刷与 conflict 分支。
+- 目标是补一层共享 governance mutation flow helper，并让后台治理动作的最小提交编排复用统一出口，减少工作台组件继续手写这段稳定流程。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminGovernanceMutationFlow.ts` 与 `adminGovernanceMutationFlow.test.ts`，收口 `runAdminGovernanceMutation(...)` 出口，统一处理治理动作的提交请求、dialog reset、reload view 与 409 conflict 信号。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `applyGovernanceRecordAction(...)` 改为消费共享 `adminGovernanceMutationFlow` helper，而不是继续在组件里直接串联 mutation meta、提交请求和治理视图回刷。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端治理动作提交流程也已进入共享 helper 出口”。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminGovernanceMutationFlow.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -319,15 +453,22 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜鏍稿姩浣滃厓鏁版嵁鎺ㄨ繘鍒板叡浜不鐞嗗姩浣滄彁浜ゆ祦绋嬶紝鍚庡彴娌荤悊鍔ㄤ綔鐨勮姹傛墽琛屻€乨ialog reset銆佹不鐞嗚鍥惧洖鍒蜂笌 conflict 淇″彿寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜?governance mutation flow helper锛涙洿杩涗竴姝ョ殑 mount/read 鍗忚皟涓?active view 鍒锋柊璁″垝浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 22:15:50 +08:00 | v1.1.0-alpha.223 | 鎺ㄨ繘 FE-041 绠＄悊绔鏍稿姩浣滃厓鏁版嵁 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享审核动作元数据推进到共享治理动作提交流程，后台治理动作的请求执行、dialog reset、治理视图回刷与 conflict 信号开始复用统一出口。
+- 这次仍然只先收口了 governance mutation flow helper；更进一步的 mount/read 协调与 active view 刷新计划仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屽鏍稿姩浣滄彁浜ゅ悗浠嶅唴鑱旂淮鎶ょ殑 path 鎷兼帴銆佹垚鍔熸彁绀轰笌璧勬枡娌荤悊鐗逛緥鍒嗘敮銆?- 鐩爣鏄ˉ涓€灞傚叡浜?moderation mutation helper锛屽苟璁╁悗鍙板鏍稿姩浣滅殑鏈€灏忔彁浜ゅ厓鏁版嵁澶嶇敤缁熶竴鍑哄彛锛屽噺灏戝伐浣滃彴缁勪欢缁х画鎵嬪啓杩欐绋冲畾鍒嗘敮銆?### 瀹為檯鍙樻洿
+## 2026-07-13 22:15:50 +08:00 | v1.1.0-alpha.223 | 推进 FE-041 管理端审核动作元数据 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminModerationMutationMeta.ts` 涓?`adminModerationMutationMeta.test.ts`锛屾敹鍙?`resolveAdminModerationMutationMeta(...)` 鍑哄彛锛岀粺涓€澶勭悊瀹℃牳鍔ㄤ綔鐨?API path銆佹垚鍔熸彁绀恒€佽祫鏂欐不鐞嗗洖鍒蜂笌 409 conflict 鐗逛緥銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `applyModerationAction(...)` 鏀逛负娑堣垂鍏变韩 `adminModerationMutationMeta` helper锛岃€屼笉鏄户缁湪缁勪欢閲岀洿鎺ョ淮鎶?path銆乶otice 鍜岃祫鏂欐不鐞嗙壒鍒ゃ€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙瀹℃牳鍔ㄤ綔鍏冩暟鎹篃宸茶繘鍏ュ叡浜?helper 鍑哄彛鈥濄€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里审核动作提交后仍内联维护的 path 拼接、成功提示与资料治理特例分支。
+- 目标是补一层共享 moderation mutation helper，并让后台审核动作的最小提交元数据复用统一出口，减少工作台组件继续手写这段稳定分支。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminModerationMutationMeta.ts` 与 `adminModerationMutationMeta.test.ts`，收口 `resolveAdminModerationMutationMeta(...)` 出口，统一处理审核动作的 API path、成功提示、资料治理回刷与 409 conflict 特例。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `applyModerationAction(...)` 改为消费共享 `adminModerationMutationMeta` helper，而不是继续在组件里直接维护 path、notice 和资料治理特判。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端审核动作元数据也已进入共享 helper 出口”。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminModerationMutationMeta.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -335,15 +476,23 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜櫥褰曡嚜涓鹃『搴忔帹杩涘埌鍏变韩瀹℃牳鍔ㄤ綔鍏冩暟鎹紝鍚庡彴瀹℃牳鍔ㄤ綔鐨?path銆佹垚鍔熸彁绀轰笌璧勬枡娌荤悊鐗逛緥寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜?moderation mutation helper锛涙洿杩涗竴姝ョ殑娌荤悊鍔ㄤ綔鍒锋柊缂栨帓涓?mount/read 鍗忚皟浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 22:08:40 +08:00 | v1.1.0-alpha.222 | 鎺ㄨ繘 FE-041 绠＄悊绔伐浣滃彴鐧诲綍鑷妇 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享登录自举顺序推进到共享审核动作元数据，后台审核动作的 path、成功提示与资料治理特例开始复用统一出口。
+- 这次仍然只先收口了 moderation mutation helper；更进一步的治理动作刷新编排与 mount/read 协调仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲岀櫥褰曟垚鍔熷悗浠嶅唴鑱旂淮鎶ょ殑 session 鎸佷箙鍖栥€乸rofile 鍒锋柊涓庡綋鍓?view 鍔犺浇椤哄簭銆?- 鐩爣鏄ˉ涓€灞傚叡浜?bootstrap helper锛屽苟璁╁悗鍙扮櫥褰曟垚鍔熷悗鐨勬渶灏忚嚜涓鹃摼璺鐢ㄧ粺涓€鍑哄彛锛屽噺灏戝伐浣滃彴缁勪欢缁х画鎵嬪啓杩欐绋冲畾缂栨帓銆?### 瀹為檯鍙樻洿
+## 2026-07-13 22:08:40 +08:00 | v1.1.0-alpha.222 | 推进 FE-041 管理端工作台登录自举 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceBootstrap.ts` 涓?`adminWorkspaceBootstrap.test.ts`锛屾敹鍙?`runAdminWorkspaceLoginBootstrap(...)` 鍑哄彛锛岀粺涓€澶勭悊鐧诲綍鎴愬姛鍚庣殑 session 鎸佷箙鍖栥€乸rofile 鍒锋柊涓庡綋鍓?view 鍔犺浇椤哄簭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `login()` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceBootstrap` helper锛岃€屼笉鏄户缁湪缁勪欢閲岀洿鎺ヤ覆鑱旂櫥褰曞悗鐨勮嚜涓炬楠ゃ€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.test.ts`锛岃ˉ涓€鏉″悗鍙扮櫥褰曟垚鍔熷悗 dashboard 鏁版嵁浼氬畬鎴愯嚜涓惧姞杞界殑椤甸潰绾у洖褰掋€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙鐧诲綍鎴愬姛鍚庣殑宸ヤ綔鍙拌嚜涓句篃宸茶繘鍏ュ叡浜?helper 鍑哄彛鈥濄€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里登录成功后仍内联维护的 session 持久化、profile 刷新与当前 view 加载顺序。
+- 目标是补一层共享 bootstrap helper，并让后台登录成功后的最小自举链路复用统一出口，减少工作台组件继续手写这段稳定编排。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceBootstrap.ts` 与 `adminWorkspaceBootstrap.test.ts`，收口 `runAdminWorkspaceLoginBootstrap(...)` 出口，统一处理登录成功后的 session 持久化、profile 刷新与当前 view 加载顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `login()` 改为消费共享 `adminWorkspaceBootstrap` helper，而不是继续在组件里直接串联登录后的自举步骤。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，补一条后台登录成功后 dashboard 数据会完成自举加载的页面级回归。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端登录成功后的工作台自举也已进入共享 helper 出口”。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceBootstrap.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -351,77 +500,112 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜鍥惧姞杞界紪鎺掓帹杩涘埌鍏变韩鐧诲綍鑷妇椤哄簭锛屽悗鍙扮櫥褰曟垚鍔熷悗鐨?session 鎸佷箙鍖栥€乸rofile 鍒锋柊涓庡綋鍓?view 鍔犺浇寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜?login bootstrap helper锛涙洿杩涗竴姝ョ殑 mount/read 鍗忚皟涓庢不鐞嗘彁浜ゅ悗鐨勫埛鏂扮紪鎺掍粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 22:00:10 +08:00 | v1.1.0-alpha.221 | 鎺ㄨ繘 FE-041 绠＄悊绔伐浣滃彴鍔犺浇缂栨帓 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享视图加载编排推进到共享登录自举顺序，后台登录成功后的 session 持久化、profile 刷新与当前 view 加载开始复用统一出口。
+- 这次仍然只先收口了 login bootstrap helper；更进一步的 mount/read 协调与治理提交后的刷新编排仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?dashboard銆乵oderation 鍜?governance 涓夌被瑙嗗浘鐨勫姞杞界紪鎺掑垎鏀€?- 鐩爣鏄ˉ涓€涓叡浜?view-load helper锛屽苟璁?overview/moderation/governance 鐨勮皟搴﹀鐢ㄧ粺涓€鍑哄彛锛屽噺灏戝伐浣滃彴缁勪欢缁х画鐩存帴缁存姢杩欑粍鍔犺浇鍒嗗弶銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 22:00:10 +08:00 | v1.1.0-alpha.221 | 推进 FE-041 管理端工作台加载编排 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceViewLoad.ts` 涓?`adminWorkspaceViewLoad.test.ts`锛屾敹鍙?`runAdminWorkspaceViewLoad(...)` 鍑哄彛锛岀粺涓€澶勭悊 dashboard銆乵oderation 鍜?governance 涓夌被瑙嗗浘鐨勫姞杞借皟搴︺€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `loadActiveView(...)` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceViewLoad` helper锛岃€屼笉鏄户缁湪缁勪欢閲屽唴鑱?`Promise.all(...)` 鍜岃鍥惧垎鏀€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙瑙嗗浘绾у姞杞界紪鎺掍篃宸茶繘鍏ュ叡浜?helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里 dashboard、moderation 和 governance 三类视图的加载编排分支。
+- 目标是补一个共享 view-load helper，并让 overview/moderation/governance 的调度复用统一出口，减少工作台组件继续直接维护这组加载分叉。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceViewLoad.ts` 与 `adminWorkspaceViewLoad.test.ts`，收口 `runAdminWorkspaceViewLoad(...)` 出口，统一处理 dashboard、moderation 和 governance 三类视图的加载调度。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `loadActiveView(...)` 改为消费共享 `adminWorkspaceViewLoad` helper，而不是继续在组件里内联 `Promise.all(...)` 和视图分支。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端视图级加载编排也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceViewLoad.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜敓鍛藉懆鏈熻鍒掓帹杩涘埌鍏变韩瑙嗗浘鍔犺浇缂栨帓锛宒ashboard銆乵oderation 鍜?governance 鐨勮皟搴﹀紑濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜?view-load helper锛涙洿杩涗竴姝ョ殑 bootstrap/read 鍗忚皟涓庣櫥褰?娌荤悊鎻愪氦缂栨帓浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 21:56:40 +08:00 | v1.1.0-alpha.220 | 鎺ㄨ繘 FE-041 绠＄悊绔伐浣滃彴鐢熷懡鍛ㄦ湡 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享生命周期计划推进到共享视图加载编排，dashboard、moderation 和 governance 的调度开始复用统一出口。
+- 这次仍然只先收口了 view-load helper；更进一步的 bootstrap/read 协调与登录/治理提交编排仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屾寕杞借嚜涓俱€乣popstate`銆佸鑸垏鎹€佷細璇濆け鏁堝洖閫€鍜岄€€鍑鸿繖鍑犵被绋冲畾鐨勫伐浣滃彴鐢熷懡鍛ㄦ湡鍒嗘敮銆?- 鐩爣鏄ˉ涓€涓叡浜?lifecycle helper锛屽苟璁?reset/sync/load 璁″垝閮藉鐢ㄧ粺涓€鍑哄彛锛屽噺灏戝伐浣滃彴缁勪欢缁х画鐩存帴缁存姢杩欎簺娴佺▼鍒ゆ柇銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 21:56:40 +08:00 | v1.1.0-alpha.220 | 推进 FE-041 管理端工作台生命周期 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceLifecycle.ts` 涓?`adminWorkspaceLifecycle.test.ts`锛屾敹鍙?`buildAdminWorkspaceMountPlan(...)`銆乣buildAdminWorkspacePopstatePlan(...)`銆乣buildAdminWorkspaceViewSwitchPlan(...)`銆乣buildAdminWorkspaceSessionClearedPlan(...)` 涓?`buildAdminWorkspaceLogoutPlan(...)` 浜斾釜鍑哄彛銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃鎸傝浇鑷妇銆乣popstate`銆佸鑸垏鎹€佷細璇濆け鏁堝洖閫€鍜岄€€鍑鸿矾寰勯兘鏀逛负娑堣垂鍏变韩 lifecycle helper锛岃€屼笉鏄户缁湪宸ヤ綔鍙伴噷鎵嬪啓 reset/sync/load 鍒嗘敮銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙宸ヤ綔鍙扮敓鍛藉懆鏈熻鍒掍篃宸茶繘鍏ュ叡浜?helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里挂载自举、`popstate`、导航切换、会话失效回退和退出这几类稳定的工作台生命周期分支。
+- 目标是补一个共享 lifecycle helper，并让 reset/sync/load 计划都复用统一出口，减少工作台组件继续直接维护这些流程判断。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceLifecycle.ts` 与 `adminWorkspaceLifecycle.test.ts`，收口 `buildAdminWorkspaceMountPlan(...)`、`buildAdminWorkspacePopstatePlan(...)`、`buildAdminWorkspaceViewSwitchPlan(...)`、`buildAdminWorkspaceSessionClearedPlan(...)` 与 `buildAdminWorkspaceLogoutPlan(...)` 五个出口。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让挂载自举、`popstate`、导航切换、会话失效回退和退出路径都改为消费共享 lifecycle helper，而不是继续在工作台里手写 reset/sync/load 分支。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端工作台生命周期计划也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLifecycle.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜伐浣滃彴璺敱瀹氫綅鎺ㄨ繘鍒板叡浜敓鍛藉懆鏈熻鍒掞紝鎸傝浇鑷妇銆佸鑸垏鎹㈠拰浼氳瘽鍥為€€寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗙敓鍛藉懆鏈?helper锛涙洿杩涗竴姝ョ殑 bootstrap/load 璇锋眰缂栨帓浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 21:52:30 +08:00 | v1.1.0-alpha.219 | 鎺ㄨ繘 FE-041 绠＄悊绔伐浣滃彴璺敱瀹氫綅 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享工作台路由定位推进到共享生命周期计划，挂载自举、导航切换和会话回退开始复用统一出口。
+- 这次仍然只先收口了生命周期 helper；更进一步的 bootstrap/load 请求编排仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屼笌鍚庡彴 URL 瑙ｆ瀽銆佽矾寰勫綊涓€鍖栧拰瀵艰埅鍒囨崲鍘嗗彶鍚屾鐩稿叧鐨勯€昏緫銆?- 鐩爣鏄ˉ涓€涓叡浜矾鐢卞畾浣?helper锛屽苟璁╁伐浣滃彴鐨勫垵濮嬪寲瑙嗗浘銆侀潪娉曡矾寰勪慨姝ｃ€佸鑸垏鎹㈠拰浼氳瘽澶辨晥鍥為€€閮藉鐢ㄧ粺涓€鍑哄彛锛屽噺灏戦〉闈㈠眰缁х画鍐呰仈杩欎簺 URL 鍒嗘敮銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 21:52:30 +08:00 | v1.1.0-alpha.219 | 推进 FE-041 管理端工作台路由定位 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceLocation.ts` 涓?`adminWorkspaceLocation.test.ts`锛屾敹鍙?`resolveAdminWorkspaceLocationView(...)`銆乣normalizeAdminWorkspaceLocation(...)` 涓?`syncAdminWorkspaceLocation(...)` 涓変釜鍑哄彛銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `activeView` 鍒濆鍖栥€乣popstate` 鍥為€€銆佹寕杞芥椂 URL 褰掍竴鍖栥€乣switchView(...)` 瀵艰埅鍒囨崲锛屼互鍙?session 澶辨晥/閫€鍑烘椂鐨?`replace` 鍥為€€閮芥敼涓烘秷璐瑰叡浜?`adminWorkspaceLocation` helper銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙宸ヤ綔鍙?URL/瑙嗗浘鍚屾涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里与后台 URL 解析、路径归一化和导航切换历史同步相关的逻辑。
+- 目标是补一个共享路由定位 helper，并让工作台的初始化视图、非法路径修正、导航切换和会话失效回退都复用统一出口，减少页面层继续内联这些 URL 分支。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceLocation.ts` 与 `adminWorkspaceLocation.test.ts`，收口 `resolveAdminWorkspaceLocationView(...)`、`normalizeAdminWorkspaceLocation(...)` 与 `syncAdminWorkspaceLocation(...)` 三个出口。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `activeView` 初始化、`popstate` 回退、挂载时 URL 归一化、`switchView(...)` 导航切换，以及 session 失效/退出时的 `replace` 回退都改为消费共享 `adminWorkspaceLocation` helper。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端工作台 URL/视图同步也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLocation.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜淳鐢熸暟鎹€昏緫鎺ㄨ繘鍒板叡浜伐浣滃彴璺敱瀹氫綅锛屽垵濮嬪寲瑙嗗浘銆侀潪娉曡矾寰勪慨姝ｅ拰瀵艰埅鍘嗗彶鍚屾寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗚矾鐢卞畾浣?helper锛涙洿杩涗竴姝ョ殑 session/bootstrap 鍗忚皟涓庢暟鎹姞杞界紪鎺掍粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 21:11:40 +08:00 | v1.1.0-alpha.218 | 鎺ㄨ繘 FE-041 绠＄悊绔伐浣滃彴娲剧敓鏁版嵁 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享派生数据逻辑推进到共享工作台路由定位，初始化视图、非法路径修正和导航历史同步开始复用统一出口。
+- 这次仍然只先收口了路由定位 helper；更进一步的 session/bootstrap 协调与数据加载编排仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屽鏍稿垪琛ㄤ笌娌荤悊鍒楄〃鍒嗘暎缁存姢鐨勬淳鐢熸暟鎹€昏緫銆?- 鐩爣鏄ˉ涓€涓叡浜淳鐢熸暟鎹?helper锛屽苟璁╁笘瀛?璧勬枡鎷嗗垎銆佹湰鍦扮瓫閫変笌鐘舵€侀€夐」鐢熸垚閮藉鐢ㄧ粺涓€鍑哄彛锛屽噺灏戝伐浣滃彴灞傜户缁唴鑱旇繖浜?`computed` 鍒嗘敮銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 21:11:40 +08:00 | v1.1.0-alpha.218 | 推进 FE-041 管理端工作台派生数据 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceDerivedData.ts` 涓?`adminWorkspaceDerivedData.test.ts`锛屾敹鍙?`splitModerationItems(...)`銆乣filterModerationItems(...)`銆乣buildModerationStatusOptions(...)`銆乣filterGovernanceRows(...)` 涓?`buildGovernanceStatusOptions(...)` 浜斾釜鍑哄彛銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `pendingPosts`銆乣pendingMaterials`銆乣visibleModerationItems`銆乣moderationStatusOptions`銆乣visibleGovernanceRows` 涓?`governanceStatusOptions` 鍏ㄩ儴鏀逛负娑堣垂鍏变韩 `adminWorkspaceDerivedData` helper锛岃€屼笉鏄户缁湪宸ヤ綔鍙伴噷鍐呰仈绛涢€夊拰鐘舵€侀€夐」鍒嗘敮銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙宸ヤ綔鍙版淳鐢熸暟鎹篃宸茶繘鍏ュ叡浜?helper 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里审核列表与治理列表分散维护的派生数据逻辑。
+- 目标是补一个共享派生数据 helper，并让帖子/资料拆分、本地筛选与状态选项生成都复用统一出口，减少工作台层继续内联这些 `computed` 分支。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceDerivedData.ts` 与 `adminWorkspaceDerivedData.test.ts`，收口 `splitModerationItems(...)`、`filterModerationItems(...)`、`buildModerationStatusOptions(...)`、`filterGovernanceRows(...)` 与 `buildGovernanceStatusOptions(...)` 五个出口。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `pendingPosts`、`pendingMaterials`、`visibleModerationItems`、`moderationStatusOptions`、`visibleGovernanceRows` 与 `governanceStatusOptions` 全部改为消费共享 `adminWorkspaceDerivedData` helper，而不是继续在工作台里内联筛选和状态选项分支。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端工作台派生数据也已进入共享 helper 出口”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceDerivedData.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜伐浣滃彴鎻愮ず璇箟鎺ㄨ繘鍒板叡浜淳鐢熸暟鎹€昏緫锛屽鏍稿垪琛ㄤ笌娌荤悊鍒楄〃寮€濮嬪鐢ㄧ粺涓€鐨勬媶鍒嗐€佺瓫閫夊拰鐘舵€侀€夐」鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗘淳鐢熸暟鎹?helper锛涙洿杩涗竴姝ョ殑宸ヤ綔鍙扮骇瑙嗗浘鍒囨崲銆乁RL 鍚屾涓庤姹傚崗璋冮€昏緫浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 07:49:16 +08:00 | v1.1.0-alpha.197 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?FilterBar 绛涢€夋潯楠ㄦ灦鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享工作台提示语义推进到共享派生数据逻辑，审核列表与治理列表开始复用统一的拆分、筛选和状态选项出口。
+- 这次仍然只先收口了派生数据 helper；更进一步的工作台级视图切换、URL 同步与请求协调逻辑仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画娓呯悊瀹℃牳妯″潡涓庢不鐞嗘ā鍧楅噷閲嶅鍑虹幇鐨勨€滄悳绱㈡爮 + 绛涢€変笅鎷?+ 璁℃暟鈥濈瓫閫夋潯楠ㄦ灦銆?- 鐩爣鏄ˉ涓€涓?`AdminFilterBar` Vue 閫傞厤灞傦紝骞舵妸瀹℃牳妯″潡涓庢不鐞嗘ā鍧楅噷閲嶅鐨勬悳绱㈢瓫閫夋潯鍒囧埌缁熶竴鍑哄彛锛岃鍚庡彴楂橀鍒楄〃鐨勭瓫閫夊叆鍙ｄ笉鍐嶅悇鑷淮鎶ょ浉鍚岄鏋舵ā鏉裤€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 07:49:16 +08:00 | v1.1.0-alpha.197 | 推进 FE-041 管理端共享 FilterBar 筛选条骨架接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminFilterBar.vue` 涓?`AdminFilterBar.test.ts`锛屾敹鍙ｅ悗鍙扮瓫閫夋潯鐨勫叡浜鏋讹紝骞剁粺涓€鎵挎帴鎼滅储杈撳叆銆佺姸鎬佺瓫閫夊拰璁℃暟灞曠ず銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`AdminGovernanceModule.vue`锛屾妸瀹℃牳/娌荤悊妯″潡閲岀殑鍐呰仈绛涢€夋潯缁撴瀯鏇挎崲涓哄叡浜?`AdminFilterBar`锛屽悓鏃朵繚鐣欏悇鑷凡鏈夌殑鏌ヨ銆佺瓫閫夊瓧娈靛拰娴嬭瘯閽╁瓙銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 涓?`AdminGovernanceModule.test.ts`锛岃ˉ涓婁袱鏉＄湡瀹炴ā鍧楄矾寰勫凡缁忛€氳繃鍏变韩绛涢€夋潯楠ㄦ灦娓叉煋鎼滅储鍜岀瓫閫夊叆鍙ｇ殑鏂█銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理审核模块与治理模块里重复出现的“搜索栏 + 筛选下拉 + 计数”筛选条骨架。
+- 目标是补一个 `AdminFilterBar` Vue 适配层，并把审核模块与治理模块里重复的搜索筛选条切到统一出口，让后台高频列表的筛选入口不再各自维护相同骨架模板。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminFilterBar.vue` 与 `AdminFilterBar.test.ts`，收口后台筛选条的共享骨架，并统一承接搜索输入、状态筛选和计数展示。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，把审核/治理模块里的内联筛选条结构替换为共享 `AdminFilterBar`，同时保留各自已有的查询、筛选字段和测试钩子。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `AdminGovernanceModule.test.ts`，补上两条真实模块路径已经通过共享筛选条骨架渲染搜索和筛选入口的断言。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminFilterBar.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -429,16 +613,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画娌垮悗鍙伴珮棰戠瓫閫夐鏋跺悜涓婃敹鍙ｏ紝瀹℃牳妯″潡涓庢不鐞嗘ā鍧楀紑濮嬪叡浜粺涓€鐨勬悳绱㈢瓫閫夋潯鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗙瓫閫夋潯楠ㄦ灦锛涙洿杩涗竴姝ョ殑澶氭潯浠剁瓫閫夋ā鍨嬨€佺瓫閫夋潯浠跺垎缁勮涔夊拰鏇村畬鏁寸殑 filter bar 濂戠害杩樻病鏈夌粺涓€锛屽悗缁€傚悎缁х画娌胯繖鏉¤矾寰勬帹杩涖€?
-## 2026-07-13 07:44:48 +08:00 | v1.1.0-alpha.196 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?FilterSelect 绛涢€変笅鎷夋帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在继续沿后台高频筛选骨架向上收口，审核模块与治理模块开始共享统一的搜索筛选条出口。
+- 这次仍然只先收口了筛选条骨架；更进一步的多条件筛选模型、筛选条件分组语义和更完整的 filter bar 契约还没有统一，后续适合继续沿这条路径推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画娓呯悊瀹℃牳妯″潡涓庢不鐞嗘ā鍧楅噷閲嶅鍑虹幇鐨勭姸鎬佺瓫閫変笅鎷夌粨鏋勩€?- 鐩爣鏄ˉ涓€涓?`AdminFilterSelect` Vue 閫傞厤灞傦紝骞舵妸瀹℃牳妯″潡涓庢不鐞嗘ā鍧楅噷閲嶅鐨?`AdminSelect + option 鍒楄〃 + 鐘舵€佺瓫閫夐挬瀛恅 缁撴瀯鍒囧埌缁熶竴绛涢€変笅鎷夊嚭鍙ｏ紝璁╁悗鍙伴珮棰戠瓫閫夊叆鍙ｄ笉鍐嶅悇鑷淮鎶ょ浉鍚屾ā鏉裤€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 07:44:48 +08:00 | v1.1.0-alpha.196 | 推进 FE-041 管理端共享 FilterSelect 筛选下拉接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminFilterSelect.vue` 涓?`AdminFilterSelect.test.ts`锛屾敹鍙ｅ悗鍙扮瓫閫変笅鎷夌殑鍏变韩楠ㄦ灦銆侀€夐」娓叉煋涓庡€煎彉鏇翠簨浠躲€?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`AdminGovernanceModule.vue`锛屾妸瀹℃牳/娌荤悊妯″潡閲岀殑鍐呰仈鐘舵€佺瓫閫変笅鎷夋浛鎹负鍏变韩 `AdminFilterSelect`锛屽悓鏃朵繚鐣欏悇鑷凡鏈夌殑绛涢€夊瓧娈靛拰娴嬭瘯閽╁瓙銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 涓?`AdminGovernanceModule.test.ts`锛岃ˉ涓婁袱鏉＄湡瀹炴ā鍧楄矾寰勫凡缁忛€氳繃鍏变韩绛涢€変笅鎷夋覆鏌撶姸鎬佺瓫閫夊叆鍙ｇ殑鏂█銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理审核模块与治理模块里重复出现的状态筛选下拉结构。
+- 目标是补一个 `AdminFilterSelect` Vue 适配层，并把审核模块与治理模块里重复的 `AdminSelect + option 列表 + 状态筛选钩子` 结构切到统一筛选下拉出口，让后台高频筛选入口不再各自维护相同模板。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminFilterSelect.vue` 与 `AdminFilterSelect.test.ts`，收口后台筛选下拉的共享骨架、选项渲染与值变更事件。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，把审核/治理模块里的内联状态筛选下拉替换为共享 `AdminFilterSelect`，同时保留各自已有的筛选字段和测试钩子。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `AdminGovernanceModule.test.ts`，补上两条真实模块路径已经通过共享筛选下拉渲染状态筛选入口的断言。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminFilterSelect.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -446,17 +638,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画娌垮悗鍙伴珮棰戠瓫閫夐鏋跺悜涓婃敹鍙ｏ紝瀹℃牳妯″潡涓庢不鐞嗘ā鍧楀紑濮嬪叡浜粺涓€鐨勭姸鎬佺瓫閫変笅鎷夊嚭鍙ｃ€?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗙瓫閫変笅鎷夋湰韬紱鏇磋繘涓€姝ョ殑绛涢€夋潯妯″瀷銆佹潯浠跺垎缁勮涔夊拰澶氭潯浠?filter bar 濂戠害杩樻病鏈夌粺涓€锛屽悗缁€傚悎缁х画娌胯繖鏉¤矾寰勬帹杩涖€?
-## 2026-07-13 07:40:27 +08:00 | v1.1.0-alpha.195 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?MetricGrid 鎸囨爣缃戞牸鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续沿后台高频筛选骨架向上收口，审核模块与治理模块开始共享统一的状态筛选下拉出口。
+- 这次仍然只先收口了筛选下拉本身；更进一步的筛选条模型、条件分组语义和多条件 filter bar 契约还没有统一，后续适合继续沿这条路径推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画娓呯悊 dashboard 涓庢不鐞嗘憳瑕佸尯閲岄噸澶嶅嚭鐜扮殑鎸囨爣鍗＄墖缃戞牸缁撴瀯銆?- 鐩爣鏄ˉ涓€涓?`AdminMetricGrid` Vue 閫傞厤灞傦紝骞舵妸 dashboard 姒傝鍖轰笌娌荤悊鎽樿鍖洪噷閲嶅鐨?`admin-metric-grid + AdminMetricCard` 缁撴瀯鍒囧埌缁熶竴缃戞牸鍑哄彛锛岃鍚庡彴楂橀姒傝鍗＄墖涓嶅啀鍚勮嚜缁存姢鐩稿悓鐨勬寚鏍囩綉鏍兼ā鏉裤€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 07:40:27 +08:00 | v1.1.0-alpha.195 | 推进 FE-041 管理端共享 MetricGrid 指标网格接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminMetricGrid.vue` 涓?`AdminMetricGrid.test.ts`锛屾敹鍙ｅ悗鍙版寚鏍囧崱鐗囩綉鏍肩殑鍏变韩楠ㄦ灦锛屽苟缁熶竴鎵挎帴 `AdminMetricCard` 鍒楄〃娓叉煋銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminDashboardModule.vue` 涓?`AdminGovernanceModule.vue`锛屾妸 dashboard 姒傝鍖哄拰娌荤悊鎽樿鍖洪噷鐨勫唴鑱旀寚鏍囩綉鏍兼浛鎹负鍏变韩 `AdminMetricGrid`锛屽悓鏃朵繚鐣欏悇鑷凡鏈夌殑鎸囨爣鍐呭涓庡竷灞€銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminDashboardModule.test.ts` 涓?`AdminGovernanceModule.test.ts`锛岃ˉ涓婁袱鏉＄湡瀹炴ā鍧楄矾寰勫凡缁忛€氳繃鍏变韩鎸囨爣缃戞牸娓叉煋姒傝鍗＄墖鐨勬柇瑷€銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理 dashboard 与治理摘要区里重复出现的指标卡片网格结构。
+- 目标是补一个 `AdminMetricGrid` Vue 适配层，并把 dashboard 概览区与治理摘要区里重复的 `admin-metric-grid + AdminMetricCard` 结构切到统一网格出口，让后台高频概览卡片不再各自维护相同的指标网格模板。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminMetricGrid.vue` 与 `AdminMetricGrid.test.ts`，收口后台指标卡片网格的共享骨架，并统一承接 `AdminMetricCard` 列表渲染。
+- 更新 `frontend-admin/src/views/modules/AdminDashboardModule.vue` 与 `AdminGovernanceModule.vue`，把 dashboard 概览区和治理摘要区里的内联指标网格替换为共享 `AdminMetricGrid`，同时保留各自已有的指标内容与布局。
+- 更新 `frontend-admin/src/views/modules/AdminDashboardModule.test.ts` 与 `AdminGovernanceModule.test.ts`，补上两条真实模块路径已经通过共享指标网格渲染概览卡片的断言。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminMetricGrid.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -464,17 +663,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画娌垮悗鍙版瑙堥鏋跺悜涓婃敹鍙ｏ紝dashboard 涓庢不鐞嗘憳瑕佸尯寮€濮嬪叡浜粺涓€鐨勬寚鏍囩綉鏍煎嚭鍙ｃ€?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗙綉鏍奸鏋讹紱鏇磋繘涓€姝ョ殑鎸囨爣鏁版嵁妯″瀷銆佸崱鐗囧垎缁勮涔夊拰鏇村鍚庡彴鎽樿鍖哄绾﹁繕娌℃湁缁熶竴锛屽悗缁€傚悎缁х画娌胯繖鏉¤矾寰勬帹杩涖€?
-## 2026-07-13 07:35:28 +08:00 | v1.1.0-alpha.194 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?DataTable 琛ㄦ牸澹冲眰鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续沿后台概览骨架向上收口，dashboard 与治理摘要区开始共享统一的指标网格出口。
+- 这次仍然只先收口了网格骨架；更进一步的指标数据模型、卡片分组语义和更多后台摘要区契约还没有统一，后续适合继续沿这条路径推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画娓呯悊瀹℃牳涓庢不鐞嗘ā鍧楅噷閲嶅鍑虹幇鐨勮〃鏍煎崱鐗囬鏋躲€?- 鐩爣鏄ˉ涓€涓?`AdminDataTable` Vue 閫傞厤灞傦紝骞舵妸瀹℃牳妯″潡涓庢不鐞嗘ā鍧楅噷閲嶅鐨?`DataCardHeader + DataState + admin-table` 缁撴瀯鍒囧埌缁熶竴琛ㄦ牸澹冲眰鍑哄彛锛岃鍚庡彴楂橀鍒楄〃涓嶅啀鍚勮嚜缁存姢鐩稿悓鐨勫崱鐗?鐘舵€?琛ㄦ牸瀹瑰櫒妯℃澘銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 07:35:28 +08:00 | v1.1.0-alpha.194 | 推进 FE-041 管理端共享 DataTable 表格壳层接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminDataTable.vue` 涓?`AdminDataTable.test.ts`锛屾敹鍙ｅ悗鍙拌〃鏍煎崱鐗囨爣棰樺尯銆佺姸鎬佸尯鍜岃〃鏍煎鍣ㄧ殑鍏变韩楠ㄦ灦锛屽苟閫氳繃鎻掓Ы鎵挎帴琛ㄥご鍜岃鍐呭銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`AdminGovernanceModule.vue`锛屾妸瀹℃牳/娌荤悊妯″潡閲岀殑鍐呰仈琛ㄦ牸鍗＄墖缁撴瀯鏇挎崲涓哄叡浜?`AdminDataTable`锛屽悓鏃朵繚鐣欏悇鑷凡鏈夌殑绛涢€夋潯銆佽〃澶淬€佽缁勪欢鍜岃鎯呭尯銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 涓?`AdminGovernanceModule.test.ts`锛岃ˉ涓婁袱鏉＄湡瀹炴ā鍧楄矾寰勫凡缁忛€氳繃鍏变韩琛ㄦ牸澹冲眰娓叉煋鍒楄〃楠ㄦ灦鐨勬柇瑷€銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理审核与治理模块里重复出现的表格卡片骨架。
+- 目标是补一个 `AdminDataTable` Vue 适配层，并把审核模块与治理模块里重复的 `DataCardHeader + DataState + admin-table` 结构切到统一表格壳层出口，让后台高频列表不再各自维护相同的卡片/状态/表格容器模板。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminDataTable.vue` 与 `AdminDataTable.test.ts`，收口后台表格卡片标题区、状态区和表格容器的共享骨架，并通过插槽承接表头和行内容。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，把审核/治理模块里的内联表格卡片结构替换为共享 `AdminDataTable`，同时保留各自已有的筛选条、表头、行组件和详情区。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `AdminGovernanceModule.test.ts`，补上两条真实模块路径已经通过共享表格壳层渲染列表骨架的断言。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminDataTable.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -482,17 +688,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画娌垮悗鍙伴珮棰戝垪琛ㄩ鏋跺悜涓婃敹鍙ｏ紝瀹℃牳鍜屾不鐞嗘ā鍧楅櫎浜嗚〃澶翠笌琛岀粍浠朵箣澶栵紝涔熷紑濮嬪叡浜粺涓€鐨勮〃鏍煎崱鐗囧３灞傘€?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗚〃鏍奸鏋讹紱鏇磋繘涓€姝ョ殑鍒楀畾涔夋ā鍨嬨€佺┖鐘舵€佹枃妗堣鑼冨拰鏇撮€氱敤鐨勬暟鎹〃濂戠害杩樻病鏈夌粺涓€锛屽悗缁€傚悎缁х画娌胯繖鏉¤矾寰勬帹杩涖€?
-## 2026-07-13 07:27:20 +08:00 | v1.1.0-alpha.193 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?TableHead 琛ㄥご鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续沿后台高频列表骨架向上收口，审核和治理模块除了表头与行组件之外，也开始共享统一的表格卡片壳层。
+- 这次仍然只先收口了表格骨架；更进一步的列定义模型、空状态文案规范和更通用的数据表契约还没有统一，后续适合继续沿这条路径推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画娓呯悊瀹℃牳涓庢不鐞嗗垪琛ㄩ噷閲嶅鍑虹幇鐨勮〃澶撮鏋躲€?- 鐩爣鏄ˉ涓€涓?`AdminTableHead` Vue 閫傞厤灞傦紝骞舵妸瀹℃牳妯″潡涓庢不鐞嗘ā鍧楃殑 `admin-table__head` 閮藉垏鍒扮粺涓€琛ㄥご鍑哄彛锛岃鍒楄〃鍒楀悕楠ㄦ灦涓嶅啀鍒嗘暎鍦ㄥ涓ā鍧楁ā鏉块噷缁存姢銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 07:27:20 +08:00 | v1.1.0-alpha.193 | 推进 FE-041 管理端共享 TableHead 表头接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminTableHead.vue` 涓?`AdminTableHead.test.ts`锛屾敹鍙ｅ悗鍙拌〃鏍艰〃澶寸殑鍒楀悕娓叉煋椤哄簭涓庡叡浜爣璁般€?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`AdminGovernanceModule.vue`锛屾妸瀹℃牳/娌荤悊妯″潡閲岀殑鍐呰仈琛ㄥご缁撴瀯鏇挎崲涓哄叡浜?`AdminTableHead`锛屽悓鏃朵繚鐣欏悇鑷凡鏈夌殑鍒楀畾涔変笌鍒楄〃甯冨眬銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 涓?`AdminGovernanceModule.test.ts`锛岃ˉ涓婁袱鏉＄湡瀹炴ā鍧楄矾寰勫凡缁忛€氳繃鍏变韩琛ㄥご閫傞厤灞傛覆鏌撳垪鍚嶇殑鏂█銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理审核与治理列表里重复出现的表头骨架。
+- 目标是补一个 `AdminTableHead` Vue 适配层，并把审核模块与治理模块的 `admin-table__head` 都切到统一表头出口，让列表列名骨架不再分散在多个模块模板里维护。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminTableHead.vue` 与 `AdminTableHead.test.ts`，收口后台表格表头的列名渲染顺序与共享标记。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，把审核/治理模块里的内联表头结构替换为共享 `AdminTableHead`，同时保留各自已有的列定义与列表布局。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `AdminGovernanceModule.test.ts`，补上两条真实模块路径已经通过共享表头适配层渲染列名的断言。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminTableHead.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -500,16 +713,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画娌垮悗鍙伴珮棰戣〃鏍奸鏋跺悜涓婃彁浜嗕竴灞傦紝瀹℃牳鍒楄〃鍜屾不鐞嗗垪琛ㄩ櫎浜嗚缁勪欢涔嬪锛屼篃寮€濮嬪叡浜粺涓€琛ㄥご鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗚〃澶达紱鏇村畬鏁寸殑鍒楄〃鍒楀畾涔夈€佽〃浣撳３灞傚拰鍙鐢ㄦ暟鎹〃濂戠害杩樻病鏈夌粺涓€锛屽悗缁€傚悎缁х画娌胯繖鏉¤矾寰勬帹杩涖€?
-## 2026-07-13 07:23:02 +08:00 | v1.1.0-alpha.192 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?ModerationRow 瀹℃牳琛屾帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在继续沿后台高频表格骨架向上提了一层，审核列表和治理列表除了行组件之外，也开始共享统一表头出口。
+- 这次仍然只先收口了表头；更完整的列表列定义、表体壳层和可复用数据表契约还没有统一，后续适合继续沿这条路径推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑娌荤悊鑳藉姏锛岃€屾槸缁х画娓呯悊瀹℃牳涓昏矾寰勯噷浠嶇劧淇濈暀鐨勫唴鑱斿垪琛ㄨ缁撴瀯銆?- 鐩爣鏄ˉ涓€涓?`AdminModerationRow` Vue 閫傞厤灞傦紝骞舵妸瀹℃牳妯″潡鐨勫唴瀹硅鍒囧埌缁熶竴琛屽嚭鍙ｏ紝璁╁唴瀹规憳瑕併€佺被鍨?鐘舵€佹爣绛俱€佸姩浣滃尯鍜岃绾ф爣璁板绾︿笉鍐嶆暎钀藉湪椤甸潰妯℃澘閲屻€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 07:23:02 +08:00 | v1.1.0-alpha.192 | 推进 FE-041 管理端共享 ModerationRow 审核行接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminModerationRow.vue` 涓?`AdminModerationRow.test.ts`锛屾敹鍙ｅ鏍稿垪琛ㄨ鐨勫唴瀹规憳瑕併€佺被鍨嬫爣绛俱€佺姸鎬佹爣绛俱€佸姩浣滃尯涓?`press` 浜嬩欢銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue`锛屾妸瀹℃牳妯″潡閲岀殑鍐呰仈 `<article>` 琛岀粨鏋勬浛鎹负鍏变韩 `AdminModerationRow`锛屼繚鐣欐棦鏈夋悳绱€佺姸鎬佺瓫閫夊拰鍔ㄤ綔瑙﹀彂濂戠害銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 涓?`frontend-admin/src/views/AdminWorkspaceView.test.ts`锛岃ˉ涓婂鏍告ā鍧楀拰宸ヤ綔鍙板凡缁忚蛋鍏变韩瀹℃牳琛岄€傞厤灞傜殑鏂█锛屽苟璁╂湰鍦扮瓫閫夊洖褰掑垏鍒版柊鐨勮绾ф爣璁般€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的治理能力，而是继续清理审核主路径里仍然保留的内联列表行结构。
+- 目标是补一个 `AdminModerationRow` Vue 适配层，并把审核模块的内容行切到统一行出口，让内容摘要、类型/状态标签、动作区和行级标记契约不再散落在页面模板里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminModerationRow.vue` 与 `AdminModerationRow.test.ts`，收口审核列表行的内容摘要、类型标签、状态标签、动作区与 `press` 事件。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue`，把审核模块里的内联 `<article>` 行结构替换为共享 `AdminModerationRow`，保留既有搜索、状态筛选和动作触发契约。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，补上审核模块和工作台已经走共享审核行适配层的断言，并让本地筛选回归切到新的行级标记。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminModerationRow.test.ts src/views/modules/AdminModerationModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -517,16 +738,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庢不鐞嗚鎯呭垪琛ㄥ悜瀹℃牳涓昏矾寰勫唴閮ㄦ帹杩涳紝鍏变韩鍚庡彴楠ㄦ灦宸插悓鏃惰鐩栨不鐞嗚褰曡涓庡鏍稿唴瀹硅杩欎袱绫婚珮棰戝垪琛ㄥ叆鍙ｃ€?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗗鏍歌鏈韩锛涘垪琛ㄨ〃澶淬€佸垪瀹氫箟鍜屾洿閫氱敤鐨勬暟鎹〃楠ㄦ灦杩樻病鏈夌粺涓€锛屽悗缁€傚悎缁х画娌胯繖浜涢珮棰戠粨鏋勬帹杩涳紝鑰屼笉鏄烦鍘绘柊鐨勫煙鍔熻兘銆?
-## 2026-07-13 07:17:00 +08:00 | v1.1.0-alpha.191 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?RecordRow 璁板綍琛屾帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在继续从治理详情列表向审核主路径内部推进，共享后台骨架已同时覆盖治理记录行与审核内容行这两类高频列表入口。
+- 这次仍然只先收口了审核行本身；列表表头、列定义和更通用的数据表骨架还没有统一，后续适合继续沿这些高频结构推进，而不是跳去新的域功能。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画娓呯悊绠＄悊绔湡瀹炰富璺緞閲岄噸澶嶅嚭鐜扮殑璁板綍琛岄鏋躲€?- 鐩爣鏄ˉ涓€涓?`AdminRecordRow` Vue 閫傞厤灞傦紝骞舵妸娌荤悊妯″潡鐨勮褰曞垪琛ㄥ垏鍒扮粺涓€璁板綍琛屽嚭鍙ｏ紝璁╃姸鎬佹爣绛俱€侀€変腑鎬佸拰鐐瑰嚮閫夋嫨濂戠害涓嶅啀鏁ｈ惤鍦ㄩ〉闈㈠唴鑱旀ā鏉块噷銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 07:17:00 +08:00 | v1.1.0-alpha.191 | 推进 FE-041 管理端共享 RecordRow 记录行接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminRecordRow.vue` 涓?`AdminRecordRow.test.ts`锛屾敹鍙ｆ不鐞嗚褰曡鐨勬寜閽鏋躲€佺姸鎬佹爣绛炬覆鏌撱€佺┖鍊兼牸寮忓寲鍜?`press` 浜嬩欢銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`锛屾妸娌荤悊璁板綍鍒楄〃浠庡唴鑱?`<button>` / `<span>` 缁撴瀯鏇挎崲涓哄叡浜?`AdminRecordRow`锛屼繚鐣欐棦鏈?`data-record-row`銆侀€変腑鎬佸拰璁板綍閫夋嫨浜嬩欢銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminGovernanceModule.test.ts`锛岃ˉ涓婃不鐞嗘ā鍧楀凡缁忚蛋鍏变韩 `AdminRecordRow` 閫傞厤灞傜殑鏂█锛屽悓鏃朵繚鎸佹棦鏈夎褰曢€夋嫨銆佺姸鎬佹爣绛惧拰绛涢€夎涓哄洖褰掋€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的治理域能力，而是继续清理管理端真实主路径里重复出现的记录行骨架。
+- 目标是补一个 `AdminRecordRow` Vue 适配层，并把治理模块的记录列表切到统一记录行出口，让状态标签、选中态和点击选择契约不再散落在页面内联模板里。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminRecordRow.vue` 与 `AdminRecordRow.test.ts`，收口治理记录行的按钮骨架、状态标签渲染、空值格式化和 `press` 事件。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`，把治理记录列表从内联 `<button>` / `<span>` 结构替换为共享 `AdminRecordRow`，保留既有 `data-record-row`、选中态和记录选择事件。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.test.ts`，补上治理模块已经走共享 `AdminRecordRow` 适配层的断言，同时保持既有记录选择、状态标签和筛选行为回归。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminRecordRow.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -534,17 +763,25 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画鍚戠鐞嗙鐪熷疄璁板綍鍒楄〃鍐呴儴鎺ㄨ繘浜嗕竴灞傦紝鍏变韩娌荤悊楠ㄦ灦涓嶅啀鍙鐩栧鑸€佹搷浣滄爮銆佹爣绛惧拰鍐呭鎽樿鍗曞厓锛屼篃寮€濮嬭鐩栭珮棰戠殑璁板綍琛屽叆鍙ｃ€?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗘不鐞嗚褰曞垪琛紱瀹℃牳鍒楄〃銆佹洿澶氬悗鍙拌〃鏍艰鍥句互鍙婃洿缁熶竴鐨勮〃澶?鍒楀畾涔夊绾﹁繕娌℃湁杩涘叆鍏变韩鎶借薄锛屽悗缁€傚悎缁х画娌胯繖浜涢珮棰戝垪琛ㄩ鏋舵帹杩涖€?
-## 2026-07-13 05:56:43 +08:00 | v1.1.0-alpha.179 | 鎺ㄨ繘 FE-041 绠＄悊绔鏍告不鐞嗗叡浜悳绱㈠伐鍏锋爮鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续向管理端真实记录列表内部推进了一层，共享治理骨架不再只覆盖导航、操作栏、标签和内容摘要单元，也开始覆盖高频的记录行入口。
+- 这次仍然只先收口了治理记录列表；审核列表、更多后台表格视图以及更统一的表头/列定义契约还没有进入共享抽象，后续适合继续沿这些高频列表骨架推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画娓呯悊绠＄悊绔湡瀹炰富璺緞閲岄噸澶嶅嚭鐜扮殑鎼滅储宸ュ叿鏍忛鏋躲€?- 鐩爣鏄ˉ涓€涓?`AdminSearchToolbar` Vue 閫傞厤灞傦紝骞舵妸瀹℃牳闃熷垪涓庢不鐞嗚褰曡繖涓ゆ潯鍚庡彴楂橀鍏ュ彛鍒囧埌缁熶竴鎼滅储鏉″嚭鍙ｃ€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 05:56:43 +08:00 | v1.1.0-alpha.179 | 推进 FE-041 管理端审核治理共享搜索工具栏接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminSearchToolbar.vue` 涓?`AdminSearchToolbar.test.ts`锛屾敹鍙ｅ悗鍙版悳绱㈣緭鍏ユ鍜岀粨鏋滆鏁板尯杩欑粍宸ュ叿鏍忚涔夈€?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`AdminGovernanceModule.vue`锛岃瀹℃牳鍜屾不鐞嗘ā鍧楃粺涓€閫氳繃 `AdminSearchToolbar` 娓叉煋鎼滅储杈撳叆涓庤鏁板厓淇℃伅銆?- 閲嶅啓 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 涓?`AdminGovernanceModule.test.ts`锛岄攣瀹氳繖涓ゆ潯鐪熷疄娌荤悊璺緞宸茬粡閫氳繃鍏变韩鎼滅储宸ュ叿鏍忔毚闇?`ds-input`銆佽鏁板尯鍜屾煡璇簨浠讹紝鑰屼笉鏄户缁洿鎺ヤ緷璧栧眬閮?DOM 鎷艰銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙涔熷凡鍏峰鍏变韩 `AdminSearchToolbar` 閫傞厤灞傚苟鎺ュ叆瀹℃牳/娌荤悊妯″潡鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的治理域能力，而是继续清理管理端真实主路径里重复出现的搜索工具栏骨架。
+- 目标是补一个 `AdminSearchToolbar` Vue 适配层，并把审核队列与治理记录这两条后台高频入口切到统一搜索条出口。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminSearchToolbar.vue` 与 `AdminSearchToolbar.test.ts`，收口后台搜索输入框和结果计数区这组工具栏语义。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，让审核和治理模块统一通过 `AdminSearchToolbar` 渲染搜索输入与计数元信息。
+- 重写 `frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `AdminGovernanceModule.test.ts`，锁定这两条真实治理路径已经通过共享搜索工具栏暴露 `ds-input`、计数区和查询事件，而不是继续直接依赖局部 DOM 拼装。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端也已具备共享 `AdminSearchToolbar` 适配层并接入审核/治理模块”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminSearchToolbar.test.ts src/components/admin/AdminPageHeader.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -552,33 +789,49 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙敹鍙ｅ悗鍙伴〉澶撮鏋讹紝瀹℃牳鍜屾不鐞嗘ā鍧椾篃寮€濮嬭蛋缁熶竴鎼滅储宸ュ叿鏍忛€傞厤灞傦紝鍚庣画缁х画鎺ㄨ繘鍚庡彴绛涢€夋潯鍜岃〃鏍煎伐鍏锋爮鏃跺彲浠ュ鐢ㄥ悓涓€鍑哄彛銆?- 杩欎竴杞粛鐒跺彧鍏堣鐩栦簡鎼滅储杈撳叆鍜岃鏁板尯锛涚瓫閫変笅鎷夈€佹壒閲忓姩浣滃拰鏇村鏉傜殑 filter bar 缁勫悎杩樻病鏈夎繘鍏ョ粺涓€濂戠害锛屽悗缁洿閫傚悎缁х画娌胯繖浜涢珮棰戞不鐞嗛鏋舵帹杩涖€?
-## 2026-07-13 05:49:05 +08:00 | v1.1.0-alpha.178 | 鎺ㄨ繘 FE-041 绠＄悊绔３灞傚叡浜?PageHeader 閫傞厤灞傛帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在不再只收口后台页头骨架，审核和治理模块也开始走统一搜索工具栏适配层，后续继续推进后台筛选条和表格工具栏时可以复用同一出口。
+- 这一轮仍然只先覆盖了搜索输入和计数区；筛选下拉、批量动作和更复杂的 filter bar 组合还没有进入统一契约，后续更适合继续沿这些高频治理骨架推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧埌鏂扮殑娌荤悊鑳藉姏锛岃€屾槸缁х画娓呯悊绠＄悊绔湡瀹炰富璺緞閲岄噸澶嶅嚭鐜扮殑椤靛ご楠ㄦ灦銆?- 鐩爣鏄负鍚庡彴澹冲眰琛ヤ竴涓?`AdminPageHeader` Vue 閫傞厤灞傦紝骞舵妸 `AdminShellFrame` 鍒囧埌缁熶竴椤靛ご鍑哄彛锛岃 dashboard銆佸鏍稿拰娌荤悊瑙嗗浘鍏堝叡浜悓涓€濂楀ご閮ㄥ绾︺€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 05:49:05 +08:00 | v1.1.0-alpha.178 | 推进 FE-041 管理端壳层共享 PageHeader 适配层接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminPageHeader.vue` 涓?`AdminPageHeader.test.ts`锛屾敹鍙ｇ鐞嗙 `eyebrow / title / description / actions` 椤靛ご楠ㄦ灦璇箟锛屽苟琛?actions 鎻掓Ы鏈夋棤涓ょ鍥炲綊銆?- 鏇存柊 `frontend-admin/src/components/admin/AdminShellFrame.vue`锛屾妸鍚庡彴涓诲伐浣滃尯鐨勬湰鍦伴〉澶寸粨鏋勬浛鎹负 `AdminPageHeader`锛屽悓鏃朵繚鐣欒鏁?chip 浣滀负 actions 鎻掓Ы杈撳嚭銆?- 鏇存柊 `frontend-admin/src/components/admin/AdminShellFrame.test.ts`锛岄攣瀹氬悗鍙板３灞傚凡缁忛€氳繃缁熶竴椤靛ご閫傞厤灞傛覆鏌撲富鏍囬鍜岃鏁板尯锛岃€屼笉鏄彧鏂板浜嗕竴涓湭鎺ョ嚎缁勪欢銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙涔熷凡鍏峰鍏变韩 `AdminPageHeader` 閫傞厤灞傚苟鎺ュ埌澹冲眰鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不切到新的治理能力，而是继续清理管理端真实主路径里重复出现的页头骨架。
+- 目标是为后台壳层补一个 `AdminPageHeader` Vue 适配层，并把 `AdminShellFrame` 切到统一页头出口，让 dashboard、审核和治理视图先共享同一套头部契约。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminPageHeader.vue` 与 `AdminPageHeader.test.ts`，收口管理端 `eyebrow / title / description / actions` 页头骨架语义，并补 actions 插槽有无两种回归。
+- 更新 `frontend-admin/src/components/admin/AdminShellFrame.vue`，把后台主工作区的本地页头结构替换为 `AdminPageHeader`，同时保留计数 chip 作为 actions 插槽输出。
+- 更新 `frontend-admin/src/components/admin/AdminShellFrame.test.ts`，锁定后台壳层已经通过统一页头适配层渲染主标题和计数区，而不是只新增了一个未接线组件。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端也已具备共享 `AdminPageHeader` 适配层并接到壳层”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminPageHeader.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/modules/AdminModerationModule.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙湪鐢ㄦ埛绔敹鍙ｉ〉澶撮鏋讹紝绠＄悊绔３灞備篃寮€濮嬭蛋缁熶竴椤靛ご閫傞厤灞傦紝鍚庣画缁х画鏀跺彛鍚庡彴绛涢€夋潯鍜屾ā鍧楀伐鍏锋爮鐨勬垚鏈細鏇翠綆銆?- 杩欎竴杞粛鐒跺彧鍏堣鐩栦簡鍚庡彴涓婚〉澶达紱dashboard 鍗＄墖澶撮儴銆佹不鐞嗙瓫閫夋潯鍜屾洿澶氳〃鏍煎伐鍏锋爮杩樻病鏈夎繘鍏ョ粺涓€濂戠害锛屽悗缁洿閫傚悎缁х画娌胯繖浜涢珮棰戦鏋舵帹杩涳紝鑰屼笉鏄垏鍘绘柊鍩熷姛鑳姐€?
-## 2026-07-13 05:42:49 +08:00 | v1.1.0-alpha.177 | 鎺ㄨ繘 FE-041 鍥捐氨宸ヤ綔鍖哄叡浜?PageHeader 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在不再只在用户端收口页头骨架，管理端壳层也开始走统一页头适配层，后续继续收口后台筛选条和模块工具栏的成本会更低。
+- 这一轮仍然只先覆盖了后台主页头；dashboard 卡片头部、治理筛选条和更多表格工具栏还没有进入统一契约，后续更适合继续沿这些高频骨架推进，而不是切去新域功能。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍥炲埌鍥捐氨鎺у埗鍣ㄦ繁灞傞噸鏋勶紝鑰屾槸缁х画娓呯悊鐪熷疄涓昏矾寰勯噷浠嶇劧鏁ｈ惤鐨勬湰鍦伴〉澶撮鏋跺垎鍙夈€?- 鐩爣鏄妸 `GraphWorkspaceHeader` 鍒囧埌鍏变韩 `PageHeader` 鍑哄彛锛屽悓鏃朵繚鐣欏浘璋卞伐浣滃尯宸叉湁鐨勨€滄柊寤哄浘璋?/ 淇濆瓨 / 淇濆瓨鐘舵€佲€濊繖涓€缁勫姩浣滆涔夈€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 05:42:49 +08:00 | v1.1.0-alpha.177 | 推进 FE-041 图谱工作区共享 PageHeader 接线
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceShell.tsx`锛屾妸鍥捐氨宸ヤ綔鍖哄ご閮ㄤ粠鏈湴 `workspace-header` 缁撴瀯鏇挎崲涓哄叡浜?`PageHeader`锛屼繚鐣欐棦鏈夋寜閽€佺鐢ㄦ€佸拰淇濆瓨鐘舵€佹彁绀恒€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceShell.test.tsx`锛屾敼涓虹洿鎺?mock 鍏变韩 `PageHeader` 骞惰ˉ鍏变韩濂戠害鏂█锛岄攣瀹氬浘璋卞伐浣滃尯澶撮儴宸茬粡閫氳繃缁熶竴椤靛ご鍑哄彛鏆撮湶 `eyebrow / title / description / actions`銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃叡浜?PageHeader 宸茶鐩栦富宸ヤ綔鍖洪〉闈€佹悳绱㈠伐浣滃尯涓庡浘璋卞伐浣滃尯鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不回到图谱控制器深层重构，而是继续清理真实主路径里仍然散落的本地页头骨架分叉。
+- 目标是把 `GraphWorkspaceHeader` 切到共享 `PageHeader` 出口，同时保留图谱工作区已有的“新建图谱 / 保存 / 保存状态”这一组动作语义。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceShell.tsx`，把图谱工作区头部从本地 `workspace-header` 结构替换为共享 `PageHeader`，保留既有按钮、禁用态和保存状态提示。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceShell.test.tsx`，改为直接 mock 共享 `PageHeader` 并补共享契约断言，锁定图谱工作区头部已经通过统一页头出口暴露 `eyebrow / title / description / actions`。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 PageHeader 已覆盖主工作区页面、搜索工作区与图谱工作区”。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceShell.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
@@ -586,59 +839,90 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪鍙堣ˉ涓婁簡鍥捐氨宸ヤ綔鍖鸿繖鏉￠珮棰戜富璺緞閲岀殑鍏变韩椤靛ご楠ㄦ灦锛岀敤鎴风鍓╀綑鐩存帴鎵嬪啓 `workspace-header` 鐨勫垎鏀繘涓€姝ュ噺灏戙€?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｄ簡鍥捐氨宸ヤ綔鍖哄ご閮紱绠＄悊绔〉澶淬€佺瓫閫夋潯浠ュ強鍥捐氨澶撮儴閲屾洿楂樺眰鐨勭姸鎬佸窘鏍囩粍鍚堜粛鏈粺涓€锛屽悗缁洿閫傚悎缁х画娌胯繖浜涢噸澶嶉鏋舵帹杩涳紝鑰屼笉鏄洖鍒板崟涓€娣卞眰閫昏緫閲嶆瀯銆?
-## 2026-07-13 05:30:41 +08:00 | v1.1.0-alpha.176 | 鎺ㄨ繘 FE-041 鎼滅储宸ヤ綔鍖哄叡浜?PageHeader 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在又补上了图谱工作区这条高频主路径里的共享页头骨架，用户端剩余直接手写 `workspace-header` 的分支进一步减少。
+- 这一轮仍然只先收口了图谱工作区头部；管理端页头、筛选条以及图谱头部里更高层的状态徽标组合仍未统一，后续更适合继续沿这些重复骨架推进，而不是回到单一深层逻辑重构。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍘诲仛鏂扮殑涓氬姟鑳藉姏锛岃€屾槸琛ユ悳绱㈠伐浣滃尯杩樺仠鐣欏湪鏈湴 `workspace-header` 缁撴瀯涓婄殑椤靛ご楠ㄦ灦鍒嗗弶銆?- 鐩爣鏄妸 `SearchWorkspacePage` 鍒囧埌鍏变韩 `WorkspaceHeader` / `PageHeader` 鍑哄彛锛岃鍏变韩椤靛ご涓嶅啀鍙鐩栦富宸ヤ綔鍖洪〉闈€?### 瀹為檯鍙樻洿
+## 2026-07-13 05:30:41 +08:00 | v1.1.0-alpha.176 | 推进 FE-041 搜索工作区共享 PageHeader 接线
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`锛屾妸鑷啓 `workspace-header` 缁撴瀯鏇挎崲鎴愬叡浜?`WorkspaceHeader`锛屼繚鐣欏師鏈夋爣棰樸€乪yebrow 鍜岃鏄庢枃妗堛€?- 鏇存柊 `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx`锛屽湪淇濈暀鎼滅储绌烘€併€佸姞杞芥€併€侀敊璇€併€佺瓫閫変笌鍒嗛〉鍥炲綊鐨勫悓鏃讹紝鏂板 `workspace-header` 楠ㄦ灦鏂█锛岄攣瀹氭悳绱㈠伐浣滃尯纭疄璧颁簡鍏变韩椤靛ご鍑哄彛銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃叡浜?PageHeader 宸茶鐩栦富宸ヤ綔鍖洪〉闈笌鎼滅储宸ヤ綔鍖衡€濄€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不去做新的业务能力，而是补搜索工作区还停留在本地 `workspace-header` 结构上的页头骨架分叉。
+- 目标是把 `SearchWorkspacePage` 切到共享 `WorkspaceHeader` / `PageHeader` 出口，让共享页头不再只覆盖主工作区页面。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`，把自写 `workspace-header` 结构替换成共享 `WorkspaceHeader`，保留原有标题、eyebrow 和说明文案。
+- 更新 `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx`，在保留搜索空态、加载态、错误态、筛选与分页回归的同时，新增 `workspace-header` 骨架断言，锁定搜索工作区确实走了共享页头出口。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 PageHeader 已覆盖主工作区页面与搜索工作区”。
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪鍙堣ˉ涓婁簡鎼滅储宸ヤ綔鍖鸿繖鏉＄湡瀹炲叆鍙ｇ殑鍏变韩椤靛ご楠ㄦ灦锛岀敤鎴风鍓╀綑鐩存帴鎵嬪啓 `workspace-header` 鐨勫垎鏀繘涓€姝ュ噺灏戙€?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｄ簡鎼滅储宸ヤ綔鍖哄ご閮紱鍥捐氨宸ヤ綔鍖哄ご閮ㄤ粛鏈夋洿澶嶆潅鐨勪繚瀛樼姸鎬佸拰鍔ㄤ綔鍖猴紝鍚庣画鏇撮€傚悎缁х画娌块偅鏉″垎鏀敹鍥炲叡浜〉澶村嚭鍙ｃ€?
-## 2026-07-13 05:27:24 +08:00 | v1.1.0-alpha.175 | 鎺ㄨ繘 FE-041 澶嶄範宸ヤ綔鍖哄叡浜?Select 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在又补上了搜索工作区这条真实入口的共享页头骨架，用户端剩余直接手写 `workspace-header` 的分支进一步减少。
+- 这一轮仍然只先收口了搜索工作区头部；图谱工作区头部仍有更复杂的保存状态和动作区，后续更适合继续沿那条分支收回共享页头出口。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆＄户缁竻鐞嗙敤鎴风杩樼暀鍦ㄧ湡瀹炰富璺緞涓婄殑瑁镐笅鎷夛紝鑰屼笉鏄洖澶村仛鏇存繁鐨勪笟鍔￠€昏緫閲嶆瀯銆?- 鐩爣鏄妸澶嶄範宸ヤ綔鍖烘柊寤哄崱缁勮〃鍗曢噷鐨勨€滃崱缁勫彲瑙佹€р€濆垏鍒板叡浜?`Select`锛岃ˉ涓婂叡浜笅鎷夊湪瀛︿範闂幆鏈€鍚庝竴娈电鐞嗗叆鍙ｉ噷鐨勮鐩栥€?### 瀹為檯鍙樻洿
+## 2026-07-13 05:27:24 +08:00 | v1.1.0-alpha.175 | 推进 FE-041 复习工作区共享 Select 接线
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`锛屾妸鏂板缓鍗＄粍琛ㄥ崟閲岀殑鈥滃崱缁勫彲瑙佹€р€濆師鐢熶笅鎷夋浛鎹㈡垚鍏变韩 `Select`锛屼繚鐣欐棦鏈夎〃鍗曠姸鎬佷笌 `createDeck(...)` 鎻愪氦閫昏緫銆?- 鏇存柊 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`锛屾柊澧炩€滄墦寮€绠＄悊闈㈡澘 -> 鏂板缓鍗＄粍 -> 鍒囨崲鍏紑鍙 -> 鎻愪氦鈥濈殑椤甸潰鍥炲綊锛屽苟鏂█璇?`combobox` 宸叉毚闇?`ds-select` 濂戠害銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃叡浜?Select 宸茶鐩栫瑪璁般€侀槄璇汇€佸涔犲伐浣滃尯銆佸浘璋卞伐浣滃尯涓?AI 鑽夌涓績鈥濄€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次继续清理用户端还留在真实主路径上的裸下拉，而不是回头做更深的业务逻辑重构。
+- 目标是把复习工作区新建卡组表单里的“卡组可见性”切到共享 `Select`，补上共享下拉在学习闭环最后一段管理入口里的覆盖。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，把新建卡组表单里的“卡组可见性”原生下拉替换成共享 `Select`，保留既有表单状态与 `createDeck(...)` 提交逻辑。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，新增“打开管理面板 -> 新建卡组 -> 切换公开可见 -> 提交”的页面回归，并断言该 `combobox` 已暴露 `ds-select` 契约。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 Select 已覆盖笔记、阅读、复习工作区、图谱工作区与 AI 草稿中心”。
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪鍙堣ˉ涓婁簡澶嶄範宸ヤ綔鍖鸿繖鏉＄湡瀹炲涔犱富璺緞閲岀殑鍏变韩涓嬫媺锛岀敤鎴风鍓╀綑瑁?`select` 杩涗竴姝ュ噺灏戯紝鍚庣画缁熶竴琛ㄥ崟璇箟浼氭洿椤恒€?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｄ簡澶嶄範宸ヤ綔鍖虹殑鍙鎬т笅鎷夛紱绠＄悊绔瓫閫夊櫒銆佹悳绱㈤〉/鍥捐氨椤靛ご楠ㄦ灦浠ュ強鏇村鍏变韩琛ㄥ崟 primitive 杩樻病缁熶竴锛屽悗缁洿閫傚悎缁х画娌胯繖浜涢噸澶嶆ā寮忔帹杩涖€?
-## 2026-07-13 05:22:29 +08:00 | v1.1.0-alpha.174 | 鎺ㄨ繘 FE-041 AI 鑽夌涓績鍏变韩 Select 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在又补上了复习工作区这条真实学习主路径里的共享下拉，用户端剩余裸 `select` 进一步减少，后续统一表单语义会更顺。
+- 这一轮仍然只先收口了复习工作区的可见性下拉；管理端筛选器、搜索页/图谱页头骨架以及更多共享表单 primitive 还没统一，后续更适合继续沿这些重复模式推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍥炲埌鍥捐氨鎺у埗鍣ㄦ垨鍚庡彴娌荤悊娣卞眰閫昏緫锛岃€屾槸缁х画琛ヤ竴鍧楄鐩栭潰骞裤€佽兘鎻愬崌鍏ㄥ眬涓€鑷存€х殑鍏变韩琛ㄥ崟 primitive 缂哄彛銆?- 鐩爣鏄妸 `AiPage` 閲屾潵婧愮瓫閫夈€佺姸鎬佺瓫閫夈€佸啓鍏ョ洰鏍?deck 鍜屽啓鍏ョ洰鏍囧浘璋辫繖鍥涗釜楂橀涓嬫媺鎺ュ埌鍏变韩 `Select`锛岃鍏变韩 UI 濂戠害浠庨槄璇?绗旇/鍥捐氨缁х画鎵╁埌 AI 鑽夌涓诲伐浣滃彴銆?### 瀹為檯鍙樻洿
+## 2026-07-13 05:22:29 +08:00 | v1.1.0-alpha.174 | 推进 FE-041 AI 草稿中心共享 Select 接线
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/pages/AiPage.tsx`锛屾妸鏉ユ簮绛涢€夈€佺姸鎬佺瓫閫夈€佸啓鍏ョ洰鏍?deck 涓庡啓鍏ョ洰鏍囧浘璋卞洓涓師鐢熶笅鎷夋浛鎹㈡垚鍏变韩 `Select`锛屽悓鏃朵繚鐣欐棦鏈?`select-field` class銆佺瓫閫夌姸鎬佸拰鎻愪氦鍥炶皟銆?- 閲嶅啓 `frontend-user/src/pages/AiPage.test.tsx`锛屾妸鍗＄墖鑽夌纭銆佸浘璋卞彉鏇寸‘璁ゃ€侀灞?error 鍜屽埛鏂?stale 鐨勯〉闈㈠洖褰掔粺涓€鍒扮ǔ瀹氭祴璇曞熀绾夸笂銆?- 鏂板 AI 椤甸潰鍏变韩涓嬫媺鏂█锛岄攣瀹氬洓涓?`combobox` 閮藉悓鏃舵毚闇?`ds-select` 涓庢棦鏈?`select-field` 濂戠害锛岃€屼笉鏄彧鍋滅暀鍦ㄢ€滆涓鸿繕鑳介€変腑鈥濄€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃叡浜?Select 宸茶鐩栫瑪璁般€侀槄璇汇€佸浘璋卞伐浣滃尯涓?AI 鑽夌涓績鈥濄€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不回到图谱控制器或后台治理深层逻辑，而是继续补一块覆盖面广、能提升全局一致性的共享表单 primitive 缺口。
+- 目标是把 `AiPage` 里来源筛选、状态筛选、写入目标 deck 和写入目标图谱这四个高频下拉接到共享 `Select`，让共享 UI 契约从阅读/笔记/图谱继续扩到 AI 草稿主工作台。
+### 实际变更
+
+- 更新 `frontend-user/src/pages/AiPage.tsx`，把来源筛选、状态筛选、写入目标 deck 与写入目标图谱四个原生下拉替换成共享 `Select`，同时保留既有 `select-field` class、筛选状态和提交回调。
+- 重写 `frontend-user/src/pages/AiPage.test.tsx`，把卡片草稿确认、图谱变更确认、首屏 error 和刷新 stale 的页面回归统一到稳定测试基线上。
+- 新增 AI 页面共享下拉断言，锁定四个 `combobox` 都同时暴露 `ds-select` 与既有 `select-field` 契约，而不是只停留在“行为还能选中”。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 Select 已覆盖笔记、阅读、图谱工作区与 AI 草稿中心”。
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栭槄璇汇€佺瑪璁板拰鍥捐氨琛ㄥ崟锛孉I 鑽夌涓績閲岀殑楂橀绛涢€変笌鐩爣閫夋嫨鍣ㄤ篃寮€濮嬫秷璐瑰叡浜?`Select`锛屽悗缁户缁敹鍙ｆ洿澶氳法椤甸潰琛ㄥ崟璇箟浼氭洿椤恒€?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｄ簡 AI 椤电殑涓嬫媺锛涚鐞嗙绛涢€夊櫒銆佹洿澶氬浘璋遍〉澶?琛ㄥ崟 primitive 浠ュ強鏇撮珮灞?helper 鏂囨杩樻病鏈夌粺涓€锛屽悗缁洿閫傚悎缁х画娌胯繖浜涢噸澶嶇偣鎺ㄨ繘銆?
-## 2026-07-13 05:14:39 +08:00 | v1.1.0-alpha.173 | 鎺ㄨ繘 FE-041 鍥捐氨宸ヤ綔鍖哄叡浜?Select 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖阅读、笔记和图谱表单，AI 草稿中心里的高频筛选与目标选择器也开始消费共享 `Select`，后续继续收口更多跨页面表单语义会更顺。
+- 这一轮仍然只先收口了 AI 页的下拉；管理端筛选器、更多图谱页头/表单 primitive 以及更高层 helper 文案还没有统一，后续更适合继续沿这些重复点推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍥炲埌鍥捐氨鎺у埗鍣ㄦ繁灞傞噸鏋勶紝鑰屾槸鎸戜竴涓鐩栭潰骞裤€侀闄╀綆鐨勫叡浜?primitive 缂哄彛缁х画鏀跺彛銆?- 鐩爣鏄妸鍥捐氨宸ヤ綔鍖洪噷鏈€甯哥敤鐨勮妭鐐圭被鍨嬨€佺粨鏋勫寲 metadata銆佽竟褰㈡€佸拰鍐欏叆 deck 閫夋嫨鍣ㄦ帴鍒板叡浜?`Select`锛岃鍏变韩 UI 濂戠害缁х画浠庣瑪璁?闃呰琛ㄥ崟鎵╁睍鍒板浘璋变富宸ヤ綔鍙般€?### 瀹為檯鍙樻洿
+## 2026-07-13 05:14:39 +08:00 | v1.1.0-alpha.173 | 推进 FE-041 图谱工作区共享 Select 接线
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceShell.tsx`锛屾妸宸ュ叿鏍忊€滄柊寤鸿妭鐐圭被鍨嬧€濅笅鎷夊垏鍒板叡浜?`Select`锛屼繚鐣欑幇鏈?`graph-node-type-select` class銆佺鐢ㄦ€佸拰 `onQuickNodeTypeChange(...)` 鍥炶皟銆?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceSelectionPanel.tsx`锛屾妸鍗曡妭鐐?metadata 閫夐」瀛楁鍜岃竟褰㈡€侀€夋嫨鍣ㄥ垏鍒板叡浜?`Select`锛岃宸ョ▼鍥剧被鍨嬩笌杈瑰叧绯荤紪杈戜笉鍐嶅仠鐣欏湪灞€閮ㄨ８ `select`銆?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceRecoveryPanel.tsx`锛屾妸鍗＄墖鑽夌鍐欏叆 deck 鐨勯€夋嫨鍣ㄥ垏鍒板叡浜?`Select`锛岃ˉ榻愬浘璋卞埌澶嶄範闂幆閲岀殑楂橀涓嬫媺璇箟銆?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceShell.test.tsx`銆乣GraphWorkspaceSelectionPanel.test.tsx` 涓?`GraphWorkspaceRecoveryPanel.test.tsx`锛岄攣瀹氳繖浜涢€夋嫨鍣ㄧ幇鍦ㄩ兘浼氭毚闇插叡浜?`ds-select` 濂戠害锛岃€屼笉鍙槸淇濈暀鍘熷厛鐨?change 琛屼负銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃叡浜?Select 宸茶鐩栫瑪璁般€侀槄璇讳笌鍥捐氨宸ヤ綔鍖洪珮棰戜笅鎷夆€濄€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不回到图谱控制器深层重构，而是挑一个覆盖面广、风险低的共享 primitive 缺口继续收口。
+- 目标是把图谱工作区里最常用的节点类型、结构化 metadata、边形态和写入 deck 选择器接到共享 `Select`，让共享 UI 契约继续从笔记/阅读表单扩展到图谱主工作台。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceShell.tsx`，把工具栏“新建节点类型”下拉切到共享 `Select`，保留现有 `graph-node-type-select` class、禁用态和 `onQuickNodeTypeChange(...)` 回调。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceSelectionPanel.tsx`，把单节点 metadata 选项字段和边形态选择器切到共享 `Select`，让工程图类型与边关系编辑不再停留在局部裸 `select`。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceRecoveryPanel.tsx`，把卡片草稿写入 deck 的选择器切到共享 `Select`，补齐图谱到复习闭环里的高频下拉语义。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceShell.test.tsx`、`GraphWorkspaceSelectionPanel.test.tsx` 与 `GraphWorkspaceRecoveryPanel.test.tsx`，锁定这些选择器现在都会暴露共享 `ds-select` 契约，而不只是保留原先的 change 行为。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 Select 已覆盖笔记、阅读与图谱工作区高频下拉”。
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceShell.test.tsx src/modules/graph/components/GraphWorkspaceSelectionPanel.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
@@ -646,566 +930,903 @@
 - `npm run build:user`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栫瑪璁?闃呰琛ㄥ崟锛屽浘璋卞伐浣滃尯涓昏矾寰勯噷鐨勯珮棰戜笅鎷変篃寮€濮嬫秷璐瑰叡浜?`Select`锛岃繖璁╁悗缁户缁敹鍙ｆ洿澶氬浘璋辩紪杈戣〃鍗曞拰鍚庡彴绛涢€夊櫒鏇撮『銆?- 杩欎竴杞粛鐒跺彧鍏堣鐩栦簡鍥捐氨宸ヤ綔鍖虹殑 `select`锛涘浘璋遍〉澶撮鏋躲€佹洿澶?`input / textarea` 浠ュ強绠＄悊绔?`Select` 閫傞厤灞備粛鏈粺涓€锛屽悗缁洿閫傚悎缁х画娌胯繖浜涢噸澶嶇偣鎺ㄨ繘锛岃€屼笉鏄洖鍒板崟涓€娣卞眰閫昏緫閲嶆瀯銆?
-## 2026-07-13 05:06:30 +08:00 | v1.1.0-alpha.172 | 鎺ㄨ繘 FE-040 鐢ㄦ埛绔垎浜〉椤甸潰鐘舵€佹帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖笔记/阅读表单，图谱工作区主路径里的高频下拉也开始消费共享 `Select`，这让后续继续收口更多图谱编辑表单和后台筛选器更顺。
+- 这一轮仍然只先覆盖了图谱工作区的 `select`；图谱页头骨架、更多 `input / textarea` 以及管理端 `Select` 适配层仍未统一，后续更适合继续沿这些重复点推进，而不是回到单一深层逻辑重构。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-040`锛岃繖娆′笉鎵╂柊鍩燂紝鑰屾槸鎶婄敤鎴风鍏紑鍒嗕韩椤电殑瑙ｆ瀽璺緞鎺ュ埌鍏变韩椤甸潰鐘舵€佸崗璁€?- 鐩爣鏄 `SharePage` 涓嶅啀鎶婅В鏋愪腑鐨勫垎浜摼鎺ュ拰澶辨晥鍒嗕韩閾炬帴閮藉彧鐢ㄥ眬閮?`message` 鐩村嚭锛岃€屾槸鍦ㄩ灞忛樁娈垫槑纭繘鍏ュ叡浜?`loading / error`锛屽苟琛ヤ笂缁熶竴閲嶈瘯鍏ュ彛銆?### 瀹為檯鍙樻洿
+## 2026-07-13 05:06:30 +08:00 | v1.1.0-alpha.172 | 推进 FE-040 用户端分享页页面状态接线
+### 任务内容
 
-- 鏂板 `frontend-user/src/pages/SharePage.test.tsx`锛屽厛浠?RED 閿佸畾涓変釜鐪熷疄缂哄彛锛氬垎浜〉棣栧睆娌℃湁鍏变韩 `loading`锛涘垎浜摼鎺ヨВ鏋愬け璐ユ椂娌℃湁鍏变韩 `error`锛涗粠鍏变韩閿欒鎬侀噸璇曞悗涔熸病鏈夊洖鍒版甯稿彧璇婚瑙堜笂涓嬫枃銆?- 鏇存柊 `frontend-user/src/pages/SharePage.tsx`锛屾柊澧?`SharePreviewState` 涓?`loadShare()`锛屾妸鍒嗕韩椤典富鍏ュ彛鎺ュ埌鍏变韩椤甸潰鐘舵€佸崗璁細棣栧睆璇诲彇涓蛋 `loading`锛岃В鏋愬け璐ヨ蛋 `error`锛屾棤鍐呭鏃惰蛋鍏滃簳 `empty`銆?- 鍒嗕韩椤电幇鍦ㄤ細鍦ㄥ叡浜?`error / empty` 鐘舵€侀噷鎻愪緵缁熶竴鐨勨€滈噸鏂板姞杞解€濆姩浣滐紱鍙湁鍒嗕韩鍐呭鎴愬姛杩斿洖鍚庯紝椤甸潰鎵嶆樉绀哄彧璇婚瑙堝崱鐗囧拰鈥滄墦寮€鍘熷椤甸潰鈥濆叆鍙ｃ€?- 鏃㈡湁鍒嗕韩 API 濂戠害淇濇寔涓嶅彉锛屾湰杞彧鏀跺彛鍏紑鍙鍏ュ彛鐨勯〉闈㈢姸鎬佽涔夛紝涓嶆敼 `/api/v1/share/:token` 鐨勬暟鎹粨鏋勩€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新域，而是把用户端公开分享页的解析路径接到共享页面状态协议。
+- 目标是让 `SharePage` 不再把解析中的分享链接和失效分享链接都只用局部 `message` 直出，而是在首屏阶段明确进入共享 `loading / error`，并补上统一重试入口。
+### 实际变更
 
-- RED锛歚npm --workspace frontend-user run test -- src/pages/SharePage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/pages/SharePage.test.tsx`
+- 新增 `frontend-user/src/pages/SharePage.test.tsx`，先以 RED 锁定三个真实缺口：分享页首屏没有共享 `loading`；分享链接解析失败时没有共享 `error`；从共享错误态重试后也没有回到正常只读预览上下文。
+- 更新 `frontend-user/src/pages/SharePage.tsx`，新增 `SharePreviewState` 与 `loadShare()`，把分享页主入口接到共享页面状态协议：首屏读取中走 `loading`，解析失败走 `error`，无内容时走兜底 `empty`。
+- 分享页现在会在共享 `error / empty` 状态里提供统一的“重新加载”动作；只有分享内容成功返回后，页面才显示只读预览卡片和“打开原始页面”入口。
+- 既有分享 API 契约保持不变，本轮只收口公开只读入口的页面状态语义，不改 `/api/v1/share/:token` 的数据结构。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/SharePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/SharePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鐜板湪闄や簡鍙椾繚鎶ゅ伐浣滃尯锛屼篃鎶婂叕寮€鍙鍒嗕韩鍏ュ彛鎺ヨ繘浜嗗叡浜〉闈㈢姸鎬佸崗璁紝鐢ㄦ埛绔墿浣欌€滃彧闈犲眬閮?message 鐩村嚭鈥濈殑椤甸潰鍙堝皯浜嗕竴鍧椼€?- 鐢ㄦ埛绔悗缁洿閫傚悎缁х画娌垮浘璋卞伐浣滃彴銆侀槄璇绘鏌ュ櫒鎴栧彈淇濇姢杈圭晫琛ユ洿缁嗙矑搴︾殑 `unauthorized / conflict / stale` 鐪熷叆鍙ｏ紝鑰屼笉鏄噸鏂板洖鍒伴浂鏁ｉ〉闈㈡秷鎭彁绀恒€?
-## 2026-07-13 05:01:30 +08:00 | v1.1.0-alpha.171 | 鎺ㄨ繘 FE-040 鐢ㄦ埛绔浘璋卞伐浣滃彴椤甸潰鐘舵€佹帴绾?### 浠诲姟鍐呭
+- `FE-040` 现在除了受保护工作区，也把公开只读分享入口接进了共享页面状态协议，用户端剩余“只靠局部 message 直出”的页面又少了一块。
+- 用户端后续更适合继续沿图谱工作台、阅读检查器或受保护边界补更细粒度的 `unauthorized / conflict / stale` 真入口，而不是重新回到零散页面消息提示。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-040`锛岃繖娆′笉鎵╂柊鍩燂紝鑰屾槸鎶婄敤鎴风鍥捐氨宸ヤ綔鍙扮殑棣栧睆鑷妇璺緞鎺ュ埌鍏变韩椤甸潰鐘舵€佸崗璁€?- 鐩爣鏄 `GraphWorkspacePage` 涓嶅啀鎶婇灞忓姞杞戒腑涓庨灞忓け璐ラ兘浼鎴愨€滅┖鐢诲竷 + 鐘舵€佹爮鎻愮ず鈥濓紝鑰屾槸鍦ㄩ灞忛樁娈垫槑纭繘鍏ュ叡浜?`loading / error`锛屽苟鍦ㄥ凡鏈夊浘璋变笂涓嬫枃鏃舵妸閲嶆柊鑷妇澶辫触鎻愬崌涓哄叡浜?`stale`銆?### 瀹為檯鍙樻洿
+## 2026-07-13 05:01:30 +08:00 | v1.1.0-alpha.171 | 推进 FE-040 用户端图谱工作台页面状态接线
+### 任务内容
 
-- 鍏堝湪 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 琛?RED锛岄攣瀹氫笁涓湡瀹炵己鍙ｏ細鍥捐氨宸ヤ綔鍙伴灞忔病鏈夊叡浜?`loading`锛涢灞忚嚜涓惧け璐ユ椂娌℃湁鍏变韩 `error`锛涗粠鍏变韩閿欒鎬侀噸璇曞悗涔熸病鏈夊洖鍒版甯稿伐浣滃彴涓婁笅鏂囥€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`GraphWorkspaceState` 涓?`workspaceLoadError`锛屾妸鍥捐氨宸ヤ綔鍙颁富鍏ュ彛鎺ュ埌鍏变韩椤甸潰鐘舵€佸崗璁細棣栧睆璇诲彇涓蛋 `loading`锛岄灞忓け璐ヨ蛋 `error`锛屽凡鏈夊浘璋卞唴瀹规椂閲嶆柊鑷妇澶辫触璧?`stale`銆?- 鍥捐氨宸ヤ綔鍙扮幇鍦ㄤ細鍦ㄥ叡浜?`error / stale` 鐘舵€侀噷鎻愪緵缁熶竴鐨勨€滈噸鏂板姞杞解€濆姩浣滐紱棣栧睆澶辫触鏃朵笉鍐嶇户缁覆鏌撹瀵兼€х殑绌虹敾甯冿紝鑰屾槸鐩存帴鏆撮湶鍏变韩 `DataState`銆?- 鏃㈡湁鍐茬獊澶勭悊銆佷繚瀛樸€侀噸杞芥渶鏂板浘璋便€佹鏌ュ櫒涓庤祫婧愰潰鏉块摼璺繚鎸佷笉鍙橈紝鏈疆鍙敹鍙ｄ富宸ヤ綔鍙板叆鍙ｇ姸鎬佽涔夛紝涓嶆墿澶у浘璋辨帶鍒跺櫒鑱岃矗鑼冨洿銆?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新域，而是把用户端图谱工作台的首屏自举路径接到共享页面状态协议。
+- 目标是让 `GraphWorkspacePage` 不再把首屏加载中与首屏失败都伪装成“空画布 + 状态栏提示”，而是在首屏阶段明确进入共享 `loading / error`，并在已有图谱上下文时把重新自举失败提升为共享 `stale`。
+### 实际变更
 
-- RED锛歚npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- 先在 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 补 RED，锁定三个真实缺口：图谱工作台首屏没有共享 `loading`；首屏自举失败时没有共享 `error`；从共享错误态重试后也没有回到正常工作台上下文。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `GraphWorkspaceState` 与 `workspaceLoadError`，把图谱工作台主入口接到共享页面状态协议：首屏读取中走 `loading`，首屏失败走 `error`，已有图谱内容时重新自举失败走 `stale`。
+- 图谱工作台现在会在共享 `error / stale` 状态里提供统一的“重新加载”动作；首屏失败时不再继续渲染误导性的空画布，而是直接暴露共享 `DataState`。
+- 既有冲突处理、保存、重载最新图谱、检查器与资源面板链路保持不变，本轮只收口主工作台入口状态语义，不扩大图谱控制器职责范围。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鐜板湪宸茬粡涓嶅彧瑕嗙洊棣栭〉銆佹悳绱€佽祫鏂欍€侀槄璇汇€佺瑪璁般€佸涔犮€丄I銆佺ぞ鍖哄拰璁剧疆椤碉紝鍥捐氨涓诲伐浣滃彴涔熸帴杩涗簡鍏变韩椤甸潰鐘舵€佸崗璁紝鐢ㄦ埛绔渶鏍稿績鐨勫涔犺垶鍙板張闂悎浜嗕竴娈点€?- 鍥捐氨宸ヤ綔鍙版洿缁嗙矑搴︾殑璧勬簮鍒囨崲銆佸眬閮ㄥ埛鏂颁互鍙?`unauthorized / conflict` 鐪熼〉闈㈠叆鍙ｄ粛鏈畬鍏ㄩ棴鍚堬紱鍚庣画鏇撮€傚悎缁х画娌垮浘璋卞伐浣滃彴鎴栭槄璇绘鏌ュ櫒閾捐矾琛ヨ繖浜涘墿浣欑姸鎬佽惤鐐广€?
-## 2026-07-13 04:54:30 +08:00 | v1.1.0-alpha.170 | 鎺ㄨ繘 FE-040 鐢ㄦ埛绔缃〉椤甸潰鐘舵€佹帴绾?### 浠诲姟鍐呭
+- `FE-040` 现在已经不只覆盖首页、搜索、资料、阅读、笔记、复习、AI、社区和设置页，图谱主工作台也接进了共享页面状态协议，用户端最核心的学习舞台又闭合了一段。
+- 图谱工作台更细粒度的资源切换、局部刷新以及 `unauthorized / conflict` 真页面入口仍未完全闭合；后续更适合继续沿图谱工作台或阅读检查器链路补这些剩余状态落点。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-040`锛岃繖娆′笉鎵╂柊鍩燂紝鑰屾槸鎶婄敤鎴风璁剧疆椤电殑 profile 璇诲彇璺緞鎺ュ埌鍏变韩椤甸潰鐘舵€佸崗璁€?- 鐩爣鏄 `SettingsPage` 涓嶅啀鎶?profile 鑷妇澶辫触闈欓粯鍚炴帀锛岃€屾槸鍦ㄩ灞忛樁娈垫槑纭繘鍏ュ叡浜?`loading / error`锛屽苟琛ヤ笂缁熶竴鐨勯噸璇曞叆鍙ｃ€?### 瀹為檯鍙樻洿
+## 2026-07-13 04:54:30 +08:00 | v1.1.0-alpha.170 | 推进 FE-040 用户端设置页页面状态接线
+### 任务内容
 
-- 鏂板 `frontend-user/src/pages/SettingsPage.test.tsx`锛屽厛浠?RED 閿佸畾涓変釜鐪熷疄缂哄彛锛氳缃〉棣栧睆娌℃湁鍏变韩 `loading`锛沺rofile 璇诲彇澶辫触鏃堕潤榛樻棤鍙嶉锛涗粠鍏变韩閿欒鎬侀噸璇曞悗涔熸病鏈夊洖鍒版甯歌〃鍗曚笂涓嬫枃銆?- 鏇存柊 `frontend-user/src/pages/SettingsPage.tsx`锛屾柊澧?`SettingsProfileState` 涓?`loadProfile()`锛屾妸璁剧疆椤佃祫鏂欏尯鎺ュ埌鍏变韩椤甸潰鐘舵€佸崗璁細棣栧睆璇诲彇涓蛋 `loading`锛宲rofile 璇诲彇澶辫触璧?`error`锛屾棤璧勬枡鏃惰蛋鍏滃簳 `empty`銆?- 璁剧疆椤电幇鍦ㄤ細鍦ㄥ叡浜?`error / empty` 鐘舵€侀噷鎻愪緵缁熶竴鐨勨€滈噸鏂板姞杞解€濆姩浣滐紱褰?profile 鎴愬姛杩斿洖鍚庯紝椤甸潰鎵嶆覆鏌撹祫鏂欒〃鍗曪紝閬垮厤绌虹櫧杈撳叆妗嗕吉瑁呮垚鈥滃凡鎴愬姛鍔犺浇鈥濈殑姝ｅ父鎬併€?- 鍘熸湁璧勬枡淇濆瓨閫昏緫淇濇寔涓嶅彉锛屼粛娌跨敤鏃㈡湁 `updateProfile(...)` API 鍜屾垚鍔?澶辫触鍙嶉锛屼笉鎵╁ぇ杩欐宸ヤ綔鍖呯殑濂戠害鑼冨洿銆?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新域，而是把用户端设置页的 profile 读取路径接到共享页面状态协议。
+- 目标是让 `SettingsPage` 不再把 profile 自举失败静默吞掉，而是在首屏阶段明确进入共享 `loading / error`，并补上统一的重试入口。
+### 实际变更
 
-- RED锛歚npm --workspace frontend-user run test -- src/pages/SettingsPage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/pages/SettingsPage.test.tsx`
+- 新增 `frontend-user/src/pages/SettingsPage.test.tsx`，先以 RED 锁定三个真实缺口：设置页首屏没有共享 `loading`；profile 读取失败时静默无反馈；从共享错误态重试后也没有回到正常表单上下文。
+- 更新 `frontend-user/src/pages/SettingsPage.tsx`，新增 `SettingsProfileState` 与 `loadProfile()`，把设置页资料区接到共享页面状态协议：首屏读取中走 `loading`，profile 读取失败走 `error`，无资料时走兜底 `empty`。
+- 设置页现在会在共享 `error / empty` 状态里提供统一的“重新加载”动作；当 profile 成功返回后，页面才渲染资料表单，避免空白输入框伪装成“已成功加载”的正常态。
+- 原有资料保存逻辑保持不变，仍沿用既有 `updateProfile(...)` API 和成功/失败反馈，不扩大这次工作包的契约范围。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/SettingsPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/SettingsPage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm --workspace frontend-user run test -- src/pages/SettingsPage.test.tsx src/pages/CommunityPage.test.tsx src/pages/AiPage.test.tsx src/pages/DashboardPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm run build:user`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鐜板湪宸茬粡鎶婄敤鎴风棣栭〉銆佺ぞ鍖恒€佽祫鏂欏簱銆侀槄璇汇€佺瑪璁般€佸涔犮€丄I 宸ヤ綔鍙板拰璁剧疆椤甸兘鎺ヨ繘浜嗗叡浜〉闈㈢姸鎬佸崗璁紝鐢ㄦ埛绔墿浣欌€滃け璐ラ潤榛樺悶鎺夆€濈殑鍏ュ彛缁х画鍑忓皯銆?- 璁剧疆椤电殑淇濆瓨鎻愪氦娴佺▼浠嶆槸灞€閮?`message` 鍙嶉锛屽悗缁鏋滅户缁帹杩?`FE-040`锛屾洿閫傚悎琛ュ浘璋遍〉鎴栨洿缁嗙矑搴︾殑 `unauthorized / conflict` 鐪熷叆鍙ｏ紝鑰屼笉鏄湪杩欎竴姝ユ墿鏁ｅ埌鏂扮殑浜у搧鍩熴€?
-## 2026-07-13 04:19:30 +08:00 | v1.1.0-alpha.165 | 鎺ㄨ繘 FE-040 鐢ㄦ埛绔瑪璁板伐浣滃尯 stale 椤甸潰鐘舵€佹帴绾?### 浠诲姟鍐呭
+- `FE-040` 现在已经把用户端首页、社区、资料库、阅读、笔记、复习、AI 工作台和设置页都接进了共享页面状态协议，用户端剩余“失败静默吞掉”的入口继续减少。
+- 设置页的保存提交流程仍是局部 `message` 反馈，后续如果继续推进 `FE-040`，更适合补图谱页或更细粒度的 `unauthorized / conflict` 真入口，而不是在这一步扩散到新的产品域。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-040`锛岃繖娆′笉鎵╂柊鍩燂紝鑰屾槸鎶婄敤鎴风绗旇宸ヤ綔鍖虹殑鍒锋柊澶辫触璺緞鎺ュ埌鍏变韩椤甸潰鐘舵€佸崗璁€?- 鐩爣鏄 `NotesPage` 鍦ㄩ娆″姞杞藉け璐ユ椂缁存寔娓呮櫚鐨勫叡浜?`error` 鐘舵€侊紝鍦ㄥ凡鏈夌瑪璁板垪琛ㄥ拰缂栬緫涓婁笅鏂囨椂鍒锋柊澶辫触杩涘叆鍏变韩 `stale`锛岄伩鍏嶇敤鎴峰垰淇濆瓨瀹屽氨琚墦鍥炵┖鐧藉伐浣滃尯銆?### 瀹為檯鍙樻洿
+## 2026-07-13 04:19:30 +08:00 | v1.1.0-alpha.165 | 推进 FE-040 用户端笔记工作区 stale 页面状态接线
+### 任务内容
 
-- 鍏堝湪 `frontend-user/src/pages/NotesPage.test.tsx` 琛?RED锛屽鐜扳€滅瑪璁颁繚瀛樺悗閲嶆柊鍚屾澶辫触浼氭竻绌哄垪琛ㄣ€佸綋鍓嶇瑪璁伴€€鍥炴柊寤鸿崏绋库€濈殑缂哄彛锛屽苟琛ラ灞?`error` 鐘舵€佸洖褰掋€?- 鏇存柊 `frontend-user/src/pages/NotesPage.tsx`锛屾柊澧?`NotesWorkspaceState` 涓?`loadAll({ preserveExisting })` 妯″紡锛岃绗旇鍒楄〃宸ヤ綔鍖哄紑濮嬬湡瀹炴秷璐瑰叡浜?`loading / error / empty / stale` 椤甸潰鐘舵€佸崗璁€?- 绗旇鍒涘缓銆佷繚瀛樼増鏈拰鎭㈠鐗堟湰鍦ㄦ垚鍔熸彁浜ゅ悗閮戒細灏濊瘯淇濈暀鏃у唴瀹瑰埛鏂帮紱濡傛灉鍒锋柊澶辫触锛屽乏渚т細娓叉煋鈥滅瑪璁板垪琛ㄩ渶瑕佸埛鏂扳€濈殑鍏变韩 `stale` 鐘舵€侊紝鍚屾椂缁х画淇濈暀鏃у垪琛ㄤ笌褰撳墠缂栬緫鍐呭銆?- 鍒犻櫎绗旇浠嶄繚鎸佸師鏉ョ殑涓ユ牸鍒锋柊璺緞锛屼笉鎶娾€滃凡鍒犻櫎浣嗗埛鏂板け璐モ€濈殑鎯呭喌璇覆鏌撴垚鍙户缁紪杈戠殑鏃х瑪璁帮紝閬垮厤璇箟娣锋穯銆?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新域，而是把用户端笔记工作区的刷新失败路径接到共享页面状态协议。
+- 目标是让 `NotesPage` 在首次加载失败时维持清晰的共享 `error` 状态，在已有笔记列表和编辑上下文时刷新失败进入共享 `stale`，避免用户刚保存完就被打回空白工作区。
+### 实际变更
 
-- RED锛歚npm --workspace frontend-user run test -- src/pages/NotesPage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/pages/NotesPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- 先在 `frontend-user/src/pages/NotesPage.test.tsx` 补 RED，复现“笔记保存后重新同步失败会清空列表、当前笔记退回新建草稿”的缺口，并补首屏 `error` 状态回归。
+- 更新 `frontend-user/src/pages/NotesPage.tsx`，新增 `NotesWorkspaceState` 与 `loadAll({ preserveExisting })` 模式，让笔记列表工作区开始真实消费共享 `loading / error / empty / stale` 页面状态协议。
+- 笔记创建、保存版本和恢复版本在成功提交后都会尝试保留旧内容刷新；如果刷新失败，左侧会渲染“笔记列表需要刷新”的共享 `stale` 状态，同时继续保留旧列表与当前编辑内容。
+- 删除笔记仍保持原来的严格刷新路径，不把“已删除但刷新失败”的情况误渲染成可继续编辑的旧笔记，避免语义混淆。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/NotesPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/NotesPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鐜板湪宸茬粡瑕嗙洊鐢ㄦ埛绔悳绱€佽祫鏂欏簱銆佸涔犲伐浣滃尯鍜岀瑪璁板伐浣滃尯锛岀敤鎴蜂富瀛︿範闂幆閲岀殑鍏变韩椤甸潰鐘舵€侀鏋舵洿瀹屾暣浜嗐€?- 闃呰椤典富鑸炲彴瀵?`getReaderState(...)` 澶辫触浠嶅亸鍚戦潤榛橀檷绾т负绌虹櫧闃呰鎬侊紝鍚庣画鏇撮€傚悎缁х画娌?`ReaderPage` 鎶?`error / stale` 鐨勭湡瀹炲叆鍙ｈˉ榻愩€?
-## 2026-07-13 04:13:30 +08:00 | v1.1.0-alpha.164 | 鎺ㄨ繘 FE-040 鐢ㄦ埛绔涔犲伐浣滃尯椤甸潰鐘舵€佹帴绾?### 浠诲姟鍐呭
+- `FE-040` 现在已经覆盖用户端搜索、资料库、复习工作区和笔记工作区，用户主学习闭环里的共享页面状态骨架更完整了。
+- 阅读页主舞台对 `getReaderState(...)` 失败仍偏向静默降级为空白阅读态，后续更适合继续沿 `ReaderPage` 把 `error / stale` 的真实入口补齐。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-040`锛岃繖娆′笉鎵╂柊鐨勯〉闈㈠煙锛屽彧琛ョ敤鎴风澶嶄範宸ヤ綔鍖哄鍏变韩椤甸潰鐘舵€佸崗璁殑鐪熷疄娑堣垂銆?- 鐩爣鏄 `ReviewWorkspacePage` 鍦ㄩ灞忚嚜涓惧け璐ユ椂杩涘叆鍏变韩 `error` 鐘舵€侊紝鍦ㄥ凡鏈夊涔犲崱鐗囩殑鍒锋柊澶辫触鏃惰繘鍏ュ叡浜?`stale` 鐘舵€侊紝鍚屾椂涓嶄涪鎺夌敤鎴锋鍦ㄥ鐞嗙殑鍗＄墖涓婁笅鏂囥€?### 瀹為檯鍙樻洿
+## 2026-07-13 04:13:30 +08:00 | v1.1.0-alpha.164 | 推进 FE-040 用户端复习工作区页面状态接线
+### 任务内容
 
-- 鍏堝湪 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx` 琛?RED锛屽鐜扳€滈灞忓け璐ヤ粛鍙樉绀?message + 绌烘€併€佸埛鏂板け璐ヤ笉杩涘叆 stale鈥濈殑缂哄彛锛屽苟琛?`cleanup()` 鏀跺彛锛岄伩鍏嶅墠涓€鏉＄敤渚嬫畫鐣?DOM 姹℃煋杩欎竴缁勭姸鎬佹柇瑷€銆?- 鏇存柊 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`锛屾柊澧?`ReviewWorkspaceState` 涓?`workspaceErrorMessage` 鍒ゅ畾锛屾妸澶嶄範宸ヤ綔鍖轰富鑸炲彴鎺ュ埌鍏变韩 `DataState` 鍗忚銆?- 褰撳墠澶嶄範宸ヤ綔鍖哄湪棣栨鍔犺浇澶辫触鏃朵細娓叉煋鈥滃涔犲伐浣滃彴鏆傛椂涓嶅彲鐢ㄢ€濈殑鍏变韩 `error` 鐘舵€侊紱褰撳凡鏈夊綋鍓嶅崱鐗囥€佸啀娆″埛鏂板け璐ユ椂锛屼細娓叉煋鈥滃涔犻槦鍒楅渶瑕佸埛鏂扳€濈殑鍏变韩 `stale` 鐘舵€侊紝骞剁户缁繚鐣欏綋鍓嶅崱鐗囧彲瑙併€?- 绌洪槦鍒楀満鏅粛淇濈暀甯︹€滃垱寤哄崱缁勨€濆姩浣滅殑鍏变韩 `empty` 鐘舵€侊紝涓嶆敼鍙樻棦鏈夊涔犵鐞嗗叆鍙ｄ笌 API 濂戠害銆?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新的页面域，只补用户端复习工作区对共享页面状态协议的真实消费。
+- 目标是让 `ReviewWorkspacePage` 在首屏自举失败时进入共享 `error` 状态，在已有复习卡片的刷新失败时进入共享 `stale` 状态，同时不丢掉用户正在处理的卡片上下文。
+### 实际变更
 
-- RED锛歚npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/pages/MaterialsPage.test.tsx`
+- 先在 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx` 补 RED，复现“首屏失败仍只显示 message + 空态、刷新失败不进入 stale”的缺口，并补 `cleanup()` 收口，避免前一条用例残留 DOM 污染这一组状态断言。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，新增 `ReviewWorkspaceState` 与 `workspaceErrorMessage` 判定，把复习工作区主舞台接到共享 `DataState` 协议。
+- 当前复习工作区在首次加载失败时会渲染“复习工作台暂时不可用”的共享 `error` 状态；当已有当前卡片、再次刷新失败时，会渲染“复习队列需要刷新”的共享 `stale` 状态，并继续保留当前卡片可见。
+- 空队列场景仍保留带“创建卡组”动作的共享 `empty` 状态，不改变既有复习管理入口与 API 契约。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/pages/MaterialsPage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鐜板湪涓嶅彧瑕嗙洊鐢ㄦ埛绔悳绱㈤〉鍜岃祫鏂欏簱椤碉紝澶嶄範宸ヤ綔鍖轰富鑸炲彴涔熷凡缁忓紑濮嬬湡瀹炴秷璐瑰叡浜?`loading / error / empty / stale` 椤甸潰鐘舵€佸崗璁€?- 澶嶄範绠＄悊闈㈡澘鍐呴儴鐨勫崱缁?鍗＄墖鍒楄〃浠嶄富瑕佽鐩?`empty`锛岀敤鎴风鏇村椤甸潰鐨?`unauthorized / conflict` 鍏ュ彛涔熻繕娌℃湁闂悎锛涘悗缁洿閫傚悎娌块槄璇婚〉銆佺瑪璁伴〉鍜屽涔犵鐞嗛潰鏉跨户缁敹鍙ｃ€?
-## 2026-07-13 03:38:10 +08:00 | v1.1.0-alpha.163 | 鎺ㄨ繘 FE-040 绠＄悊绔?unauthorized 椤甸潰鐘舵€佹帴绾?### 浠诲姟鍐呭
+- `FE-040` 现在不只覆盖用户端搜索页和资料库页，复习工作区主舞台也已经开始真实消费共享 `loading / error / empty / stale` 页面状态协议。
+- 复习管理面板内部的卡组/卡片列表仍主要覆盖 `empty`，用户端更多页面的 `unauthorized / conflict` 入口也还没有闭合；后续更适合沿阅读页、笔记页和复习管理面板继续收口。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-040`锛岃繖娆′笉鍋氭柊鐨勬不鐞嗗姩浣滐紝鑰屾槸琛ョ鐞嗙鐪熷疄 `unauthorized` 椤甸潰鐘舵€佸叆鍙ｃ€?- 鐩爣鏄瀹℃牳闃熷垪鍜屾不鐞嗘ā鍧楀湪 `403` 鏉冮檺澶辫触鏃舵槑纭繘鍏ュ叡浜?`DataState` 鐨?`unauthorized` 璇箟锛屽苟涓旀竻鎺変笉璇ョ户缁毚闇茬殑鏃ц〃鏍?/ 鏃ц鎯呫€?### 瀹為檯鍙樻洿
+## 2026-07-13 03:38:10 +08:00 | v1.1.0-alpha.163 | 推进 FE-040 管理端 unauthorized 页面状态接线
+### 任务内容
 
-- 鍏堝湪 `frontend-admin/src/views/modules/AdminModerationModule.test.ts`銆乣AdminGovernanceModule.test.ts` 涓?`AdminWorkspaceView.test.ts` 琛?RED锛屽鐜扳€?03 鏃舵ā鍧楅〉浠嶅彧鏄剧ず stale / error锛屼笖鏃ф暟鎹繕浼氱户缁仠鐣欏湪椤甸潰涓娾€濈殑缂哄彛銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛屼负瀹℃牳闃熷垪涓庢不鐞嗘ā鍧楄ˉ榻愮湡瀹?`403 -> unauthorized` 鐘舵€佹槧灏勶紱褰撳墠璇锋眰杩斿洖 `403` 鏃讹紝浼氳浆鎴愬叡浜?`DataState` 鐨?`unauthorized` 鏍囩涓庢潈闄愯鏄庛€?- 鍚屾椂鍦?`AdminWorkspaceView.vue` 钀戒簡鏈€灏忕殑鏁版嵁娓呯悊绛栫暐锛氬鏍搁槦鍒楀湪 `403` 鏃舵竻绌哄凡鏈夋潯鐩紝娌荤悊妯″潡鍦?`403` 鏃舵竻绌?rows / summary / selectedRecord / view 缁戝畾锛岄伩鍏嶆潈闄愭敹鍥炲悗浠嶇户缁毚闇叉棫鍐呭銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`AdminGovernanceModule.vue`锛屾妸鈥滀繚鐣欐棫琛ㄦ牸鈥濈殑鏉′欢杩涗竴姝ユ敹绱у埌 `stale` 涓撶敤璺緞锛沗loading / error / unauthorized / conflict` 閮戒笉鍐嶇户缁覆鏌撹褰曞尯銆?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不做新的治理动作，而是补管理端真实 `unauthorized` 页面状态入口。
+- 目标是让审核队列和治理模块在 `403` 权限失败时明确进入共享 `DataState` 的 `unauthorized` 语义，并且清掉不该继续暴露的旧表格 / 旧详情。
+### 实际变更
 
-- RED锛歚npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- 先在 `frontend-admin/src/views/modules/AdminModerationModule.test.ts`、`AdminGovernanceModule.test.ts` 与 `AdminWorkspaceView.test.ts` 补 RED，复现“403 时模块页仍只显示 stale / error，且旧数据还会继续停留在页面上”的缺口。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，为审核队列与治理模块补齐真实 `403 -> unauthorized` 状态映射；当前请求返回 `403` 时，会转成共享 `DataState` 的 `unauthorized` 标签与权限说明。
+- 同时在 `AdminWorkspaceView.vue` 落了最小的数据清理策略：审核队列在 `403` 时清空已有条目，治理模块在 `403` 时清空 rows / summary / selectedRecord / view 绑定，避免权限收回后仍继续暴露旧内容。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，把“保留旧表格”的条件进一步收紧到 `stale` 专用路径；`loading / error / unauthorized / conflict` 都不再继续渲染记录区。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鍦ㄧ鐞嗙宸茬粡涓嶅彧瑕嗙洊 `loading / error / empty / stale`锛宍unauthorized` 涔熻繘鍏ヤ簡鐪熷疄宸ヤ綔鍙伴〉闈㈠叆鍙ｏ紝鐘舵€佸崗璁洿鎺ヨ繎鈥滃彲鎿嶄綔銆佸彲瑙ｉ噴鈥濈殑缁熶竴楠ㄦ灦銆?- `conflict` 浠嶄富瑕佸仠鐣欏湪鍏变韩璇箟鍜屽浘璋变笓鐢ㄨ矾寰勶紝鍚庣画缁х画鎺ㄨ繘 `FE-040` 鏃讹紝鏇撮€傚悎鎸戠敤鎴风鍥捐氨鎴栬法绔叡浜〃鍗?鍒楄〃閲岀湡姝ｄ細鍑虹幇鍐茬獊鍐崇瓥鐨勫叆鍙ｇ户缁帴绾裤€?
-## 2026-07-13 03:27:16 +08:00 | v1.1.0-alpha.162 | 鎺ㄨ繘 FE-040 绠＄悊绔?stale 椤甸潰鐘舵€佹帴绾?### 浠诲姟鍐呭
+- `FE-040` 在管理端已经不只覆盖 `loading / error / empty / stale`，`unauthorized` 也进入了真实工作台页面入口，状态协议更接近“可操作、可解释”的统一骨架。
+- `conflict` 仍主要停留在共享语义和图谱专用路径，后续继续推进 `FE-040` 时，更适合挑用户端图谱或跨端共享表单/列表里真正会出现冲突决策的入口继续接线。
 
-- 寤剁画 `CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戯紝鏈疆涓嶅洖鍒版洿绐勭殑娌荤悊鍔ㄤ綔锛岃€屾槸缁х画鏀跺彛鏇撮珮浼樺厛绾х殑 `FE-040` 椤甸潰鐘舵€佸崗璁€?- 鐩爣鏄妸鍏变韩 `DataState` 閲岀殑 `stale` 璇箟浠庢灇涓惧拰鏍峰紡鎺ㄨ繘鍒扮鐞嗙鐪熷疄椤甸潰鍏ュ彛锛氬綋妯″潡宸茬粡鏈夋棫鏁版嵁銆佷絾鍒锋柊鍐嶆澶辫触鏃讹紝瑕佹樉寮忓憡璇夋搷浣滆€呪€滃綋鍓嶇湅鍒扮殑鏄檲鏃ф暟鎹€濓紝涓斾笉鑳芥妸鏃ц〃鏍肩洿鎺ュ悶鎺夈€?### 瀹為檯鍙樻洿
+## 2026-07-13 03:27:16 +08:00 | v1.1.0-alpha.162 | 推进 FE-040 管理端 stale 页面状态接线
+### 任务内容
 
-- 鍏堝湪 `frontend-admin/src/views/modules/AdminModerationModule.test.ts`銆乣AdminGovernanceModule.test.ts` 涓?`AdminWorkspaceView.test.ts` 琛?RED锛屽鐜扳€滃埛鏂板け璐ュ悗鏃㈡病鏈?shared stale state锛屼篃浼氫涪鎺夊凡鏈夊垪琛ㄢ€濈殑缂哄彛銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛屼负瀹℃牳闃熷垪涓庢不鐞嗘ā鍧楄ˉ榻愮湡瀹?`stale` 鐘舵€佽浇鑽凤紱褰撳悓涓€璺敱涓嬪凡鏈夊垪琛ㄤ笖 refresh 澶辫触鏃讹紝浼氬垎鍒敓鎴愨€滃鏍搁槦鍒楅渶瑕佸埛鏂扳€濅笌鈥滄不鐞嗚褰曢渶瑕佸埛鏂扳€濈殑鍏变韩鐘舵€佹枃妗堛€?- 鍚屾椂鍦?`AdminWorkspaceView.vue` 鏂板 `governanceRowsView` 璺熻釜锛岄檺鍒垛€滀繚鐣欐棫琛ㄦ牸鈥濆彧鍙戠敓鍦ㄥ悓涓€娌荤悊瑙嗗浘鐨勫埛鏂板け璐ヨ矾寰勶紱璺ㄦā鍧楀垏鎹㈠け璐ユ椂浠嶅洖鍒扮┖鍒楄〃 / error 鐘舵€侊紝涓嶆贩鍏ヤ笂涓€涓ā鍧楃殑鏁版嵁銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`AdminGovernanceModule.vue`锛岃妯″潡椤靛湪 `stale` 鏃跺悓鏃舵覆鏌?`AdminDataState` 鍜屾棫琛ㄦ牸锛岃€屼笉鏄儚 `loading / error` 涓€鏍风洿鎺ユ浛鎹㈠唴瀹瑰尯銆?### 楠岃瘉缁撴灉
+- 延续 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向，本轮不回到更窄的治理动作，而是继续收口更高优先级的 `FE-040` 页面状态协议。
+- 目标是把共享 `DataState` 里的 `stale` 语义从枚举和样式推进到管理端真实页面入口：当模块已经有旧数据、但刷新再次失败时，要显式告诉操作者“当前看到的是陈旧数据”，且不能把旧表格直接吞掉。
+### 实际变更
 
-- RED锛歚npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- 先在 `frontend-admin/src/views/modules/AdminModerationModule.test.ts`、`AdminGovernanceModule.test.ts` 与 `AdminWorkspaceView.test.ts` 补 RED，复现“刷新失败后既没有 shared stale state，也会丢掉已有列表”的缺口。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，为审核队列与治理模块补齐真实 `stale` 状态载荷；当同一路由下已有列表且 refresh 失败时，会分别生成“审核队列需要刷新”与“治理记录需要刷新”的共享状态文案。
+- 同时在 `AdminWorkspaceView.vue` 新增 `governanceRowsView` 跟踪，限制“保留旧表格”只发生在同一治理视图的刷新失败路径；跨模块切换失败时仍回到空列表 / error 状态，不混入上一个模块的数据。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，让模块页在 `stale` 时同时渲染 `AdminDataState` 和旧表格，而不是像 `loading / error` 一样直接替换内容区。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鐜板湪涓嶅啀鍙鐩栫鐞嗙鐨?`loading / error / empty`锛宍stale` 涔熷凡缁忚惤鍒扮湡瀹炲垪琛ㄥ埛鏂板け璐ヨ矾寰勶紝椤甸潰鐘舵€佸崗璁洿鎺ヨ繎鈥滅湡瀹炲彲鎿嶄綔鈥濈殑娌荤悊宸ヤ綔鍙般€?- `unauthorized / conflict` 浠嶄富瑕佸仠鐣欏湪鍏变韩鏂囨涓庡眬閮ㄦ彁绀哄眰锛屽悗缁户缁部 `FE-040` 鎺ㄨ繘鏃讹紝鏇撮€傚悎鎸戠敤鎴风鍥捐氨鎴栧悗鍙颁細璇濊竟鐣屼腑鐨勭湡瀹炲叆鍙ｏ紝鎶婅繖涓ょ被鐘舵€佷篃鎺ュ埌椤甸潰楠ㄦ灦閲屻€?
-## 2026-07-10 00:41:30 +08:00 | v1.1.0-alpha.161 | 鏀跺彛 WB-032 鍥捐氨鍐茬獊鍙潬鎬ч獙璇?### 浠诲姟鍐呭
+- `FE-040` 现在不再只覆盖管理端的 `loading / error / empty`，`stale` 也已经落到真实列表刷新失败路径，页面状态协议更接近“真实可操作”的治理工作台。
+- `unauthorized / conflict` 仍主要停留在共享文案与局部提示层，后续继续沿 `FE-040` 推进时，更适合挑用户端图谱或后台会话边界中的真实入口，把这两类状态也接到页面骨架里。
 
-- 鎸?`CODEX_MASTER_PROMPT.md` 鐨勨€滄帴鎵嬫牳楠屽皬姝モ€濆厛鍋滄帀鏂扮殑 FE-041 鎺ョ嚎锛屾敼涓哄鏍稿綋鍓嶆洿楂樹紭鍏堢骇鐨?`VERIFY / IN_PROGRESS` 宸ヤ綔鍖呫€?- 鐢变簬 `FE-010`銆乣FE-020`銆乣FE-030`銆乣UI-04` 宸插湪 backlog 涓甫楠岃瘉璇佹嵁鏀跺彛锛屾湰杞洰鏍囪浆涓哄垽鏂?`WB-032` 鏄惁宸茬粡杈惧埌鍙叧闂竟鐣岋紝杩樻槸浠嶇己涓€涓渶灏忋€佸彲鎵ц鐨勫啿绐佸洖褰掑叆鍙ｃ€?### 瀹為檯鍙樻洿
+## 2026-07-10 00:41:30 +08:00 | v1.1.0-alpha.161 | 收口 WB-032 图谱冲突可靠性验证
+### 任务内容
 
-- 杩愯 `npm run verify:graph-conflicts`锛屼覆琛屽鏍稿浘璋卞啿绐佸鐞嗙殑鍓嶇 Vitest銆佸悗绔?Go 娴嬭瘯銆佸浘璋卞伐浣滃尯 Playwright 鍥炲綊鍜屾枃妗ｅ悓姝ユ牎楠屻€?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 浠?`IN_PROGRESS` 鏀跺彛涓?`DONE`锛屽苟琛ヤ竴鏉?2026-07-10 鐨勯獙璇佹墽琛岃褰曘€?- 鏈疆鏈敼鍔ㄤ笟鍔′唬鐮侊紱鏀跺彛鍔ㄤ綔鍙惤鍦?backlog / 浜や粯鏃ュ織锛岄伩鍏嶅湪娌℃湁鏂扮己鍙ｈ瘉鎹殑鎯呭喌涓嬬户缁墿鍐欏啿绐佸鐞嗗疄鐜般€?### 楠岃瘉缁撴灉
+- 按 `CODEX_MASTER_PROMPT.md` 的“接手核验小步”先停掉新的 FE-041 接线，改为复核当前更高优先级的 `VERIFY / IN_PROGRESS` 工作包。
+- 由于 `FE-010`、`FE-020`、`FE-030`、`UI-04` 已在 backlog 中带验证证据收口，本轮目标转为判断 `WB-032` 是否已经达到可关闭边界，还是仍缺一个最小、可执行的冲突回归入口。
+### 实际变更
+
+- 运行 `npm run verify:graph-conflicts`，串行复核图谱冲突处理的前端 Vitest、后端 Go 测试、图谱工作区 Playwright 回归和文档同步校验。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 从 `IN_PROGRESS` 收口为 `DONE`，并补一条 2026-07-10 的验证执行记录。
+- 本轮未改动业务代码；收口动作只落在 backlog / 交付日志，避免在没有新缺口证据的情况下继续扩写冲突处理实现。
+### 验证结果
 
 - `npm run verify:graph-conflicts`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `WB-032` 鐜板湪鍙互瑙嗕负鈥滆嚜鍔ㄤ繚瀛?/ 蹇収 / 鍐茬獊澶勭悊鍙潬鎬р€濊繖涓€闃舵鐨勫疄鐜颁笌鍥炲綊閮藉凡闂悎锛屽悗缁笉蹇呭啀鎶婂畠褰撲綔杩涜涓殑涓婚樆濉為」銆?- 鍓╀綑鏇村畬鏁寸殑 create/save/restore/export/layout/conflict/鏉冮檺鐭╅樀銆佹洿澶氭闈?/ 绐勫睆缁勫悎涓庢潈闄愬垎鏀紝搴旂户缁斁鍦?`WB-034` 涓墿灞曪紝鑰屼笉鏄啀娆℃妸 `WB-032` 鎷夊洖鏈畬鎴愮姸鎬併€?
-## 2026-07-10 00:33:10 +08:00 | v1.1.0-alpha.160 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?Input/Button 閫傞厤灞傛帴绾?### 浠诲姟鍐呭
+- `WB-032` 现在可以视为“自动保存 / 快照 / 冲突处理可靠性”这一阶段的实现与回归都已闭合，后续不必再把它当作进行中的主阻塞项。
+- 剩余更完整的 create/save/restore/export/layout/conflict/权限矩阵、更多桌面 / 窄屏组合与权限分支，应继续放在 `WB-034` 中扩展，而不是再次把 `WB-032` 拉回未完成状态。
 
-- 娌垮綋鍓嶆洿楂樹紭鍏堢骇鐨?`FE-041` 缁х画鍋氫竴涓寖鍥村皬浣嗚鐩栭潰骞跨殑鍏变韩 primitive 鏀跺彛锛屼笉鍥炲ご娣辨寲鍗曚竴鍥捐氨鎴栧悗鍙版不鐞嗗姩浣溿€?- 鏈疆鐩爣鏄绠＄悊绔篃寮€濮嬬湡瀹炴秷璐瑰叡浜?`Input` / `Button` 濂戠害锛屼紭鍏堣鐩栫櫥褰曘€佸凡鐧诲綍澹冲眰銆乨ashboard CTA銆佸鏍告悳绱?鍔ㄤ綔鍜屾不鐞嗘悳绱?鍔ㄤ綔杩欎簺楂橀鐪熷疄鍏ュ彛銆?### 瀹為檯鍙樻洿
+## 2026-07-10 00:33:10 +08:00 | v1.1.0-alpha.160 | 推进 FE-041 管理端共享 Input/Button 适配层接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminInput.vue` 涓?`AdminButton.vue`锛屼互 Vue 閫傞厤灞傛壙鎺ュ叡浜?`ds-input`銆乣primary/secondary/ghost`銆乣danger` 鍜岄粯璁?`type="button"` 璇箟锛屼笉寮鸿澶嶇敤 React 缁勪欢瀹炵幇銆?- 鏂板 `frontend-admin/src/components/admin/AdminInput.test.ts` 涓?`AdminButton.test.ts`锛屽厛鐢?RED 閿佸畾鈥滅鐞嗙鍏变韩杈撳叆/鎸夐挳閫傞厤灞傚繀椤诲瓨鍦ㄤ笖绗﹀悎鍏变韩濂戠害鈥濈殑缂哄彛锛屽啀鍦?GREEN 闃舵鍥哄畾榛樿绫诲瀷銆侀敊璇€?class 涓庣偣鍑?鏇存柊浜嬩欢銆?- 鏇存柊 `frontend-admin/src/components/admin/AdminLoginPanel.vue`銆乣AdminShellFrame.vue`銆乣AdminConfirmDialog.vue`锛屾妸鐧诲綍杈撳叆銆佺櫥褰曟彁浜ゃ€佸埛鏂般€侀€€鍑哄拰纭灞傛寜閽垏鍒版柊鐨?Vue 閫傞厤灞傘€?- 鏇存柊 `frontend-admin/src/views/modules/AdminDashboardModule.vue`銆乣AdminModerationModule.vue` 涓?`AdminGovernanceModule.vue`锛屾妸 dashboard CTA銆佸鏍?娌荤悊鎼滅储妗嗗拰娌荤悊鍔ㄤ綔鎸夐挳鍒囧埌绠＄悊绔叡浜?`Input/Button` 閫傞厤灞傘€?- 鏇存柊 `frontend-admin/src/components/admin/admin.css`锛岃ˉ榻?`ghost-button` 涓?`danger` class 璇箟锛岃绠＄悊绔牱寮忓拰鍏变韩 `Button` 濂戠害淇濇寔涓€鑷达紝涓嶅啀鍙緷璧栧眬閮?`is-danger`銆?- 鏇存柊鐩稿叧绠＄悊绔祴璇曟枃浠讹紝閿佸畾杩欎簺鐪熷疄椤甸潰鍏ュ彛宸茬粡寮€濮嬫秷璐瑰叡浜?`ds-input` / `ghost-button` / `danger` 璇箟锛岃€屼笉鏄户缁覆鏌撹８ `input` / `button`銆?### 楠岃瘉缁撴灉
+- 沿当前更高优先级的 `FE-041` 继续做一个范围小但覆盖面广的共享 primitive 收口，不回头深挖单一图谱或后台治理动作。
+- 本轮目标是让管理端也开始真实消费共享 `Input` / `Button` 契约，优先覆盖登录、已登录壳层、dashboard CTA、审核搜索/动作和治理搜索/动作这些高频真实入口。
+### 实际变更
 
-- RED锛歚npm --workspace frontend-admin run test -- src/components/admin/AdminInput.test.ts src/components/admin/AdminButton.test.ts src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/components/admin/AdminInput.test.ts src/components/admin/AdminButton.test.ts src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- 新增 `frontend-admin/src/components/admin/AdminInput.vue` 与 `AdminButton.vue`，以 Vue 适配层承接共享 `ds-input`、`primary/secondary/ghost`、`danger` 和默认 `type="button"` 语义，不强行复用 React 组件实现。
+- 新增 `frontend-admin/src/components/admin/AdminInput.test.ts` 与 `AdminButton.test.ts`，先用 RED 锁定“管理端共享输入/按钮适配层必须存在且符合共享契约”的缺口，再在 GREEN 阶段固定默认类型、错误态 class 与点击/更新事件。
+- 更新 `frontend-admin/src/components/admin/AdminLoginPanel.vue`、`AdminShellFrame.vue`、`AdminConfirmDialog.vue`，把登录输入、登录提交、刷新、退出和确认层按钮切到新的 Vue 适配层。
+- 更新 `frontend-admin/src/views/modules/AdminDashboardModule.vue`、`AdminModerationModule.vue` 与 `AdminGovernanceModule.vue`，把 dashboard CTA、审核/治理搜索框和治理动作按钮切到管理端共享 `Input/Button` 适配层。
+- 更新 `frontend-admin/src/components/admin/admin.css`，补齐 `ghost-button` 与 `danger` class 语义，让管理端样式和共享 `Button` 契约保持一致，不再只依赖局部 `is-danger`。
+- 更新相关管理端测试文件，锁定这些真实页面入口已经开始消费共享 `ds-input` / `ghost-button` / `danger` 语义，而不是继续渲染裸 `input` / `button`。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/components/admin/AdminInput.test.ts src/components/admin/AdminButton.test.ts src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/components/admin/AdminInput.test.ts src/components/admin/AdminButton.test.ts src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栫敤鎴风 React 椤甸潰锛涚鐞嗙涔熷凡缁忓紑濮嬮€氳繃 Vue 閫傞厤灞傛秷璐瑰悓涓€濂?`Input` / `Button` 璇箟锛岃繖璁╁悗缁户缁敹鍙?`Select`銆佺瓫閫夋潯鍜屾洿澶氭不鐞嗗姩浣滄椂鎴愭湰鏇翠綆銆?- 杩欎竴杞粛鐒跺彧瑕嗙洊浜嗙鐞嗙楂橀 `Input/Button` 鍏ュ彛锛涘鑸寜閽€佹洿澶氳〃鏍间氦浜掑拰澶嶆潅绛涢€夌粨鏋勮繕娌℃湁缁熶竴鏀惰繘鍏变韩灞傦紝鍚庣画鏇撮€傚悎缁х画娌?`FE-041 / ADM-010 / ADM-011` 鎺ㄨ繘銆?
-## 2026-07-09 14:51:28 +08:00 | v1.1.0-alpha.159 | 鎺ㄨ繘 FE-040 绠＄悊绔〉闈㈢姸鎬佸崗璁帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖用户端 React 页面；管理端也已经开始通过 Vue 适配层消费同一套 `Input` / `Button` 语义，这让后续继续收口 `Select`、筛选条和更多治理动作时成本更低。
+- 这一轮仍然只覆盖了管理端高频 `Input/Button` 入口；导航按钮、更多表格交互和复杂筛选结构还没有统一收进共享层，后续更适合继续沿 `FE-041 / ADM-010 / ADM-011` 推进。
 
-- 缁х画娌?`FE-040` 鎺ㄨ繘鈥滈〉闈㈢姸鎬佸崗璁€濊繖鏉℃洿鍋忓叏灞€楠ㄦ灦鐨勫伐浣滅嚎锛岃繖娆′笉鍐嶆墿 token锛岃€屾槸琛ョ鐞嗙瀵瑰叡浜?`DataState` 璇箟鐨勭湡瀹炴秷璐广€?- 鏈疆鐩爣鏄妸鍚庡彴妯″潡椤佃嚦灏戝厛鎺ヤ笂 `loading / error / empty` 杩欎笁绫诲叡浜姸鎬侊紝閬垮厤鐢ㄦ埛绔凡缁忕粺涓€銆佺鐞嗙杩樼户缁悇鑷墜鍐欑┖鎬佸潡涓庡眬閮ㄦ彁绀恒€?### 瀹為檯鍙樻洿
+## 2026-07-09 14:51:28 +08:00 | v1.1.0-alpha.159 | 推进 FE-040 管理端页面状态协议接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminDataState.vue` 涓?`frontend-admin/src/components/admin/dataState.ts`锛岃绠＄悊绔紑濮嬬洿鎺ユ秷璐?`@studymate/ui` 鐨?`DataStateKind` / `getDataStateLabel(...)`锛屼互 Vue 閫傞厤灞傛壙鎺ュ叡浜姸鎬佽涔夈€?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`frontend-admin/src/views/modules/AdminGovernanceModule.vue`锛屾ā鍧楅〉鐜板湪浼氫紭鍏堟覆鏌撳叡浜姸鎬侀鏋讹紱褰撲紶鍏?`dataState` 鏃舵樉绀?`loading / error`锛屽綋鍒楄〃涓虹┖鏃剁粺涓€鍥炶惤鍒板叡浜?`empty` 鐘舵€侊紝鑰屼笉鏄户缁娇鐢ㄥ悇鑷垎鍙夌殑绌烘€?DOM銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛屼负瀹℃牳闃熷垪鍜屾不鐞嗚褰曡ˉ涓婃渶灏忕姸鎬佽浇鑽烽€忎紶锛氬垪琛ㄥ皻鏃犳暟鎹椂锛屽伐浣滃彴浼氭牴鎹綋鍓?`loading/error` 鐘舵€佺敓鎴愬叡浜?`dataState` 骞朵氦缁欐ā鍧楅〉娑堣垂銆?- 鍚屾椂鏇存柊 `frontend-admin/tsconfig.json`锛岃ˉ榻?`jsx: "preserve"`锛岃В鍐崇鐞嗙鐩存帴娑堣垂 `@studymate/ui` 瀵煎嚭鏃?`vue-tsc` 鏃犳硶瑙ｆ瀽鍖呭唴 `.tsx` 鍏ュ彛鐨勯棶棰樸€?- 鏇存柊 `frontend-admin/src/components/admin/admin.css` 涓庣浉鍏虫祴璇曟枃浠讹紝鎶婅繖鏉＄姸鎬佸崗璁ˉ鎴愮湡瀹炲彲鍥炲綊鐨勭鐞嗙鍒囩墖銆?### 楠岃瘉缁撴灉
+- 继续沿 `FE-040` 推进“页面状态协议”这条更偏全局骨架的工作线，这次不再扩 token，而是补管理端对共享 `DataState` 语义的真实消费。
+- 本轮目标是把后台模块页至少先接上 `loading / error / empty` 这三类共享状态，避免用户端已经统一、管理端还继续各自手写空态块与局部提示。
+### 实际变更
 
-- RED锛歚npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- 新增 `frontend-admin/src/components/admin/AdminDataState.vue` 与 `frontend-admin/src/components/admin/dataState.ts`，让管理端开始直接消费 `@studymate/ui` 的 `DataStateKind` / `getDataStateLabel(...)`，以 Vue 适配层承接共享状态语义。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`，模块页现在会优先渲染共享状态骨架；当传入 `dataState` 时显示 `loading / error`，当列表为空时统一回落到共享 `empty` 状态，而不是继续使用各自分叉的空态 DOM。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，为审核队列和治理记录补上最小状态载荷透传：列表尚无数据时，工作台会根据当前 `loading/error` 状态生成共享 `dataState` 并交给模块页消费。
+- 同时更新 `frontend-admin/tsconfig.json`，补齐 `jsx: "preserve"`，解决管理端直接消费 `@studymate/ui` 导出时 `vue-tsc` 无法解析包内 `.tsx` 入口的问题。
+- 更新 `frontend-admin/src/components/admin/admin.css` 与相关测试文件，把这条状态协议补成真实可回归的管理端切片。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鐜板湪宸茬粡浠庘€滃叡浜?token 鍗曚竴鏉ユ簮鈥濊繘涓€姝ユ帹杩涘埌鈥滅鐞嗙寮€濮嬬湡瀹炴秷璐瑰叡浜〉闈㈢姸鎬佽涔夆€濓紝杩欐洿鎺ヨ繎鈥滃厛鎶婂叏灞€楠ㄦ灦琛ラ綈鈥濈殑鐩爣銆?- 杩欐鍏堣鐩栫殑鏄悗鍙版ā鍧楅〉鐨?`loading / error / empty` 棣栧眰鍗忚锛涘悗缁鏋滅户缁墿 `unauthorized / stale / conflict`锛屽凡缁忔湁浜嗗彲澶嶇敤鐨?Vue 渚х姸鎬侀€傞厤灞備笌椤甸潰鍏ュ彛銆?
-## 2026-07-09 14:34:33 +08:00 | v1.1.0-alpha.158 | 鎵╁厖 WB-032 latest-head 鍒嗙粍渚濊禆鍥哄畾鍏ュ彛 E2E
-### 浠诲姟鍐呭
+- `FE-040` 现在已经从“共享 token 单一来源”进一步推进到“管理端开始真实消费共享页面状态语义”，这更接近“先把全局骨架补齐”的目标。
+- 这次先覆盖的是后台模块页的 `loading / error / empty` 首层协议；后续如果继续扩 `unauthorized / stale / conflict`，已经有了可复用的 Vue 侧状态适配层与页面入口。
 
-- 缁х画娌?`WB-032` 鎵╁浐瀹氶獙璇佸叆鍙ｏ紝杩欐鑱氱劍鈥渓atest-head 鍒犻櫎璇箟涓嬬殑鍒嗙粍渚濊禆闃绘柇鈥濊繖鏉￠〉闈㈢骇宸茬粡閿佸畾銆佷絾鍥哄畾鍏ュ彛杩樻病鏈夎鐩栫殑鐪熷疄娴忚鍣ㄨ矾寰勩€?- 鏈疆鐩爣鏄妸鈥滄湰鍦拌崏绋挎仮澶?-> latest-head 鏂板 `Server node` 涓?`Server group` -> 涓€閿簲鐢?2 椤硅仈鍔ㄥ彇鑸嶅缓璁?-> 搴旂敤宸叉爣璁板彇鑸?-> 鍐嶆淇濆瓨鈥濇帴杩?`verify:graph-conflicts`锛岄伩鍏嶈繖鏉″垎缁勪緷璧栦富绾垮彧鍋滅暀鍦ㄩ〉闈㈢骇鍥炲綊閲屻€?### 瀹為檯鍙樻洿
+## 2026-07-09 14:34:33 +08:00 | v1.1.0-alpha.158 | 扩充 WB-032 latest-head 分组依赖固定入口 E2E
+### 任务内容
 
-- 鏇存柊 `e2e/v1-graph-workspace.spec.ts`锛屾柊澧?Playwright 鐢ㄤ緥瑕嗙洊鐪熷疄 `graph_version_conflict` 鍚庣殑 latest-head 鍒嗙粍渚濊禆璺緞锛氭湰鍦拌崏绋夸繚鎸佸彧鏈?`Graph root`锛屾湇鍔＄鏈€鏂扮増鏈澶栧寘鍚?`Server node` 涓庡紩鐢ㄥ畠鐨?`Server group`锛岄殢鍚庡湪鍐茬獊鍗＄墖涓厛璇€夆€滀繚鐣欐湰鍦拌妭鐐瑰垹闄?+ 淇濈暀鏈嶅姟绔垎缁勫垹闄も€濄€?- 杩欐潯鏂?E2E 浼氬厛閿佸畾闃绘柇鎻愮ず鈥滃垎缁?`Server group` 浠嶅紩鐢ㄦ湭淇濈暀鐨勮妭鐐光€濓紝鍐嶆牴鎹湡瀹炴祻瑙堝櫒鍚堝悓鏂█涓ゆ潯鑱斿姩寤鸿鍒嗗埆鏄€滆仈鍔ㄤ繚鐣欐湇鍔＄锛氳妭鐐癸綔鍒犻櫎锝淪erver node鈥濆拰鈥滆仈鍔ㄤ繚鐣欐湰鍦帮細鍒嗙粍锝滃垹闄わ綔Server group鈥濓紝闅忓悗涓€閿簲鐢?2 椤硅仈鍔ㄥ彇鑸嶅缓璁苟缁х画淇濆瓨銆?- 鍚屼竴涓敤渚嬭繕浼氭崟鑾风浜屾 `batch-save` 璇锋眰锛屾柇瑷€鎻愪氦鐨勬槸 rebased `document.version = 5`锛屽苟涓旀渶缁堜繚瀛樼粨鏋滅鍚堝綋鍓?latest-head 鍒嗙粍渚濊禆鍚堝悓锛氫繚鐣?`Graph root` 涓?`Server node`锛屽悓鏃舵寜鏈湴鍒犻櫎 `Server group`锛屽舰鎴?`2 鑺傜偣 / 0 鍒嗙粍 / 0 杩炵嚎` 鐨勫悎骞惰崏绋裤€?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/GRAPH_CONFLICT_REGRESSION.md`锛屾妸杩欐潯鏂板鍥哄畾鍏ュ彛璺緞琛ュ洖 `WB-032` 鐨勬墽琛岃褰曞拰鍥捐氨鍐茬獊鍥炲綊鐭╅樀銆?### 楠岃瘉缁撴灉
+- 继续沿 `WB-032` 扩固定验证入口，这次聚焦“latest-head 删除语义下的分组依赖阻断”这条页面级已经锁定、但固定入口还没有覆盖的真实浏览器路径。
+- 本轮目标是把“本地草稿恢复 -> latest-head 新增 `Server node` 与 `Server group` -> 一键应用 2 项联动取舍建议 -> 应用已标记取舍 -> 再次保存”接进 `verify:graph-conflicts`，避免这条分组依赖主线只停留在页面级回归里。
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增 Playwright 用例覆盖真实 `graph_version_conflict` 后的 latest-head 分组依赖路径：本地草稿保持只有 `Graph root`，服务端最新版本额外包含 `Server node` 与引用它的 `Server group`，随后在冲突卡片中先误选“保留本地节点删除 + 保留服务端分组删除”。
+- 这条新 E2E 会先锁定阻断提示“分组 `Server group` 仍引用未保留的节点”，再根据真实浏览器合同断言两条联动建议分别是“联动保留服务端：节点｜删除｜Server node”和“联动保留本地：分组｜删除｜Server group”，随后一键应用 2 项联动取舍建议并继续保存。
+- 同一个用例还会捕获第二次 `batch-save` 请求，断言提交的是 rebased `document.version = 5`，并且最终保存结果符合当前 latest-head 分组依赖合同：保留 `Graph root` 与 `Server node`，同时按本地删除 `Server group`，形成 `2 节点 / 0 分组 / 0 连线` 的合并草稿。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，把这条新增固定入口路径补回 `WB-032` 的执行记录和图谱冲突回归矩阵。
+### 验证结果
 
 - `npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can clear latest-head group dependency blockers and save the rebased draft"`
 - `npm run verify:graph-conflicts`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `WB-032` 鐨勫浐瀹氬叆鍙ｇ幇鍦ㄥ凡缁忓紑濮嬭鐩?latest-head 鍒嗙粍渚濊禆鑱斿姩娓呴樆鏂悗鐨勭湡瀹炴祻瑙堝櫒閾捐矾锛涘悗缁鏋滅户缁墿 latest-head 澶氱洰鏍囧垹闄よ涔夋垨鏇村缁勭骇渚濊禆闃绘柇锛屽彲浠ョ洿鎺ユ部杩欐潯 E2E 涓荤嚎琛ュ厖銆?- 杩欐娌℃湁淇敼鍐茬獊澶勭悊杩愯鏃惰涔夛紝鏂板鐢ㄤ緥鍦ㄧ幇鏈夊疄鐜颁笂鐩存帴 GREEN锛岃鏄庨〉闈㈢骇宸茬粡閿佸畾鐨?latest-head 鍒嗙粍鑱斿姩鍚堝悓鐜板湪涔熻鎻愬崌鍒颁簡 Playwright 鍥哄畾鍏ュ彛閲屻€?
-## 2026-07-09 14:25:00 +08:00 | v1.1.0-alpha.157 | 鎵╁厖 WB-032 澶氱洰鏍囨湰鍦拌繛绾胯仈鍔ㄥ缓璁悗鐨勫浐瀹氬叆鍙?E2E
-### 浠诲姟鍐呭
+- `WB-032` 的固定入口现在已经开始覆盖 latest-head 分组依赖联动清阻断后的真实浏览器链路；后续如果继续扩 latest-head 多目标删除语义或更多组级依赖阻断，可以直接沿这条 E2E 主线补充。
+- 这次没有修改冲突处理运行时语义，新增用例在现有实现上直接 GREEN，说明页面级已经锁定的 latest-head 分组联动合同现在也被提升到了 Playwright 固定入口里。
 
-- 缁х画娌?`WB-032` 鎵╁浐瀹氶獙璇佸叆鍙ｏ紝杩欐鑱氱劍鈥滄湰鍦板鐩爣杩炵嚎瑙﹀彂鑱斿姩寤鸿鈥濊繖鏉￠〉闈㈢骇宸茬粡閿佸畾銆佷絾鍥哄畾鍏ュ彛杩樻病鏈夎鐩栫殑鐪熷疄娴忚鍣ㄨ矾寰勩€?- 鏈疆鐩爣鏄妸鈥滄湰鍦拌崏绋挎仮澶?-> 澶氱洰鏍囪繛绾胯Е鍙?`graph_version_conflict` -> 涓€閿簲鐢?3 椤硅仈鍔ㄥ彇鑸嶅缓璁?-> 搴旂敤宸叉爣璁板彇鑸?-> 鍐嶆淇濆瓨鈥濇帴杩?`verify:graph-conflicts`锛岄伩鍏嶅鐩爣渚濊禆杩欐潯涓荤嚎鍙仠鐣欏湪椤甸潰绾у洖褰掗噷銆?### 瀹為檯鍙樻洿
+## 2026-07-09 14:25:00 +08:00 | v1.1.0-alpha.157 | 扩充 WB-032 多目标本地连线联动建议后的固定入口 E2E
+### 任务内容
 
-- 鏇存柊 `e2e/v1-graph-workspace.spec.ts`锛屾柊澧?Playwright 鐢ㄤ緥瑕嗙洊鍚屽浘璋卞悓鐗堟湰鑽夌鎭㈠鍚庣殑澶氱洰鏍囨湰鍦拌繛绾胯矾寰勶細鏈湴鑽夌涓柊澧?`Local concept`銆乣Extra target node` 涓や釜鑺傜偣锛屽苟閫氳繃 `metadata.targetNodeIds` 鎸備竴鏉″鐩爣 `Local edge`锛岀劧鍚庢晠鎰忚Е鍙?`graph_version_conflict`銆?- 杩欐潯鏂?E2E 浼氬厛閿佸畾鍐茬獊鍗＄墖閲岀殑涓ゆ潯鈥滆仈鍔ㄤ繚鐣欐湰鍦扳€濊妭鐐瑰缓璁拰 `涓€閿簲鐢?3 椤硅仈鍔ㄥ彇鑸嶅缓璁甡锛屽啀鏍规嵁鐪熷疄娴忚鍣ㄥ悎鍚屾柇瑷€鎵归噺寤鸿缁撴灉鏄€滀繚鐣欐湰鍦?2 椤广€佷繚鐣欐湇鍔＄ 1 椤光€濓紝闅忓悗搴旂敤宸叉爣璁板彇鑸嶅苟鍐嶆淇濆瓨銆?- 鍚屼竴涓敤渚嬭繕浼氭崟鑾风浜屾 `batch-save` 璇锋眰锛屾柇瑷€鎻愪氦鐨勬槸 rebased `document.version = 5`锛屽苟涓旀渶缁堜繚瀛樼粨鏋滅鍚堝綋鍓嶅鐩爣鑱斿姩鍚堝悓锛氫繚鐣欎袱涓湰鍦扮洰鏍囪妭鐐癸紝鍥為€€鏈湴澶氱洰鏍囪繛绾匡紝褰㈡垚 `3 鑺傜偣 / 0 杩炵嚎` 鐨勫悎骞惰崏绋裤€?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/GRAPH_CONFLICT_REGRESSION.md`锛屾妸杩欐潯鏂板鍥哄畾鍏ュ彛璺緞琛ュ洖 `WB-032` 鐨勬墽琛岃褰曞拰鍥捐氨鍐茬獊鍥炲綊鐭╅樀銆?### 楠岃瘉缁撴灉
+- 继续沿 `WB-032` 扩固定验证入口，这次聚焦“本地多目标连线触发联动建议”这条页面级已经锁定、但固定入口还没有覆盖的真实浏览器路径。
+- 本轮目标是把“本地草稿恢复 -> 多目标连线触发 `graph_version_conflict` -> 一键应用 3 项联动取舍建议 -> 应用已标记取舍 -> 再次保存”接进 `verify:graph-conflicts`，避免多目标依赖这条主线只停留在页面级回归里。
+### 实际变更
 
-- RED锛歚npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can batch-apply multi-target linked suggestions and save the rebased draft"`
-- GREEN锛歚npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can batch-apply multi-target linked suggestions and save the rebased draft"`
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增 Playwright 用例覆盖同图谱同版本草稿恢复后的多目标本地连线路径：本地草稿中新增 `Local concept`、`Extra target node` 两个节点，并通过 `metadata.targetNodeIds` 挂一条多目标 `Local edge`，然后故意触发 `graph_version_conflict`。
+- 这条新 E2E 会先锁定冲突卡片里的两条“联动保留本地”节点建议和 `一键应用 3 项联动取舍建议`，再根据真实浏览器合同断言批量建议结果是“保留本地 2 项、保留服务端 1 项”，随后应用已标记取舍并再次保存。
+- 同一个用例还会捕获第二次 `batch-save` 请求，断言提交的是 rebased `document.version = 5`，并且最终保存结果符合当前多目标联动合同：保留两个本地目标节点，回退本地多目标连线，形成 `3 节点 / 0 连线` 的合并草稿。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，把这条新增固定入口路径补回 `WB-032` 的执行记录和图谱冲突回归矩阵。
+### 验证结果
+
+- RED：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can batch-apply multi-target linked suggestions and save the rebased draft"`
+- GREEN：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can batch-apply multi-target linked suggestions and save the rebased draft"`
 - `npm run verify:graph-conflicts`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `WB-032` 鐨勫浐瀹氬叆鍙ｇ幇鍦ㄥ凡缁忓紑濮嬭鐩栧鐩爣鏈湴杩炵嚎鐨勭湡瀹炴祻瑙堝櫒閾捐矾锛屽悗缁嫢缁х画鎵?`latest-head` 澶氱洰鏍囧垹闄よ涔夋垨鏇村鏉傜殑渚濊禆鑱斿姩锛屽凡缁忔湁涓€鏉℃洿璐磋繎鐪熷疄浜哄伐鍚堝苟鐨?E2E 鍩哄骇鍙户缁墿灞曘€?- 杩欐娌℃湁淇敼鍐茬獊澶勭悊杩愯鏃惰涔夛紝涓昏鏄妸椤甸潰绾у凡缁忓瓨鍦ㄧ殑澶氱洰鏍囪仈鍔ㄥ缓璁祦绋嬫彁鍗囧埌浜?Playwright 鍥哄畾鍏ュ彛閲岋紝闄嶄綆鍚庣画鍙潬灞€閮ㄦ祴璇曞彂鐜板洖褰掔殑椋庨櫓銆?
-## 2026-07-09 14:14:00 +08:00 | v1.1.0-alpha.156 | 鎵╁厖 WB-032 鏈爣璁板璞￠粯璁ゅ洖閫€鍚庣殑鍥哄畾鍏ュ彛 E2E
-### 浠诲姟鍐呭
+- `WB-032` 的固定入口现在已经开始覆盖多目标本地连线的真实浏览器链路，后续若继续扩 `latest-head` 多目标删除语义或更复杂的依赖联动，已经有一条更贴近真实人工合并的 E2E 基座可继续扩展。
+- 这次没有修改冲突处理运行时语义，主要是把页面级已经存在的多目标联动建议流程提升到了 Playwright 固定入口里，降低后续只靠局部测试发现回归的风险。
 
-- 缁х画娌?`WB-032` 鎵╁浐瀹氶獙璇佸叆鍙ｏ紝杩欐鑱氱劍鈥滃彧鏍囪閮ㄥ垎瀵硅薄绾у彇鑸嶆椂锛屽墿浣欐湭鏍囪瀵硅薄榛樿娌跨敤鏈€鏂扮増鏈€濈殑鐪熷疄娴忚鍣ㄨ矾寰勩€?- 鏈疆鐩爣鏄妸鈥滄湇鍔＄宸插垹闄ゆ棫杩炵嚎 + 鏈湴鏂板鑺傜偣 + 鍙爣璁版湰鍦版柊鑺傜偣 -> 鏈爣璁板璞℃寜 latest head 榛樿鍥為€€ -> 鍐嶆淇濆瓨鈥濇帴杩?`verify:graph-conflicts`锛岄伩鍏嶆湭鏍囪榛樿鍥為€€杩欐潯涓荤嚎鍙仠鐣欏湪椤甸潰绾ч妫€鎻愮ず閲屻€?### 瀹為檯鍙樻洿
+## 2026-07-09 14:14:00 +08:00 | v1.1.0-alpha.156 | 扩充 WB-032 未标记对象默认回退后的固定入口 E2E
+### 任务内容
 
-- 鏇存柊 `e2e/v1-graph-workspace.spec.ts`锛屾柊澧?Playwright 鐢ㄤ緥瑕嗙洊鐪熷疄 `graph_version_conflict` 鍚庣殑鏈爣璁伴粯璁ゅ洖閫€璺緞锛氬厛璁╂湇鍔＄鐗堟湰鍒犻櫎 `鏃у叧绯籤锛屾湰鍦板啀鏂板 `鏂版蹇礰 鑺傜偣锛屽彧鏍囪淇濈暀鏈湴鑺傜偣锛岄殢鍚庡簲鐢ㄥ凡鏍囪鍙栬垗骞跺啀娆′繚瀛樸€?- 杩欐潯鏂?E2E 浼氬厛閿佸畾鍐茬獊鍗＄墖閲岀殑鈥滆繕鏈?3 涓璞″皻鏈爣璁板彇鑸嶁€濅笌鈥滃彟澶?2 涓湭鏍囪瀵硅薄浼氶粯璁ゆ部鐢ㄦ渶鏂板浘璋辩増鏈€濇彁绀猴紝鍐嶆崟鑾风浜屾 `batch-save` 璇锋眰锛屾柇瑷€鏈€缁堟彁浜ょ殑鏄?rebased `document.version = 5`锛屽苟涓斾繚瀛樼粨鏋滅鍚堥粯璁ゅ洖閫€鍚堝悓锛氫繚鐣?`Graph root` 涓?`鏂版蹇礰 涓や釜鑺傜偣锛屽悓鏃剁Щ闄ゆ湭鏍囪鐨?`鏃у叧绯籤 杩炵嚎銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/GRAPH_CONFLICT_REGRESSION.md`锛屾妸杩欐潯鏂板鍥哄畾鍏ュ彛璺緞琛ュ洖 `WB-032` 鐨勬墽琛岃褰曞拰鍥捐氨鍐茬獊鍥炲綊鐭╅樀銆?### 楠岃瘉缁撴灉
+- 继续沿 `WB-032` 扩固定验证入口，这次聚焦“只标记部分对象级取舍时，剩余未标记对象默认沿用最新版本”的真实浏览器路径。
+- 本轮目标是把“服务端已删除旧连线 + 本地新增节点 + 只标记本地新节点 -> 未标记对象按 latest head 默认回退 -> 再次保存”接进 `verify:graph-conflicts`，避免未标记默认回退这条主线只停留在页面级预检提示里。
+### 实际变更
 
-- RED锛歚npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace falls back unmarked conflict objects to the latest head when applying marked resolutions"`
-- GREEN锛歚npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace falls back unmarked conflict objects to the latest head when applying marked resolutions"`
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增 Playwright 用例覆盖真实 `graph_version_conflict` 后的未标记默认回退路径：先让服务端版本删除 `旧关系`，本地再新增 `新概念` 节点，只标记保留本地节点，随后应用已标记取舍并再次保存。
+- 这条新 E2E 会先锁定冲突卡片里的“还有 3 个对象尚未标记取舍”与“另外 2 个未标记对象会默认沿用最新图谱版本”提示，再捕获第二次 `batch-save` 请求，断言最终提交的是 rebased `document.version = 5`，并且保存结果符合默认回退合同：保留 `Graph root` 与 `新概念` 两个节点，同时移除未标记的 `旧关系` 连线。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，把这条新增固定入口路径补回 `WB-032` 的执行记录和图谱冲突回归矩阵。
+### 验证结果
+
+- RED：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace falls back unmarked conflict objects to the latest head when applying marked resolutions"`
+- GREEN：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace falls back unmarked conflict objects to the latest head when applying marked resolutions"`
 - `npm run verify:graph-conflicts`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `WB-032` 鐨勫浐瀹氬叆鍙ｇ幇鍦ㄥ凡缁忓紑濮嬭鐩栤€滄湭鏍囪瀵硅薄榛樿娌跨敤鏈€鏂扮増鏈€濈殑鐪熷疄娴忚鍣ㄩ摼璺紝鍚庣画濡傛灉缁х画鎵?latest-head 澶氱洰鏍囦緷璧栥€佹湭鏍囪瀵硅薄绀轰緥鏂囨鎴栭粯璁ゅ洖閫€璇箟锛屽彲浠ョ洿鎺ユ部杩欐潯 E2E 涓荤嚎琛ュ厖銆?- 杩欐娌℃湁淇敼鍐茬獊澶勭悊杩愯鏃惰涔夛紝涓昏鏄妸椤甸潰绾у凡缁忓瓨鍦ㄧ殑鏈爣璁伴粯璁ゅ洖閫€棰勬涓庝繚瀛樼粨鏋滄彁鍗囧埌浜?Playwright 鍥哄畾鍏ュ彛閲岋紝闄嶄綆鍚庣画鍙潬灞€閮ㄦ祴璇曞厹搴曠殑椋庨櫓銆?
-## 2026-07-09 14:07:00 +08:00 | v1.1.0-alpha.155 | 鎵╁厖 WB-032 鑱斿姩鍙栬垗寤鸿娓呴樆鏂悗鐨勫浐瀹氬叆鍙?E2E
-### 浠诲姟鍐呭
+- `WB-032` 的固定入口现在已经开始覆盖“未标记对象默认沿用最新版本”的真实浏览器链路，后续如果继续扩 latest-head 多目标依赖、未标记对象示例文案或默认回退语义，可以直接沿这条 E2E 主线补充。
+- 这次没有修改冲突处理运行时语义，主要是把页面级已经存在的未标记默认回退预检与保存结果提升到了 Playwright 固定入口里，降低后续只靠局部测试兜底的风险。
 
-- 缁х画娌?`WB-032` 鎵╁浐瀹氶獙璇佸叆鍙ｏ紝杩欐涓嶅啀鍙湅鈥滃凡鏍囪鍙栬垗鐩存帴搴旂敤鈥濓紝鑰屾槸琛ヤ笂涓€鏉℃洿璐磋繎鐪熷疄浜哄伐鍚堝苟杈呭姪鐨勬祻瑙堝櫒涓昏矾寰勩€?- 鏈疆鐩爣鏄妸鈥滄湰鍦拌崏绋挎仮澶?-> `dangling_edge` 闃绘柇 -> 涓€閿簲鐢ㄨ仈鍔ㄥ彇鑸嶅缓璁?-> 搴旂敤宸叉爣璁板彇鑸?-> 鍐嶆淇濆瓨鈥濇帴杩?`verify:graph-conflicts`锛岄伩鍏嶈仈鍔ㄥ缓璁繖鏉′富绾垮彧鍋滅暀鍦ㄩ〉闈㈢骇鍥炲綊閲屻€?### 瀹為檯鍙樻洿
+## 2026-07-09 14:07:00 +08:00 | v1.1.0-alpha.155 | 扩充 WB-032 联动取舍建议清阻断后的固定入口 E2E
+### 任务内容
 
-- 鏇存柊 `e2e/v1-graph-workspace.spec.ts`锛屾柊澧?Playwright 鐢ㄤ緥瑕嗙洊鍚屽浘璋卞悓鐗堟湰鑽夌鎭㈠鍚庣殑鍐茬獊淇濆瓨璺緞锛氬厛鏁呮剰瑙﹀彂 `graph_version_conflict`锛屽啀瀵?`Local edge` 鏂藉姞瀵硅薄绾у彇鑸嶏紝鍒╃敤鑱斿姩寤鸿涓€閿ˉ榻愪緷璧栧彇鑸嶏紝鏈€鍚庡簲鐢ㄥ悎骞惰崏绋垮苟鍐嶆淇濆瓨銆?- 杩欐潯鏂?E2E 浼氭崟鑾风浜屾 `batch-save` 璇锋眰锛屾柇瑷€鎻愪氦鐨勬槸 rebased `document.version = 5`锛屽苟涓旀渶缁堟彁浜ょ粨鏋滅鍚堣仈鍔ㄥ缓璁殑鐪熷疄鍚堝悓锛氫繚鐣欐湰鍦拌妭鐐?`Local concept`锛屽洖閫€鏈湴杩炵嚎 `Local edge`锛屽舰鎴?`2 鑺傜偣 / 0 杩炵嚎` 鐨勫悎骞惰崏绋裤€?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/GRAPH_CONFLICT_REGRESSION.md`锛屾妸杩欐潯鏂板鍥哄畾鍏ュ彛璺緞琛ュ洖 `WB-032` 鐨勬墽琛岃褰曞拰鍥捐氨鍐茬獊鍥炲綊鐭╅樀銆?### 楠岃瘉缁撴灉
+- 继续沿 `WB-032` 扩固定验证入口，这次不再只看“已标记取舍直接应用”，而是补上一条更贴近真实人工合并辅助的浏览器主路径。
+- 本轮目标是把“本地草稿恢复 -> `dangling_edge` 阻断 -> 一键应用联动取舍建议 -> 应用已标记取舍 -> 再次保存”接进 `verify:graph-conflicts`，避免联动建议这条主线只停留在页面级回归里。
+### 实际变更
 
-- RED锛歚npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can batch-apply linked conflict suggestions, clear blockers, and save the rebased draft"`
-- GREEN锛歚npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can batch-apply linked conflict suggestions, clear blockers, and save the rebased draft"`
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增 Playwright 用例覆盖同图谱同版本草稿恢复后的冲突保存路径：先故意触发 `graph_version_conflict`，再对 `Local edge` 施加对象级取舍，利用联动建议一键补齐依赖取舍，最后应用合并草稿并再次保存。
+- 这条新 E2E 会捕获第二次 `batch-save` 请求，断言提交的是 rebased `document.version = 5`，并且最终提交结果符合联动建议的真实合同：保留本地节点 `Local concept`，回退本地连线 `Local edge`，形成 `2 节点 / 0 连线` 的合并草稿。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，把这条新增固定入口路径补回 `WB-032` 的执行记录和图谱冲突回归矩阵。
+### 验证结果
+
+- RED：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can batch-apply linked conflict suggestions, clear blockers, and save the rebased draft"`
+- GREEN：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace can batch-apply linked conflict suggestions, clear blockers, and save the rebased draft"`
 - `npm run verify:graph-conflicts`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `WB-032` 鐨勫浐瀹氬叆鍙ｇ幇鍦ㄤ笉浠呰鐩栤€滃啿绐佸悗閲嶈浇鏈€鏂板浘璋扁€濆拰鈥滃啿绐佸悗鐩存帴搴旂敤宸叉爣璁板彇鑸嶅啀淇濆瓨鈥濓紝涔熷紑濮嬭鐩栤€滀緷璧栭樆鏂?-> 鑱斿姩寤鸿 -> 鍚堝苟淇濆瓨鈥濈殑鐪熷疄娴忚鍣ㄩ摼璺紝鍚庣画缁х画鎵╁鐩爣渚濊禆鎴栨湭鏍囪榛樿鍥為€€鏃讹紝鏈変簡鏇磋创杩戠湡瀹炰汉宸ュ悎骞剁殑 E2E 鍩哄骇銆?- 杩欐娌℃湁淇敼鍐茬獊澶勭悊杩愯鏃惰涔夛紝涓昏鏄妸椤甸潰绾у凡缁忓瓨鍦ㄧ殑鑱斿姩寤鸿娓呴樆鏂祦绋嬫彁鍗囧埌浜?Playwright 鍥哄畾鍏ュ彛閲岋紝闄嶄綆鍚庣画閲嶆瀯鏃跺彧闈犲眬閮ㄦ祴璇曞彂鐜板洖褰掔殑椋庨櫓銆?
-## 2026-07-09 13:58:00 +08:00 | v1.1.0-alpha.154 | 鎵╁厖 WB-032 瀵硅薄绾у彇鑸嶅簲鐢ㄥ悗鐨勫浐瀹氬叆鍙?E2E
-### 浠诲姟鍐呭
+- `WB-032` 的固定入口现在不仅覆盖“冲突后重载最新图谱”和“冲突后直接应用已标记取舍再保存”，也开始覆盖“依赖阻断 -> 联动建议 -> 合并保存”的真实浏览器链路，后续继续扩多目标依赖或未标记默认回退时，有了更贴近真实人工合并的 E2E 基座。
+- 这次没有修改冲突处理运行时语义，主要是把页面级已经存在的联动建议清阻断流程提升到了 Playwright 固定入口里，降低后续重构时只靠局部测试发现回归的风险。
 
-- 缁х画娌?`WB-032` 鎺ㄨ繘鍐茬獊澶勭悊鍥哄畾楠岃瘉鍏ュ彛锛屼絾杩欐涓嶅啀鍙鐩栤€滃啿绐佸悗閲嶈浇鏈€鏂板浘璋扁€濓紝鑰屾槸琛ヤ笂涓€鏉℃洿璐磋繎瀵硅薄绾у啿绐佷富绾跨殑鐪熷疄娴忚鍣ㄨ矾寰勩€?- 鏈疆鐩爣鏄妸鈥滄爣璁板璞＄骇鍙栬垗 -> 搴旂敤宸叉爣璁板彇鑸嶅埌褰撳墠鑽夌 -> 浠?rebased document 鍐嶆淇濆瓨鈥濇帴杩?`verify:graph-conflicts`锛岄伩鍏嶈繖鏉″叧閿摼璺彧鍦ㄩ〉闈㈢骇娴嬭瘯閲屽瓨鍦ㄣ€佸浐瀹氬叆鍙ｈ繕鐪嬩笉鍒般€?### 瀹為檯鍙樻洿
+## 2026-07-09 13:58:00 +08:00 | v1.1.0-alpha.154 | 扩充 WB-032 对象级取舍应用后的固定入口 E2E
+### 任务内容
 
-- 鏇存柊 `e2e/v1-graph-workspace.spec.ts`锛屾柊澧?Playwright 鐢ㄤ緥瑕嗙洊鐪熷疄 `graph_version_conflict` 鍚庣殑瀵硅薄绾у彇鑸嶅簲鐢ㄨ矾寰勶細鍏堜繚鐣欐湰鍦版柊澧炶妭鐐癸紝鍐嶅簲鐢ㄥ凡鏍囪鍙栬垗鐢熸垚鍚堝苟鑽夌锛屾渶鍚庡啀娆＄偣鍑讳繚瀛樸€?- 杩欐潯鏂?E2E 涓嶅彧鐪嬮〉闈㈡彁绀猴紝杩樹細鎹曡幏绗簩娆?`batch-save` 璇锋眰锛屾柇瑷€鎻愪氦鐨勬槸 rebased `document.version = 5`锛屽苟涓旇姹備綋閲屽甫鏈変繚鐣欎笅鏉ョ殑鏈湴鑺傜偣鏍囬 `鏂版蹇礰銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/GRAPH_CONFLICT_REGRESSION.md`锛屾妸杩欐潯鏂板鍥哄畾鍏ュ彛璺緞琛ュ洖 `WB-032` 鐨勬墽琛岃褰曞拰鍥捐氨鍐茬獊鍥炲綊鐭╅樀銆?### 楠岃瘉缁撴灉
+- 继续沿 `WB-032` 推进冲突处理固定验证入口，但这次不再只覆盖“冲突后重载最新图谱”，而是补上一条更贴近对象级冲突主线的真实浏览器路径。
+- 本轮目标是把“标记对象级取舍 -> 应用已标记取舍到当前草稿 -> 以 rebased document 再次保存”接进 `verify:graph-conflicts`，避免这条关键链路只在页面级测试里存在、固定入口还看不到。
+### 实际变更
 
-- RED锛歚npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace applies marked conflict resolutions onto the latest head and saves the rebased draft"`
-- GREEN锛歚npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace applies marked conflict resolutions onto the latest head and saves the rebased draft"`
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增 Playwright 用例覆盖真实 `graph_version_conflict` 后的对象级取舍应用路径：先保留本地新增节点，再应用已标记取舍生成合并草稿，最后再次点击保存。
+- 这条新 E2E 不只看页面提示，还会捕获第二次 `batch-save` 请求，断言提交的是 rebased `document.version = 5`，并且请求体里带有保留下来的本地节点标题 `新概念`。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，把这条新增固定入口路径补回 `WB-032` 的执行记录和图谱冲突回归矩阵。
+### 验证结果
+
+- RED：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace applies marked conflict resolutions onto the latest head and saves the rebased draft"`
+- GREEN：`npm run build:user; npm run build:admin; npx playwright test e2e/v1-graph-workspace.spec.ts -g "graph workspace applies marked conflict resolutions onto the latest head and saves the rebased draft"`
 - `npm run verify:graph-conflicts`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `WB-032` 鐨勫浐瀹氬叆鍙ｇ幇鍦ㄤ笉鍐嶅彧楠岃瘉鈥滃啿绐佸悗鏀惧純骞堕噸杞解€濓紝涔熷紑濮嬭鐩栤€滃啿绐佸悗淇濈暀閮ㄥ垎鏈湴淇敼骞剁户缁繚瀛樷€濈殑涓昏矾寰勶紝鍚庣画琛ユ洿澶氬璞¤仈鍔ㄤ笌鏈爣璁伴粯璁ゅ洖閫€鍦烘櫙鏃讹紝鍙互鐩存帴娌胯繖鏉?E2E 涓荤嚎鎵╁睍銆?- 杩欐娌℃湁鏀瑰彉鍐茬獊澶勭悊杩愯鏃惰涔夛紝涓昏鏄妸椤甸潰绾у凡缁忓瓨鍦ㄧ殑瀵硅薄绾у彇鑸嶄繚瀛橀摼璺彁鍗囧埌浜?Playwright 鍥哄畾鍏ュ彛閲岋紝闄嶄綆鍚庣画閲嶆瀯鏃跺彧闈犲眬閮ㄦ祴璇曞厹搴曠殑椋庨櫓銆?
-## 2026-07-09 13:46:00 +08:00 | v1.1.0-alpha.153 | 鏀跺彛 WB-032 鍥捐氨鍐茬獊閲嶈浇纭鐨?E2E 鍚堝悓
-### 浠诲姟鍐呭
+- `WB-032` 的固定入口现在不再只验证“冲突后放弃并重载”，也开始覆盖“冲突后保留部分本地修改并继续保存”的主路径，后续补更多对象联动与未标记默认回退场景时，可以直接沿这条 E2E 主线扩展。
+- 这次没有改变冲突处理运行时语义，主要是把页面级已经存在的对象级取舍保存链路提升到了 Playwright 固定入口里，降低后续重构时只靠局部测试兜底的风险。
 
-- 缁х画娌?`WB-032` 鏀跺彛鍥捐氨鍐茬獊涓荤嚎锛屼絾杩欐涓嶆墿瀹炵幇杈圭晫锛屽彧淇浐瀹氶獙璇佸叆鍙ｉ噷宸茬粡钀藉悗鐨勬祴璇曞悎鍚屻€?- 鏈疆鐩爣鏄 `verify:graph-conflicts` 涓殑 Playwright 鍥炲綊涓庡綋鍓嶅叡浜?`ConfirmDialog` 琛屼负閲嶆柊瀵归綈锛岄伩鍏嶁€滃疄鐜板凡鍒囧埌浜屾纭锛孍2E 浠嶆寜鏃х殑鐩存帴閲嶈浇璺緞鏂█鈥濇寔缁樆濉炲伐浣滃寘楠屾敹銆?### 瀹為檯鍙樻洿
+## 2026-07-09 13:46:00 +08:00 | v1.1.0-alpha.153 | 收口 WB-032 图谱冲突重载确认的 E2E 合同
+### 任务内容
 
-- 鏇存柊 `e2e/v1-graph-workspace.spec.ts`锛屽湪涓ゆ潯鐪熷疄 `graph_version_conflict` 璺緞閲岃ˉ榻愬叡浜‘璁ゅ脊绐椾氦浜掞細鐐瑰嚮 `鏀惧純鏈湴骞堕噸杞芥渶鏂板浘璋盽 鍚庯紝鍏堟柇瑷€鍑虹幇 `纭閲嶈浇鏈€鏂板浘璋盽锛屽啀鐐瑰嚮 `纭閲嶈浇` 杩涘叆鎴愬姛閲嶈浇娴佺▼銆?- 鍚屼竴浠?E2E 鐜板湪鍚屾椂閿佸畾甯歌瑙嗗彛涓庣獎灞忚鍙ｇ殑鍐茬獊閲嶈浇璺緞锛岀‘淇濃€滃啿绐佽緟鍔╁崱鐗囧彲瑙佷笖鍏变韩纭寮圭獥鍙揪鈥濅笉浼氬彧鍦ㄦ闈㈠搴︿笅鎴愮珛銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md` 涓?`PROJECT_LOG.md`锛屾妸杩欐鍥哄畾鍏ュ彛鍚堝悓瀵归綈鍜岄獙璇佺粨鏋滆ˉ鍥?`WB-032` 鐨勬墽琛岃褰曘€?### 楠岃瘉缁撴灉
+- 继续沿 `WB-032` 收口图谱冲突主线，但这次不扩实现边界，只修固定验证入口里已经落后的测试合同。
+- 本轮目标是让 `verify:graph-conflicts` 中的 Playwright 回归与当前共享 `ConfirmDialog` 行为重新对齐，避免“实现已切到二次确认，E2E 仍按旧的直接重载路径断言”持续阻塞工作包验收。
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，在两条真实 `graph_version_conflict` 路径里补齐共享确认弹窗交互：点击 `放弃本地并重载最新图谱` 后，先断言出现 `确认重载最新图谱`，再点击 `确认重载` 进入成功重载流程。
+- 同一份 E2E 现在同时锁定常规视口与窄屏视口的冲突重载路径，确保“冲突辅助卡片可见且共享确认弹窗可达”不会只在桌面宽度下成立。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `PROJECT_LOG.md`，把这次固定入口合同对齐和验证结果补回 `WB-032` 的执行记录。
+### 验证结果
 
 - `npm run test:graph:conflicts:e2e`
 - `npm run verify:graph-conflicts`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `WB-032` 鐨勫浐瀹氬叆鍙ｇ幇鍦ㄩ噸鏂板洖鍒板叏缁匡紝鍚庣画鍙互缁х画鎶婄簿鍔涙斁鍦ㄥ璞＄骇鍐茬獊鍙栬垗鍜屾洿瀹屾暣鐨勪汉宸ュ悎骞惰緟鍔╋紝鑰屼笉鏄弽澶嶅崱鍦ㄨ繃鏈熺殑 E2E 鍚堝悓涓娿€?- 杩欐鍙榻愭祴璇曚笌鐜版湁瀹炵幇锛屾病鏈夋敼鍙樺浘璋卞啿绐佸鐞嗙殑杩愯鏃惰涔夛紱濡傛灉鍚庣画缁х画婕旇繘閲嶈浇纭鏂囨鎴栦氦浜掞紝璁板緱鍚屾鏇存柊 `e2e/v1-graph-workspace.spec.ts`锛岄伩鍏嶅啀娆″嚭鐜扳€滈〉闈㈡祴璇曞凡璺熶笂銆佸浐瀹氬叆鍙?E2E 杩樺仠鐣欏湪鏃у悎鍚屸€濈殑鍒嗗弶銆?
-## 2026-07-09 13:04:11 +08:00 | v1.1.0-alpha.152 | 鏀跺彛 API-011 / ADM-011 鐨?403 user_disabled 鍓嶇浼氳瘽鑱斿姩
-### 浠诲姟鍐呭
+- `WB-032` 的固定入口现在重新回到全绿，后续可以继续把精力放在对象级冲突取舍和更完整的人工合并辅助，而不是反复卡在过期的 E2E 合同上。
+- 这次只对齐测试与现有实现，没有改变图谱冲突处理的运行时语义；如果后续继续演进重载确认文案或交互，记得同步更新 `e2e/v1-graph-workspace.spec.ts`，避免再次出现“页面测试已跟上、固定入口 E2E 还停留在旧合同”的分叉。
 
-- 鍦?`ADM-011` 宸茶ˉ榻愨€滅鐢ㄥ嵆鎾ら攢 refresh + 璇锋眰鏃舵寜鐪熷疄鐢ㄦ埛鐘舵€佹嫤鎴€濈殑鍚庣杈圭晫鍩虹涓婏紝缁х画鏀舵帀鍓嶇鏈€鍚庝竴娈典綋楠岀己鍙ｏ紝涓嶈杩愯涓殑琚鐢ㄨ处鍙峰彧鏀跺埌瑁?`403` 鑰屼繚鐣欐棫 session銆?- 鏈疆鐩爣涓嶆槸缁х画鎵╁悗鍙版不鐞嗛潰锛岃€屾槸娌?`API-011 / ADM-011` 鍋氫竴涓皬鑰屽畬鏁寸殑鑱斿姩鍒囩墖锛氬叡浜?API client 璇嗗埆 `403 user_disabled`銆佸墠鍚庡彴缁熶竴娓?session銆佺櫥褰曢〉鏄剧ず鏄庣‘鐨勭鐢ㄦ彁绀猴紝骞剁敤璺ㄧ娴嬭瘯閿佷綇琛屼负銆?### 瀹為檯鍙樻洿
+## 2026-07-09 13:04:11 +08:00 | v1.1.0-alpha.152 | 收口 API-011 / ADM-011 的 403 user_disabled 前端会话联动
+### 任务内容
 
-- 鏇存柊 `packages/api-client/src/index.ts` 涓?`packages/api-client/src/index.test.ts`锛屾妸鍏变韩 `SessionInvalidationState` 鎵╁埌 `refresh_failed | session_rejected`锛屽苟璁?`createSessionRequest(...)` 鍦ㄨ姹傞樁娈电洿鎺ユ敹鍒?`403 user_disabled` 鏃朵笉瑙﹀彂 refresh锛岃€屾槸绔嬪嵆娓?session銆佽褰曠粨鏋勫寲澶辨晥鍘熷洜銆?- 鏇存柊 `frontend-user/src/api/sessionRefresh.test.ts`銆乣frontend-user/src/pages/AuthPages.tsx` 涓?`frontend-user/src/pages/AuthPages.test.tsx`锛岄攣瀹氱敤鎴风鍙椾繚鎶よ姹傚湪 `user_disabled` 鏃剁洿鎺ュ洖鍒扮櫥褰曢〉锛屽苟鏄剧ず鈥滃綋鍓嶈处鍙峰凡琚鐢紝璇疯仈绯荤鐞嗗憳鍚庨噸鏂扮櫥褰曘€傗€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue` 涓?`frontend-admin/src/views/AdminWorkspaceView.test.ts`锛岃鍚庡彴鑷妇鎴栧悗缁彈淇濇姢璇锋眰鍦?`user_disabled` 鏃跺悓鏍风珛鍗虫竻绌哄悗鍙?session銆佸洖閫€鐧诲綍椤碉紝骞舵樉绀衡€滃綋鍓嶈处鍙峰凡琚鐢紝璇疯仈绯诲叾浠栫鐞嗗憳鍚庨噸鏂扮櫥褰曘€傗€?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `API-011 / ADM-011` 浠庘€滃墠绔繕娌℃帴 403 user_disabled鈥濇帹杩涘埌鈥滆法绔細璇濊仈鍔ㄥ凡鏀跺彛鈥濈殑褰撳墠浜嬪疄銆?### 楠岃瘉缁撴灉
+- 在 `ADM-011` 已补齐“禁用即撤销 refresh + 请求时按真实用户状态拦截”的后端边界基础上，继续收掉前端最后一段体验缺口，不让运行中的被禁用账号只收到裸 `403` 而保留旧 session。
+- 本轮目标不是继续扩后台治理面，而是沿 `API-011 / ADM-011` 做一个小而完整的联动切片：共享 API client 识别 `403 user_disabled`、前后台统一清 session、登录页显示明确的禁用提示，并用跨端测试锁住行为。
+### 实际变更
 
-- RED锛歚npx vitest run packages/api-client/src/index.test.ts`
-- RED锛歚npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
-- RED锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚npx vitest run packages/api-client/src/index.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- 更新 `packages/api-client/src/index.ts` 与 `packages/api-client/src/index.test.ts`，把共享 `SessionInvalidationState` 扩到 `refresh_failed | session_rejected`，并让 `createSessionRequest(...)` 在请求阶段直接收到 `403 user_disabled` 时不触发 refresh，而是立即清 session、记录结构化失效原因。
+- 更新 `frontend-user/src/api/sessionRefresh.test.ts`、`frontend-user/src/pages/AuthPages.tsx` 与 `frontend-user/src/pages/AuthPages.test.tsx`，锁定用户端受保护请求在 `user_disabled` 时直接回到登录页，并显示“当前账号已被禁用，请联系管理员后重新登录。”
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，让后台自举或后续受保护请求在 `user_disabled` 时同样立即清空后台 session、回退登录页，并显示“当前账号已被禁用，请联系其他管理员后重新登录。”
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `API-011 / ADM-011` 从“前端还没接 403 user_disabled”推进到“跨端会话联动已收口”的当前事实。
+### 验证结果
+
+- RED：`npx vitest run packages/api-client/src/index.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npx vitest run packages/api-client/src/index.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-user run typecheck`
 - `npm --workspace frontend-admin run typecheck`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `API-011` 鐜板湪涓嶅啀鍙鐞?refresh 澶辫触鏃剁殑琚姩鐧诲嚭锛涜姹傞樁娈电洿鎺ユ敹鍒?`403 user_disabled` 涔熶細璧扮粺涓€鐨勬竻 session 鍜岀鐢ㄦ彁绀鸿涔夛紝鍚庣画鏂板彈淇濇姢璇锋眰杈圭晫涓嶉渶瑕佸啀鍚勮嚜琛ヤ竴濂楀眬閮ㄥ鐞嗐€?- 褰撳墠鍏变韩浼氳瘽灞備粛鏈繘鍏?HttpOnly Refresh Token 杩佺Щ璇存槑銆佹洿澶氬悗鍙版ā鍧?API client 鎷嗗垎涓庢洿缁嗙矑搴︾殑澶辨晥鍒嗙被锛涘悗缁洿閫傚悎缁х画娌?`API-011 / ADM-010 / ADM-011` 鏀跺彛锛岃€屼笉鏄洖鍒伴〉闈㈤噷鏁ｈ惤鏂扮殑浼氳瘽 helper銆?
-## 2026-07-09 12:05:00 +08:00 | v1.1.0-alpha.149 | 鎺ㄨ繘 ADM-011 AI 浠诲姟娌荤悊鍔ㄤ綔璧锋
-### 浠诲姟鍐呭
+- `API-011` 现在不再只处理 refresh 失败时的被动登出；请求阶段直接收到 `403 user_disabled` 也会走统一的清 session 和禁用提示语义，后续新受保护请求边界不需要再各自补一套局部处理。
+- 当前共享会话层仍未进入 HttpOnly Refresh Token 迁移说明、更多后台模块 API client 拆分与更细粒度的失效分类；后续更适合继续沿 `API-011 / ADM-010 / ADM-011` 收口，而不是回到页面里散落新的会话 helper。
 
-- 缁х画娌?`ADM-011` 鍋氣€滃厛鎶婂悗鍙版不鐞嗕富璺緞琛ラ綈鈥濈殑灏忔鎺ㄨ繘锛岃繖涓€杞粠璧勬枡娌荤悊缁х画鎵╁埌 AI 浠诲姟娌荤悊锛屼笉鍥炲ご娣辨寲宸叉湁涓炬姤/璧勬枡瀛愬煙銆?- 鏈疆鐩爣鏄妸 AI 浠诲姟鍒楄〃浠庡彧璇绘帹杩涘埌鏈€灏忓彲鎵ц娌荤悊锛氬け璐ヤ换鍔″彲閲嶈瘯锛屽緟澶勭悊浠诲姟鍙彇娑堬紝骞朵繚鐣欏悗鍙板彲杩芥函瀹¤璁板綍銆?
-### 瀹為檯鍙樻洿
+## 2026-07-09 12:05:00 +08:00 | v1.1.0-alpha.149 | 推进 ADM-011 AI 任务治理动作起步
+### 任务内容
 
-- 鏂板 `backend/internal/modules/admin/service/ai_task_actions_test.go`锛屽厛鐢?RED 閿佸畾涓変釜缂哄彛锛歚HandleAITask(...)` 灏氫笉瀛樺湪銆丄I 浠诲姟杩樻病鏈?`retry / cancel` 鐘舵€佸姩浣溿€佸悗鍙颁篃杩樹笉浼氫负杩欎簺鍔ㄤ綔鍐欏叆瀹¤鏃ュ織銆?- 鏇存柊 `backend/internal/modules/admin/service/service.go`銆乣handler/handler.go` 涓?`router/router.go`锛岃ˉ榻?`HandleAITask(...)`銆乣/api/v1/admin/ai/tasks/:id/retry` 涓?`/api/v1/admin/ai/tasks/:id/cancel`锛涘綋鍓嶅師鍨嬭涔夋槸 `failed -> pending`銆乣pending -> cancelled`锛屽苟鍦ㄥ悓涓€浜嬪姟鍐呭啓鍏?`admin.handle.ai_task` 瀹¤浜嬩欢銆?- 鏇存柊 `backend/internal/modules/admin/dto/governance.go`锛屼负鍚庡彴 AI 浠诲姟娌荤悊鍒楄〃琛ュ洖 `errorMessage` 涓?`updatedAt` 瀛楁锛岃澶辫触鍘熷洜鍜屾渶杩戞洿鏂版椂闂磋兘鐩存帴鏄剧ず鍦ㄦ不鐞嗚鍥鹃噷銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue` 涓?`frontend-admin/src/views/modules/AdminGovernanceModule.vue`锛岃 AI 妯″潡鍦ㄥけ璐ヤ换鍔′笂鏄剧ず鈥滈噸璇曚换鍔♀€濓紝鍦ㄥ緟澶勭悊浠诲姟涓婃樉绀衡€滃彇娑堜换鍔♀€濓紝骞堕€氳繃纭灞傛彁浜ょ湡瀹炲悗鍙板姩浣溿€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.test.ts`锛岄攣瀹?AI 浠诲姟娌荤悊椤典細鏄剧ず鍔ㄤ綔鎸夐挳銆佸厛寮圭‘璁ゅ眰锛屽啀鎻愪氦 `/api/v1/admin/ai/tasks/:id/retry`锛涘悓鏃朵繚鐣欑幇鏈夌鐞嗙浼氳瘽澶翠笌妯″潡鍔犺浇璺緞涓嶅洖閫€銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `ADM-011` 做“先把后台治理主路径补齐”的小步推进，这一轮从资料治理继续扩到 AI 任务治理，不回头深挖已有举报/资料子域。
+- 本轮目标是把 AI 任务列表从只读推进到最小可执行治理：失败任务可重试，待处理任务可取消，并保留后台可追溯审计记录。
 
-- RED锛歚go test ./internal/modules/admin/service`
-- RED锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚go test ./internal/modules/admin/service`
+### 实际变更
+
+- 新增 `backend/internal/modules/admin/service/ai_task_actions_test.go`，先用 RED 锁定三个缺口：`HandleAITask(...)` 尚不存在、AI 任务还没有 `retry / cancel` 状态动作、后台也还不会为这些动作写入审计日志。
+- 更新 `backend/internal/modules/admin/service/service.go`、`handler/handler.go` 与 `router/router.go`，补齐 `HandleAITask(...)`、`/api/v1/admin/ai/tasks/:id/retry` 与 `/api/v1/admin/ai/tasks/:id/cancel`；当前原型语义是 `failed -> pending`、`pending -> cancelled`，并在同一事务内写入 `admin.handle.ai_task` 审计事件。
+- 更新 `backend/internal/modules/admin/dto/governance.go`，为后台 AI 任务治理列表补回 `errorMessage` 与 `updatedAt` 字段，让失败原因和最近更新时间能直接显示在治理视图里。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue` 与 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`，让 AI 模块在失败任务上显示“重试任务”，在待处理任务上显示“取消任务”，并通过确认层提交真实后台动作。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，锁定 AI 任务治理页会显示动作按钮、先弹确认层，再提交 `/api/v1/admin/ai/tasks/:id/retry`；同时保留现有管理端会话头与模块加载路径不回退。
+
+### 验证结果
+
+- RED：`go test ./internal/modules/admin/service`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`go test ./internal/modules/admin/service`
 - `go test ./internal/modules/admin/...`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍚庡彴 AI 妯″潡鐜板湪宸茬粡浠庡彧璇诲垪琛ㄦ帹杩涘埌鏈€灏忓彲鎿嶄綔娌荤悊锛屽悗缁户缁ˉ鈥滅湡姝ｉ噸鎺掓墽琛?/ 鐪熷彇娑堟墽琛屽櫒 / 鏇寸粏浠诲姟澶辫触鍘熷洜涓庡璁¤鍥锯€濇椂锛屼細姣旂幇鍦ㄩ『寰堝銆?- 褰撳墠 AI 浠诲姟娌荤悊浠嶆槸鈥滅姸鎬佽縼绉荤骇鈥濆師鍨嬶紝`retry` 鍏堝洖鍒?`pending`锛宍cancel` 鍏堝啓鎴?`cancelled`锛岃繕娌℃湁瀵规帴鐪熸鐨勫紓姝ユ墽琛屽櫒閲嶆帓鎴栦腑鏂満鍒讹紱鍚庣画鑻ョ户缁帹杩?`ADM-010 / ADM-011`锛屾洿閫傚悎鎶?AI銆佽祫鏂欍€佺敤鎴蜂笌瀹¤鍔ㄤ綔缁х画寰€ page / feature 灞備笅娌夈€?
-## 2026-07-09 11:50:00 +08:00 | v1.1.0-alpha.148 | 鎺ㄨ繘 ADM-011 璧勬枡娌荤悊鍒囧埌鐪熷疄鏉愭枡鍒楄〃
-### 浠诲姟鍐呭
+- 后台 AI 模块现在已经从只读列表推进到最小可操作治理，后续继续补“真正重排执行 / 真取消执行器 / 更细任务失败原因与审计视图”时，会比现在顺很多。
+- 当前 AI 任务治理仍是“状态迁移级”原型，`retry` 先回到 `pending`，`cancel` 先写成 `cancelled`，还没有对接真正的异步执行器重排或中断机制；后续若继续推进 `ADM-010 / ADM-011`，更适合把 AI、资料、用户与审计动作继续往 page / feature 层下沉。
 
-- 缁х画娌?`ADM-011` 鍋氣€滃厛鎶婂悗鍙版不鐞嗕富璺緞琛ラ綈鈥濈殑灏忔鎺ㄨ繘锛屼笉鍦ㄤ妇鎶ュ姩浣滀笂缁х画鍗曠偣娣辨寲銆?- 鏈疆鐩爣鏄妸 `materials` 妯″潡浠?`/api/v1/admin/files` 鐨勫崰浣嶅垪琛ㄦ帹杩涘埌鐪熷疄鏉愭枡娌荤悊锛氳鍙栧疄闄呰祫鏂欒褰曪紝骞跺湪娌荤悊瑙嗗浘閲岀洿鎺ユ墽琛岃祫鏂欏鏍?涓嬫灦鍔ㄤ綔銆?
-### 瀹為檯鍙樻洿
+## 2026-07-09 11:50:00 +08:00 | v1.1.0-alpha.148 | 推进 ADM-011 资料治理切到真实材料列表
+### 任务内容
 
-- 鏂板 `backend/internal/modules/admin/service/materials_list_test.go`锛屽厛鐢?RED 閿佸畾鍚庡彴缂哄皯 `ListMaterials(...)`銆佽祫鏂欐不鐞嗛〉浠嶅湪璧版枃浠跺垪琛ㄥ崰浣嶈繖涓や釜缂哄彛銆?- 鏇存柊 `backend/internal/modules/admin/dto/governance.go`銆乣service/service.go`銆乣handler/handler.go` 涓?`router/router.go`锛岃ˉ榻?`AdminMaterialPayload`銆乣ListMaterials(...)` 浠ュ強 `/api/v1/admin/materials`锛涘悗鍙扮幇鍦ㄤ細杩斿洖璧勬枡鏍囬銆佷綔鑰呫€佸垎绫汇€侀檮浠跺悕銆佺姸鎬佸拰鏃堕棿瀛楁銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛屾妸 `materials` 妯″潡鍒囧埌鐪熷疄 `/api/v1/admin/materials`锛屽苟鎸夎祫鏂欑姸鎬佹毚闇?`approve / reject / hide` 鍔ㄤ綔锛涜嫢璧勬枡褰撳墠涓?`hidden`锛屾不鐞嗚鍥鹃噷鍙洿鎺ユ墽琛屾仮澶嶃€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.test.ts`锛岄攣瀹氳祫鏂欐不鐞嗕細鍔犺浇鐪熷疄鏉愭枡璁板綍銆佹樉绀哄姩浣滄寜閽紝骞跺湪纭鍚庢彁浜?`/api/v1/admin/moderation/materials/:id/:action`锛屼笉鍐嶅洖閫€鍒?`/api/v1/admin/files`銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ADM-011` 浠庘€滃彧鏈変妇鎶ュ姩浣滆捣姝モ€濇帹杩涘埌鈥滀妇鎶?+ 璧勬枡娌荤悊鈥濅袱娈电湡瀹炲垏鐗囥€?
-### 楠岃瘉缁撴灉
+- 继续沿 `ADM-011` 做“先把后台治理主路径补齐”的小步推进，不在举报动作上继续单点深挖。
+- 本轮目标是把 `materials` 模块从 `/api/v1/admin/files` 的占位列表推进到真实材料治理：读取实际资料记录，并在治理视图里直接执行资料审核/下架动作。
 
-- RED锛歚go test ./internal/modules/admin/service`
-- RED锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚go test ./internal/modules/admin/service`
+### 实际变更
+
+- 新增 `backend/internal/modules/admin/service/materials_list_test.go`，先用 RED 锁定后台缺少 `ListMaterials(...)`、资料治理页仍在走文件列表占位这两个缺口。
+- 更新 `backend/internal/modules/admin/dto/governance.go`、`service/service.go`、`handler/handler.go` 与 `router/router.go`，补齐 `AdminMaterialPayload`、`ListMaterials(...)` 以及 `/api/v1/admin/materials`；后台现在会返回资料标题、作者、分类、附件名、状态和时间字段。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，把 `materials` 模块切到真实 `/api/v1/admin/materials`，并按资料状态暴露 `approve / reject / hide` 动作；若资料当前为 `hidden`，治理视图里可直接执行恢复。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，锁定资料治理会加载真实材料记录、显示动作按钮，并在确认后提交 `/api/v1/admin/moderation/materials/:id/:action`，不再回退到 `/api/v1/admin/files`。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-011` 从“只有举报动作起步”推进到“举报 + 资料治理”两段真实切片。
+
+### 验证结果
+
+- RED：`go test ./internal/modules/admin/service`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`go test ./internal/modules/admin/service`
 - `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍚庡彴鈥滆祫鏂欐不鐞嗏€濈幇鍦ㄥ凡缁忚劚绂绘枃浠跺崰浣嶉〉锛屽紑濮嬪叿澶囩湡瀹炴潗鏂欒褰曞拰鍙墽琛屽姩浣滐紱鍚庣画缁х画琛モ€滀笅鏋?/ 鎭㈠鈥濈殑鏇存竻鏅拌繍钀ヨ涔夈€佺嫭绔嬪璁′簨浠跺拰澶辫触鍥炴粴鏃讹紝浼氭瘮鐜板湪鏇撮『銆?- 褰撳墠璧勬枡娌荤悊鍔ㄤ綔浠嶅鐢ㄥ鏍告祦鐨?`approve / reject / hide` 璇箟锛屼笖鍔ㄤ綔鐘舵€佽繕闆嗕腑鍦?`AdminWorkspaceView.vue`锛涘悗缁嫢缁х画鎺ㄨ繘 `ADM-010 / ADM-011`锛屾洿閫傚悎鎶婅祫鏂欍€佺敤鎴枫€丄I銆佸璁＄瓑妯″潡鍔ㄤ綔缁х画寰€ page / feature 灞備笅娌夈€?
-## 2026-07-09 11:36:00 +08:00 | v1.1.0-alpha.147 | 鎺ㄨ繘 ADM-011 涓炬姤娌荤悊鍔ㄤ綔涓庡璁￠摼璺捣姝?### 浠诲姟鍐呭
+- 后台“资料治理”现在已经脱离文件占位页，开始具备真实材料记录和可执行动作；后续继续补“下架 / 恢复”的更清晰运营语义、独立审计事件和失败回滚时，会比现在更顺。
+- 当前资料治理动作仍复用审核流的 `approve / reject / hide` 语义，且动作状态还集中在 `AdminWorkspaceView.vue`；后续若继续推进 `ADM-010 / ADM-011`，更适合把资料、用户、AI、审计等模块动作继续往 page / feature 层下沉。
 
-- 鎸夊綋鍓嶁€滃厛琛ュ叏灞€涓昏矾寰勩€佸啀娣辨寲鍗曠偣鈥濈殑鑺傚锛屽惎鍔?`ADM-011` 鐨勬渶灏忛鍒囩墖锛屼笉涓€娆℃€ч摵寮€灏佺銆佷笅鏋躲€侀噸璇曠瓑鍏ㄩ儴鍚庡彴娌荤悊鍔ㄤ綔銆?- 鏈疆鐩爣鏄妸绠＄悊绔妇鎶ュ垪琛ㄤ粠鍙鎺ㄨ繘鍒扮湡瀹炲彲鎵ц浠诲姟锛氱鐞嗗憳鍙互鏄惧紡 `resolve / dismiss` 涓炬姤锛屽苟鎶婂鐞嗕汉銆佸鐞嗘椂闂村拰瀹¤浜嬩欢鍐欒繘鍚庣閾捐矾銆?
-### 瀹為檯鍙樻洿
+## 2026-07-09 11:36:00 +08:00 | v1.1.0-alpha.147 | 推进 ADM-011 举报治理动作与审计链路起步
+### 任务内容
 
-- 鏂板 `backend/internal/modules/admin/service/report_actions_test.go`锛屽厛鐢?RED 閿佸畾涓夌被缂哄彛锛歚HandleReport(...)` 灏氫笉瀛樺湪銆侀潪娉曠姸鎬佷笉浼氳鎷掔粷銆佷妇鎶ュ鐞嗚繕涓嶄細鍚屾鍐欏叆瀹¤鏃ュ織銆?- 鏇存柊 `backend/internal/modules/admin/service/service.go`锛屾柊澧炰簨鍔″寲鐨?`HandleReport(actorID, reportID, status)`锛涘彧鎺ュ彈 `resolved / dismissed`锛屼細鍐欏洖 `reports.status`銆乣handled_by`銆乣handled_at`锛屽苟杩藉姞 `admin.handle.report` 瀹¤浜嬩欢锛沗ListReports(...)` 涔熻ˉ鍥?`handledBy`銆乣handledAt` 瀛楁銆?- 鏇存柊 `backend/internal/modules/admin/handler/handler.go` 涓?`backend/internal/modules/admin/router/router.go`锛岃ˉ榻?`/api/v1/admin/reports/:id/resolve`銆乣/api/v1/admin/reports/:id/dismiss` 涓ゆ潯娌荤悊鍔ㄤ綔鍏ュ彛锛屾部鐢ㄧ幇鏈夌鐞嗗憳韬唤涓婁笅鏂囦笌缁熶竴鍝嶅簲 envelope銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`銆乣frontend-admin/src/views/AdminWorkspaceView.vue` 涓?`frontend-admin/src/components/admin/admin.css`锛岃涓炬姤璇︽儏鍖哄嚭鐜?`resolve / dismiss` 鍔ㄤ綔鎸夐挳锛屽苟閫氳繃纭灞傛彁浜ゅ悗鍙版不鐞嗗姩浣滐紝鍐嶅洖鍐欏垪琛ㄤ笌璇︽儏鐘舵€併€?- 鏇存柊 `frontend-admin/src/views/modules/AdminGovernanceModule.test.ts` 涓?`frontend-admin/src/views/AdminWorkspaceView.test.ts`锛岄攣瀹氭不鐞嗘ā鍧楃殑鍔ㄤ綔鎸夐挳灞曠ず銆佷簨浠跺彂灏勩€佺‘璁ゅ眰鍜屾彁浜ゅ悗鐨勭姸鎬佸洖鍐欎笉鍥為€€銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ADM-011` 浠庣函瑙勫垝鎺ㄨ繘鍒扳€滀妇鎶ユ不鐞嗗姩浣滈鍒囩墖宸茶捣姝モ€濄€?
-### 楠岃瘉缁撴灉
+- 按当前“先补全局主路径、再深挖单点”的节奏，启动 `ADM-011` 的最小首切片，不一次性铺开封禁、下架、重试等全部后台治理动作。
+- 本轮目标是把管理端举报列表从只读推进到真实可执行任务：管理员可以显式 `resolve / dismiss` 举报，并把处理人、处理时间和审计事件写进后端链路。
 
-- RED锛歚go test ./internal/modules/admin/service`
-- RED锛歚npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚go test ./internal/modules/admin/service`
+### 实际变更
+
+- 新增 `backend/internal/modules/admin/service/report_actions_test.go`，先用 RED 锁定三类缺口：`HandleReport(...)` 尚不存在、非法状态不会被拒绝、举报处理还不会同步写入审计日志。
+- 更新 `backend/internal/modules/admin/service/service.go`，新增事务化的 `HandleReport(actorID, reportID, status)`；只接受 `resolved / dismissed`，会写回 `reports.status`、`handled_by`、`handled_at`，并追加 `admin.handle.report` 审计事件；`ListReports(...)` 也补回 `handledBy`、`handledAt` 字段。
+- 更新 `backend/internal/modules/admin/handler/handler.go` 与 `backend/internal/modules/admin/router/router.go`，补齐 `/api/v1/admin/reports/:id/resolve`、`/api/v1/admin/reports/:id/dismiss` 两条治理动作入口，沿用现有管理员身份上下文与统一响应 envelope。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`、`frontend-admin/src/views/AdminWorkspaceView.vue` 与 `frontend-admin/src/components/admin/admin.css`，让举报详情区出现 `resolve / dismiss` 动作按钮，并通过确认层提交后台治理动作，再回写列表与详情状态。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，锁定治理模块的动作按钮展示、事件发射、确认层和提交后的状态回写不回退。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-011` 从纯规划推进到“举报治理动作首切片已起步”。
+
+### 验证结果
+
+- RED：`go test ./internal/modules/admin/service`
+- RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- GREEN：`go test ./internal/modules/admin/service`
 - `go test ./internal/modules/admin/...`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `ADM-011` 鐜板湪宸茬粡浠庘€滃悗鍙版不鐞嗗叏鏄彧璇诲垪琛ㄢ€濇帹杩涘埌鈥滀妇鎶ュ鐞嗗叿澶囩湡瀹炲姩浣滀笌瀹¤閾捐矾鈥濓紝鍚庣画缁х画琛ヨ祫鏂欎笅鏋?鎭㈠銆丄I 浠诲姟閲嶈瘯/鍙栨秷銆佹ā鏉垮鏍?鍙戝竷鏃讹紝鍙互娌垮悓涓€濂楃‘璁ゆ祦鍜屽璁¤涔夋墿灞曘€?- 褰撳墠鍚庡彴娌荤悊鍔ㄤ綔鐘舵€佷粛涓昏鐢?`AdminWorkspaceView.vue` 鍗忚皟锛涘悗缁嫢缁х画鎺ㄨ繘 `ADM-010 / ADM-011`锛屾洿閫傚悎鎶?users / materials / ai / audit 鐨勫姩浣滆竟鐣屻€佺‘璁ょ姸鎬佸拰澶辫触澶勭悊涓€璧蜂笅娌夊埌妯″潡椤垫垨 feature 灞傘€?
-## 2026-07-09 10:18:44 +08:00 | v1.1.0-alpha.142 | 鎺ㄨ繘 FE-041 鍏变韩 ConfirmDialog 鎵╁睍鍒板浘璋卞伐浣滃尯涓昏矾寰?### 浠诲姟鍐呭
+- `ADM-011` 现在已经从“后台治理全是只读列表”推进到“举报处理具备真实动作与审计链路”，后续继续补资料下架/恢复、AI 任务重试/取消、模板审核/发布时，可以沿同一套确认流和审计语义扩展。
+- 当前后台治理动作状态仍主要由 `AdminWorkspaceView.vue` 协调；后续若继续推进 `ADM-010 / ADM-011`，更适合把 users / materials / ai / audit 的动作边界、确认状态和失败处理一起下沉到模块页或 feature 层。
 
-- 缁х画娌?`FE-041` 鍋氫竴涓渶灏忋€佸彲娴嬭瘯鐨勫叡浜?primitive 鎵╁睍锛屼笉鍥炲埌鍥捐氨鎺у埗鍣ㄧ殑鏇存繁閲嶆瀯锛屼篃涓嶆柊寮€鍚庡彴娌荤悊鍒嗘敮銆?- 鏈疆鐩爣鏄妸鍥捐氨宸ヤ綔鍖洪噷浠呭墿鐨勪袱澶勯珮棰戝師鐢熺‘璁ゆ敹鍙ｅ埌鍏变韩 `ConfirmDialog`锛氫竴澶勬槸鍐茬獊澶勭悊涓殑鈥滄斁寮冩湰鍦板苟閲嶈浇鏈€鏂板浘璋扁€濓紝鍙︿竴澶勬槸姒傝闈㈡澘閲岀殑鈥滃垹闄ゅ綋鍓嶅浘璋扁€濄€?
-### 瀹為檯鍙樻洿
+## 2026-07-09 10:18:44 +08:00 | v1.1.0-alpha.142 | 推进 FE-041 共享 ConfirmDialog 扩展到图谱工作区主路径
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`锛屽厛鐢?RED 閿佸畾鍥捐氨宸ヤ綔鍖虹殑涓や釜鐩爣璺緞涓嶅啀鐩存帴渚濊禆鍘熺敓 `window.confirm(...)`锛岃€屾槸鍏堝嚭鐜板叡浜‘璁ゆ锛屽啀鐢辩敤鎴锋槑纭偣鍑荤‘璁ょ户缁墽琛岄噸杞芥垨鍒犻櫎銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧炲浘璋卞伐浣滃尯绾у埆鐨勫叡浜‘璁ゆ鐘舵€侊紝缁熶竴鎵挎帴 `reload-latest` 涓?`delete-graph` 涓ょ被 destructive action锛屽苟淇濈暀 `danger` 鍔ㄤ綔銆佺‘璁や腑绂佺敤鍜屽け璐ユ彁绀恒€?- `GraphConflictAssistCard` 鐨勨€滄斁寮冩湰鍦板苟閲嶈浇鏈€鏂板浘璋扁€濅互鍙?`GraphWorkspaceOverviewPanel` 鐨勨€滃垹闄ゅ綋鍓嶅浘璋扁€濈幇鍦ㄩ兘浼氬厛寮瑰嚭鍏变韩 `ConfirmDialog`锛屽啀杩涘叆鍘熸湁鐨勯噸杞芥垨鍒犻櫎涓氬姟娴併€?- 杩欎竴杞畬鎴愬悗锛宍frontend-user`銆乣frontend-admin` 涓?`packages` 鑼冨洿鍐呯殑鍘熺敓 `window.confirm` 璋冪敤宸叉竻闆讹紝璇存槑鐢ㄦ埛绔富璺緞鐨勭‘璁や氦浜掔涓€闃舵宸茬粡浠庢祻瑙堝櫒鍘熺敓瀹炵幇缁熶竴鏀跺彛鍒板叡浜‘璁ゆ銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃叡浜?ConfirmDialog 宸蹭粠绗旇椤垫墿灞曞埌鍥捐氨宸ヤ綔鍖轰富璺緞鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `FE-041` 做一个最小、可测试的共享 primitive 扩展，不回到图谱控制器的更深重构，也不新开后台治理分支。
+- 本轮目标是把图谱工作区里仅剩的两处高频原生确认收口到共享 `ConfirmDialog`：一处是冲突处理中的“放弃本地并重载最新图谱”，另一处是概览面板里的“删除当前图谱”。
 
-- RED锛歚npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，先用 RED 锁定图谱工作区的两个目标路径不再直接依赖原生 `window.confirm(...)`，而是先出现共享确认框，再由用户明确点击确认继续执行重载或删除。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增图谱工作区级别的共享确认框状态，统一承接 `reload-latest` 与 `delete-graph` 两类 destructive action，并保留 `danger` 动作、确认中禁用和失败提示。
+- `GraphConflictAssistCard` 的“放弃本地并重载最新图谱”以及 `GraphWorkspaceOverviewPanel` 的“删除当前图谱”现在都会先弹出共享 `ConfirmDialog`，再进入原有的重载或删除业务流。
+- 这一轮完成后，`frontend-user`、`frontend-admin` 与 `packages` 范围内的原生 `window.confirm` 调用已清零，说明用户端主路径的确认交互第一阶段已经从浏览器原生实现统一收口到共享确认框。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 ConfirmDialog 已从笔记页扩展到图谱工作区主路径”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `rg -n "window\\.confirm" frontend-user frontend-admin packages`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `ConfirmDialog` 鐜板湪宸茬粡浠庡崟椤靛垹闄ょ‘璁ゆ墿灞曞埌鍥捐氨宸ヤ綔鍖轰富璺緞锛屽悗缁户缁帹杩涘悗鍙版不鐞嗛噷鐨勫垹闄ゃ€佷笅鏋躲€侀噸璇曠瓑纭鍔ㄤ綔鏃讹紝鍙互娌垮悓涓€濂?destructive action 璇箟缁х画鏀跺彛銆?- 褰撳墠鍥捐氨宸ヤ綔鍖虹殑纭妗嗙姸鎬佷粛鐒剁敱 `useGraphWorkspaceController.tsx` 鐩存帴缁存姢锛涘悗缁鏋滄部 `GPH-040` 鎷?commands / store锛屾洿閫傚悎鎶婅繖绫?destructive intent 鍜屽璇濇鐘舵€佷竴璧锋矇鍒版洿娓呮櫚鐨勮竟鐣屽眰銆?
-## 2026-07-09 10:07:41 +08:00 | v1.1.0-alpha.141 | 鎺ㄨ繘 FE-041 鍏变韩 ConfirmDialog 鎺ュ叆绗旇鍒犻櫎纭
-### 浠诲姟鍐呭
+- `ConfirmDialog` 现在已经从单页删除确认扩展到图谱工作区主路径，后续继续推进后台治理里的删除、下架、重试等确认动作时，可以沿同一套 destructive action 语义继续收口。
+- 当前图谱工作区的确认框状态仍然由 `useGraphWorkspaceController.tsx` 直接维护；后续如果沿 `GPH-040` 拆 commands / store，更适合把这类 destructive intent 和对话框状态一起沉到更清晰的边界层。
 
-- 娌垮綋鍓嶆洿楂樹紭鍏堢骇鐨?`FE-041` 缁х画鍋氫竴涓渶灏忋€佸彲娴嬭瘯鐨勫叡浜?primitive 鏀跺彛锛屼笉鍋忕鍏变韩 UI 涓荤嚎锛屼篃涓嶅洖鍒板浘璋辨帶鍒跺櫒閲屼竴娆℃€ф敼寰堝纭璺緞銆?- 鏈疆鐩爣鏄妸宸茬粡鍑虹幇鍦ㄧ湡瀹炲涔犺矾寰勯噷鐨勫垹闄ょ‘璁わ紝浠庢祻瑙堝櫒鍘熺敓 `window.confirm(...)` 鏀跺彛涓哄叡浜?`ConfirmDialog`锛屽悓鏃朵繚鐣欑鐢ㄤ腑銆侀敊璇彁绀哄拰宸ヤ綔鍖虹姸鎬佹秷鎭紝涓嶆妸杩欎竴姝ユ墿鏁ｆ垚鏁村妯℃€佺郴缁熼噸鍐欍€?
-### 瀹為檯鍙樻洿
+## 2026-07-09 10:07:41 +08:00 | v1.1.0-alpha.141 | 推进 FE-041 共享 ConfirmDialog 接入笔记删除确认
+### 任务内容
 
-- 鏂板 `packages/ui/src/ConfirmDialog.tsx`锛岃ˉ榻愬叡浜?`ConfirmDialog` primitive锛屽厛缁熶竴纭鏍囬銆佽鏄庢枃妗堛€佸彇娑?纭鍔ㄤ綔銆乣danger` 鍙樹綋锛屼互鍙婄‘璁や腑绂佺敤鍜岄敊璇彁绀鸿繖缁勬渶灏忕‘璁や氦浜掑绾︺€?- 鏇存柊 `packages/ui/src/index.ts`銆乣frontend-user/src/design-system/primitives/ConfirmDialog.tsx` 涓?`frontend-user/src/design-system/primitives/index.ts`锛岃ˉ榻愬叡浜鍑哄拰鐢ㄦ埛绔吋瀹瑰嚭鍙ｏ紝璁╅〉闈㈠眰缁х画娌挎湰鍦?design-system 璺緞娑堣垂鍏变韩瀹炵幇銆?- 鏇存柊 `frontend-user/src/pages/NotesPage.tsx`锛屾妸绗旇鍒犻櫎浠庢祻瑙堝櫒鍘熺敓 `window.confirm(...)` 鏀逛负鍏变韩 `ConfirmDialog`锛涘垹闄や腑鐨勭鐢ㄦ€併€佸け璐ユ彁绀哄拰椤堕儴宸ヤ綔鍖烘秷鎭繚鎸佸彲瑙併€?- 鏇存柊 `frontend-user/src/styles/ui-redesign.css`锛岃ˉ榻?`ConfirmDialog` 鐨勯伄缃┿€侀潰鏉裤€侀敊璇€佸拰搴曢儴鍔ㄤ綔鍖烘牱寮忥紝璁╁叡浜?primitive 鍦ㄧ湡瀹為〉闈㈤噷鏈夌ǔ瀹氱殑瑙嗚楠ㄦ灦銆?- 鏇存柊 `packages/ui/src/reactPrimitives.test.tsx`銆佹柊澧?`frontend-user/src/design-system/primitives/ConfirmDialog.test.tsx` 涓庨噸鍐?`frontend-user/src/pages/NotesPage.test.tsx`锛屽厛鐢?RED 閿佸畾鈥滃叡浜?ConfirmDialog 缂哄け / 鍏煎鍑哄彛缂哄け / NotesPage 浠嶇洿鎺ヤ緷璧栧師鐢熺‘璁ゆ鈥濈殑缂哄彛锛屽啀鐢?GREEN 閿佸畾鍏变韩瀵煎嚭銆佺‘璁や腑绂佺敤鎬併€佸吋瀹瑰嚭鍙ｄ笌鍒犻櫎纭鎺ョ嚎涓嶅洖閫€銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃叡浜?ConfirmDialog 宸茶惤鍦板苟鎺ュ叆绗旇鍒犻櫎纭鈥濄€?
-### 楠岃瘉缁撴灉
+- 沿当前更高优先级的 `FE-041` 继续做一个最小、可测试的共享 primitive 收口，不偏离共享 UI 主线，也不回到图谱控制器里一次性改很多确认路径。
+- 本轮目标是把已经出现在真实学习路径里的删除确认，从浏览器原生 `window.confirm(...)` 收口为共享 `ConfirmDialog`，同时保留禁用中、错误提示和工作区状态消息，不把这一步扩散成整套模态系统重写。
 
-- RED锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- RED锛歚npm --workspace frontend-user run test -- src/design-system/primitives/ConfirmDialog.test.tsx src/pages/NotesPage.test.tsx`
-- GREEN锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/design-system/primitives/ConfirmDialog.test.tsx src/pages/NotesPage.test.tsx`
+### 实际变更
+
+- 新增 `packages/ui/src/ConfirmDialog.tsx`，补齐共享 `ConfirmDialog` primitive，先统一确认标题、说明文案、取消/确认动作、`danger` 变体，以及确认中禁用和错误提示这组最小确认交互契约。
+- 更新 `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/ConfirmDialog.tsx` 与 `frontend-user/src/design-system/primitives/index.ts`，补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/pages/NotesPage.tsx`，把笔记删除从浏览器原生 `window.confirm(...)` 改为共享 `ConfirmDialog`；删除中的禁用态、失败提示和顶部工作区消息保持可见。
+- 更新 `frontend-user/src/styles/ui-redesign.css`，补齐 `ConfirmDialog` 的遮罩、面板、错误态和底部动作区样式，让共享 primitive 在真实页面里有稳定的视觉骨架。
+- 更新 `packages/ui/src/reactPrimitives.test.tsx`、新增 `frontend-user/src/design-system/primitives/ConfirmDialog.test.tsx` 与重写 `frontend-user/src/pages/NotesPage.test.tsx`，先用 RED 锁定“共享 ConfirmDialog 缺失 / 兼容出口缺失 / NotesPage 仍直接依赖原生确认框”的缺口，再用 GREEN 锁定共享导出、确认中禁用态、兼容出口与删除确认接线不回退。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 ConfirmDialog 已落地并接入笔记删除确认”。
+
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/ConfirmDialog.test.tsx src/pages/NotesPage.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/ConfirmDialog.test.tsx src/pages/NotesPage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `@studymate/ui` 鐜板湪宸茬粡涓嶅彧鎵挎帴椤甸潰鐘舵€併€佽〃鍗曞拰楠ㄦ灦锛屼篃寮€濮嬫壙鎺?destructive action 鐨勭‘璁よ涔夛紱鍚庣画缁х画鎺ㄨ繘鍥捐氨鍒犻櫎銆侀噸杞芥斁寮冩垨鍚庡彴娌荤悊鍔ㄤ綔鏃讹紝鍙互娌跨潃鍚屼竴濂楃‘璁ら鏋剁户缁敹鍙ｃ€?- 褰撳墠杩欒疆鍏堝彧瑕嗙洊 `NotesPage` 鐨勫垹闄ょ‘璁わ紱鍥捐氨宸ヤ綔鍖洪噷鐨勨€滈噸杞芥渶鏂板浘璋?/ 鍒犻櫎鍥捐氨鈥濅粛鍦ㄦ帶鍒跺櫒閲岀洿鎺ヨ皟鐢ㄥ師鐢熺‘璁ゆ锛屽悗缁洿閫傚悎鎸夌湡瀹為珮棰戣矾寰勯€愭鏇挎崲锛岃€屼笉鏄竴娆℃€цЕ纰版暣涓帶鍒跺櫒銆?
-## 2026-07-09 09:47:29 +08:00 | v1.1.0-alpha.140 | 鎺ㄨ繘 FE-041 鍏变韩 CommandBar 鎺ュ叆涓荤珯椤堕儴楠ㄦ灦
-### 浠诲姟鍐呭
+- `@studymate/ui` 现在已经不只承接页面状态、表单和骨架，也开始承接 destructive action 的确认语义；后续继续推进图谱删除、重载放弃或后台治理动作时，可以沿着同一套确认骨架继续收口。
+- 当前这轮先只覆盖 `NotesPage` 的删除确认；图谱工作区里的“重载最新图谱 / 删除图谱”仍在控制器里直接调用原生确认框，后续更适合按真实高频路径逐段替换，而不是一次性触碰整个控制器。
 
-- 娌垮綋鍓嶆洿楂樹紭鍏堢骇鐨?`FE-041` 缁х画鍋氫竴涓渶灏忋€佸彲娴嬭瘯鐨勫叡浜?primitive 鏀跺彛锛屼笉鍋忕鍏变韩 UI 涓荤嚎锛屼篃涓嶅洖鍒板崟涓€鍐茬獊鍦烘櫙娣辨寲銆?- 鏈疆鐩爣鏄妸涓荤珯澹冲眰閲岄噸澶嶅嚭鐜扮殑椤堕儴 meta / 鎼滅储 / 鍔ㄤ綔楠ㄦ灦鎶芥垚鍏变韩 `CommandBar`锛屽悓鏃朵繚鐣欑幇鏈夐〉闈㈠厓淇℃伅銆佸叏灞€鎼滅储銆丄I 鑽夌鍏ュ彛鍜岄€€鍑虹櫥褰曢€昏緫涓嶅彉锛岃€屼笉鏄洿鎺ラ噸鍐?`AppShell` 鐨勮涓恒€?### 瀹為檯鍙樻洿
+## 2026-07-09 09:47:29 +08:00 | v1.1.0-alpha.140 | 推进 FE-041 共享 CommandBar 接入主站顶部骨架
+### 任务内容
 
-- 鏂板 `packages/ui/src/CommandBar.tsx`锛岃ˉ榻愬叡浜?`CommandBar` primitive锛屽厛缁熶竴 `topbar`銆乥readcrumb銆乻ubtitle銆佹悳绱㈡Ы浣嶅拰鍔ㄤ綔妲戒綅杩欑粍椤堕儴楠ㄦ灦璇箟銆?- 鏇存柊 `packages/ui/src/index.ts`銆乣frontend-user/src/design-system/primitives/CommandBar.tsx` 涓?`frontend-user/src/design-system/primitives/index.ts`锛岃ˉ榻愬叡浜鍑哄拰鐢ㄦ埛绔吋瀹瑰嚭鍙ｏ紝璁╅〉闈㈠眰缁х画娌挎湰鍦?design-system 璺緞娑堣垂鍏变韩瀹炵幇銆?- 鏇存柊 `frontend-user/src/app/chrome/CommandBar.tsx`锛屾妸鐜版湁涓荤珯椤堕儴鏉℃敼涓衡€滈〉闈㈠厓淇℃伅/鎼滅储/鐢ㄦ埛鍔ㄤ綔鍖呰鍣?+ 鍏变韩楠ㄦ灦鈥濅袱灞傜粨鏋勶紱鐜版湁鎼滅储鎻愪氦娴佺▼銆丄I 鑽夌鍏ュ彛銆佽缃叆鍙ｅ拰閫€鍑虹櫥褰曢€昏緫淇濇寔涓嶅彉銆?- 鏇存柊 `packages/ui/src/reactPrimitives.test.tsx` 涓庢柊澧?`frontend-user/src/design-system/primitives/CommandBar.test.tsx`銆乣frontend-user/src/app/chrome/CommandBar.test.tsx`锛屽苟澶嶇敤 `frontend-user/src/app/layouts/AppShell.test.tsx`锛屽厛鐢?RED 閿佸畾鈥滃叡浜?CommandBar 缂哄け / 鍏煎鍑哄彛缂哄け / 涓荤珯椤堕儴鏉′粛鏈蛋鍏变韩瀹炵幇鈥濈殑缂哄彛锛屽啀鐢?GREEN 閿佸畾鍏变韩瀵煎嚭銆佸寘瑁呮帴绾夸笌澹冲眰鎼滅储鍏ュ彛涓嶅洖閫€銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃叡浜?CommandBar 宸茶惤鍦板苟鎺ュ叆涓荤珯椤堕儴楠ㄦ灦鈥濄€?### 楠岃瘉缁撴灉
+- 沿当前更高优先级的 `FE-041` 继续做一个最小、可测试的共享 primitive 收口，不偏离共享 UI 主线，也不回到单一冲突场景深挖。
+- 本轮目标是把主站壳层里重复出现的顶部 meta / 搜索 / 动作骨架抽成共享 `CommandBar`，同时保留现有页面元信息、全局搜索、AI 草稿入口和退出登录逻辑不变，而不是直接重写 `AppShell` 的行为。
+### 实际变更
 
-- RED锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- RED锛歚npm --workspace frontend-user run test -- src/design-system/primitives/CommandBar.test.tsx src/app/chrome/CommandBar.test.tsx src/app/layouts/AppShell.test.tsx`
-- GREEN锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/design-system/primitives/CommandBar.test.tsx src/app/chrome/CommandBar.test.tsx src/app/layouts/AppShell.test.tsx`
+- 新增 `packages/ui/src/CommandBar.tsx`，补齐共享 `CommandBar` primitive，先统一 `topbar`、breadcrumb、subtitle、搜索槽位和动作槽位这组顶部骨架语义。
+- 更新 `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/CommandBar.tsx` 与 `frontend-user/src/design-system/primitives/index.ts`，补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/app/chrome/CommandBar.tsx`，把现有主站顶部条改为“页面元信息/搜索/用户动作包装器 + 共享骨架”两层结构；现有搜索提交流程、AI 草稿入口、设置入口和退出登录逻辑保持不变。
+- 更新 `packages/ui/src/reactPrimitives.test.tsx` 与新增 `frontend-user/src/design-system/primitives/CommandBar.test.tsx`、`frontend-user/src/app/chrome/CommandBar.test.tsx`，并复用 `frontend-user/src/app/layouts/AppShell.test.tsx`，先用 RED 锁定“共享 CommandBar 缺失 / 兼容出口缺失 / 主站顶部条仍未走共享实现”的缺口，再用 GREEN 锁定共享导出、包装接线与壳层搜索入口不回退。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 CommandBar 已落地并接入主站顶部骨架”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/CommandBar.test.tsx src/app/chrome/CommandBar.test.tsx src/app/layouts/AppShell.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/CommandBar.test.tsx src/app/chrome/CommandBar.test.tsx src/app/layouts/AppShell.test.tsx`
 - `npm --workspace frontend-user run typecheck`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `@studymate/ui` 鐜板湪宸茬粡涓嶅彧瑕嗙洊鐘舵€併€佹娊灞夈€佹鏌ュ櫒銆佹寜閽€佽〃鍗曚笌椤甸潰澶撮儴锛屼篃寮€濮嬫壙鎺ヤ富绔欓《閮ㄩ鏋讹紱鍚庣画缁х画鎺ㄨ繘 `ConfirmDialog` 鎴栧悗鍙扮瓫閫夋潯鏃讹紝椤甸潰楠ㄦ灦灞傜殑鍏变韩璺緞浼氭洿椤恒€?- 褰撳墠杩欒疆涓昏瑕嗙洊鐨勬槸涓荤珯 `AppShell` 椤堕儴鏉★紱鍥捐氨宸ヤ綔鍖洪噷鐨勪笓鐢?command bar 浠嶆槸鍙︿竴濂楀伐鍏锋爮璇箟锛屽悗缁槸鍚︾户缁叡鐢ㄩ渶瑕佺粨鍚堥偅濂楁搷浣滄潯鐨勪笓鐢ㄧ▼搴﹀啀鍒ゆ柇銆?
-## 2026-07-09 09:38:52 +08:00 | v1.1.0-alpha.139 | 鎺ㄨ繘 FE-041 鍏变韩 PageHeader 鎺ュ叆宸ヤ綔鍖哄ご閮?### 浠诲姟鍐呭
+- `@studymate/ui` 现在已经不只覆盖状态、抽屉、检查器、按钮、表单与页面头部，也开始承接主站顶部骨架；后续继续推进 `ConfirmDialog` 或后台筛选条时，页面骨架层的共享路径会更顺。
+- 当前这轮主要覆盖的是主站 `AppShell` 顶部条；图谱工作区里的专用 command bar 仍是另一套工具栏语义，后续是否继续共用需要结合那套操作条的专用程度再判断。
 
-- 娌垮綋鍓嶆洿楂樹紭鍏堢骇鐨?`FE-041` 缁х画鍋氫竴涓渶灏忋€佸彲娴嬭瘯鐨勫叡浜?primitive 鏀跺彛锛屼笉鍋忕鍏变韩 UI 涓荤嚎锛屼篃涓嶅洖鍒板崟涓€鍐茬獊鍦烘櫙娣辨寲銆?- 鏈疆鐩爣鏄妸宸茬粡琚涓〉闈㈠鐢ㄧ殑宸ヤ綔鍖哄ご閮ㄧ粨鏋勬娊鎴愬叡浜?`PageHeader`锛屽苟浼樺厛閫氳繃 `WorkspaceHeader` 杩欎釜鐜版湁鍏ュ彛鎶婁竴鎵圭湡瀹為〉闈竴璧锋帴鍒板叡浜绾︼紝鑰屼笉鏄€愰〉閲嶅啓澶撮儴甯冨眬銆?### 瀹為檯鍙樻洿
+## 2026-07-09 09:38:52 +08:00 | v1.1.0-alpha.139 | 推进 FE-041 共享 PageHeader 接入工作区头部
+### 任务内容
 
-- 鏂板 `packages/ui/src/PageHeader.tsx`锛岃ˉ榻愬叡浜?`PageHeader` primitive锛屽厛缁熶竴 `workspace-header`銆乣eyebrow`銆乣header-copy` 涓?`header-actions` 杩欑粍椤甸潰澶撮儴楠ㄦ灦璇箟銆?- 鏇存柊 `packages/ui/src/index.ts`銆乣frontend-user/src/design-system/primitives/PageHeader.tsx` 涓?`frontend-user/src/design-system/primitives/index.ts`锛岃ˉ榻愬叡浜鍑哄拰鐢ㄦ埛绔吋瀹瑰嚭鍙ｏ紝璁╅〉闈㈠眰缁х画娌挎湰鍦?design-system 璺緞娑堣垂鍏变韩瀹炵幇銆?- 鏇存柊 `frontend-user/src/app/appShared.tsx`锛屾妸 `WorkspaceHeader` 鏀逛负鐩存帴澶嶇敤鍏变韩 `PageHeader`锛岃褰撳墠鎵€鏈夎蛋杩欏眰鍖呰鐨勭湡瀹為〉闈竴璧疯繘鍏ュ悓涓€濂楀ご閮ㄥ绾︺€?- 鏇存柊 `packages/ui/src/reactPrimitives.test.tsx` 涓庢柊澧?`frontend-user/src/design-system/primitives/PageHeader.test.tsx`銆乣frontend-user/src/app/appShared.test.tsx`锛屽厛鐢?RED 閿佸畾鈥滃叡浜?PageHeader 缂哄け / 鍏煎鍑哄彛缂哄け / WorkspaceHeader 浠嶆湭璧板叡浜疄鐜扳€濈殑缂哄彛锛屽啀鐢?GREEN 閿佸畾鍏变韩瀵煎嚭銆佸ご閮ㄥ姩浣滃尯鍜屽寘瑁呮帴绾裤€?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃叡浜?PageHeader 宸茶惤鍦板苟鎺ュ叆宸ヤ綔鍖哄ご閮ㄢ€濄€?### 楠岃瘉缁撴灉
+- 沿当前更高优先级的 `FE-041` 继续做一个最小、可测试的共享 primitive 收口，不偏离共享 UI 主线，也不回到单一冲突场景深挖。
+- 本轮目标是把已经被多个页面复用的工作区头部结构抽成共享 `PageHeader`，并优先通过 `WorkspaceHeader` 这个现有入口把一批真实页面一起接到共享契约，而不是逐页重写头部布局。
+### 实际变更
 
-- RED锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- RED锛歚npm --workspace frontend-user run test -- src/design-system/primitives/PageHeader.test.tsx src/app/appShared.test.tsx`
-- GREEN锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/design-system/primitives/PageHeader.test.tsx src/app/appShared.test.tsx`
+- 新增 `packages/ui/src/PageHeader.tsx`，补齐共享 `PageHeader` primitive，先统一 `workspace-header`、`eyebrow`、`header-copy` 与 `header-actions` 这组页面头部骨架语义。
+- 更新 `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/PageHeader.tsx` 与 `frontend-user/src/design-system/primitives/index.ts`，补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/app/appShared.tsx`，把 `WorkspaceHeader` 改为直接复用共享 `PageHeader`，让当前所有走这层包装的真实页面一起进入同一套头部契约。
+- 更新 `packages/ui/src/reactPrimitives.test.tsx` 与新增 `frontend-user/src/design-system/primitives/PageHeader.test.tsx`、`frontend-user/src/app/appShared.test.tsx`，先用 RED 锁定“共享 PageHeader 缺失 / 兼容出口缺失 / WorkspaceHeader 仍未走共享实现”的缺口，再用 GREEN 锁定共享导出、头部动作区和包装接线。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 PageHeader 已落地并接入工作区头部”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/PageHeader.test.tsx src/app/appShared.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/PageHeader.test.tsx src/app/appShared.test.tsx`
 - `npm --workspace frontend-user run typecheck`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `@studymate/ui` 鐜板湪宸茬粡涓嶅彧瑕嗙洊鐘舵€併€佹娊灞夈€佹鏌ュ櫒銆佹寜閽€佹爣绛惧拰琛ㄥ崟杈撳叆锛屼篃寮€濮嬫壙鎺ラ〉闈㈠ご閮ㄩ鏋讹紱鍚庣画缁х画鎺ㄨ繘 `CommandBar` 鏃讹紝椤甸潰楠ㄦ灦灞傜殑鍏变韩璺緞浼氭洿椤恒€?- 褰撳墠杩欒疆涓昏閫氳繃 `WorkspaceHeader` 瑕嗙洊浜嗕富宸ヤ綔鍖洪〉闈紱鎼滅储宸ヤ綔鍖哄拰鍥捐氨宸ヤ綔鍖轰粛淇濈暀鍚勮嚜鐩存帴鍐欑殑 `workspace-header` / 鎼滅储鏉＄粨鏋勶紝涓嬩竴姝ユ洿鍊煎緱缁х画娌胯繖浜涢噸澶嶇偣鎺ㄨ繘銆?
-## 2026-07-09 09:32:26 +08:00 | v1.1.0-alpha.138 | 鎺ㄨ繘 FE-041 鍏变韩 Select 鎺ュ叆绗旇涓庨槄璇昏〃鍗?### 浠诲姟鍐呭
+- `@studymate/ui` 现在已经不只覆盖状态、抽屉、检查器、按钮、标签和表单输入，也开始承接页面头部骨架；后续继续推进 `CommandBar` 时，页面骨架层的共享路径会更顺。
+- 当前这轮主要通过 `WorkspaceHeader` 覆盖了主工作区页面；搜索工作区和图谱工作区仍保留各自直接写的 `workspace-header` / 搜索条结构，下一步更值得继续沿这些重复点推进。
 
-- 娌垮綋鍓嶆洿楂樹紭鍏堢骇鐨?`FE-041` 缁х画鍋氫竴涓渶灏忋€佸彲娴嬭瘯鐨勫叡浜?primitive 鏀跺彛锛屼笉鍋忕鍏变韩 UI 涓荤嚎锛屼篃涓嶅洖鍒板崟涓€鍐茬獊鍦烘櫙娣辨寲銆?- 鏈疆鐩爣鏄妸绗旇鍜岄槄璇讳富璺緞閲屽凡缁忛噸澶嶅嚭鐜扮殑璧勬枡鏉ユ簮 / 鍐欏叆 deck 閫夋嫨鍣ㄦ娊鎴愬叡浜?`Select`锛屽苟鑷冲皯鎺ュ埌涓ゆ潯鐪熷疄瀛︿範璺緞椤甸潰锛岃€屼笉鏄彧鍋滅暀鍦ㄥ寘閲屸€滄柊澧炰竴涓笅鎷夌粍浠舵枃浠垛€濄€?### 瀹為檯鍙樻洿
+## 2026-07-09 09:32:26 +08:00 | v1.1.0-alpha.138 | 推进 FE-041 共享 Select 接入笔记与阅读表单
+### 任务内容
 
-- 鏂板 `packages/ui/src/Select.tsx`锛岃ˉ榻愬叡浜?`Select` primitive锛屽厛缁熶竴 `ds-select` class 涓?`invalid` 閿欒鎬佽涔夈€?- 鏇存柊 `packages/ui/src/index.ts`銆乣frontend-user/src/design-system/primitives/Select.tsx` 涓?`frontend-user/src/design-system/primitives/index.ts`锛岃ˉ榻愬叡浜鍑哄拰鐢ㄦ埛绔吋瀹瑰嚭鍙ｏ紝璁╅〉闈㈠眰缁х画娌挎湰鍦?design-system 璺緞娑堣垂鍏变韩瀹炵幇銆?- 鏇存柊 `frontend-user/src/pages/NotesPage.tsx` 涓?`frontend-user/src/pages/ReaderPage.tsx`锛屾妸璧勬枡鏉ユ簮鍜屽啓鍏?Deck 閫夋嫨鍣ㄥ垏鍒板叡浜?`Select`锛岃 `FE-041` 浠庤緭鍏ユ缁х画鎵╁睍鍒伴珮棰戜笅鎷夎〃鍗曡緭鍏ャ€?- 鏇存柊 `packages/ui/src/reactPrimitives.test.tsx` 涓庢柊澧?`frontend-user/src/design-system/primitives/Select.test.tsx`銆乣frontend-user/src/pages/NotesPage.test.tsx` 鍥炲綊锛屽厛鐢?RED 閿佸畾鈥滃叡浜?Select 缂哄け / 鍏煎鍑哄彛缂哄け / 椤甸潰浠嶆槸瑁?select鈥濈殑缂哄彛锛屽啀鐢?GREEN 閿佸畾鍏变韩瀵煎嚭銆侀敊璇€佽涔変笌涓昏矾寰勬帴绾裤€?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃叡浜?Select 宸茶惤鍦板苟鎺ュ叆绗旇涓庨槄璇昏〃鍗曗€濄€?### 楠岃瘉缁撴灉
+- 沿当前更高优先级的 `FE-041` 继续做一个最小、可测试的共享 primitive 收口，不偏离共享 UI 主线，也不回到单一冲突场景深挖。
+- 本轮目标是把笔记和阅读主路径里已经重复出现的资料来源 / 写入 deck 选择器抽成共享 `Select`，并至少接到两条真实学习路径页面，而不是只停留在包里“新增一个下拉组件文件”。
+### 实际变更
 
-- RED锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- RED锛歚npm --workspace frontend-user run test -- src/design-system/primitives/Select.test.tsx src/pages/NotesPage.test.tsx`
-- GREEN锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/design-system/primitives/Select.test.tsx src/pages/NotesPage.test.tsx src/pages/ReaderPage.test.tsx`
+- 新增 `packages/ui/src/Select.tsx`，补齐共享 `Select` primitive，先统一 `ds-select` class 与 `invalid` 错误态语义。
+- 更新 `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/Select.tsx` 与 `frontend-user/src/design-system/primitives/index.ts`，补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/pages/NotesPage.tsx` 与 `frontend-user/src/pages/ReaderPage.tsx`，把资料来源和写入 Deck 选择器切到共享 `Select`，让 `FE-041` 从输入框继续扩展到高频下拉表单输入。
+- 更新 `packages/ui/src/reactPrimitives.test.tsx` 与新增 `frontend-user/src/design-system/primitives/Select.test.tsx`、`frontend-user/src/pages/NotesPage.test.tsx` 回归，先用 RED 锁定“共享 Select 缺失 / 兼容出口缺失 / 页面仍是裸 select”的缺口，再用 GREEN 锁定共享导出、错误态语义与主路径接线。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 Select 已落地并接入笔记与阅读表单”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/Select.test.tsx src/pages/NotesPage.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/Select.test.tsx src/pages/NotesPage.test.tsx src/pages/ReaderPage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `@studymate/ui` 鐜板湪宸茬粡涓嶅彧瑕嗙洊鐘舵€併€佹娊灞夈€佹鏌ュ櫒銆佹寜閽€佹爣绛惧拰杈撳叆妗嗭紝涔熷紑濮嬫壙鎺ョ湡瀹炲涔犺矾寰勯噷鐨勪笅鎷夐€夋嫨锛涘悗缁户缁帹杩?`CommandBar`銆乣PageHeader` 鎴栫鐞嗙绛涢€夊櫒鏃朵細鏇撮『銆?- 褰撳墠杩欒疆浠嶅彧瑕嗙洊 React 鐢ㄦ埛绔紱绠＄悊绔笌 AI 椤甸潰銆佸浘璋卞伐浣滃尯涓殑 `select-field` 瑙嗚鍙樹綋杩樻病鐩存帴鎺ュ埌杩欏眰鍏变韩 `Select`锛屼笅涓€姝ユ洿鍊煎緱缁х画娌块珮棰戠瓫閫変笌椤甸潰楠ㄦ灦閲嶅鐐规帹杩涖€?
-## 2026-07-09 09:25:25 +08:00 | v1.1.0-alpha.137 | 鎺ㄨ繘 FE-041 鍏变韩 Input 鎺ュ叆璧勬枡椤佃〃鍗?### 浠诲姟鍐呭
+- `@studymate/ui` 现在已经不只覆盖状态、抽屉、检查器、按钮、标签和输入框，也开始承接真实学习路径里的下拉选择；后续继续推进 `CommandBar`、`PageHeader` 或管理端筛选器时会更顺。
+- 当前这轮仍只覆盖 React 用户端；管理端与 AI 页面、图谱工作区中的 `select-field` 视觉变体还没直接接到这层共享 `Select`，下一步更值得继续沿高频筛选与页面骨架重复点推进。
 
-- 娌垮綋鍓嶆洿楂樹紭鍏堢骇鐨?`FE-041` 缁х画鍋氫竴涓渶灏忋€佸彲娴嬭瘯鐨勫叡浜?primitive 鏀跺彛锛屼笉鍋忕鍏变韩 UI 涓荤嚎锛屼篃涓嶅洖鍒板崟涓€鍐茬獊鍦烘櫙娣辨寲銆?- 鏈疆鐩爣鏄妸璧勬枡椤靛凡缁忛噸澶嶅嚭鐜扮殑鎼滅储杈撳叆涓庣紪杈戣〃鍗曡緭鍏ユ娊鎴愬叡浜?`Input`锛屽苟鑷冲皯鎺ュ埌涓€鏉＄湡瀹炲涔犺矾寰勯〉闈紝鑰屼笉鏄彧鍋滅暀鍦ㄥ寘閲屸€滄柊澧炰竴涓緭鍏ョ粍浠舵枃浠垛€濄€?### 瀹為檯鍙樻洿
+## 2026-07-09 09:25:25 +08:00 | v1.1.0-alpha.137 | 推进 FE-041 共享 Input 接入资料页表单
+### 任务内容
 
-- 鏂板 `packages/ui/src/Input.tsx`锛岃ˉ榻愬叡浜?`Input` primitive锛屽厛缁熶竴榛樿 `type="text"`銆乣ds-input` class 涓?`invalid` 閿欒鎬佽涔夈€?- 鏇存柊 `packages/ui/src/index.ts`銆乣frontend-user/src/design-system/primitives/Input.tsx` 涓?`frontend-user/src/design-system/primitives/index.ts`锛岃ˉ榻愬叡浜鍑哄拰鐢ㄦ埛绔吋瀹瑰嚭鍙ｏ紝璁╅〉闈㈠眰缁х画娌挎湰鍦?design-system 璺緞娑堣垂鍏变韩瀹炵幇銆?- 鏇存柊 `frontend-user/src/pages/MaterialsPage.tsx`锛屾妸璧勬枡鎼滅储妗嗗拰璧勬枡璇︽儏缂栬緫琛ㄥ崟鍒囧埌鍏变韩 `Input`锛岃 `FE-041` 浠庢寜閽€佹爣绛剧户缁墿灞曞埌楂橀琛ㄥ崟杈撳叆銆?- 鏇存柊 `packages/ui/src/reactPrimitives.test.tsx` 涓庢柊澧?`frontend-user/src/design-system/primitives/Input.test.tsx`銆乣frontend-user/src/pages/MaterialsPage.test.tsx`锛屽厛鐢?RED 閿佸畾鈥滃叡浜?Input 缂哄け / 鍏煎鍑哄彛缂哄け鈥濈殑缂哄彛锛屽啀鐢?GREEN 閿佸畾鍏变韩瀵煎嚭銆侀粯璁よ緭鍏ョ被鍨嬨€侀敊璇€佽涔変笌璧勬枡椤垫悳绱㈡帴绾裤€?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃叡浜?Input 宸茶惤鍦板苟鎺ュ叆璧勬枡椤佃〃鍗曗€濄€?### 楠岃瘉缁撴灉
+- 沿当前更高优先级的 `FE-041` 继续做一个最小、可测试的共享 primitive 收口，不偏离共享 UI 主线，也不回到单一冲突场景深挖。
+- 本轮目标是把资料页已经重复出现的搜索输入与编辑表单输入抽成共享 `Input`，并至少接到一条真实学习路径页面，而不是只停留在包里“新增一个输入组件文件”。
+### 实际变更
 
-- RED锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- RED锛歚npm --workspace frontend-user run test -- src/design-system/primitives/Input.test.tsx src/pages/MaterialsPage.test.tsx`
-- GREEN锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/design-system/primitives/Input.test.tsx src/pages/MaterialsPage.test.tsx`
+- 新增 `packages/ui/src/Input.tsx`，补齐共享 `Input` primitive，先统一默认 `type="text"`、`ds-input` class 与 `invalid` 错误态语义。
+- 更新 `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/Input.tsx` 与 `frontend-user/src/design-system/primitives/index.ts`，补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/pages/MaterialsPage.tsx`，把资料搜索框和资料详情编辑表单切到共享 `Input`，让 `FE-041` 从按钮、标签继续扩展到高频表单输入。
+- 更新 `packages/ui/src/reactPrimitives.test.tsx` 与新增 `frontend-user/src/design-system/primitives/Input.test.tsx`、`frontend-user/src/pages/MaterialsPage.test.tsx`，先用 RED 锁定“共享 Input 缺失 / 兼容出口缺失”的缺口，再用 GREEN 锁定共享导出、默认输入类型、错误态语义与资料页搜索接线。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 Input 已落地并接入资料页表单”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/Input.test.tsx src/pages/MaterialsPage.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/Input.test.tsx src/pages/MaterialsPage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `@studymate/ui` 鐜板湪宸茬粡涓嶅彧瑕嗙洊鐘舵€併€佹娊灞夈€佹鏌ュ櫒銆佹寜閽拰鏍囩锛屼篃寮€濮嬫壙鎺ョ湡瀹炲涔犺矾寰勯噷鐨勯珮棰戣緭鍏ワ紱鍚庣画缁х画鎺ㄨ繘 `Select`銆乣CommandBar`銆乣PageHeader` 鏃朵細鏇撮『銆?- 褰撳墠杩欒疆浠嶅彧瑕嗙洊 React 鐢ㄦ埛绔紱绠＄悊绔皻鏈洿鎺ユ秷璐硅繖灞?`Input`锛屼笅涓€姝ユ洿鍊煎緱缁х画娌胯祫鏂欍€佺瑪璁般€佹悳绱㈠拰鍚庡彴娌荤悊椤甸噷閲嶅鏈€鏄庢樉鐨勮緭鍏?绛涢€夐鏋剁户缁敹鍙ｃ€?
-## 2026-07-09 09:14:18 +08:00 | v1.1.0-alpha.136 | 鎺ㄨ繘 FE-041 鍏变韩 Tag 鎺ュ叆闃呰涓庤祫鏂欓〉
-### 浠诲姟鍐呭
+- `@studymate/ui` 现在已经不只覆盖状态、抽屉、检查器、按钮和标签，也开始承接真实学习路径里的高频输入；后续继续推进 `Select`、`CommandBar`、`PageHeader` 时会更顺。
+- 当前这轮仍只覆盖 React 用户端；管理端尚未直接消费这层 `Input`，下一步更值得继续沿资料、笔记、搜索和后台治理页里重复最明显的输入/筛选骨架继续收口。
 
-- 娌垮綋鍓嶆洿楂樹紭鍏堢骇鐨?`FE-041` 缁х画鍋氫竴涓渶灏忋€佸彲娴嬭瘯鐨勫叡浜?primitive 鏀跺彛锛屼笉鍥炲埌鍗曚竴鍐茬獊瀛愬満鏅繁鎸栥€?- 鏈疆鐩爣鏄妸鏈€杞婚噺銆侀噸澶嶆渶鏄庢樉鐨?`chip/tag` 璇箟浠庨〉闈㈠眰鎶芥垚鍏变韩 `Tag`锛屽苟鑷冲皯鎺ュ埌闃呰鍜岃祫鏂欎袱鏉＄湡瀹炲涔犺矾寰勯〉闈紝鑰屼笉鏄彧鍋滅暀鍦ㄥ寘閲屸€滄柊澧炰竴涓粍浠舵枃浠垛€濄€?### 瀹為檯鍙樻洿
+## 2026-07-09 09:14:18 +08:00 | v1.1.0-alpha.136 | 推进 FE-041 共享 Tag 接入阅读与资料页
+### 任务内容
 
-- 鏂板 `packages/ui/src/Tag.tsx`锛岃ˉ榻愬叡浜?`Tag` primitive锛屽厛缁熶竴 `chip` / `muted` 涓ょ鍩虹璇箟銆?- 鏇存柊 `packages/ui/src/index.ts`銆乣frontend-user/src/design-system/primitives/Tag.tsx` 涓?`frontend-user/src/design-system/primitives/index.ts`锛岃ˉ榻愬叡浜鍑哄拰鐢ㄦ埛绔吋瀹瑰嚭鍙ｏ紝璁╅〉闈㈠眰缁х画娌挎湰鍦?design-system 璺緞娑堣垂鍏变韩瀹炵幇銆?- 鏇存柊 `frontend-user/src/pages/ReaderPage.tsx` 涓?`frontend-user/src/pages/MaterialsPage.tsx`锛屾妸闃呰鍏冧俊鎭?chips 鍜岃祫鏂欒鎯呮爣绛惧垏鍒板叡浜?`Tag`锛岃 `FE-041` 浠庡浘璋遍鏋剁户缁墿灞曞埌瀛︿範涓昏矾寰勯〉闈€?- 鏇存柊 `packages/ui/src/reactPrimitives.test.tsx` 涓庢柊澧?`frontend-user/src/design-system/primitives/Tag.test.tsx`锛屽厛鐢?RED 閿佸畾鈥滃叡浜?Tag 缂哄け / 鍏煎鍑哄彛缂哄け鈥濈殑缂哄彛锛屽啀鐢?GREEN 閿佸畾鍏变韩瀵煎嚭銆乣muted` 鍙樹綋涓庣敤鎴风鍏煎鍑哄彛銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃叡浜?Tag 宸茶惤鍦板苟鎺ュ叆鐪熷疄椤甸潰鈥濄€?### 楠岃瘉缁撴灉
+- 沿当前更高优先级的 `FE-041` 继续做一个最小、可测试的共享 primitive 收口，不回到单一冲突子场景深挖。
+- 本轮目标是把最轻量、重复最明显的 `chip/tag` 语义从页面层抽成共享 `Tag`，并至少接到阅读和资料两条真实学习路径页面，而不是只停留在包里“新增一个组件文件”。
+### 实际变更
 
-- RED锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx frontend-user/src/design-system/primitives/Tag.test.tsx`
-- GREEN锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx frontend-user/src/design-system/primitives/Tag.test.tsx`
+- 新增 `packages/ui/src/Tag.tsx`，补齐共享 `Tag` primitive，先统一 `chip` / `muted` 两种基础语义。
+- 更新 `packages/ui/src/index.ts`、`frontend-user/src/design-system/primitives/Tag.tsx` 与 `frontend-user/src/design-system/primitives/index.ts`，补齐共享导出和用户端兼容出口，让页面层继续沿本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/pages/ReaderPage.tsx` 与 `frontend-user/src/pages/MaterialsPage.tsx`，把阅读元信息 chips 和资料详情标签切到共享 `Tag`，让 `FE-041` 从图谱骨架继续扩展到学习主路径页面。
+- 更新 `packages/ui/src/reactPrimitives.test.tsx` 与新增 `frontend-user/src/design-system/primitives/Tag.test.tsx`，先用 RED 锁定“共享 Tag 缺失 / 兼容出口缺失”的缺口，再用 GREEN 锁定共享导出、`muted` 变体与用户端兼容出口。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“共享 Tag 已落地并接入真实页面”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx frontend-user/src/design-system/primitives/Tag.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx frontend-user/src/design-system/primitives/Tag.test.tsx`
 - `npm --workspace frontend-user run test -- src/pages/ReaderPage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `@studymate/ui` 鐜板湪涓嶅啀鍙叡浜〉闈㈢姸鎬併€佹娊灞夈€佹鏌ュ櫒鍜屾寜閽紝`Tag` 涔熷凡缁忚繘鍏ョ湡瀹炲涔犻〉闈紝涓哄悗缁户缁粺涓€琛ㄥ崟銆侀〉闈㈠ご閮ㄥ拰纭浜や簰鎻愪緵浜嗘洿绋崇殑璺緞銆?- 褰撳墠杩欒疆浠嶅彧瑕嗙洊 React 鐢ㄦ埛绔紱绠＄悊绔皻鏈洿鎺ユ秷璐硅繖灞?`Tag`锛屼笅涓€姝ユ洿鍊煎緱缁х画鎺ㄨ繘鐨勬槸 Input銆丼elect銆丆onfirmDialog銆丆ommandBar銆丳ageHeader 杩欑被鏇撮珮棰戜笖鏇磋兘鏀跺彛椤甸潰楠ㄦ灦鍒嗗弶鐨?primitives銆?
-## 2026-07-09 09:06:40 +08:00 | v1.1.0-alpha.135 | 鏀跺彛 WB-032 鑺傜偣绾ф潵婧愪笌灏哄鍐茬獊椤甸潰绾у洖褰?### 浠诲姟鍐呭
+- `@studymate/ui` 现在不再只共享页面状态、抽屉、检查器和按钮，`Tag` 也已经进入真实学习页面，为后续继续统一表单、页面头部和确认交互提供了更稳的路径。
+- 当前这轮仍只覆盖 React 用户端；管理端尚未直接消费这层 `Tag`，下一步更值得继续推进的是 Input、Select、ConfirmDialog、CommandBar、PageHeader 这类更高频且更能收口页面骨架分叉的 primitives。
 
-- 缁х画娌?`WB-032` 鍋氫竴涓渶灏忋€佸彲娴嬭瘯鐨勫啿绐佸鐞嗘敹鍙ｏ紝涓嶆墿鏂伴€昏緫锛屽彧鎶婂凡缁忓瓨鍦ㄤ簬 helper 灞傜殑鑺傜偣绾ч樆鏂缓璁ˉ鍒伴〉闈㈢骇鐪熷疄鎿嶄綔鍥炲綊閲屻€?- 鏈疆閲嶇偣鏄妸 `invalid_source_target` 涓?`invalid_node_size` 涓ゆ潯璺緞鎺ヨ繘 `GraphWorkspaceConflictResolutionDependencies`锛氱敤鎴峰厛璇€夆€滀繚鐣欐湰鍦扳€濓紝闅忓悗鐪嬪埌闃绘柇涓庤仈鍔ㄢ€滀繚鐣欐湇鍔＄鈥濆缓璁紝骞惰兘鍦ㄨВ闄ら樆鏂悗缁х画搴旂敤宸叉爣璁板彇鑸嶃€?### 瀹為檯鍙樻洿
+## 2026-07-09 09:06:40 +08:00 | v1.1.0-alpha.135 | 收口 WB-032 节点级来源与尺寸冲突页面级回归
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛屾柊澧炰袱鏉￠〉闈㈢骇鍥炲綊锛屽垎鍒鐩栤€滄潵婧愪俊鎭笉瀹屾暣鑺傜偣鈥濆拰鈥滃昂瀵搁潪娉曡妭鐐光€濈殑鍐茬獊杈呭姪浜や簰銆?- 涓ゆ潯鏂板洖褰掗兘閿佸畾鍚屼竴鏉＄湡瀹炴搷浣滈摼锛歚淇濆瓨淇敼` 瑙﹀彂 `graph_version_conflict`銆佽繘鍏?`鍥捐氨鍐茬獊杈呭姪`銆佸厛鏍囪 `淇濈暀鏈湴`銆佸嚭鐜?`鍙栬垗渚濊禆鏍￠獙闂` 涓?`鑱斿姩鍙栬垗寤鸿`銆佸啀閫氳繃 `鑱斿姩淇濈暀鏈嶅姟绔痐 娓呴櫎闃绘柇骞堕噸鏂板厑璁?`搴旂敤宸叉爣璁板彇鑸嶅埌褰撳墠鑽夌`銆?- 鍚屾鏇存柊 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`銆乣docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滆妭鐐圭骇鏉ユ簮/灏哄闃绘柇涔熸湁椤甸潰绾х湡瀹炴搷浣滃洖褰掆€濄€?### 楠岃瘉缁撴灉
+- 继续沿 `WB-032` 做一个最小、可测试的冲突处理收口，不扩新逻辑，只把已经存在于 helper 层的节点级阻断建议补到页面级真实操作回归里。
+- 本轮重点是把 `invalid_source_target` 与 `invalid_node_size` 两条路径接进 `GraphWorkspaceConflictResolutionDependencies`：用户先误选“保留本地”，随后看到阻断与联动“保留服务端”建议，并能在解除阻断后继续应用已标记取舍。
+### 实际变更
 
-- RED锛歚npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
-### 鍚庣画褰卞搷
+- 更新 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，新增两条页面级回归，分别覆盖“来源信息不完整节点”和“尺寸非法节点”的冲突辅助交互。
+- 两条新回归都锁定同一条真实操作链：`保存修改` 触发 `graph_version_conflict`、进入 `图谱冲突辅助`、先标记 `保留本地`、出现 `取舍依赖校验问题` 与 `联动取舍建议`、再通过 `联动保留服务端` 清除阻断并重新允许 `应用已标记取舍到当前草稿`。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“节点级来源/尺寸阻断也有页面级真实操作回归”。
+### 验证结果
 
-- `WB-032` 鐨勯〉闈㈢骇鍐茬獊鐭╅樀鐜板湪涓嶅彧瑕嗙洊 dangling edge銆乴atest-head 鍒犻櫎璇箟鍜屽鐩爣杩炵嚎锛屼篃寮€濮嬮攣瀹氳妭鐐圭骇缁撴瀯閿欒鍦ㄧ湡瀹炲啿绐佸崱鐗囬噷鐨勯樆鏂笌鑱斿姩淇璺緞銆?- 褰撳墠浠嶆湭鏂板鏂扮殑鍐茬獊澶勭悊閫昏緫锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄洿澶氳妭鐐?杈?鍒嗙粍闃绘柇绫诲瀷鐨勯〉闈㈢骇鐪熷疄璺緞锛屾垨缁х画娌?`WB-034` 鎶婅繖浜涜矾寰勫苟鍏ユ洿鎴愪綋绯荤殑楠岃瘉鐭╅樀銆?
-## 2026-07-09 07:47:00 +08:00 | v1.1.0-alpha.134 | 鏀跺彛鍥捐氨鍐茬獊 E2E 鐨勭獎灞?smoke
-### 浠诲姟鍐呭
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+### 后续影响
 
-- 寤剁画 `verify:graph-conflicts` 鐨勫浐瀹氬叆鍙ｅ缓璁撅紝缁х画娌?`WB-032/WB-034` 鍋氫竴涓渶灏忎絾鏇村畬鏁寸殑楠岃瘉鏀跺彛銆?- 鏈疆鐩爣浠嶇劧涓嶆敼鍥捐氨涓氬姟閫昏緫锛屽彧鎶婂浘璋卞伐浣滃尯 Playwright 鍥炲綊浠庘€滄闈?smoke + 鐪熷疄鐗堟湰鍐茬獊璺緞鈥濈户缁帹杩涘埌鈥滅獎灞忓竷灞€涓嬩篃鑳借蛋閫氬啿绐佸鐞嗗熀鏈摼璺€濓紝瀵瑰簲鏀跺彛 backlog 涓槑纭啓鐫€鐨勨€滄闈笌绐勫睆鑷冲皯鏈?smoke 鍥炲綊鈥濄€?### 瀹為檯鍙樻洿
+- `WB-032` 的页面级冲突矩阵现在不只覆盖 dangling edge、latest-head 删除语义和多目标连线，也开始锁定节点级结构错误在真实冲突卡片里的阻断与联动修正路径。
+- 当前仍未新增新的冲突处理逻辑；下一步更值得继续补的是更多节点/边/分组阻断类型的页面级真实路径，或继续沿 `WB-034` 把这些路径并入更成体系的验证矩阵。
 
-- 鏇存柊 `scripts/graph-conflict-regression-baseline.test.mjs`锛屽厛鐢?RED 閿佸畾缂哄彛锛氬綋鍓?`e2e/v1-graph-workspace.spec.ts` 杩樻病鏈変换浣?`setViewportSize(...)` 绾у埆鐨勭獎灞忚瘉鎹紝鍥捐氨鍐茬獊鍥炲綊鏂囨。閲屼篃杩樺仠鐣欏湪鈥滄闈?/ 绐勫睆鍙屽竷灞€鍐茬獊鍥炲綊浠嶇己鈥濄€?- 鏇存柊 `e2e/v1-graph-workspace.spec.ts`锛屾柊澧炵獎灞忓浘璋卞伐浣滃尯鐗堟湰鍐茬獊 smoke锛氬湪 `390x844` 瑙嗗彛涓嬫瀯閫?`409 graph_version_conflict`锛屾柇瑷€璧勬簮/妫€鏌ュ櫒鍏ュ彛鍙銆乣鍥捐氨鍐茬獊杈呭姪` 涓?`鏀惧純鏈湴骞堕噸杞芥渶鏂板浘璋盽 浠嶅彲杈撅紝骞跺湪纭鍚庢垚鍔熷洖鍒版湇鍔＄鏈€鏂?head銆?- 鏇存柊 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`銆乣README.md`銆乣docs/DEVELOPMENT.md`銆乣docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛岀粺涓€鎶婂浘璋卞伐浣滃尯 E2E 鎻忚堪鎺ㄨ繘鍒扳€滄闈?绐勫睆 smoke + 鐪熷疄 `graph_version_conflict` 璺緞鈥濄€?### 楠岃瘉缁撴灉
+## 2026-07-09 07:47:00 +08:00 | v1.1.0-alpha.134 | 收口图谱冲突 E2E 的窄屏 smoke
+### 任务内容
 
-- RED锛歚node --test scripts/graph-conflict-regression-baseline.test.mjs`
-- GREEN锛歚node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- 延续 `verify:graph-conflicts` 的固定入口建设，继续沿 `WB-032/WB-034` 做一个最小但更完整的验证收口。
+- 本轮目标仍然不改图谱业务逻辑，只把图谱工作区 Playwright 回归从“桌面 smoke + 真实版本冲突路径”继续推进到“窄屏布局下也能走通冲突处理基本链路”，对应收口 backlog 中明确写着的“桌面与窄屏至少有 smoke 回归”。
+### 实际变更
+
+- 更新 `scripts/graph-conflict-regression-baseline.test.mjs`，先用 RED 锁定缺口：当前 `e2e/v1-graph-workspace.spec.ts` 还没有任何 `setViewportSize(...)` 级别的窄屏证据，图谱冲突回归文档里也还停留在“桌面 / 窄屏双布局冲突回归仍缺”。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增窄屏图谱工作区版本冲突 smoke：在 `390x844` 视口下构造 `409 graph_version_conflict`，断言资源/检查器入口可见、`图谱冲突辅助` 与 `放弃本地并重载最新图谱` 仍可达，并在确认后成功回到服务端最新 head。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`、`README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把图谱工作区 E2E 描述推进到“桌面/窄屏 smoke + 真实 `graph_version_conflict` 路径”。
+### 验证结果
+
+- RED：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- GREEN：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
 - `npm run test:graph:conflicts:e2e`
 - `npm run verify:graph-conflicts`
 - `npm run verify:docs`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `verify:graph-conflicts` 鐜板湪宸茬粡鍏峰妗岄潰涓庣獎灞忎袱鏉″浘璋卞伐浣滃尯 smoke锛屽苟涓斾袱杈归兘鑷冲皯瑕嗙洊浜嗕竴娆＄湡瀹炵増鏈啿绐佸悗鐨勫啿绐佸鐞嗗叆鍙ｏ紝涓哄悗缁?`WB-034` 缁х画琛ユ洿瀹屾暣鐨勫竷灞€鐭╅樀鍜岀粍鍚堣矾寰勬彁渚涗簡鏇村彲淇＄殑 E2E 鍩哄骇銆?- 褰撳墠浠嶆湭瑕嗙洊鏇村畬鏁寸殑妗岄潰 / 绐勫睆鍐茬獊缁勫悎鐭╅樀锛屼互鍙?create/save/restore/export/layout/conflict/鏉冮檺鍏ㄩ摼璺紱鍚庣画浠嶅簲缁х画娌胯繖鏉″浐瀹氬叆鍙ｆ墿灞曘€?
-## 2026-07-09 07:33:00 +08:00 | v1.1.0-alpha.133 | 鏀跺彛鍥捐氨鍐茬獊 E2E 鐨勭湡瀹炵増鏈啿绐佽矾寰?### 浠诲姟鍐呭
+- `verify:graph-conflicts` 现在已经具备桌面与窄屏两条图谱工作区 smoke，并且两边都至少覆盖了一次真实版本冲突后的冲突处理入口，为后续 `WB-034` 继续补更完整的布局矩阵和组合路径提供了更可信的 E2E 基座。
+- 当前仍未覆盖更完整的桌面 / 窄屏冲突组合矩阵，以及 create/save/restore/export/layout/conflict/权限全链路；后续仍应继续沿这条固定入口扩展。
 
-- 寤剁画 `verify:graph-conflicts` 鐨勫浐瀹氬叆鍙ｅ缓璁撅紝缁х画娌?`WB-032/WB-034` 鍋氫竴涓渶灏忎絾鏇磋创杩戠湡瀹炵敤鎴锋搷浣滅殑鍥炲綊鏀跺彛銆?- 鏈疆鐩爣鏄笉鏀瑰浘璋变笟鍔￠€昏緫锛屽彧鎶婂浘璋卞伐浣滃尯 Playwright smoke 浠庘€滃姞杞?淇濆瓨/瀵煎叆/鍘嗗彶鈥濇帹杩涘埌鈥滅湡瀹?`graph_version_conflict` 鍚庣殑鍐茬獊澶勭悊璺緞鈥濓紝璁╁浐瀹氬叆鍙ｈ嚦灏戣鐩栦竴娆＄湡瀹炵増鏈啿绐佹彁绀恒€佷汉宸ユ殏瀛樹笌閲嶈浇鏈€鏂?head 鐨勬搷浣滈摼銆?### 瀹為檯鍙樻洿
+## 2026-07-09 07:33:00 +08:00 | v1.1.0-alpha.133 | 收口图谱冲突 E2E 的真实版本冲突路径
+### 任务内容
 
-- 鏇存柊 `scripts/graph-conflict-regression-baseline.test.mjs`锛屽厛鐢?RED 閿佸畾缂哄彛锛氬綋鍓?`e2e/v1-graph-workspace.spec.ts` 铏藉凡鎺ュ叆鍥哄畾鍏ュ彛锛屼絾杩樻病鏈夌湡姝ｈ鐩栫増鏈啿绐佸鐞嗚矾寰勶紝鍥炲綊鐭╅樀鏂囨。閲屼篃娌℃湁鎶婅繖鏉?E2E 鎻忚堪鏄庣‘鎻愬崌鍒扳€滅増鏈啿绐佸鐞嗏€濆眰銆?- 鏇存柊 `e2e/v1-graph-workspace.spec.ts`锛屾柊澧炲浘璋卞伐浣滃尯鐪熷疄鐗堟湰鍐茬獊 smoke锛氭瀯閫?`batch-save` 杩斿洖 `409 graph_version_conflict`銆侀殢鍚庢媺鍙栨湇鍔＄鏈€鏂?head 鐨勫満鏅紝鏂█椤甸潰浼氬睍绀?`鏌ョ湅鍐茬獊澶勭悊`銆乣鍥捐氨鍐茬獊杈呭姪`銆乣鍏堜繚鐣欐湰鍦帮紝绋嶅悗浜哄伐鍚堝苟` 涓?`鏀惧純鏈湴骞堕噸杞芥渶鏂板浘璋盽锛屽苟鍦ㄧ‘璁ゅ悗鎴愬姛鍒囧洖鏈€鏂扮増鏈殑绌洪棽鐘舵€併€?- 鏇存柊 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`銆乣README.md`銆乣docs/DEVELOPMENT.md`銆乣docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛岀粺涓€鎶婂浘璋卞伐浣滃尯 E2E 鐨勬弿杩颁粠娉涘寲 smoke 鎻愬崌鍒扳€滃凡瑕嗙洊鐪熷疄 `graph_version_conflict` 澶勭悊璺緞鈥濄€?### 楠岃瘉缁撴灉
+- 延续 `verify:graph-conflicts` 的固定入口建设，继续沿 `WB-032/WB-034` 做一个最小但更贴近真实用户操作的回归收口。
+- 本轮目标是不改图谱业务逻辑，只把图谱工作区 Playwright smoke 从“加载/保存/导入/历史”推进到“真实 `graph_version_conflict` 后的冲突处理路径”，让固定入口至少覆盖一次真实版本冲突提示、人工暂存与重载最新 head 的操作链。
+### 实际变更
 
-- RED锛歚node --test scripts/graph-conflict-regression-baseline.test.mjs`
-- GREEN锛歚node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- 更新 `scripts/graph-conflict-regression-baseline.test.mjs`，先用 RED 锁定缺口：当前 `e2e/v1-graph-workspace.spec.ts` 虽已接入固定入口，但还没有真正覆盖版本冲突处理路径，回归矩阵文档里也没有把这条 E2E 描述明确提升到“版本冲突处理”层。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增图谱工作区真实版本冲突 smoke：构造 `batch-save` 返回 `409 graph_version_conflict`、随后拉取服务端最新 head 的场景，断言页面会展示 `查看冲突处理`、`图谱冲突辅助`、`先保留本地，稍后人工合并` 与 `放弃本地并重载最新图谱`，并在确认后成功切回最新版本的空闲状态。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`、`README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把图谱工作区 E2E 的描述从泛化 smoke 提升到“已覆盖真实 `graph_version_conflict` 处理路径”。
+### 验证结果
+
+- RED：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- GREEN：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
 - `npm run test:graph:conflicts:e2e`
 - `npm run verify:graph-conflicts`
 - `npm run verify:docs`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `verify:graph-conflicts` 鐜板湪涓嶄粎鑳借窇閫氬浘璋卞伐浣滃尯棰勮鐜锛岃繕鑳借鐩栦竴娆＄湡瀹炵増鏈啿绐佸悗鐨勫啿绐佸鐞嗗叆鍙ｅ拰閲嶈浇鏈€鏂?head 璺緞锛屼负鍚庣画 `WB-034` 缁х画琛ユ洿瀹屾暣鐨?Playwright 鍐茬獊鐭╅樀鎻愪緵浜嗘洿鎵庡疄鐨?E2E 鍩哄骇銆?- 褰撳墠浠嶆湭瑕嗙洊妗岄潰/绐勫睆鍙屽竷灞€涓嬬殑鍐茬獊璺緞锛屼互鍙婃洿瀹屾暣鐨?create/save/restore/export/layout/conflict/鏉冮檺鐭╅樀锛涘悗缁簲缁х画鍦ㄨ繖鏉″浐瀹氬叆鍙ｄ笂鎵╁睍锛岃€屼笉鏄噸鏂板垎鏁ｆ垚鎵嬪伐鍛戒护銆?
-## 2026-07-09 07:18:00 +08:00 | v1.1.0-alpha.132 | 鏀跺彛鍥捐氨鍐茬獊鍥哄畾鍏ュ彛鐨?E2E smoke
-### 浠诲姟鍐呭
+- `verify:graph-conflicts` 现在不仅能跑通图谱工作区预览环境，还能覆盖一次真实版本冲突后的冲突处理入口和重载最新 head 路径，为后续 `WB-034` 继续补更完整的 Playwright 冲突矩阵提供了更扎实的 E2E 基座。
+- 当前仍未覆盖桌面/窄屏双布局下的冲突路径，以及更完整的 create/save/restore/export/layout/conflict/权限矩阵；后续应继续在这条固定入口上扩展，而不是重新分散成手工命令。
 
-- 鍦ㄤ笂涓€杞凡缁忓缓绔?`verify:graph-conflicts` 鍥哄畾鍏ュ彛鐨勫熀纭€涓婏紝缁х画鍋氫竴涓洿瀹屾暣浣嗕粛鐒跺彲鎺х殑鍏ㄥ眬鏀跺彛銆?- 鏈疆鐩爣鏄妸鐜版湁 `e2e/v1-graph-workspace.spec.ts` 涔熺撼杩涜繖鏉″浐瀹氬叆鍙ｏ紝璁╁浘璋卞啿绐佷笓椤归獙璇佷笉鍐嶅彧瑕嗙洊鍓嶇 Vitest銆佸悗绔?Go test 鍜屾枃妗ｅ悓姝ワ紝鑰屾槸鑷冲皯甯︿笂涓€鏉＄湡瀹為瑙堢幆澧冧笅鐨勫浘璋卞伐浣滃尯 smoke銆?### 瀹為檯鍙樻洿
+## 2026-07-09 07:18:00 +08:00 | v1.1.0-alpha.132 | 收口图谱冲突固定入口的 E2E smoke
+### 任务内容
 
-- 鏇存柊 `scripts/graph-conflict-regression-baseline.test.mjs`锛屽厛鐢?RED 閿佸畾缂哄彛锛歚verify:graph-conflicts` 杩樻病鏈変覆涓婁笓闂ㄧ殑鍥捐氨宸ヤ綔鍖?E2E smoke锛屼篃娌℃湁鍦ㄥ洖褰掔煩闃垫枃妗ｄ腑鎶婅繖鏉?Playwright 瑕嗙洊鏄犲皠杩涙潵銆?- 鏇存柊 `package.json`锛屾柊澧?`test:graph:conflicts:e2e`锛屽苟璁?`verify:graph-conflicts` 椤哄簭鎵ц鍓嶇鍐茬獊鍥炲綊銆佸悗绔?graph 鐢熷懡鍛ㄦ湡娴嬭瘯銆佸浘璋卞伐浣滃尯 Playwright smoke 涓庢枃妗ｅ悓姝ャ€?- 鏇存柊 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`銆乣README.md`銆乣docs/DEVELOPMENT.md`銆乣docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛岀粺涓€鎶?`e2e/v1-graph-workspace.spec.ts` 绾冲叆鍥捐氨鍐茬獊鍥哄畾鍏ュ彛鍜屽洖褰掓槧灏勩€?### 楠岃瘉缁撴灉
+- 在上一轮已经建立 `verify:graph-conflicts` 固定入口的基础上，继续做一个更完整但仍然可控的全局收口。
+- 本轮目标是把现有 `e2e/v1-graph-workspace.spec.ts` 也纳进这条固定入口，让图谱冲突专项验证不再只覆盖前端 Vitest、后端 Go test 和文档同步，而是至少带上一条真实预览环境下的图谱工作区 smoke。
+### 实际变更
 
-- RED锛歚node --test scripts/graph-conflict-regression-baseline.test.mjs`
-- GREEN锛歚node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- 更新 `scripts/graph-conflict-regression-baseline.test.mjs`，先用 RED 锁定缺口：`verify:graph-conflicts` 还没有串上专门的图谱工作区 E2E smoke，也没有在回归矩阵文档中把这条 Playwright 覆盖映射进来。
+- 更新 `package.json`，新增 `test:graph:conflicts:e2e`，并让 `verify:graph-conflicts` 顺序执行前端冲突回归、后端 graph 生命周期测试、图谱工作区 Playwright smoke 与文档同步。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`、`README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把 `e2e/v1-graph-workspace.spec.ts` 纳入图谱冲突固定入口和回归映射。
+### 验证结果
+
+- RED：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- GREEN：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
 - `npm run verify:graph-conflicts`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `verify:graph-conflicts` 鐜板湪宸茬粡涓嶅彧鏄€滃崟鍏?缁勪欢/椤甸潰鍥炲綊闆嗗悎鈥濓紝鑰屾槸鑳借嚦灏戝湪鐪熷疄棰勮鐜涓嬭窇閫氫竴鏉″浘璋卞伐浣滃尯 smoke锛屼负鍚庣画 `WB-034` 琛ユ洿瀹屾暣鐨勫浘璋卞洖褰掔煩闃垫彁渚涗簡鏇村彲闈犵殑鍥哄畾鍩哄骇銆?- 褰撳墠浠嶆湭瑕嗙洊鐪熸鐨勫啿绐?Playwright 鍦烘櫙銆佺獎灞?妗岄潰鍙屽竷灞€鐭╅樀鍜屾洿瀹屾暣鐨?create/save/restore/export/layout/conflict/鏉冮檺璺緞锛涘悗缁簲缁х画鍦ㄨ繖鏉″浐瀹氬叆鍙ｄ箣涓婃墿灞曪紝鑰屼笉鏄彟璧烽浂鏁ｅ懡浠ゃ€?
-## 2026-07-09 07:14:00 +08:00 | v1.1.0-alpha.131 | 鏀跺彛 WB-032 鍥捐氨鍐茬獊鍥哄畾楠岃瘉鍏ュ彛
-### 浠诲姟鍐呭
+- `verify:graph-conflicts` 现在已经不只是“单元/组件/页面回归集合”，而是能至少在真实预览环境下跑通一条图谱工作区 smoke，为后续 `WB-034` 补更完整的图谱回归矩阵提供了更可靠的固定基座。
+- 当前仍未覆盖真正的冲突 Playwright 场景、窄屏/桌面双布局矩阵和更完整的 create/save/restore/export/layout/conflict/权限路径；后续应继续在这条固定入口之上扩展，而不是另起零散命令。
 
-- 鍦ㄨ繛缁ˉ浜嗗杞?`WB-032` 椤甸潰绾у啿绐佸洖褰掑悗锛岀户缁仛涓€涓洿鍋忓叏灞€鐨勬敹鍙ｏ紝涓嶅啀鍙柊澧炲崟鏉″洖褰掞紝鑰屾槸缁欏綋鍓嶅浘璋卞啿绐佺煩闃靛缓绔嬪浐瀹氭墽琛屽叆鍙ｃ€?- 鏈疆鐩爣鏄儚 `verify:search` 閭ｆ牱锛屾妸鐜版湁鍥捐氨鍐茬獊鐩稿叧鐨勫墠绔〉闈?缁勪欢/helper 鍥炲綊銆佸悗绔敓鍛藉懆鏈熸祴璇曞拰鏂囨。鍚屾鏀跺彛鎴愬彲閲嶅鎵ц鐨勭粺涓€鍛戒护锛屽苟鎶婃祴璇曟槧灏勬矇鍒板崟涓€鏂囨。閲岋紝涓哄悗缁?`WB-034` 鐨勫浐瀹氶獙璇佹竻鍗曟墦搴曘€?### 瀹為檯鍙樻洿
+## 2026-07-09 07:14:00 +08:00 | v1.1.0-alpha.131 | 收口 WB-032 图谱冲突固定验证入口
+### 任务内容
 
-- 鏂板 `scripts/graph-conflict-regression-baseline.test.mjs`锛屽厛浠?RED 閿佸畾涓夌被缂哄彛锛氫粨搴撶己灏?`verify:graph-conflicts` 鍏ュ彛銆佺己灏戝浘璋卞啿绐佸洖褰掔煩闃垫枃妗ｃ€佷富鏂囨。閲屼篃娌℃湁杩欐潯鍥哄畾鍏ュ彛銆?- 鏇存柊 `package.json`锛屾柊澧烇細
+- 在连续补了多轮 `WB-032` 页面级冲突回归后，继续做一个更偏全局的收口，不再只新增单条回归，而是给当前图谱冲突矩阵建立固定执行入口。
+- 本轮目标是像 `verify:search` 那样，把现有图谱冲突相关的前端页面/组件/helper 回归、后端生命周期测试和文档同步收口成可重复执行的统一命令，并把测试映射沉到单一文档里，为后续 `WB-034` 的固定验证清单打底。
+### 实际变更
+
+- 新增 `scripts/graph-conflict-regression-baseline.test.mjs`，先以 RED 锁定三类缺口：仓库缺少 `verify:graph-conflicts` 入口、缺少图谱冲突回归矩阵文档、主文档里也没有这条固定入口。
+- 更新 `package.json`，新增：
   - `test:graph:conflicts:frontend`
   - `test:graph:conflicts:backend`
   - `verify:graph-conflicts`
-- 鏂板 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`锛岄泦涓褰曞綋鍓嶅浘璋卞啿绐佺敓鍛藉懆鏈熻竟鐣屻€侀〉闈㈢骇閲嶇偣缁勫悎璺緞銆佸墠鍚庣娴嬭瘯鏄犲皠涓庢帹鑽愭墽琛屽叆鍙ｃ€?- 鏇存柊 `README.md`銆乣docs/DEVELOPMENT.md`銆乣docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛岀粺涓€鎶?`npm run verify:graph-conflicts` 鎺ュ叆涓绘枃妗ｅ拰鎵ц璺嚎銆?### 楠岃瘉缁撴灉
+- 新增 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，集中记录当前图谱冲突生命周期边界、页面级重点组合路径、前后端测试映射与推荐执行入口。
+- 更新 `README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把 `npm run verify:graph-conflicts` 接入主文档和执行路线。
+### 验证结果
 
-- RED锛歚node --test scripts/graph-conflict-regression-baseline.test.mjs`
-- GREEN锛歚node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- RED：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- GREEN：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
 - `npm run verify:graph-conflicts`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 褰撳墠鍥捐氨鍐茬獊鐭╅樀宸茬粡涓嶅啀鍙瓨鍦ㄤ簬闆舵暎娴嬭瘯鍛戒护鍜?`PROJECT_LOG.md` 鍙欒堪閲岋紝鑰屾槸鏈変簡鍥哄畾鎵ц鍏ュ彛鍜屽崟涓€鍥炲綊鏂囨。锛涘悗缁户缁ˉ `WB-032` 缁勫悎鍦烘櫙鏃讹紝鍙互鐩存帴鎺ュ埌杩欐潯鍏ュ彛涓婏紝鑰屼笉鏄噸澶嶆暣鐞嗗懡浠ゃ€?- 杩欒繕涓嶄唬琛?`WB-034` 宸插畬鎴愶紱鏇村畬鏁寸殑 Playwright 鍐茬獊 smoke銆佺獎灞?妗岄潰甯冨眬鐭╅樀鍜?create/save/restore/export/layout/conflict/鏉冮檺鍏ㄨ矾寰勶紝浠嶇劧闇€瑕佸湪杩欐潯鍏ュ彛鍩虹涓婄户缁墿灞曘€?
-## 2026-07-09 07:10:00 +08:00 | v1.1.0-alpha.130 | 鏀跺彛 WB-032 latest-head 澶氱洰鏍囪繛鏈爣璁板洖閫€椤甸潰绾у洖褰?### 浠诲姟鍐呭
+- 当前图谱冲突矩阵已经不再只存在于零散测试命令和 `PROJECT_LOG.md` 叙述里，而是有了固定执行入口和单一回归文档；后续继续补 `WB-032` 组合场景时，可以直接接到这条入口上，而不是重复整理命令。
+- 这还不代表 `WB-034` 已完成；更完整的 Playwright 冲突 smoke、窄屏/桌面布局矩阵和 create/save/restore/export/layout/conflict/权限全路径，仍然需要在这条入口基础上继续扩展。
 
-- 缁х画娌?`WB-032` 鎵╁睍椤甸潰绾у啿绐佺煩闃碉紝浣嗕繚鎸佹渶灏忛獙璇佹骞咃紝涓嶅湪杩欒疆寮曞叆鏂扮殑鍐茬獊閫昏緫銆?- 鏈疆鐩爣鏄妸 `latest-head` 鍒犻櫎璇箟涓嬬殑澶氱洰鏍囪繛绾胯矾寰勭户缁ˉ鍒版洿璐磋繎鐪熷疄鎿嶄綔鐨勯〉闈㈠洖褰掗噷锛氬綋鍓嶈崏绋垮厛娌跨敤鏈湴鍒犻櫎缁撴灉锛屽啀鍗曠嫭灏濊瘯淇濈暀鏈嶅姟绔鐩爣杩炵嚎锛岀敱鍐茬獊鍗＄墖缁欏嚭鑱斿姩寤鸿骞惰В闄ら樆鏂€?### 瀹為檯鍙樻洿
+## 2026-07-09 07:10:00 +08:00 | v1.1.0-alpha.130 | 收口 WB-032 latest-head 多目标连未标记回退页面级回归
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛屾柊澧?latest-head 澶氱洰鏍囪繛绾块〉闈㈢骇缁勫悎鍦烘櫙锛氬厛鏍囪 `Server node` 涓?`Extra server node` 涓轰繚鐣欐湰鍦板垹闄ょ粨鏋滐紝鍐嶆爣璁?`Server edge` 涓轰繚鐣欐湇鍔＄锛岄殢鍚庢柇瑷€鍗＄墖浼氬嚭鐜?`杩炵嚎鈥淪erver edge鈥濅細寮曠敤鏈繚鐣欑殑鑺傜偣` 闃绘柇璇存槑銆乣鑱斿姩淇濈暀鏈嶅姟绔細鑺傜偣锝滃垹闄わ綔Server node`銆乣鑱斿姩淇濈暀鏈嶅姟绔細鑺傜偣锝滃垹闄わ綔Extra server node` 涓?`鑱斿姩淇濈暀鏈湴锛氳繛绾匡綔鍒犻櫎锝淪erver edge` 涓夌被寤鸿锛屽苟鍦?`涓€閿簲鐢?3 椤硅仈鍔ㄥ彇鑸嶅缓璁甡 鍚庤В闄ら樆鏂€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€渓atest-head 鍒犻櫎璇箟涓嬬殑澶氱洰鏍囪繛绾胯矾寰勫凡琚〉闈㈢骇鍐茬獊鍥炲綊閿佸畾鈥濄€?### 楠岃瘉缁撴灉
+- 继续沿 `WB-032` 扩展页面级冲突矩阵，但保持最小验证步幅，不在这轮引入新的冲突逻辑。
+- 本轮目标是把 `latest-head` 删除语义下的多目标连线路径继续补到更贴近真实操作的页面回归里：当前草稿先沿用本地删除结果，再单独尝试保留服务端多目标连线，由冲突卡片给出联动建议并解除阻断。
+### 实际变更
 
-- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
-- `npm --workspace frontend-user run typecheck`
-- `npm run verify:docs`
-### 鍚庣画褰卞搷
-
-- `WB-032` 鐨勯〉闈㈢骇鍐茬獊鐭╅樀鐜板湪鍚屾椂瑕嗙洊浜?latest-head 鍒犻櫎璇箟涓嬬殑鍒嗙粍渚濊禆鍜屽鐩爣杩炵嚎锛屼笉鍐嶅彧鍋滅暀鍦ㄧ函 helper 鎴栧崟涓€瀵硅薄鍦烘櫙銆?- 涓嬩竴姝ユ洿閫傚悎缁х画琛モ€滄湭鏍囪榛樿鍥為€€ + 鍒嗙粍渚濊禆 + 澶氱洰鏍囪繛绾库€濊繖绫绘洿澶嶆潅鐨勭粍鍚堣矾寰勶紝鎴栬€呭紑濮嬫妸杩欎簺椤甸潰绾у洖褰掓暣鐞嗘垚 `WB-034` 鐨勫浐瀹氶獙璇佹竻鍗曘€?
-## 2026-07-09 07:06:00 +08:00 | v1.1.0-alpha.129 | 鏀跺彛 WB-032 latest-head 澶氱洰鏍囪繛椤甸潰绾у洖褰?### 浠诲姟鍐呭
-
-- 缁х画娌?`WB-032` 鎵╁睍椤甸潰绾у啿绐佺煩闃碉紝浣嗕粛淇濇寔灏忔楠岃瘉锛屼笉鍦ㄨ繖杞紩鍏ユ柊鐨勫啿绐侀€昏緫銆?- 鏈疆鐩爣鏄妸 `latest-head` 鍒犻櫎璇箟涓嬬殑澶氱洰鏍囪繛绾胯矾寰勪篃閿佽繘椤甸潰绾у洖褰掞細褰撳綋鍓嶈崏绋挎部鐢ㄦ湰鍦板垹闄ょ粨鏋溿€佸嵈灏濊瘯淇濈暀鏈嶅姟绔鐩爣杩炵嚎鏃讹紝鍐茬獊鍗＄墖蹇呴』鍚屾椂璇嗗埆涓荤洰鏍囪妭鐐瑰拰闄勫姞鐩爣鑺傜偣鐨勭己澶憋紝骞剁粰鍑?scope-aware 鐨勮仈鍔ㄥ缓璁€?### 瀹為檯鍙樻洿
-
-- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛屾柊澧?latest-head 澶氱洰鏍囪繛绾胯矾寰勶細鍏堟瀯閫犫€滀繚鐣欐湰鍦板垹闄ょ殑鏈嶅姟绔妭鐐?闄勫姞鐩爣鑺傜偣 + 淇濈暀鏈嶅姟绔繛绾库€濈殑鍐茬獊鐘舵€侊紝鍐嶆柇瑷€鍗＄墖浼氭樉绀?`杩炵嚎鈥淪erver edge鈥濅細寮曠敤鏈繚鐣欑殑鑺傜偣` 闃绘柇璇存槑銆乣鑱斿姩淇濈暀鏈嶅姟绔細鑺傜偣锝滃垹闄わ綔Server node`銆乣鑱斿姩淇濈暀鏈嶅姟绔細鑺傜偣锝滃垹闄わ綔Extra server node` 鍜?`鑱斿姩淇濈暀鏈湴锛氳繛绾匡綔鍒犻櫎锝淪erver edge` 涓夌被寤鸿锛屼互鍙?`涓€閿簲鐢?3 椤硅仈鍔ㄥ彇鑸嶅缓璁甡 鍚庨樆鏂В闄ゃ€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€渓atest-head 鍒犻櫎璇箟涓嬬殑澶氱洰鏍囪繛绾胯矾寰勪篃宸茶椤甸潰绾у洖褰掗攣瀹氣€濄€?### 楠岃瘉缁撴灉
+- 更新 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，新增 latest-head 多目标连线页面级组合场景：先标记 `Server node` 与 `Extra server node` 为保留本地删除结果，再标记 `Server edge` 为保留服务端，随后断言卡片会出现 `连线“Server edge”会引用未保留的节点` 阻断说明、`联动保留服务端：节点｜删除｜Server node`、`联动保留服务端：节点｜删除｜Extra server node` 与 `联动保留本地：连线｜删除｜Server edge` 三类建议，并在 `一键应用 3 项联动取舍建议` 后解除阻断。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“latest-head 删除语义下的多目标连线路径已被页面级冲突回归锁定”。
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run verify:docs`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `WB-032` 鐨勯〉闈㈢骇鍐茬獊鐭╅樀鐜板湪杩涗竴姝ヨ鐩栧埌浜?latest-head 鍒犻櫎璇箟涓嬬殑澶氱洰鏍囪繛绾匡紝涓嶅啀鍙鐩栨湰鍦版柊澧炲鐩爣渚濊禆銆?- 涓嬩竴姝ユ洿閫傚悎缁х画琛モ€滃鐩爣杩炵嚎 + 鍒嗙粍渚濊禆 + 鏈爣璁伴粯璁ゅ洖閫€鈥濅竴绫绘洿澶嶆潅鐨勭粍鍚堣矾寰勶紝鎴栬€呭紑濮嬫妸杩欎簺宸叉矇娣€鐨勯〉闈㈢骇鍥炲綊鏁寸悊鎴?`WB-034` 鐨勫浐瀹氶獙璇佹竻鍗曘€?
-## 2026-07-09 07:02:00 +08:00 | v1.1.0-alpha.128 | 鏀跺彛 WB-032 latest-head 鍒嗙粍渚濊禆椤甸潰绾у洖褰?### 浠诲姟鍐呭
+- `WB-032` 的页面级冲突矩阵现在同时覆盖了 latest-head 删除语义下的分组依赖和多目标连线，不再只停留在纯 helper 或单一对象场景。
+- 下一步更适合继续补“未标记默认回退 + 分组依赖 + 多目标连线”这类更复杂的组合路径，或者开始把这些页面级回归整理成 `WB-034` 的固定验证清单。
 
-- 缁х画娌?`WB-032` 鍋氫竴涓渶灏忎絾鏇存帴杩戠湡瀹炵敤鎴疯矾寰勭殑楠岃瘉鏀跺彛锛屼笉鎵╂柊閫昏緫锛岃€屾槸鎶婁笂涓€杞凡缁忚惤鍦扮殑 latest-head 鍒犻櫎璇箟琛ュ埌椤甸潰绾у啿绐佺煩闃甸噷銆?- 鏈疆鐩爣鏄攣瀹氫竴涓粍鍚堝満鏅細褰撳綋鍓嶈崏绋挎部鐢ㄦ湰鍦板垹闄ょ粨鏋溿€佷絾鍙堝皾璇曚繚鐣欐湇鍔＄鍒嗙粍鏃讹紝鍐茬獊鍗＄墖蹇呴』鑳借瘑鍒?`invalid_group_node` 闃绘柇锛屽苟缁欏嚭鐪熸 scope-aware 鐨勮仈鍔ㄥ彇鑸嶅缓璁€?### 瀹為檯鍙樻洿
+## 2026-07-09 07:06:00 +08:00 | v1.1.0-alpha.129 | 收口 WB-032 latest-head 多目标连页面级回归
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛屾柊澧?latest-head `group/node` 鍒犻櫎璇箟鐨勯〉闈㈢骇鍥炲綊锛氬厛鏋勯€犫€滀繚鐣欐湰鍦板垹闄ょ殑鏈嶅姟绔妭鐐?+ 淇濈暀鏈嶅姟绔垎缁勨€濈殑鍐茬獊鐘舵€侊紝鍐嶆柇瑷€鍗＄墖浼氬嚭鐜?`鍒嗙粍鈥淪erver group鈥濅粛寮曠敤鏈繚鐣欑殑鑺傜偣` 闃绘柇璇存槑銆乣鑱斿姩淇濈暀鏈嶅姟绔細鑺傜偣锝滃垹闄わ綔Server node` 涓?`鑱斿姩淇濈暀鏈湴锛氬垎缁勶綔鍒犻櫎锝淪erver group` 涓ょ被寤鸿锛屼互鍙?`涓€閿簲鐢?2 椤硅仈鍔ㄥ彇鑸嶅缓璁甡 鍚庨樆鏂В闄ゃ€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€渓atest-head 鍒犻櫎璇箟涓嬬殑鍒嗙粍渚濊禆鍦烘櫙涔熷凡琚〉闈㈢骇鍥炲綊閿佸畾鈥濄€?### 楠岃瘉缁撴灉
+- 继续沿 `WB-032` 扩展页面级冲突矩阵，但仍保持小步验证，不在这轮引入新的冲突逻辑。
+- 本轮目标是把 `latest-head` 删除语义下的多目标连线路径也锁进页面级回归：当当前草稿沿用本地删除结果、却尝试保留服务端多目标连线时，冲突卡片必须同时识别主目标节点和附加目标节点的缺失，并给出 scope-aware 的联动建议。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，新增 latest-head 多目标连线路径：先构造“保留本地删除的服务端节点/附加目标节点 + 保留服务端连线”的冲突状态，再断言卡片会显示 `连线“Server edge”会引用未保留的节点` 阻断说明、`联动保留服务端：节点｜删除｜Server node`、`联动保留服务端：节点｜删除｜Extra server node` 和 `联动保留本地：连线｜删除｜Server edge` 三类建议，以及 `一键应用 3 项联动取舍建议` 后阻断解除。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“latest-head 删除语义下的多目标连线路径也已被页面级回归锁定”。
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run verify:docs`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `WB-032` 鐜板湪涓嶄粎瑕嗙洊鏈湴鏂板瀵硅薄渚濊禆銆佸鐩爣杩炵嚎闄勫姞渚濊禆锛屼篃寮€濮嬭鐩?latest-head 鍒犻櫎璇箟涓嬬殑鍒嗙粍渚濊禆缁勫悎璺緞锛岄〉闈㈢骇鍐茬獊鐭╅樀鏇存帴杩戠湡瀹炲绔啿绐併€?- 涓嬩竴姝ユ洿閫傚悎缁х画琛?`dangling_edge` / `invalid_group_node` 涓?latest-head銆佸鐩爣渚濊禆銆佹湭鏍囪榛樿鍥為€€涔嬮棿鐨勬洿瀹屾暣缁勫悎鐭╅樀锛屽苟閫愭涓?`WB-034` 鏁寸悊鍥哄畾楠岃瘉娓呭崟銆?
-## 2026-07-09 06:58:00 +08:00 | v1.1.0-alpha.127 | 鏀跺彛 WB-032 澶氱洰鏍囪繛绾块〉闈㈢骇鍥炲綊
-### 浠诲姟鍐呭
+- `WB-032` 的页面级冲突矩阵现在进一步覆盖到了 latest-head 删除语义下的多目标连线，不再只覆盖本地新增多目标依赖。
+- 下一步更适合继续补“多目标连线 + 分组依赖 + 未标记默认回退”一类更复杂的组合路径，或者开始把这些已沉淀的页面级回归整理成 `WB-034` 的固定验证清单。
 
-- 鍦ㄤ笂涓€杞凡缁忚ˉ榻愬鐩爣杩炵嚎闄勫姞渚濊禆鑺傜偣鑱斿姩寤鸿鐨勫熀纭€涓婏紝缁х画娌?`WB-032` 鍋氫竴涓皬鑰岀ǔ鐨勯獙璇佹敹鍙ｃ€?- 鏈疆鐩爣涓嶆槸缁х画鎵╁啿绐侀€昏緫锛岃€屾槸鎶婅繖鏉¤涓虹湡姝ｉ攣杩涘伐浣滃尯椤甸潰绾у洖褰掞紝閬垮厤鍔熻兘鍙湪 `graphConflictSummary` 鍗曞厓灞傞€氳繃銆佷絾鍦ㄥ啿绐佸崱鐗囦氦浜掍笂鎮勬倓閫€鍥炪€?### 瀹為檯鍙樻洿
+## 2026-07-09 07:02:00 +08:00 | v1.1.0-alpha.128 | 收口 WB-032 latest-head 分组依赖页面级回归
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛屾柊澧炩€滃鐩爣杩炵嚎闄勫姞鐩爣鑺傜偣鈥濆満鏅細褰撴湰鍦拌崏绋夸繚鐣欎竴鏉″甫 `metadata.targetNodeIds` 鐨勮繛绾挎椂锛屽啿绐佽緟鍔╁崱鐗囧繀椤诲悓鏃剁粰鍑轰富鐩爣鑺傜偣鍜岄檮鍔犵洰鏍囪妭鐐圭殑鑱斿姩淇濈暀寤鸿锛屽苟鏄剧ず `涓€閿簲鐢?3 椤硅仈鍔ㄥ彇鑸嶅缓璁甡銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃鐩爣杩炵嚎闄勫姞渚濊禆鑺傜偣宸茶椤甸潰绾у啿绐佸洖褰掗攣瀹氣€濄€?### 楠岃瘉缁撴灉
+- 继续沿 `WB-032` 做一个最小但更接近真实用户路径的验证收口，不扩新逻辑，而是把上一轮已经落地的 latest-head 删除语义补到页面级冲突矩阵里。
+- 本轮目标是锁定一个组合场景：当当前草稿沿用本地删除结果、但又尝试保留服务端分组时，冲突卡片必须能识别 `invalid_group_node` 阻断，并给出真正 scope-aware 的联动取舍建议。
+### 实际变更
 
-- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
-### 鍚庣画褰卞搷
+- 更新 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，新增 latest-head `group/node` 删除语义的页面级回归：先构造“保留本地删除的服务端节点 + 保留服务端分组”的冲突状态，再断言卡片会出现 `分组“Server group”仍引用未保留的节点` 阻断说明、`联动保留服务端：节点｜删除｜Server node` 与 `联动保留本地：分组｜删除｜Server group` 两类建议，以及 `一键应用 2 项联动取舍建议` 后阻断解除。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“latest-head 删除语义下的分组依赖场景也已被页面级回归锁定”。
+### 验证结果
 
-- `WB-032` 鐜板湪涓嶅彧鍦ㄧ函閫昏緫灞傝鐩栧鐩爣杩炵嚎闄勫姞渚濊禆鑺傜偣锛岄〉闈㈢骇鍐茬獊鍗＄墖浜や簰涔熻閿佷綇锛屼负鍚庣画 `WB-034` 鐨勫浘璋卞啿绐佸洖褰掔煩闃垫墦浜嗕竴鍧楁洿鎺ヨ繎鐪熷疄鐢ㄦ埛璺緞鐨勫湴鍩恒€?- 涓嬩竴姝ユ洿閫傚悎缁х画琛ユ洿澶?latest-head / group / multi-target 缁勫悎鍦烘櫙鐨勯〉闈㈢骇鍥炲綊锛屾垨閫愭寮€濮嬫暣鐞?`WB-034` 鎵€闇€鐨勫啿绐侀獙璇佺煩闃点€?
-## 2026-07-09 06:53:00 +08:00 | v1.1.0-alpha.126 | 鎺ㄨ繘 WB-032 澶氱洰鏍囪繛绾胯仈鍔ㄥ彇鑸嶅瓙姝ラ
-### 浠诲姟鍐呭
-
-- 鎸?`CODEX_MASTER_PROMPT.md` 褰撳墠浼樺厛绾х户缁部 `WB-032` 鍋氫竴涓渶灏忋€佸彲娴嬭瘯鐨勫啿绐佸鐞嗘敹鍙ｏ紝涓嶈烦鍘绘柊鐨勫叡浜眰鎴栨帶鍒跺櫒鎷嗗垎銆?- 鏈疆鐩爣鏄ˉ榻愪竴涓湡瀹炰絾杈冮殣钄界殑渚濊禆缂哄彛锛氬綋 `dangling_edge` 鏉ヨ嚜澶氱洰鏍囪繛绾?`metadata.targetNodeIds` 涓殑缂哄け鑺傜偣鏃讹紝鑱斿姩鍙栬垗寤鸿涓嶅簲鍙洴浣忎富 `sourceNodeId / targetNodeId`锛岃繕搴旀彁绀轰繚鐣欒繖浜涢澶栦緷璧栬妭鐐广€?### 瀹為檯鍙樻洿
-
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`锛屽厛鐢?RED 閿佸畾鈥滃鐩爣杩炵嚎寮曠敤鐨勯檮鍔犵洰鏍囪妭鐐硅閬楁紡鈥濊繖涓€缂哄彛锛氬綋鍓嶅彧浼氬缓璁洖閫€杩炵嚎锛屼笉浼氳仈鍔ㄨˉ榻?`targetNodeIds` 閲岀殑渚濊禆鑺傜偣銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛岃 `buildGraphConflictResolutionSuggestions(...)` 鍦ㄥ鐞?`dangling_edge` 鏃剁粺涓€鏀堕泦 `sourceNodeId`銆乣targetNodeId` 鍜?`metadata.targetNodeIds`锛屽苟瀵瑰幓閲嶅悗鐨勮妭鐐归泦鍚堢敓鎴愬悓涓€濂椻€滀繚鐣欎緷璧栬妭鐐?/ 鏀惧純闂杩炵嚎鈥濆缓璁€?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃鐩爣杩炵嚎鐨勯檮鍔犱緷璧栬妭鐐逛篃鑳借繘鍏ヨ仈鍔ㄥ彇鑸嶅缓璁€濄€?### 楠岃瘉缁撴灉
-
-- RED锛歚npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 - `npm --workspace frontend-user run typecheck`
-### 鍚庣画褰卞搷
+- `npm run verify:docs`
+### 后续影响
 
-- `WB-032` 鐨勮仈鍔ㄥ彇鑸嶅缓璁幇鍦ㄤ笉鍐嶅彧瑕嗙洊鏅€氬崟鐩爣杩炵嚎锛涘綋鍐茬獊鏉ヨ嚜澶氱洰鏍囪繛绾块檮甯︾殑棰濆鐩爣鑺傜偣鏃讹紝鍐茬獊鍗＄墖涔熻兘缁欏嚭鐪熸鍙墽琛岀殑琛ラ綈寤鸿銆?- 杩欎竴杞粛鐒舵病鏈夊畬鎴愭洿绯荤粺鐨?conflict handling锛涗笅涓€姝ユ洿閫傚悎缁х画琛ユ洿澶氱粍鍚堝瀷渚濊禆鍦烘櫙锛屾垨寮€濮嬫暣鐞?`WB-034` 鎵€闇€鐨勫浘璋卞啿绐佸洖褰掔煩闃点€?
-## 2026-07-09 06:46:00 +08:00 | v1.1.0-alpha.125 | 鎺ㄨ繘 WB-032 latest-head 鍒犻櫎璇箟鑱斿姩寤鸿淇
-### 浠诲姟鍐呭
+- `WB-032` 现在不仅覆盖本地新增对象依赖、多目标连线附加依赖，也开始覆盖 latest-head 删除语义下的分组依赖组合路径，页面级冲突矩阵更接近真实多端冲突。
+- 下一步更适合继续补 `dangling_edge` / `invalid_group_node` 与 latest-head、多目标依赖、未标记默认回退之间的更完整组合矩阵，并逐步为 `WB-034` 整理固定验证清单。
 
-- 鎸夊綋鍓嶄紭鍏堢骇缁х画娌?`WB-032` 鍋氫竴涓渶灏忋€佸彲娴嬭瘯鐨勫啿绐佸鐞嗘敹鍙ｏ紝鑰屼笉鏄烦鍘绘柊鐨勫叡浜眰鎴栨洿澶х殑閲嶆瀯銆?- 鏈疆鐩爣鏄慨姝ｄ竴涓湡瀹炵殑 latest-head 璇箟缂哄彛锛氬綋闃绘柇鏉ヨ嚜鈥滃綋鍓嶅彇鑸嶆兂娌跨敤鏈湴鍒犻櫎缁撴灉锛屽鑷存湇鍔＄杈?鍒嗙粍澶卞幓渚濊禆瀵硅薄鈥濇椂锛岃仈鍔ㄥ彇鑸嶅缓璁笉搴旂户缁満姊板湴鎺ㄨ崘 `keep-local` / `keep-latest`锛岃€屽簲缁欏嚭鐪熸鑳借В闄ら樆鏂殑鏂瑰悜銆?### 瀹為檯鍙樻洿
+## 2026-07-09 06:58:00 +08:00 | v1.1.0-alpha.127 | 收口 WB-032 多目标连线页面级回归
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`锛屽厛鐢?RED 閿佸畾涓€涓?latest-head 鍒犻櫎鍦烘櫙锛氬綋鍓嶈崏绋跨己灏戞湇鍔＄鑺傜偣涓庤繛绾匡紝鑻ョ敤鎴风户缁部鐢ㄦ湰鍦板垹闄ょ粨鏋滐紝鍐茬獊寤鸿蹇呴』鑳芥纭彁绀衡€滀繚鐣欐湇鍔＄鑺傜偣鈥濇垨鈥滄寜鏈湴鍒犻櫎缁撴灉澶勭悊璇ユ湇鍔＄杩炵嚎鈥濄€?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛岃 `buildGraphConflictResolutionSuggestions(...)` 涓嶅啀鎶娾€滀繚鐣欏璞♀€濆浐瀹氬啓姝绘垚 `keep-local`銆佹妸鈥滄斁寮冨璞♀€濆浐瀹氬啓姝绘垚 `keep-latest`锛岃€屾槸鎸夊璞″樊寮傜殑 `action` 鍒ゆ柇鐪熸鐨勫缓璁柟鍚戯紱鍚屾椂鍦ㄧ敓鎴?`dangling_edge` / `invalid_group_node` 寤鸿鏃惰ˉ涓婂 `latestHead` 鏂囨。杈瑰拰鍒嗙粍鐨勮鍙栵紝閬垮厤鏈嶅姟绔璞″彧瀛樺湪浜庢渶鏂扮増鏈椂鐩存帴澶卞幓鑱斿姩寤鸿銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾妸 `latestConflictDetail` 缁х画涓嬩紶鍒板缓璁敓鎴愰€昏緫锛岀‘淇濋〉闈㈢骇鍐茬獊鍗＄墖涔熻兘娑堣垂杩欐 latest-head 鍒犻櫎璇箟淇銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€渓atest-head removed 瀵硅薄鐨勮仈鍔ㄥ缓璁柟鍚戝凡绾犳鈥濈殑鏈€鏂扮姸鎬併€?### 楠岃瘉缁撴灉
+- 在上一轮已经补齐多目标连线附加依赖节点联动建议的基础上，继续沿 `WB-032` 做一个小而稳的验证收口。
+- 本轮目标不是继续扩冲突逻辑，而是把这条行为真正锁进工作区页面级回归，避免功能只在 `graphConflictSummary` 单元层通过、但在冲突卡片交互上悄悄退回。
+### 实际变更
 
-- RED锛歚npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- 更新 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，新增“多目标连线附加目标节点”场景：当本地草稿保留一条带 `metadata.targetNodeIds` 的连线时，冲突辅助卡片必须同时给出主目标节点和附加目标节点的联动保留建议，并显示 `一键应用 3 项联动取舍建议`。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“多目标连线附加依赖节点已被页面级冲突回归锁定”。
+### 验证结果
+
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `WB-032` 鐨勮仈鍔ㄥ彇鑸嶅缓璁幇鍦ㄤ笉鍐嶅彧瀵光€滄湰鍦版柊澧?淇敼瀵硅薄鈥濇柟鍚戞纭紱褰撻棶棰樺璞″彧瀛樺湪浜庢渶鏂版湇鍔＄鐗堟湰鏃讹紝鍐茬獊鍗＄墖涔熻兘缁欏嚭鐪熸鍙墽琛岀殑瑙ｉ櫎闃绘柇寤鸿銆?- 杩欎竴杞粛鐒舵病鏈夊畬鎴愭洿绯荤粺鐨?conflict handling锛涗笅涓€姝ユ洿閫傚悎缁х画琛ユ洿澶?latest-head / 璺ㄥ璞＄粍鍚堝満鏅殑椤甸潰绾у洖褰掞紝鎴栧紑濮嬫⒊鐞?`WB-034` 鎵€闇€鐨勫浘璋卞啿绐佺煩闃点€?
-## 2026-07-09 07:18:00 +08:00 | v1.1.0-alpha.124 | 鏀跺彛 QA-010 榛樿瑕嗙洊鐜囧熀绾块棬绂?### 浠诲姟鍐呭
+- `WB-032` 现在不只在纯逻辑层覆盖多目标连线附加依赖节点，页面级冲突卡片交互也被锁住，为后续 `WB-034` 的图谱冲突回归矩阵打了一块更接近真实用户路径的地基。
+- 下一步更适合继续补更多 latest-head / group / multi-target 组合场景的页面级回归，或逐步开始整理 `WB-034` 所需的冲突验证矩阵。
 
-- 鍦?`SEC-011` 宸叉妸浠撳簱绾?secret scan 绾冲叆榛樿 CI 涔嬪悗锛岀户缁寜鈥滃厛鏀跺彛鍏ㄥ眬楠ㄦ灦鈥濈殑浼樺厛绾э紝琛ヤ笂鍓╀綑鐨?P0 宸ョ▼闂ㄧ缂哄彛锛屾妸瑕嗙洊鐜囦粠 release 鍓嶇殑浜哄伐姹囨€绘帹杩涗负榛樿娴佹按绾跨殑鏄惧紡纭棬绂併€?- 鏈疆鐩爣涓嶆槸寮鸿鎶婂叏浠撶珛鍒绘媺鍒?80%锛岃€屾槸鍏堟妸褰撳墠宸查獙璇佽鐩栫巼鍥哄寲涓衡€滀笉鍥為€€鈥濆熀绾匡紝骞舵妸杩欐潯绾︽潫娌夊埌鍙墽琛屾祴璇曘€佺粺涓€鑴氭湰鍜岄粯璁?CI 閲屻€?### 瀹為檯鍙樻洿
+## 2026-07-09 06:53:00 +08:00 | v1.1.0-alpha.126 | 推进 WB-032 多目标连线联动取舍子步骤
+### 任务内容
 
-- 鏂板 `scripts/coverage-baseline.test.mjs`锛屽厛浠?RED 閿佸畾鍥涚被缂哄彛锛氫粨搴撶己灏?`verify:coverage` 鍛戒护銆乣ci` 鏈樉寮忔墽琛岃鐩栫巼闂ㄧ銆丟itHub Actions 娌℃湁 coverage gate 姝ラ锛屼互鍙?README / 寮€鍙戣鏄?/ 鐗堟湰璁″垝 / release checklist 浠嶅彧璁板綍 `test:coverage` 鑰屾病鏈夐粯璁ょ‖闂ㄧ鍏ュ彛銆?- 鏂板 `scripts/verify-coverage-gates.mjs`锛岀粺涓€鏀跺彛鍥涘瑕嗙洊鐜囨潵婧愶細`frontend-user` 涓?`frontend-admin` 杩愯 Vitest coverage 骞惰鍙?JSON summary锛宍@studymate/graph-core` 瑙ｆ瀽 Node test coverage 鐨?`all files` 姹囨€伙紝鍚庣杩愯 `go test ./... -coverprofile` 骞剁敤 `go tool cover -func` 璇诲彇鎬讳綋 statements銆?- 灏嗗綋鍓嶄粨搴撳凡楠岃瘉瑕嗙洊鐜囧浐鍖栦负榛樿鈥滀笉鍥為€€鈥濆熀绾匡細`frontend-user` `statements/branches/functions/lines >= 68/63/67/68`锛宍frontend-admin >= 70/67/64/75`锛宍graph-core lines/branches/functions >= 96/79/100`锛屽悗绔€讳綋 `statements >= 25`銆?- 鏇存柊 `package.json`銆乣.github/workflows/ci.yml`銆乣README.md`銆乣docs/DEVELOPMENT.md`銆乣docs/planning/VERSION_PLAN.md`銆乣docs/planning/ROADMAP.md`銆乣docs/planning/versions/v1.0.0-release.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_PROJECT_CONTEXT.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛岀粺涓€鎶婇粯璁よ鐩栫巼闂ㄧ鍏ュ彛鏀跺彛涓?`npm run verify:coverage`锛屽苟鏄庣‘ `npm run test:coverage` 缁х画鎵挎媴鍙戝竷鍓嶈缁嗘眹鎬昏亴璐ｃ€?### 楠岃瘉缁撴灉
+- 按 `CODEX_MASTER_PROMPT.md` 当前优先级继续沿 `WB-032` 做一个最小、可测试的冲突处理收口，不跳去新的共享层或控制器拆分。
+- 本轮目标是补齐一个真实但较隐蔽的依赖缺口：当 `dangling_edge` 来自多目标连线 `metadata.targetNodeIds` 中的缺失节点时，联动取舍建议不应只盯住主 `sourceNodeId / targetNodeId`，还应提示保留这些额外依赖节点。
+### 实际变更
 
-- RED锛歚node --test scripts/coverage-baseline.test.mjs`
-- GREEN锛歚node --test scripts/coverage-baseline.test.mjs`
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，先用 RED 锁定“多目标连线引用的附加目标节点被遗漏”这一缺口：当前只会建议回退连线，不会联动补齐 `targetNodeIds` 里的依赖节点。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，让 `buildGraphConflictResolutionSuggestions(...)` 在处理 `dangling_edge` 时统一收集 `sourceNodeId`、`targetNodeId` 和 `metadata.targetNodeIds`，并对去重后的节点集合生成同一套“保留依赖节点 / 放弃问题连线”建议。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“多目标连线的附加依赖节点也能进入联动取舍建议”。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+### 后续影响
+
+- `WB-032` 的联动取舍建议现在不再只覆盖普通单目标连线；当冲突来自多目标连线附带的额外目标节点时，冲突卡片也能给出真正可执行的补齐建议。
+- 这一轮仍然没有完成更系统的 conflict handling；下一步更适合继续补更多组合型依赖场景，或开始整理 `WB-034` 所需的图谱冲突回归矩阵。
+
+## 2026-07-09 06:46:00 +08:00 | v1.1.0-alpha.125 | 推进 WB-032 latest-head 删除语义联动建议修正
+### 任务内容
+
+- 按当前优先级继续沿 `WB-032` 做一个最小、可测试的冲突处理收口，而不是跳去新的共享层或更大的重构。
+- 本轮目标是修正一个真实的 latest-head 语义缺口：当阻断来自“当前取舍想沿用本地删除结果，导致服务端边/分组失去依赖对象”时，联动取舍建议不应继续机械地推荐 `keep-local` / `keep-latest`，而应给出真正能解除阻断的方向。
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，先用 RED 锁定一个 latest-head 删除场景：当前草稿缺少服务端节点与连线，若用户继续沿用本地删除结果，冲突建议必须能正确提示“保留服务端节点”或“按本地删除结果处理该服务端连线”。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，让 `buildGraphConflictResolutionSuggestions(...)` 不再把“保留对象”固定写死成 `keep-local`、把“放弃对象”固定写死成 `keep-latest`，而是按对象差异的 `action` 判断真正的建议方向；同时在生成 `dangling_edge` / `invalid_group_node` 建议时补上对 `latestHead` 文档边和分组的读取，避免服务端对象只存在于最新版本时直接失去联动建议。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把 `latestConflictDetail` 继续下传到建议生成逻辑，确保页面级冲突卡片也能消费这次 latest-head 删除语义修正。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“latest-head removed 对象的联动建议方向已纠正”的最新状态。
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+### 后续影响
+
+- `WB-032` 的联动取舍建议现在不再只对“本地新增/修改对象”方向正确；当问题对象只存在于最新服务端版本时，冲突卡片也能给出真正可执行的解除阻断建议。
+- 这一轮仍然没有完成更系统的 conflict handling；下一步更适合继续补更多 latest-head / 跨对象组合场景的页面级回归，或开始梳理 `WB-034` 所需的图谱冲突矩阵。
+
+## 2026-07-09 07:18:00 +08:00 | v1.1.0-alpha.124 | 收口 QA-010 默认覆盖率基线门禁
+### 任务内容
+
+- 在 `SEC-011` 已把仓库级 secret scan 纳入默认 CI 之后，继续按“先收口全局骨架”的优先级，补上剩余的 P0 工程门禁缺口，把覆盖率从 release 前的人工汇总推进为默认流水线的显式硬门禁。
+- 本轮目标不是强行把全仓立刻拉到 80%，而是先把当前已验证覆盖率固化为“不回退”基线，并把这条约束沉到可执行测试、统一脚本和默认 CI 里。
+### 实际变更
+
+- 新增 `scripts/coverage-baseline.test.mjs`，先以 RED 锁定四类缺口：仓库缺少 `verify:coverage` 命令、`ci` 未显式执行覆盖率门禁、GitHub Actions 没有 coverage gate 步骤，以及 README / 开发说明 / 版本计划 / release checklist 仍只记录 `test:coverage` 而没有默认硬门禁入口。
+- 新增 `scripts/verify-coverage-gates.mjs`，统一收口四套覆盖率来源：`frontend-user` 与 `frontend-admin` 运行 Vitest coverage 并读取 JSON summary，`@studymate/graph-core` 解析 Node test coverage 的 `all files` 汇总，后端运行 `go test ./... -coverprofile` 并用 `go tool cover -func` 读取总体 statements。
+- 将当前仓库已验证覆盖率固化为默认“不回退”基线：`frontend-user` `statements/branches/functions/lines >= 68/63/67/68`，`frontend-admin >= 70/67/64/75`，`graph-core lines/branches/functions >= 96/79/100`，后端总体 `statements >= 25`。
+- 更新 `package.json`、`.github/workflows/ci.yml`、`README.md`、`docs/DEVELOPMENT.md`、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`docs/planning/versions/v1.0.0-release.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_PROJECT_CONTEXT.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把默认覆盖率门禁入口收口为 `npm run verify:coverage`，并明确 `npm run test:coverage` 继续承担发布前详细汇总职责。
+### 验证结果
+
+- RED：`node --test scripts/coverage-baseline.test.mjs`
+- GREEN：`node --test scripts/coverage-baseline.test.mjs`
 - `npm run verify:coverage`
 - `npm run verify:docs`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 榛樿 CI 鐜板湪涓嶅啀鍙湪 release checklist 閲屸€滄彁閱掕鐪嬭鐩栫巼姹囨€烩€濓紝鑰屾槸浼氱洿鎺ユ墽琛?`npm run verify:coverage`锛屽厛鎶婂墠鍚庡彴銆乬raph-core 鍜屽悗绔鐩栫巼鍥為€€鎸″湪鏈湴涓庢祦姘寸嚎鍏ュ彛銆?- 杩欎竴杞敹鍙ｇ殑鏄€滃熀绾夸笉鍥為€€鈥濈‖闂ㄧ锛岃€屼笉鏄€滃叏浠?80% 涓€姝ュ埌浣嶁€濓紱鍚庣画浠嶅簲娌?`FE-040`銆乣API-010`銆乣WB-032` 绛夐噷绋嬬缁х画琛ユ祴璇曘€佹彁鍗囩湡瀹炶鐩栫巼锛屽苟閫愭鎶珮榛樿闃堝€笺€?
-## 2026-07-09 06:28:00 +08:00 | v1.1.0-alpha.122 | 鏀跺彛 SEC-010 渚濊禆瀹夊叏鍩虹嚎涓?CI 瀹¤闂ㄧ
-### 浠诲姟鍐呭
+- 默认 CI 现在不再只在 release checklist 里“提醒要看覆盖率汇总”，而是会直接执行 `npm run verify:coverage`，先把前后台、graph-core 和后端覆盖率回退挡在本地与流水线入口。
+- 这一轮收口的是“基线不回退”硬门禁，而不是“全仓 80% 一步到位”；后续仍应沿 `FE-040`、`API-010`、`WB-032` 等里程碑继续补测试、提升真实覆盖率，并逐步抬高默认阈值。
 
-- 鍦?`DEV-010` 宸叉彁渚?`verify:deps` 瀹¤鍏ュ彛鐨勫熀纭€涓婏紝缁х画閫夋嫨涓€涓鐩栭潰骞夸絾涓嶆繁鍏ヤ骇鍝佸姛鑳界殑鏂板伐浣滃寘锛屾妸鈥滃璁″凡缁忚兘鎶ュ嚭鏉モ€濇帹杩涘埌鈥滃綋鍓嶅熀绾垮凡缁忚鏀跺彛骞堕粯璁ゅ彈 CI 淇濇姢鈥濄€?- 鏈疆鐩爣涓嶆槸缁х画鎵╁睍涓氬姟妯″潡锛岃€屾槸閿佸畾鍓嶇閿佹枃浠朵腑鐨勫畨鍏ㄧ増鏈€佸悗绔?Go toolchain 涓庡叧閿緷璧栫殑 patch 涓嬮檺锛屽苟鎶婅繖缁勭害鏉熸矇鍒板彲鎵ц娴嬭瘯鍜岄粯璁ゆ祦姘寸嚎閲屻€?### 瀹為檯鍙樻洿
+## 2026-07-09 06:28:00 +08:00 | v1.1.0-alpha.122 | 收口 SEC-010 依赖安全基线与 CI 审计门禁
+### 任务内容
 
-- 鏂板 `scripts/dependency-security-baseline.test.mjs`锛屽厛鐢?RED 閿佸畾 `vite` / `esbuild` / `undici` / `glob` 鐨勬渶浣庡畨鍏ㄧ増鏈€乣frontend-user` / `frontend-admin` 鐨?`vite` 鐗堟湰涓嬮檺銆佹牴 `vitest` / `@vitest/coverage-v8` / `@vue/test-utils` 鐗堟湰涓嬮檺锛屼互鍙?`backend/go.mod` 涓?`toolchain go1.26.5`銆乣golang.org/x/net v0.55.0`銆乣github.com/quic-go/quic-go v0.59.1` 涓?CI 鐨?Go patch 鐗堟湰銆?- 鏇存柊鏍?`package.json`銆乣frontend-user/package.json`銆乣frontend-admin/package.json` 涓?`package-lock.json`锛屾妸鍓嶇渚濊禆澹版槑鍜岄攣鏂囦欢涓€璧锋媺鍥?`vite ^7.3.6`銆乣vitest ^4.1.10`銆乣@vitest/coverage-v8 ^4.1.10`銆乣@vue/test-utils ^2.4.11` 鐨勫畨鍏ㄥ熀绾匡紝骞舵竻鎺夐攣鏂囦欢閲屾畫鐣欑殑 `esbuild` / `undici` / `glob` 鏃х増鏈€?- 鏇存柊 `backend/go.mod` 涓?`backend/go.sum`锛屾樉寮忓姞鍏?`toolchain go1.26.5`锛屽苟鍗囩骇 `golang.org/x/net` 鍒?`v0.55.0`銆乣github.com/quic-go/quic-go` 鍒?`v0.59.1`锛屽悓姝ュ甫涓?`qpack` 涓?`x/*` 渚濊禆鐨勬柊瀹夊叏鐗堟湰銆?- 鏇存柊 [.github/workflows/ci.yml](/E:/Code/1108026_rust_go/StudyMate/.github/workflows/ci.yml)銆乕docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)銆乕docs/engineering/CODEX_BACKLOG.md](/E:/Code/1108026_rust_go/StudyMate/docs/engineering/CODEX_BACKLOG.md)銆乕docs/engineering/CODEX_EXECUTION_ROADMAP.md](/E:/Code/1108026_rust_go/StudyMate/docs/engineering/CODEX_EXECUTION_ROADMAP.md) 涓?[docs/engineering/CODEX_PROJECT_CONTEXT.md](/E:/Code/1108026_rust_go/StudyMate/docs/engineering/CODEX_PROJECT_CONTEXT.md)锛屾妸 Go `1.26.5`銆乣verify:deps` 闂ㄧ鍜屾湰杞緷璧栧畨鍏ㄦ敹鍙ｇ姸鎬佸悓姝ュ洖宸ョ▼鏂囨。銆?### 楠岃瘉缁撴灉
+- 在 `DEV-010` 已提供 `verify:deps` 审计入口的基础上，继续选择一个覆盖面广但不深入产品功能的新工作包，把“审计已经能报出来”推进到“当前基线已经被收口并默认受 CI 保护”。
+- 本轮目标不是继续扩展业务模块，而是锁定前端锁文件中的安全版本、后端 Go toolchain 与关键依赖的 patch 下限，并把这组约束沉到可执行测试和默认流水线里。
+### 实际变更
 
-- RED锛歚node --test scripts/dependency-security-baseline.test.mjs`
-- GREEN锛歚node --test scripts/dependency-security-baseline.test.mjs`
+- 新增 `scripts/dependency-security-baseline.test.mjs`，先用 RED 锁定 `vite` / `esbuild` / `undici` / `glob` 的最低安全版本、`frontend-user` / `frontend-admin` 的 `vite` 版本下限、根 `vitest` / `@vitest/coverage-v8` / `@vue/test-utils` 版本下限，以及 `backend/go.mod` 中 `toolchain go1.26.5`、`golang.org/x/net v0.55.0`、`github.com/quic-go/quic-go v0.59.1` 与 CI 的 Go patch 版本。
+- 更新根 `package.json`、`frontend-user/package.json`、`frontend-admin/package.json` 与 `package-lock.json`，把前端依赖声明和锁文件一起拉回 `vite ^7.3.6`、`vitest ^4.1.10`、`@vitest/coverage-v8 ^4.1.10`、`@vue/test-utils ^2.4.11` 的安全基线，并清掉锁文件里残留的 `esbuild` / `undici` / `glob` 旧版本。
+- 更新 `backend/go.mod` 与 `backend/go.sum`，显式加入 `toolchain go1.26.5`，并升级 `golang.org/x/net` 到 `v0.55.0`、`github.com/quic-go/quic-go` 到 `v0.59.1`，同步带上 `qpack` 与 `x/*` 依赖的新安全版本。
+- 更新 [.github/workflows/ci.yml](/E:/Code/1108026_rust_go/StudyMate/.github/workflows/ci.yml)、[docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)、[docs/engineering/CODEX_BACKLOG.md](/E:/Code/1108026_rust_go/StudyMate/docs/engineering/CODEX_BACKLOG.md)、[docs/engineering/CODEX_EXECUTION_ROADMAP.md](/E:/Code/1108026_rust_go/StudyMate/docs/engineering/CODEX_EXECUTION_ROADMAP.md) 与 [docs/engineering/CODEX_PROJECT_CONTEXT.md](/E:/Code/1108026_rust_go/StudyMate/docs/engineering/CODEX_PROJECT_CONTEXT.md)，把 Go `1.26.5`、`verify:deps` 门禁和本轮依赖安全收口状态同步回工程文档。
+### 验证结果
+
+- RED：`node --test scripts/dependency-security-baseline.test.mjs`
+- GREEN：`node --test scripts/dependency-security-baseline.test.mjs`
 - `npm run verify:deps`
 - `npm run verify:runtimes`
 - `npm --workspace frontend-user run typecheck`
@@ -1214,42 +1835,62 @@
 - `npm --workspace frontend-admin run test -- src/tokenSource.test.ts`
 - `cd backend && go test ./...`
 - `npm run verify:docs`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `verify:deps` 鐜板湪涓嶅啀鍙槸鈥滆兘鎶婃紡娲炴墦鍑烘潵鈥濈殑杈呭姪鍏ュ彛锛岃€屾槸褰撳墠鍩虹嚎鏈韩宸茬粡杞豢锛屽苟琚撼鍏ラ粯璁?CI 闂ㄧ锛涘悗缁鏋滈攣鏂囦欢鎴?Go 渚濊禆鍥為€€鍒板凡鐭ユ紡娲炵増鏈紝浼氬厛鍦ㄦ湰鍦板熀绾挎祴璇曞拰 CI 涓毚闇插嚭鏉ャ€?- 鍓╀綑鐨勫伐绋嬬骇 P0 缂哄彛涓嶅啀鏄€滀緷璧栧璁＄粨鏋滃皻鏈鐞嗏€濓紝鑰屾槸瑕嗙洊鐜囩‖闂ㄦ涓庢洿瀹屾暣鐨?secret scan锛涘悗缁簲缁х画浼樺厛鏀跺彛杩欎簺鍏ㄥ眬璐ㄩ噺闂ㄧ锛岃€屼笉鏄墿鏂板姛鑳藉煙銆?
-## 2026-07-09 05:26:00 +08:00 | v1.1.0-alpha.120 | 鏀跺彛 API-011 浼氳瘽澶辨晥鍘熷洜涓庣粺涓€鎻愮ず璇箟
-### 浠诲姟鍐呭
+- `verify:deps` 现在不再只是“能把漏洞打出来”的辅助入口，而是当前基线本身已经转绿，并被纳入默认 CI 门禁；后续如果锁文件或 Go 依赖回退到已知漏洞版本，会先在本地基线测试和 CI 中暴露出来。
+- 剩余的工程级 P0 缺口不再是“依赖审计结果尚未处理”，而是覆盖率硬门槛与更完整的 secret scan；后续应继续优先收口这些全局质量门禁，而不是扩新功能域。
 
-- 鍦?`API-011` 宸插畬鎴愬墠鍚庡彴鍏变韩 refresh/replay 绗竴娈甸鏋剁殑鍩虹涓婏紝缁х画閫夋嫨涓€涓鐩栭潰骞夸絾浠嶇劧瀹夊叏鍙帶鐨勬渶灏忓伐浣滃寘锛屾妸鈥渞efresh 澶辫触鍚庝负浠€涔堣鐧诲嚭鈥濅粠灞€閮ㄥ壇浣滅敤鎻愬崌涓哄叡浜敓鍛藉懆鏈熺殑涓€閮ㄥ垎銆?- 鏈疆鐩爣涓嶆槸缁х画鎵╁悗鍙版柊妯″潡锛岃€屾槸鍏堟敹鍙ｄ袱涓槑纭己鍙ｏ細浼氳瘽澶辨晥鍘熷洜璁板綍锛屼互鍙婂墠鍚庡彴鐧诲綍椤典竴鑷村彲璇荤殑 fail-logout 鎻愮ず璇箟銆?### 瀹為檯鍙樻洿
+## 2026-07-09 05:26:00 +08:00 | v1.1.0-alpha.120 | 收口 API-011 会话失效原因与统一提示语义
+### 任务内容
 
-- 鏇存柊 `packages/api-client/src/index.ts`锛屾柊澧?`SessionInvalidationState` 涓?`onSessionInvalidated(...)` 鍥炶皟锛涘叡浜?`createSessionRequest(...)` 鍦?refresh 澶辫触鏃朵笉鍐嶅彧浼氭竻 session锛屼篃浼氭妸缁撴瀯鍖栧け鏁堝師鍥犲洖鍐欏埌鍓嶅悗鍙颁細璇濆叆鍙ｃ€?- 鏇存柊 `frontend-user/src/app/sessionStore.ts` 涓?`frontend-admin/src/api/sessionStore.ts`锛屾妸 session 涓?invalidation 鍏冩暟鎹垎寮€鎸佷箙鍖栧苟寮€鏀捐鍐?璁㈤槄鍏ュ彛锛況efresh 鎴愬姛浼氭竻鎺夋棫 invalidation锛宺efresh 澶辫触浼氫繚鐣欏師鍥狅紝渚涚櫥褰曢〉鍜岃矾鐢卞眰娑堣垂銆?- 鏇存柊 `frontend-user/src/api/core.ts` 涓?`frontend-admin/src/api/client.ts`锛屾妸鏂扮殑 invalidation 鍥炶皟鎺ュ埌鍏变韩 refresh 鐢熷懡鍛ㄦ湡锛沗frontend-user/src/pages/AuthPages.tsx`銆乣frontend-user/src/app/routes.tsx` 涓?`frontend-admin/src/views/AdminWorkspaceView.vue` 鍒欒ˉ榻愮粺涓€ fail-logout 鎻愮ず锛屽苟鍦ㄦ墜鍔ㄩ€€鍑烘椂涓诲姩娓呯悊鏃ф彁绀恒€?- 鏇存柊 `packages/api-client/src/index.test.ts`銆乣frontend-user/src/api/sessionRefresh.test.ts`銆佹柊澧?`frontend-user/src/pages/AuthPages.test.tsx`锛屽苟鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.test.ts`锛涘厛鐢?RED 澶嶇幇鈥渞efresh 澶辫触鍙竻 session銆佷笉璁板綍鍘熷洜鈥濆拰鈥滅櫥褰曢〉娌℃湁缁熶竴鎻愮ず鈥濈殑缂哄彛锛屽啀杞?GREEN 閿佸畾鍥炲綊銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_PROJECT_CONTEXT.md`锛屾妸 `API-011` 鎺ㄨ繘鍒扳€滃墠鍚庡彴鍏变韩鍒锋柊楠ㄦ灦 + 澶辨晥鍘熷洜鎻愮ず璇箟宸叉敹鍙ｂ€濈殑鏈€鏂扮姸鎬併€?### 楠岃瘉缁撴灉
+- 在 `API-011` 已完成前后台共享 refresh/replay 第一段骨架的基础上，继续选择一个覆盖面广但仍然安全可控的最小工作包，把“refresh 失败后为什么被登出”从局部副作用提升为共享生命周期的一部分。
+- 本轮目标不是继续扩后台新模块，而是先收口两个明确缺口：会话失效原因记录，以及前后台登录页一致可读的 fail-logout 提示语义。
+### 实际变更
 
-- RED锛歚npx vitest run packages/api-client/src/index.test.ts`
-- RED锛歚npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
-- RED锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚npx vitest run packages/api-client/src/index.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- 更新 `packages/api-client/src/index.ts`，新增 `SessionInvalidationState` 与 `onSessionInvalidated(...)` 回调；共享 `createSessionRequest(...)` 在 refresh 失败时不再只会清 session，也会把结构化失效原因回写到前后台会话入口。
+- 更新 `frontend-user/src/app/sessionStore.ts` 与 `frontend-admin/src/api/sessionStore.ts`，把 session 与 invalidation 元数据分开持久化并开放读写/订阅入口；refresh 成功会清掉旧 invalidation，refresh 失败会保留原因，供登录页和路由层消费。
+- 更新 `frontend-user/src/api/core.ts` 与 `frontend-admin/src/api/client.ts`，把新的 invalidation 回调接到共享 refresh 生命周期；`frontend-user/src/pages/AuthPages.tsx`、`frontend-user/src/app/routes.tsx` 与 `frontend-admin/src/views/AdminWorkspaceView.vue` 则补齐统一 fail-logout 提示，并在手动退出时主动清理旧提示。
+- 更新 `packages/api-client/src/index.test.ts`、`frontend-user/src/api/sessionRefresh.test.ts`、新增 `frontend-user/src/pages/AuthPages.test.tsx`，并更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`；先用 RED 复现“refresh 失败只清 session、不记录原因”和“登录页没有统一提示”的缺口，再转 GREEN 锁定回归。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把 `API-011` 推进到“前后台共享刷新骨架 + 失效原因提示语义已收口”的最新状态。
+### 验证结果
+
+- RED：`npx vitest run packages/api-client/src/index.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npx vitest run packages/api-client/src/index.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts src/pages/AuthPages.test.tsx src/api/graphs.test.ts src/api/searchShare.test.ts`
 - `npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-user run typecheck`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:user`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `API-011` 鐜板湪涓嶅啀鍙細鍦?refresh 澶辫触鏃垛€滄妸浜鸿涪鍥炵櫥褰曢〉鈥濓紝鑰屾槸浼氭樉寮忎繚鐣欏け鏁堝師鍥犲苟鍦ㄥ墠鍚庡彴鐧诲綍椤电粰鍑虹粺涓€鎻愮ず锛涘悗缁柊璇锋眰杈圭晫涓嶉渶瑕佸啀鍚勮嚜琛ヤ竴濂楀眬閮?fail-logout 鏂囨銆?- 杩欎竴杞粛鐒舵病鏈夎В鍐?HttpOnly Refresh Token 杩佺Щ璇存槑銆佹洿澶氬悗鍙版ā鍧?API 鎺ョ嚎涓庡悗鍙?Router 妯″潡鍖栵紱鍚庣画搴旂户缁部 `API-011 / ADM-010` 鏀跺彛锛岃€屼笉鏄洖鍒伴〉闈㈤噷鏁ｈ惤鏂扮殑浼氳瘽 helper銆?
-## 2026-07-09 04:56:33 +08:00 | v1.1.0-alpha.119 | 鎺ㄨ繘 API-011 绠＄悊绔叡浜細璇濆埛鏂拌捣姝?### 浠诲姟鍐呭
+- `API-011` 现在不再只会在 refresh 失败时“把人踢回登录页”，而是会显式保留失效原因并在前后台登录页给出统一提示；后续新请求边界不需要再各自补一套局部 fail-logout 文案。
+- 这一轮仍然没有解决 HttpOnly Refresh Token 迁移说明、更多后台模块 API 接线与后台 Router 模块化；后续应继续沿 `API-011 / ADM-010` 收口，而不是回到页面里散落新的会话 helper。
 
-- 鍦?`API-011` 宸插畬鎴愮敤鎴风鍏变韩 refresh/replay/fail-logout 璧锋鐨勫熀纭€涓婏紝缁х画閫夋嫨涓€涓鐩栭潰骞夸絾浠嶇劧瀹夊叏鍙帶鐨勬渶灏忓伐浣滃寘锛屾妸鍚屼竴濂椾細璇濈敓鍛藉懆鏈熸帴鍒?`frontend-admin`銆?- 鏈疆鐩爣涓嶆槸鎵╂柊鍚庡彴娌荤悊妯″潡锛岃€屾槸鍏堣绠＄悊绔櫥褰曞悗鑷妇銆佷护鐗岃繃鏈熼噸璇曚笌鍒锋柊澶辫触閫€鍥炵櫥褰曢〉杩欐潯鍩虹璺緞杩涘叆鍏变韩灞傦紝閬垮厤鍓嶅悗鍙扮户缁悇鑷暎钀芥湰鍦颁細璇濋€昏緫銆?
-### 瀹為檯鍙樻洿
+## 2026-07-09 04:56:33 +08:00 | v1.1.0-alpha.119 | 推进 API-011 管理端共享会话刷新起步
+### 任务内容
 
-- 鏇存柊 `packages/api-client/src/index.ts`锛岃鍏变韩 `createSessionRequest(...)` 鏀寔鏄惧紡 `sessionOverride`锛岀鐞嗙鍦ㄤ粛鐒朵紶鍏ュ綋鍓嶉〉闈?session 鐨勫満鏅笅锛屼篃鑳藉弬涓庡叡浜?401 refresh/replay 鐢熷懡鍛ㄦ湡銆?- 鏂板 `frontend-admin/src/api/sessionStore.ts`锛屾妸鍚庡彴 `studymate.admin.session` 鐨勮鍙栥€佹寔涔呭寲銆佹竻鐞嗕笌璁㈤槄缁熶竴鏀跺彛鎴愬彲澶嶇敤 store銆?- 鏇存柊 `frontend-admin/src/api/client.ts`锛岀粺涓€閫氳繃鍏变韩 `createSessionRequest(...)` 涓?`/api/v1/auth/refresh` 鍒锋柊鍚庡彴 Access Token锛屽苟鍦ㄥ埛鏂版垚鍔熷悗鎸佷箙鍖栨渶鏂?session銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岀櫥褰曘€佽嚜涓句笌閫€鍑烘祦绋嬫敼涓烘秷璐瑰叡浜?session store锛涘綋鍚姩闃舵鎴栬姹傞樁娈?refresh 澶辫触鏃讹紝浼氭竻绌哄悗鍙版湰鍦颁細璇濄€侀噸缃不鐞嗗伐浣滃彴鐘舵€佸苟鍥為€€鍒扮櫥褰曠晫闈€?- 鏇存柊 `frontend-admin/src/api/client.test.ts` 涓?`frontend-admin/src/views/AdminWorkspaceView.test.ts`锛屽厛鐢?RED 澶嶇幇鈥滃悗鍙颁护鐗岃繃鏈熷悗涓嶄細鑷姩鍒锋柊閲嶆斁鈥濆拰鈥滃悗鍙板惎鍔ㄦ椂 refresh 澶辫触涓嶄細閫€鍥炵櫥褰曗€濈殑闂锛屽啀杞?GREEN 閿佸畾鍥炲綊銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_PROJECT_CONTEXT.md`锛屾妸 `API-011` 鎺ㄨ繘鍒扳€滃墠鍚庡彴鍏变韩浼氳瘽鍒锋柊楠ㄦ灦鍧囧凡璧锋鈥濈殑鏈€鏂扮姸鎬併€?
-### 楠岃瘉缁撴灉
+- 在 `API-011` 已完成用户端共享 refresh/replay/fail-logout 起步的基础上，继续选择一个覆盖面广但仍然安全可控的最小工作包，把同一套会话生命周期接到 `frontend-admin`。
+- 本轮目标不是扩新后台治理模块，而是先让管理端登录后自举、令牌过期重试与刷新失败退回登录页这条基础路径进入共享层，避免前后台继续各自散落本地会话逻辑。
 
-- RED锛歚npm --workspace frontend-admin run test -- src/api/client.test.ts`
-- RED锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`
+### 实际变更
+
+- 更新 `packages/api-client/src/index.ts`，让共享 `createSessionRequest(...)` 支持显式 `sessionOverride`，管理端在仍然传入当前页面 session 的场景下，也能参与共享 401 refresh/replay 生命周期。
+- 新增 `frontend-admin/src/api/sessionStore.ts`，把后台 `studymate.admin.session` 的读取、持久化、清理与订阅统一收口成可复用 store。
+- 更新 `frontend-admin/src/api/client.ts`，统一通过共享 `createSessionRequest(...)` 与 `/api/v1/auth/refresh` 刷新后台 Access Token，并在刷新成功后持久化最新 session。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，登录、自举与退出流程改为消费共享 session store；当启动阶段或请求阶段 refresh 失败时，会清空后台本地会话、重置治理工作台状态并回退到登录界面。
+- 更新 `frontend-admin/src/api/client.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，先用 RED 复现“后台令牌过期后不会自动刷新重放”和“后台启动时 refresh 失败不会退回登录”的问题，再转 GREEN 锁定回归。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把 `API-011` 推进到“前后台共享会话刷新骨架均已起步”的最新状态。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/api/client.test.ts`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npx vitest run packages/api-client/src/index.test.ts`
@@ -1259,35 +1900,57 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `API-011` 鐜板湪涓嶅啀鍙仠鐣欏湪鐢ㄦ埛绔紱鍓嶅悗鍙伴兘宸插紑濮嬪鐢ㄥ悓涓€濂?refresh/replay 鍩虹嚎锛屽悗缁柊鍚庡彴璇锋眰杈圭晫涓嶉渶瑕佸啀浠庡ご鏁ｈ惤浼氳瘽鍒锋柊閫昏緫銆?- 杩欎竴杞粛鐒跺彧鏄鐞嗙绗竴娈垫帴绾匡細浼氳瘽澶辨晥鍘熷洜璁板綍銆佺粺涓€ fail-logout 鎻愮ず璇箟銆佹洿澶氬悗鍙版ā鍧?API 鎷嗗垎涓?HttpOnly Refresh Token 杩佺Щ璇存槑浠嶆湭瀹屾垚锛屽悗缁簲缁х画娌?`API-011 / ADM-010` 鏀跺彛锛岃€屼笉鏄洖鍒板崟椤靛伐浣滃彴閲屽彔鍔犲眬閮?helper銆?
-## 2026-07-09 04:40:56 +08:00 | v1.1.0-alpha.118 | 鎺ㄨ繘 API-011 鐢ㄦ埛绔叡浜細璇濆埛鏂拌捣姝?### 浠诲姟鍐呭
+- `API-011` 现在不再只停留在用户端；前后台都已开始复用同一套 refresh/replay 基线，后续新后台请求边界不需要再从头散落会话刷新逻辑。
+- 这一轮仍然只是管理端第一段接线：会话失效原因记录、统一 fail-logout 提示语义、更多后台模块 API 拆分与 HttpOnly Refresh Token 迁移说明仍未完成，后续应继续沿 `API-011 / ADM-010` 收口，而不是回到单页工作台里叠加局部 helper。
 
-- 鍦?`API-010` 宸插畬鎴愬叡浜?request/error/auth-header銆乹uery/pagination 鍙傛暟鎷兼帴涓?JSON 璇锋眰浣撳綊涓€鍖栬捣姝ョ殑鍩虹涓婏紝缁х画娌?`API-011` 閫夋嫨涓€涓鐩栭潰骞夸絾椋庨櫓鍙帶鐨勬渶灏忓伐浣滃寘銆?- 鏈疆鐩爣鏄妸 Access Token 杩囨湡鍚庣殑 refresh/replay/fail-logout 楠ㄦ灦鍏堟矇鍒板叡浜眰锛屽苟鑷冲皯鎺ラ€氱敤鎴风涓€鏉＄湡瀹炲彈淇濇姢璇锋眰璺緞锛岃€屼笉鏄户缁湪涓氬姟 API 鏂囦欢閲屾暎钀芥湰鍦?401 澶勭悊銆?
-### 瀹為檯鍙樻洿
+## 2026-07-09 04:40:56 +08:00 | v1.1.0-alpha.118 | 推进 API-011 用户端共享会话刷新起步
+### 任务内容
 
-- 鏇存柊 `packages/api-client/src/index.ts`锛屾柊澧?`ApiRequestError` 涓?`createSessionRequest(...)`锛岃鍏变韩璇锋眰灞傚紑濮嬫壙鎺?401 鍗曟 refresh/replay銆佸苟鍙?refresh 鍘婚噸锛屼互鍙?refresh 澶辫触鏃舵竻鐞嗘湰鍦?session 鐨勬渶灏忕敓鍛藉懆鏈熴€?- 鏇存柊 `packages/api-client/src/index.test.ts`锛屽厛浠?RED 閿佸畾鈥滀袱涓苟鍙戝彈淇濇姢璇锋眰鍦?Access Token 杩囨湡鍚庡彧瑙﹀彂涓€娆?refresh锛屽苟鍦ㄦ柊 token 涓嬪叡鍚岄噸鏀锯€濈殑琛屼负锛屽啀杞?GREEN銆?- 鏂板 `frontend-user/src/app/sessionStore.ts`锛屾妸鐢ㄦ埛绔?session 鎸佷箙鍖栨敹鍙ｄ负鍙闃呭瓨鍌紱`frontend-user/src/app/routes.tsx` 鏀逛负閫氳繃 `useSyncExternalStore(...)` 璁㈤槄 session锛屼繚璇?refresh 鎴愬姛鎴栧け璐ュ悗锛岃矾鐢辨€佽兘璺熼殢鏈€鏂版寔涔呭寲鐘舵€佹洿鏂般€?- 鏇存柊 `frontend-user/src/api/core.ts`锛岀粺涓€閫氳繃鍏变韩 `createSessionRequest(...)` 涓?`/api/v1/auth/refresh` 鍒锋柊 Access Token锛沗withAuth(...)` 涔熶細浼樺厛娑堣垂鏈€鏂版寔涔呭寲 session锛岄伩鍏嶆棫椤甸潰 props 鎶?stale token 鍐嶆鍐欏洖璇锋眰澶淬€?- 鏂板 `frontend-user/src/api/sessionRefresh.test.ts` 鐨?RED/GREEN 闂幆锛屽鐜板浘璋卞垪琛ㄥ湪 401 鍚庝笉浼氳嚜鍔ㄦ仮澶嶇殑闂锛屽苟閿佸畾 refresh 鎴愬姛鍚庢洿鏂版湰鍦?session銆佸啀閲嶆斁鍘熻姹傜殑鐢ㄦ埛绔矾寰勩€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_PROJECT_CONTEXT.md`锛屾妸 `API-011` 浠庣函寰呭姙鎺ㄨ繘鍒扳€滅敤鎴风鍏变韩鍒锋柊楠ㄦ灦宸茶捣姝モ€濈殑鏈€鏂扮姸鎬併€?
-### 楠岃瘉缁撴灉
+- 在 `API-010` 已完成共享 request/error/auth-header、query/pagination 参数拼接与 JSON 请求体归一化起步的基础上，继续沿 `API-011` 选择一个覆盖面广但风险可控的最小工作包。
+- 本轮目标是把 Access Token 过期后的 refresh/replay/fail-logout 骨架先沉到共享层，并至少接通用户端一条真实受保护请求路径，而不是继续在业务 API 文件里散落本地 401 处理。
 
-- RED锛歚npx vitest run packages/api-client/src/index.test.ts`
-- RED锛歚npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts`
-- GREEN锛歚npx vitest run packages/api-client/src/index.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts`
+### 实际变更
+
+- 更新 `packages/api-client/src/index.ts`，新增 `ApiRequestError` 与 `createSessionRequest(...)`，让共享请求层开始承接 401 单次 refresh/replay、并发 refresh 去重，以及 refresh 失败时清理本地 session 的最小生命周期。
+- 更新 `packages/api-client/src/index.test.ts`，先以 RED 锁定“两个并发受保护请求在 Access Token 过期后只触发一次 refresh，并在新 token 下共同重放”的行为，再转 GREEN。
+- 新增 `frontend-user/src/app/sessionStore.ts`，把用户端 session 持久化收口为可订阅存储；`frontend-user/src/app/routes.tsx` 改为通过 `useSyncExternalStore(...)` 订阅 session，保证 refresh 成功或失败后，路由态能跟随最新持久化状态更新。
+- 更新 `frontend-user/src/api/core.ts`，统一通过共享 `createSessionRequest(...)` 与 `/api/v1/auth/refresh` 刷新 Access Token；`withAuth(...)` 也会优先消费最新持久化 session，避免旧页面 props 把 stale token 再次写回请求头。
+- 新增 `frontend-user/src/api/sessionRefresh.test.ts` 的 RED/GREEN 闭环，复现图谱列表在 401 后不会自动恢复的问题，并锁定 refresh 成功后更新本地 session、再重放原请求的用户端路径。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把 `API-011` 从纯待办推进到“用户端共享刷新骨架已起步”的最新状态。
+
+### 验证结果
+
+- RED：`npx vitest run packages/api-client/src/index.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts`
+- GREEN：`npx vitest run packages/api-client/src/index.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/api/sessionRefresh.test.ts`
 - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/api/sessionRefresh.test.ts src/api/searchShare.test.ts`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `packages/api-client` 鐜板湪涓嶅彧缁熶竴 request/error/query/JSON body锛屼篃寮€濮嬬粺涓€鐢ㄦ埛绔殑 401 refresh/replay 璇箟锛涘悗缁柊鐨勫彈淇濇姢璇锋眰璺緞涓嶉渶瑕佸啀鍦ㄤ笟鍔?API 妯″潡閲岄噸澶嶈ˉ鏈湴鍒锋柊閫昏緫銆?- 杩欎竴杞粛鍙畬鎴愪簡 API-011 鐨勭敤鎴风绗竴娈甸鏋讹紝`frontend-admin` 杩樻病鏈夋帴鍏ュ悓涓€濂?refresh/replay/fail-logout锛屼細璇濆け鏁堝師鍥犺褰曚笌 HttpOnly Refresh Token 杩佺Щ璇存槑涔熷皻鏈ˉ榻愶紱鍚庣画浠嶅簲缁х画娌?`API-011` 鏀跺彛锛岃€屼笉鏄洖鍒板悇绔眬閮ㄦ嫾瑁呬細璇濈敓鍛藉懆鏈熴€?
-## 2026-07-09 04:24:00 +08:00 | v1.1.0-alpha.117 | 鎺ㄨ繘 API-010 鍏变韩 JSON 璇锋眰浣撶紪鐮佽捣姝?### 浠诲姟鍐呭
+- `packages/api-client` 现在不只统一 request/error/query/JSON body，也开始统一用户端的 401 refresh/replay 语义；后续新的受保护请求路径不需要再在业务 API 模块里重复补本地刷新逻辑。
+- 这一轮仍只完成了 API-011 的用户端第一段骨架，`frontend-admin` 还没有接入同一套 refresh/replay/fail-logout，会话失效原因记录与 HttpOnly Refresh Token 迁移说明也尚未补齐；后续仍应继续沿 `API-011` 收口，而不是回到各端局部拼装会话生命周期。
 
-- 鍦?`API-010` 宸插畬鎴愬叡浜?request/error/auth-header銆佺鐞嗙璇锋眰杈圭晫鎶界涓?query/pagination 鍙傛暟鎷兼帴璧锋鐨勫熀纭€涓婏紝缁х画閫夋嫨涓€涓寖鍥村皬浣嗚鐩栭潰骞跨殑鍏变韩灞傛敹鍙ｇ偣銆?- 鏈疆鐩爣鏄妸 plain object / array 鐨?JSON 璇锋眰浣撶紪鐮佷粠鍓嶅悗鍙板悇涓?API 璋冪敤鐐规敹鍥炲埌 `packages/api-client`锛岄伩鍏嶇户缁湪涓氬姟 API 鏂囦欢閲屾暎钀?`JSON.stringify(...)`銆?### 瀹為檯鍙樻洿
+## 2026-07-09 04:24:00 +08:00 | v1.1.0-alpha.117 | 推进 API-010 共享 JSON 请求体编码起步
+### 任务内容
 
-- 鏇存柊 `packages/api-client/src/index.ts`锛屾柊澧?`ApiRequestInit`銆丣SON/body 褰掍竴鍖栭€昏緫涓庣被鍨嬪畧鍗紝璁?`requestApi(...)` 鍙洿鎺ユ帴鏀?plain object / array锛屽苟缁熶竴搴忓垪鍖栦负 JSON锛涘悓鏃剁户缁繚鐣?`FormData`銆乣Blob`銆乣URLSearchParams`銆乣ArrayBuffer` 绛夊師鐢?body 鐨勭洿閫氳兘鍔涖€?- 鏇存柊 `packages/api-client/src/index.test.ts`锛屾妸鍏变韩璇锋眰灞傛祴璇曟敼涓虹洿鎺ヤ紶瀵硅薄璇锋眰浣擄紝閿佸畾鈥滃叡浜眰璐熻矗 JSON 搴忓垪鍖栧苟琛ラ綈 `Content-Type`鈥濈殑鏂拌竟鐣屻€?- 鏇存柊 `frontend-user/src/api/core.ts`锛屾妸鐢ㄦ埛绔熀纭€ request 鍏ュ弬绫诲瀷鍒囧埌鍏变韩 `ApiRequestInit`锛岃涓氬姟鍩?API 鍙互鐩存帴鎶婂璞¤姹備綋浜ょ粰鍏变韩灞傘€?- 鏇存柊 `frontend-user/src/api/auth.ts`銆乣community.ts`銆乣graphs.ts`銆乣materials.ts`銆乣notes.ts`銆乣reader.ts`銆乣review.ts` 涓?`share.ts`锛岀Щ闄ゅ悇鑷墜鍐欑殑 `JSON.stringify(...)`锛岀粺涓€鏀逛负鐩存帴浼犲璞℃垨鏁扮粍銆?- 鏇存柊 `frontend-admin/src/api/client.ts` 涓?`frontend-admin/src/views/AdminWorkspaceView.vue`锛岃绠＄悊绔?`adminPost(...)` 涓庨〉闈㈠唴 `post(...)` 鍖呰鍑芥暟鐩存帴澶嶇敤鍏变韩灞傜殑 JSON 璇锋眰浣撶害瀹氥€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_PROJECT_CONTEXT.md`锛屾妸 `API-010` 鎺ㄨ繘鍒扳€滃叡浜眰宸插紑濮嬫壙鎺?JSON 璇锋眰浣撶紪鐮佲€濈殑鏈€鏂扮姸鎬併€?### 楠岃瘉缁撴灉
+- 在 `API-010` 已完成共享 request/error/auth-header、管理端请求边界抽离与 query/pagination 参数拼接起步的基础上，继续选择一个范围小但覆盖面广的共享层收口点。
+- 本轮目标是把 plain object / array 的 JSON 请求体编码从前后台各个 API 调用点收回到 `packages/api-client`，避免继续在业务 API 文件里散落 `JSON.stringify(...)`。
+### 实际变更
+
+- 更新 `packages/api-client/src/index.ts`，新增 `ApiRequestInit`、JSON/body 归一化逻辑与类型守卫，让 `requestApi(...)` 可直接接收 plain object / array，并统一序列化为 JSON；同时继续保留 `FormData`、`Blob`、`URLSearchParams`、`ArrayBuffer` 等原生 body 的直通能力。
+- 更新 `packages/api-client/src/index.test.ts`，把共享请求层测试改为直接传对象请求体，锁定“共享层负责 JSON 序列化并补齐 `Content-Type`”的新边界。
+- 更新 `frontend-user/src/api/core.ts`，把用户端基础 request 入参类型切到共享 `ApiRequestInit`，让业务域 API 可以直接把对象请求体交给共享层。
+- 更新 `frontend-user/src/api/auth.ts`、`community.ts`、`graphs.ts`、`materials.ts`、`notes.ts`、`reader.ts`、`review.ts` 与 `share.ts`，移除各自手写的 `JSON.stringify(...)`，统一改为直接传对象或数组。
+- 更新 `frontend-admin/src/api/client.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.vue`，让管理端 `adminPost(...)` 与页面内 `post(...)` 包装函数直接复用共享层的 JSON 请求体约定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把 `API-010` 推进到“共享层已开始承接 JSON 请求体编码”的最新状态。
+### 验证结果
 
 - `npx vitest run packages/api-client/src/index.test.ts`
 - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/api/reader.test.ts src/api/reviewAi.test.ts src/api/searchShare.test.ts`
@@ -1299,14 +1962,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `API-010` 鐜板湪涓嶄粎缁熶竴浜?request/error/auth-header 涓?query/pagination 鍙傛暟鎷兼帴锛屼篃寮€濮嬬粺涓€ JSON 璇锋眰浣撶紪鐮侊紱鍚庣画鏂板鍓嶅悗鍙?API 鏃讹紝涓嶉渶瑕佸啀浠庡悇绔笟鍔℃枃浠堕噷閲嶅鍐欏簭鍒楀寲缁嗚妭銆?- 杩欎竴杞粛鐒跺彧鏄€淛SON 璇锋眰浣撶紪鐮佽捣姝モ€濓紝杩樻病鏈夊舰鎴愬畬鏁寸殑鍒嗛〉鍝嶅簲 DTO銆佷笂浼犺涔夌煩闃点€?01 refresh/replay/fail-logout 涓庣粺涓€浼氳瘽澶辨晥澶勭悊锛屽悗缁粛搴旂户缁部 `API-010 / API-011` 鎺ㄨ繘銆?
-## 2026-07-09 04:15:00 +08:00 | v1.1.0-alpha.116 | 鎺ㄨ繘 API-010 鍏变韩 query 涓庡垎椤靛弬鏁版嫾鎺ヨ捣姝?### 浠诲姟鍐呭
+- `API-010` 现在不仅统一了 request/error/auth-header 与 query/pagination 参数拼接，也开始统一 JSON 请求体编码；后续新增前后台 API 时，不需要再从各端业务文件里重复写序列化细节。
+- 这一轮仍然只是“JSON 请求体编码起步”，还没有形成完整的分页响应 DTO、上传语义矩阵、401 refresh/replay/fail-logout 与统一会话失效处理，后续仍应继续沿 `API-010 / API-011` 推进。
 
-- 鍦?`API-010` 宸插畬鎴愬叡浜?request/error/auth-header 璧锋鍜岀鐞嗙璇锋眰杈圭晫鎶界鐨勫熀纭€涓婏紝缁х画閫夋嫨鏈€灏忎絾鑳芥墿澶у叡浜眰瑕嗙洊闈㈢殑涓嬩竴姝ャ€?- 鏈疆鐩爣鏄妸鏌ヨ鍙傛暟涓庡垎椤靛弬鏁版嫾鎺ヤ粠椤甸潰鍜屽崟涓?API 鏂囦欢涓娊鍒?`packages/api-client`锛岃鐢ㄦ埛绔悳绱㈠拰绠＄悊绔不鐞嗗垪琛ㄥ紑濮嬪叡浜悓涓€濂?query 璇箟銆?### 瀹為檯鍙樻洿
+## 2026-07-09 04:15:00 +08:00 | v1.1.0-alpha.116 | 推进 API-010 共享 query 与分页参数拼接起步
+### 任务内容
 
-- 鏇存柊 `packages/api-client/src/index.ts`锛屾柊澧?`buildApiPath(...)`锛岀粺涓€澶勭悊宸叉湁 query銆佹暟缁?filters銆乣limit` 绛夊弬鏁版嫾鎺ワ紝骞惰烦杩?`null` / `undefined` / 绌烘暟缁勩€?- 鏇存柊 `packages/api-client/src/index.test.ts`锛岃ˉ榻愬叡浜?query helper 鐨?RED/GREEN 瑕嗙洊锛岄攣瀹氣€滄暟缁勬寜閫楀彿鎷兼帴銆佸凡鏈?query 琚繚鐣欍€佺┖鍊艰蹇界暐鈥濈殑琛屼负銆?- 鏇存柊 `frontend-user/src/api/search.ts`锛岃鎼滅储璇锋眰鐨?`q`銆乣types`銆乣limit` 鏀逛负閫氳繃 `buildApiPath(...)` 鐢熸垚锛屼笉鍐嶆湰鍦扮淮鎶?`URLSearchParams`銆?- 鏇存柊 `frontend-admin/src/api/client.ts` 涓?`frontend-admin/src/views/AdminWorkspaceView.vue`锛岃绠＄悊绔不鐞嗗垪琛ㄧ殑 `limit=20` 鏀逛负閫氳繃鍏变韩 helper 鐢熸垚锛岃€屼笉鏄妸 `?limit=20` 鍐欐鍦ㄩ〉闈㈤厤缃噷銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_PROJECT_CONTEXT.md`锛屾妸鈥渜uery/pagination 鍙傛暟鎷兼帴宸插紑濮嬬粺涓€鈥濆啓鍥炴墽琛屽熀绾裤€?### 楠岃瘉缁撴灉
+- 在 `API-010` 已完成共享 request/error/auth-header 起步和管理端请求边界抽离的基础上，继续选择最小但能扩大共享层覆盖面的下一步。
+- 本轮目标是把查询参数与分页参数拼接从页面和单个 API 文件中抽到 `packages/api-client`，让用户端搜索和管理端治理列表开始共享同一套 query 语义。
+### 实际变更
+
+- 更新 `packages/api-client/src/index.ts`，新增 `buildApiPath(...)`，统一处理已有 query、数组 filters、`limit` 等参数拼接，并跳过 `null` / `undefined` / 空数组。
+- 更新 `packages/api-client/src/index.test.ts`，补齐共享 query helper 的 RED/GREEN 覆盖，锁定“数组按逗号拼接、已有 query 被保留、空值被忽略”的行为。
+- 更新 `frontend-user/src/api/search.ts`，让搜索请求的 `q`、`types`、`limit` 改为通过 `buildApiPath(...)` 生成，不再本地维护 `URLSearchParams`。
+- 更新 `frontend-admin/src/api/client.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.vue`，让管理端治理列表的 `limit=20` 改为通过共享 helper 生成，而不是把 `?limit=20` 写死在页面配置里。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把“query/pagination 参数拼接已开始统一”写回执行基线。
+### 验证结果
 
 - `npx vitest run packages/api-client/src/index.test.ts`
 - `npm --workspace frontend-user run test -- src/api/searchShare.test.ts`
@@ -1316,172 +1989,277 @@
 - `npm run build:user`
 - `npm run build:admin`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `API-010` 鐜板湪涓嶅彧缁熶竴浜?request/error/auth-header锛屼篃寮€濮嬬粺涓€ query/pagination 鐨勫弬鏁版嫾鎺ワ紱鍚庣画琛ョ湡姝ｇ殑鍒嗛〉 DTO 鎴?cursor 璇箟鏃讹紝涓嶉渶瑕佸啀鍥炲埌鍚勭浠庡ご鎵嬪啓 query 缁勮銆?- 杩欎竴杞粛鐒跺彧鏄€滃弬鏁版嫾鎺ヨ捣姝モ€濓紝杩樻病鏈夊舰鎴愬畬鏁寸殑鍒嗛〉鍝嶅簲濂戠害銆佸垎椤靛厓鏁版嵁绫诲瀷鎴?401 浼氳瘽閲嶆斁鑳藉姏锛屽悗缁粛搴旂户缁部 `API-010 / API-011` 鎺ㄨ繘銆?
-## 2026-07-09 04:11:00 +08:00 | v1.1.0-alpha.115 | 鎺ㄨ繘 API-010 绠＄悊绔叡浜姹傝竟鐣屽嚭澹?### 浠诲姟鍐呭
+- `API-010` 现在不只统一了 request/error/auth-header，也开始统一 query/pagination 的参数拼接；后续补真正的分页 DTO 或 cursor 语义时，不需要再回到各端从头手写 query 组装。
+- 这一轮仍然只是“参数拼接起步”，还没有形成完整的分页响应契约、分页元数据类型或 401 会话重放能力，后续仍应继续沿 `API-010 / API-011` 推进。
 
-- 鍦?`API-010` 宸插畬鎴愬叡浜?request/error/auth-header 璧锋鐨勫熀纭€涓婏紝缁х画鎸夋渶灏忓伐浣滃寘鏀跺彛绠＄悊绔〉闈㈠垎灞傦紝閬垮厤 `AdminWorkspaceView.vue` 缁х画鎸佹湁鏈湴璇锋眰 helper銆?- 鏈疆鐩爣涓嶆槸鎵╁睍鏂板悗鍙版ā鍧楋紝鑰屾槸鎶婂凡瀛樺湪鐨勫悗鍙?`get/post` 璇锋眰杈圭晫鎶藉埌鐙珛 API 鏂囦欢锛屽苟鐢ㄦ祴璇曟妸杩欏眰鍏变韩鎺ョ嚎閿佷綇銆?### 瀹為檯鍙樻洿
+## 2026-07-09 04:11:00 +08:00 | v1.1.0-alpha.115 | 推进 API-010 管理端共享请求边界出壳
+### 任务内容
 
-- 鏂板 `frontend-admin/src/api/client.ts`锛屽鍑?`adminGet(...)` 涓?`adminPost(...)`锛岀粺涓€閫氳繃 `@studymate/api-client` 鐨?`requestApi(...)` / `createAuthHeaders(...)` 鍙戣捣鍚庡彴璇锋眰銆?- 鏂板 `frontend-admin/src/api/client.test.ts`锛屽厛浠?RED 閿佸畾鈥滅鐞嗙鍏变韩 API 妯″潡蹇呴』瀛樺湪鈥濓紝鍐嶅湪 GREEN 闃舵閿佸畾 Bearer header 涓?JSON POST body 閮界敱鍏变韩 client 璐熻矗銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岀Щ闄ら〉闈㈠唴鏈湴 `get/post` 璇锋眰鎷艰閫昏緫锛屾敼涓烘秷璐?`../api/client`锛岃瑙嗗浘灞傚洖鍒版洿绾补鐨勫伐浣滃彴缁勫悎瑙掕壊銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_PROJECT_CONTEXT.md`锛屾妸鈥滅鐞嗙璇锋眰杈圭晫宸插紑濮嬫娊绂烩€濆啓鍥炴墽琛屽熀绾裤€?### 楠岃瘉缁撴灉
+- 在 `API-010` 已完成共享 request/error/auth-header 起步的基础上，继续按最小工作包收口管理端页面分层，避免 `AdminWorkspaceView.vue` 继续持有本地请求 helper。
+- 本轮目标不是扩展新后台模块，而是把已存在的后台 `get/post` 请求边界抽到独立 API 文件，并用测试把这层共享接线锁住。
+### 实际变更
 
-- RED锛歚npm --workspace frontend-admin run test -- src/api/client.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`
+- 新增 `frontend-admin/src/api/client.ts`，导出 `adminGet(...)` 与 `adminPost(...)`，统一通过 `@studymate/api-client` 的 `requestApi(...)` / `createAuthHeaders(...)` 发起后台请求。
+- 新增 `frontend-admin/src/api/client.test.ts`，先以 RED 锁定“管理端共享 API 模块必须存在”，再在 GREEN 阶段锁定 Bearer header 与 JSON POST body 都由共享 client 负责。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，移除页面内本地 `get/post` 请求拼装逻辑，改为消费 `../api/client`，让视图层回到更纯粹的工作台组合角色。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把“管理端请求边界已开始抽离”写回执行基线。
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/api/client.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/api/client.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 绠＄悊绔悗缁户缁媶 `ADM-010 / API-010` 鏃讹紝宸茬粡鏈変簡鍙鐢ㄧ殑鍏变韩璇锋眰鍏ュ彛锛屼笉闇€瑕佸啀鎶婃渶鍩虹鐨?header銆乥ody 鍜?request helper 鏁ｈ惤鍥為〉闈€?- 杩欎竴杞粛鍙畬鎴愪簡鏈€灏?request 杈圭晫鍑哄３锛涘悗鍙版洿澶氭ā鍧?DTO銆佸垎椤佃涔夊拰浼氳瘽鐢熷懡鍛ㄦ湡杩樻病鏈夌湡姝ｇ嫭绔嬪嚭鏉ワ紝鍚庣画浠嶅簲缁х画娌?`API-010 / API-011 / ADM-010` 鏀跺彛銆?
-## 2026-07-09 04:06:00 +08:00 | v1.1.0-alpha.114 | 鎺ㄨ繘 API-010 鍏变韩璇锋眰鍩虹灞傝捣姝?### 浠诲姟鍐呭
+- 管理端后续继续拆 `ADM-010 / API-010` 时，已经有了可复用的共享请求入口，不需要再把最基础的 header、body 和 request helper 散落回页面。
+- 这一轮仍只完成了最小 request 边界出壳；后台更多模块 DTO、分页语义和会话生命周期还没有真正独立出来，后续仍应继续沿 `API-010 / API-011 / ADM-010` 收口。
 
-- 鎸?`CODEX_MASTER_PROMPT.md` 涓庡綋鍓?`CODEX_BACKLOG.md` 鐨勪紭鍏堢骇锛岀户缁€夋嫨渚濊禆宸叉弧瓒充笖鑼冨洿鏈€灏忕殑 `API-010` 宸ヤ綔鍖咃紝鑰屼笉鏄垏鍘绘柊澧炰笟鍔″煙銆?- 鏈疆鐩爣鏄湪涓嶉噸鍐欏墠鍚庡彴浼氳瘽閫昏緫鐨勫墠鎻愪笅锛岃 `packages/api-client` 鍏堟壙鎺ユ渶灏忓叡浜姹傚眰锛氱粺涓€ success/error envelope 瑙ｆ瀽銆丅earer header 鎷艰涓庡熀纭€ request helper锛屽苟鎺ョ嚎鍒扮敤鎴风鍜岀鐞嗙銆?### 瀹為檯鍙樻洿
+## 2026-07-09 04:06:00 +08:00 | v1.1.0-alpha.114 | 推进 API-010 共享请求基础层起步
+### 任务内容
 
-- 鏇存柊 `packages/api-client/src/index.ts`锛屾柊澧?`ApiSuccessPayload` / `ApiErrorPayload`銆乣readApiResponse(...)`銆乣requestApi(...)` 涓?`createAuthHeaders(...)`锛屽苟璁?`getHealth(...)` 澶嶇敤鍚屼竴濂楀叡浜姹傚叆鍙ｃ€?- 鏂板 `packages/api-client/src/index.test.ts`锛屽厛浠?RED 閿佸畾鈥滈壌鏉?header 鍙湪鏈?token 鏃舵敞鍏ャ€丣SON envelope 浼氳姝ｇ‘瑙ｅ寘銆乣FormData` 涓婁紶涓嶄細琚己濉?`Content-Type`銆丄PI 閿欒浼氭姏鍑?message鈥濓紝鍐嶈浆 GREEN銆?- 鏇存柊 `frontend-user/src/api/core.ts`锛屾妸鐢ㄦ埛绔熀纭€ request 涓?auth header 鎷艰鍒囧埌 `@studymate/api-client`锛涙洿鏂?`frontend-user/src/api/types.ts`锛岀Щ闄ゆ湰鍦伴噸澶嶇殑 success/error envelope 绫诲瀷銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃鍚庡彴宸ヤ綔鍙扮殑 `get(...)` / `post(...)` 鏀逛负閫氳繃鍏变韩 `requestApi(...)` 涓?`createAuthHeaders(...)` 璇锋眰鍚庡彴锛屽苟绉婚櫎涓嶅啀浣跨敤鐨勬湰鍦板搷搴旇В鏋?helper銆?- 鏇存柊 `frontend-user/package.json`銆乣frontend-admin/package.json` 涓?`package-lock.json`锛屾樉寮忓０鏄?`@studymate/api-client` workspace 渚濊禆锛岄伩鍏嶅叡浜帴绾垮彧渚濊禆鏍圭幆澧冨伓鐒惰В鏋愭垚鍔熴€?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `API-010` 浠庣函寰呭姙鎺ㄨ繘鍒扳€滃叡浜姹傚熀纭€灞傚凡璧锋鈥濄€?### 楠岃瘉缁撴灉
+- 按 `CODEX_MASTER_PROMPT.md` 与当前 `CODEX_BACKLOG.md` 的优先级，继续选择依赖已满足且范围最小的 `API-010` 工作包，而不是切去新增业务域。
+- 本轮目标是在不重写前后台会话逻辑的前提下，让 `packages/api-client` 先承接最小共享请求层：统一 success/error envelope 解析、Bearer header 拼装与基础 request helper，并接线到用户端和管理端。
+### 实际变更
 
-- RED锛歚npx vitest run packages/api-client/src/index.test.ts`
-- GREEN锛歚npx vitest run packages/api-client/src/index.test.ts`
+- 更新 `packages/api-client/src/index.ts`，新增 `ApiSuccessPayload` / `ApiErrorPayload`、`readApiResponse(...)`、`requestApi(...)` 与 `createAuthHeaders(...)`，并让 `getHealth(...)` 复用同一套共享请求入口。
+- 新增 `packages/api-client/src/index.test.ts`，先以 RED 锁定“鉴权 header 只在有 token 时注入、JSON envelope 会被正确解包、`FormData` 上传不会被强塞 `Content-Type`、API 错误会抛出 message”，再转 GREEN。
+- 更新 `frontend-user/src/api/core.ts`，把用户端基础 request 与 auth header 拼装切到 `@studymate/api-client`；更新 `frontend-user/src/api/types.ts`，移除本地重复的 success/error envelope 类型。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让后台工作台的 `get(...)` / `post(...)` 改为通过共享 `requestApi(...)` 与 `createAuthHeaders(...)` 请求后台，并移除不再使用的本地响应解析 helper。
+- 更新 `frontend-user/package.json`、`frontend-admin/package.json` 与 `package-lock.json`，显式声明 `@studymate/api-client` workspace 依赖，避免共享接线只依赖根环境偶然解析成功。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `API-010` 从纯待办推进到“共享请求基础层已起步”。
+### 验证结果
+
+- RED：`npx vitest run packages/api-client/src/index.test.ts`
+- GREEN：`npx vitest run packages/api-client/src/index.test.ts`
 - `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-user run typecheck`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:user`
 - `npm run build:admin`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `@studymate/api-client` 涓嶅啀鍙槸鍋ュ悍妫€鏌ュ崰浣嶅寘锛屽悗缁柊椤甸潰鑷冲皯鍙互娌跨潃鍏变韩 request/error/auth-header 灞傜户缁墿灞曪紝鑰屼笉鐢ㄥ啀浠庨〉闈㈤噷閲嶅啓鏈€鍩虹鐨?fetch 鍒嗘敮銆?- 杩欎竴杞粛鍙畬鎴愪簡鍏变韩璇锋眰鍩虹灞傝捣姝ワ紱鍒嗛〉銆佹洿澶氫笂浼犺矾寰勩€?01 refresh/replay/fail-logout 涓庣粺涓€浼氳瘽澶辨晥澶勭悊浠嶆湭鏀跺彛锛屼笅涓€姝ュ簲缁х画娌?`API-010 / API-011` 鎺ㄨ繘锛岃€屼笉鏄噸鏂板湪鍚勭鏁ｈ惤鏂扮殑鏈湴 helper銆?
-## 2026-07-09 03:53:30 +08:00 | v1.1.0-alpha.113 | 鎺ㄨ繘 FE-040 绠＄悊绔帴鍏ュ叡浜璁?token 璧锋
-### 浠诲姟鍐呭
+- `@studymate/api-client` 不再只是健康检查占位包，后续新页面至少可以沿着共享 request/error/auth-header 层继续扩展，而不用再从页面里重写最基础的 fetch 分支。
+- 这一轮仍只完成了共享请求基础层起步；分页、更多上传路径、401 refresh/replay/fail-logout 与统一会话失效处理仍未收口，下一步应继续沿 `API-010 / API-011` 推进，而不是重新在各端散落新的本地 helper。
 
-- 寤剁画蹇€熷師鍨嬮樁娈碘€滃厛鎶婂叏灞€楠ㄦ灦鏀惰捣鏉モ€濈殑鏂瑰悜锛岀户缁部 `FE-040` 鏀跺彛鍓嶅悗鍙扮殑鍏变韩瑙嗚婧愬ご锛岃€屼笉鏄洖鍒板崟鐐瑰姛鑳芥繁鎸栥€?- 鏈疆鐩爣鏄湪涓嶉噸鍐欏悗鍙板伐浣滃彴缁撴瀯鐨勫墠鎻愪笅锛岃 `frontend-admin` 涔熸帴鍏?`@studymate/ui/tokens.css`锛屾妸绠＄悊绔渶鍩虹鐨勮儗鏅€佹枃鏈€佹弿杈瑰拰 accent 璇箟鍏堝榻愬埌鍏变韩 token銆?### 瀹為檯鍙樻洿
+## 2026-07-09 03:53:30 +08:00 | v1.1.0-alpha.113 | 推进 FE-040 管理端接入共享设计 token 起步
+### 任务内容
 
-- 鏇存柊 `frontend-admin/src/main.ts`锛屾柊澧?`@studymate/ui/tokens.css` 瀵煎叆锛岃绠＄悊绔富鍏ュ彛涓庣敤鎴风鍏辩敤鍚屼竴浠芥牴 token 鏍峰紡鏉ユ簮銆?- 鏇存柊 `frontend-admin/src/components/admin/admin.css`锛岀Щ闄ゆ湰鍦?`:root` token bootstrapping锛屽苟鎶?`--admin-bg`銆乣--admin-surface`銆乣--admin-surface-soft`銆乣--admin-line`銆乣--admin-text`銆乣--admin-text-soft`銆乣--admin-text-muted`銆乣--admin-accent`銆乣--admin-accent-strong`銆乣--admin-accent-soft`銆乣--admin-danger` 鏄犲皠鍒板叡浜?token銆?- 鏇存柊 `frontend-admin/package.json` 涓?`package-lock.json`锛屾樉寮忓０鏄?`@studymate/ui` workspace 渚濊禆鍜?`@types/node` 娴嬭瘯绫诲瀷渚濊禆锛岄伩鍏嶈繖鏉℃帴绾垮彧渚濊禆鏍圭幆澧冨伓鐒跺彲鐢ㄣ€?- 鏂板 `frontend-admin/src/tokenSource.test.ts`锛屽厛浠?RED 閿佸畾鈥滅鐞嗙涓诲叆鍙ｅ繀椤诲鍏ュ叡浜?token銆乤dmin 鍩虹鍙橀噺蹇呴』寮曠敤鍏变韩 token銆佹湰鍦版牴 token 寮曞鍧楀繀椤荤Щ闄も€濓紝鍐嶈浆 GREEN銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 FE-040 浠庘€滃彧鏈夌敤鎴风鎺ョ嚎鈥濇帹杩涘埌鈥滃墠鍚庡彴鍏ュ彛閮藉凡鎺ュ叆鍏变韩 token鈥濄€?### 楠岃瘉缁撴灉
+- 延续快速原型阶段“先把全局骨架收起来”的方向，继续沿 `FE-040` 收口前后台的共享视觉源头，而不是回到单点功能深挖。
+- 本轮目标是在不重写后台工作台结构的前提下，让 `frontend-admin` 也接入 `@studymate/ui/tokens.css`，把管理端最基础的背景、文本、描边和 accent 语义先对齐到共享 token。
+### 实际变更
 
-- RED锛歚npx vitest run frontend-admin/src/tokenSource.test.ts`
-- GREEN锛歚npx vitest run frontend-admin/src/tokenSource.test.ts`
+- 更新 `frontend-admin/src/main.ts`，新增 `@studymate/ui/tokens.css` 导入，让管理端主入口与用户端共用同一份根 token 样式来源。
+- 更新 `frontend-admin/src/components/admin/admin.css`，移除本地 `:root` token bootstrapping，并把 `--admin-bg`、`--admin-surface`、`--admin-surface-soft`、`--admin-line`、`--admin-text`、`--admin-text-soft`、`--admin-text-muted`、`--admin-accent`、`--admin-accent-strong`、`--admin-accent-soft`、`--admin-danger` 映射到共享 token。
+- 更新 `frontend-admin/package.json` 与 `package-lock.json`，显式声明 `@studymate/ui` workspace 依赖和 `@types/node` 测试类型依赖，避免这条接线只依赖根环境偶然可用。
+- 新增 `frontend-admin/src/tokenSource.test.ts`，先以 RED 锁定“管理端主入口必须导入共享 token、admin 基础变量必须引用共享 token、本地根 token 引导块必须移除”，再转 GREEN。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 FE-040 从“只有用户端接线”推进到“前后台入口都已接入共享 token”。
+### 验证结果
+
+- RED：`npx vitest run frontend-admin/src/tokenSource.test.ts`
+- GREEN：`npx vitest run frontend-admin/src/tokenSource.test.ts`
 - `npm --workspace frontend-admin run test`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍓嶅悗鍙扮幇鍦ㄨ嚦灏戝凡缁忓紑濮嬪叡浜悓涓€浠借璁?token 婧愬ご锛屽悗缁户缁粺涓€鎸夐挳銆佽緭鍏ユ銆佺姸鎬佸崱鐗囧拰鎶藉眽/妫€鏌ュ櫒鐨勮瑙夊绾︽椂锛屼笉闇€瑕佸啀鍚勮嚜浠庡ご瀹氫箟鑳屾櫙銆佽竟绾垮拰鏂囧瓧灞傜骇銆?- 杩欎竴杞粛鍙畬鎴愪簡绠＄悊绔熀纭€澹冲眰鍙橀噺鐨勫叡浜帴鍏ワ紝鍚庡彴灞€閮ㄧ‖缂栫爜棰滆壊銆佹洿澶?primitives 浠ュ強鍏变韩 API/client 濂戠害閮借繕娌℃湁杩涗竴姝ユ敹鍙ｏ紱杩欎簺浠嶇劧鏄?`FE-040 / FE-041 / API-010` 鎺ヤ笅鏉ユ渶鍊煎緱缁х画鎺ㄨ繘鐨勬柟鍚戙€?
-## 2026-07-09 03:46:30 +08:00 | v1.1.0-alpha.112 | 鎺ㄨ繘 FE-040 鍏变韩璁捐 token 鍗曚竴鏉ユ簮璧锋
-### 浠诲姟鍐呭
+- 前后台现在至少已经开始共享同一份设计 token 源头，后续继续统一按钮、输入框、状态卡片和抽屉/检查器的视觉契约时，不需要再各自从头定义背景、边线和文字层级。
+- 这一轮仍只完成了管理端基础壳层变量的共享接入，后台局部硬编码颜色、更多 primitives 以及共享 API/client 契约都还没有进一步收口；这些仍然是 `FE-040 / FE-041 / API-010` 接下来最值得继续推进的方向。
 
-- 寤剁画鏂扮殑蹇€熷師鍨嬫柟鍚戯紝缁х画鍥寸粫 `FE-040` 鍋氣€滃厛鎶婂叏灞€楠ㄦ灦鏀惰捣鏉モ€濈殑灏忔鎺ㄨ繘锛岃€屼笉鏄洖鍒板崟涓€鍐茬獊瀛愬満鏅繁鎸栥€?- 鏈疆鐩爣鏄湪涓嶅ぇ鏀圭幇鏈夐〉闈㈢粨鏋勭殑鍓嶆彁涓嬶紝鎶婄敤鎴风褰撳墠鐢熸晥鐨?UI-04 鏍?token 浠庨〉闈㈡牱寮忛噷鎶藉嚭鍒板叡浜寘锛屽缓绔嬫渶灏忓彲澶嶇敤鐨勫崟涓€鏉ユ簮銆?### 瀹為檯鍙樻洿
+## 2026-07-09 03:46:30 +08:00 | v1.1.0-alpha.112 | 推进 FE-040 共享设计 token 单一来源起步
+### 任务内容
 
-- 鏂板 `packages/ui/src/tokens.css`锛屾矇娣€鐢ㄦ埛绔綋鍓嶇敓鏁堢殑 `--bg-*`銆乣--surface*`銆乣--accent*`銆乣--radius-*`銆乣--sidebar-width`銆乣--panel-blur` 绛夋牴 token锛屽苟鍦?`packages/ui/package.json` 鏆撮湶 `./tokens.css` 瀵煎嚭鍏ュ彛銆?- 鏇存柊 `frontend-user/src/styles.css`锛屽厛瀵煎叆 `@studymate/ui/tokens.css`锛岃鐢ㄦ埛绔牱寮忓叆鍙ｆ樉寮忔帴鍏ュ叡浜?token 灞傘€?- 鏇存柊 `frontend-user/src/styles/app.css` 涓?`frontend-user/src/styles/ui-redesign.css`锛岀Щ闄ら噸澶嶇殑 `:root` token 瀹氫箟锛岄伩鍏嶅悓鍚嶅彉閲忕户缁緷璧栨牱寮忓姞杞介『搴忚鐩栥€?- 鏂板 `packages/ui/src/tokens.test.ts` 涓?`frontend-user/src/styles/tokenSource.test.ts`锛岄攣瀹氬叡浜?token 鏂囦欢瀛樺湪銆佺敤鎴风鍏ュ彛宸叉帴绾匡紝浠ュ強鏈湴鏍峰紡鏂囦欢涓嶅啀閲嶅澹版槑鏍稿績 token銆?- 涓轰簡璁╁墠绔祴璇曞湪绫诲瀷妫€鏌ヤ笌鏋勫缓閾句笂鍙紪璇戯紝琛ュ厖 `frontend-user/src/vite-env.d.ts` 涓?`frontend-user` 鐨?`@types/node` 寮€鍙戜緷璧栵紝鎶?Node 鏂囦欢璇诲彇鑳藉姏鏄惧紡闄愬畾鍒板墠绔祴璇曠幆澧冦€?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 FE-040 浠庘€滈噸澶?token 寰呮敹鍙ｂ€濇帹杩涘埌鈥滃叡浜?token 宸茶捣姝ヨ惤鍦扳€濄€?### 楠岃瘉缁撴灉
+- 延续新的快速原型方向，继续围绕 `FE-040` 做“先把全局骨架收起来”的小步推进，而不是回到单一冲突子场景深挖。
+- 本轮目标是在不大改现有页面结构的前提下，把用户端当前生效的 UI-04 根 token 从页面样式里抽出到共享包，建立最小可复用的单一来源。
+### 实际变更
 
-- RED锛歚npx vitest run packages/ui/src/tokens.test.ts frontend-user/src/styles/tokenSource.test.ts`
-- GREEN锛歚npx vitest run packages/ui/src/tokens.test.ts frontend-user/src/styles/tokenSource.test.ts`
+- 新增 `packages/ui/src/tokens.css`，沉淀用户端当前生效的 `--bg-*`、`--surface*`、`--accent*`、`--radius-*`、`--sidebar-width`、`--panel-blur` 等根 token，并在 `packages/ui/package.json` 暴露 `./tokens.css` 导出入口。
+- 更新 `frontend-user/src/styles.css`，先导入 `@studymate/ui/tokens.css`，让用户端样式入口显式接入共享 token 层。
+- 更新 `frontend-user/src/styles/app.css` 与 `frontend-user/src/styles/ui-redesign.css`，移除重复的 `:root` token 定义，避免同名变量继续依赖样式加载顺序覆盖。
+- 新增 `packages/ui/src/tokens.test.ts` 与 `frontend-user/src/styles/tokenSource.test.ts`，锁定共享 token 文件存在、用户端入口已接线，以及本地样式文件不再重复声明核心 token。
+- 为了让前端测试在类型检查与构建链上可编译，补充 `frontend-user/src/vite-env.d.ts` 与 `frontend-user` 的 `@types/node` 开发依赖，把 Node 文件读取能力显式限定到前端测试环境。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 FE-040 从“重复 token 待收口”推进到“共享 token 已起步落地”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/tokens.test.ts frontend-user/src/styles/tokenSource.test.ts`
+- GREEN：`npx vitest run packages/ui/src/tokens.test.ts frontend-user/src/styles/tokenSource.test.ts`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `packages/ui` 鐜板湪涓嶅彧鎵挎帴鍏变韩椤甸潰鐘舵€佽涔夛紝涔熷紑濮嬫壙鎺ュ叡浜瑙?token锛屽悗缁户缁绠＄悊绔拰鏇村 primitives 鎺ヨ繖灞傚叡浜潵婧愮殑鎴愭湰鏄庢樉鏇翠綆銆?- 杩欎竴杞粛鍙畬鎴愪簡鐢ㄦ埛绔殑鍏变韩 token 鎺ョ嚎锛岀鐞嗙灏氭湭鎺ュ叆锛宍@studymate/ui` 涔熻繕娌℃湁褰㈡垚鏇村畬鏁寸殑鍩虹缁勪欢濂戠害锛涜繖浜涗粛鐒舵槸 `FE-040 / FE-041` 涓嬩竴姝ユ渶鍊煎緱缁х画鎺ㄨ繘鐨勬柟鍚戙€?
-## 2026-07-09 03:34:30 +08:00 | v1.1.0-alpha.111 | 鎺ㄨ繘 FE-040 FE-041 鍏变韩椤甸潰鐘舵€佸绾﹁捣姝?### 浠诲姟鍐呭
+- `packages/ui` 现在不只承接共享页面状态语义，也开始承接共享视觉 token，后续继续让管理端和更多 primitives 接这层共享来源的成本明显更低。
+- 这一轮仍只完成了用户端的共享 token 接线，管理端尚未接入，`@studymate/ui` 也还没有形成更完整的基础组件契约；这些仍然是 `FE-040 / FE-041` 下一步最值得继续推进的方向。
 
-- 鎸夋柊鐨勫揩閫熷師鍨嬫柟鍚戯紝浠庣户缁繁鎸?`WB-032` 鍒囧埌鏇村亸鍏ㄥ眬楠ㄦ灦琛ラ綈鐨勫伐浣滃寘锛屼紭鍏堝惎鍔?`FE-040 / FE-041`銆?- 鏈疆鐩爣鏄湪涓嶉噸鍐欑幇鏈夐〉闈㈢殑鍓嶆彁涓嬶紝鍏堣 `@studymate/ui` 鐪熸鎵挎帴涓€灞傛渶灏忓彲澶嶇敤鐨勯〉闈㈢姸鎬佽涔夊绾︼紝骞惰鐢ㄦ埛绔幇鏈?`DataState` 鐩存帴娑堣垂瀹冦€?### 瀹為檯鍙樻洿
+## 2026-07-09 03:34:30 +08:00 | v1.1.0-alpha.111 | 推进 FE-040 FE-041 共享页面状态契约起步
+### 任务内容
 
-- 鏂板 `packages/ui/src/dataState.ts`锛屽鍑哄叡浜?`dataStateKinds`銆乣DataStateKind` 涓?`getDataStateLabel(...)`锛屽厛缁熶竴 Loading / Empty / Error / Unauthorized / Stale / Conflict 鍏被椤甸潰鐘舵€佽涔夈€?- 鏇存柊 `packages/ui/src/index.ts` 涓?`packages/ui/src/index.test.ts`锛岃 `@studymate/ui` 浠庘€滃彧瀵煎嚭鍖呭悕鈥濈殑鍗犱綅鍖呭崌绾т负甯︽渶灏忔祴璇曠殑鍏变韩濂戠害鍏ュ彛銆?- 鏇存柊 `frontend-user/src/design-system/primitives/DataState.tsx`锛岀Щ闄ゆ湰鍦扮姸鎬佹枃妗堝垎鏀紝鏀逛负鐩存帴璋冪敤 `@studymate/ui` 鐨勫叡浜?label helper銆?- 鏇存柊 `frontend-user/src/design-system/primitives/index.ts` 涓?`frontend-user/package.json`锛屾樉寮忛€忓嚭鍏变韩 `DataStateKind` 骞跺０鏄?`@studymate/ui` workspace 渚濊禆銆?- 鏇存柊 `frontend-user/src/design-system/primitives/DataState.test.tsx`锛岃ˉ榻?`conflict` 鐘舵€佸洖褰掞紝纭鐢ㄦ埛绔粍浠跺凡缁忔秷璐瑰叡浜涔夎€屼笉鏄户缁湰鍦板垎鍙夈€?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-040 / FE-041` 浠庤鍒掓€佹帹杩涘埌宸插惎鍔ㄧ殑鍏变韩鐘舵€佸绾﹂鏋躲€?### 楠岃瘉缁撴灉
+- 按新的快速原型方向，从继续深挖 `WB-032` 切到更偏全局骨架补齐的工作包，优先启动 `FE-040 / FE-041`。
+- 本轮目标是在不重写现有页面的前提下，先让 `@studymate/ui` 真正承接一层最小可复用的页面状态语义契约，并让用户端现有 `DataState` 直接消费它。
+### 实际变更
 
-- RED锛歚npx vitest run packages/ui/src/index.test.ts frontend-user/src/design-system/primitives/DataState.test.tsx`
-- GREEN锛歚npx vitest run packages/ui/src/index.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/design-system/primitives/DataState.test.tsx`
+- 新增 `packages/ui/src/dataState.ts`，导出共享 `dataStateKinds`、`DataStateKind` 与 `getDataStateLabel(...)`，先统一 Loading / Empty / Error / Unauthorized / Stale / Conflict 六类页面状态语义。
+- 更新 `packages/ui/src/index.ts` 与 `packages/ui/src/index.test.ts`，让 `@studymate/ui` 从“只导出包名”的占位包升级为带最小测试的共享契约入口。
+- 更新 `frontend-user/src/design-system/primitives/DataState.tsx`，移除本地状态文案分支，改为直接调用 `@studymate/ui` 的共享 label helper。
+- 更新 `frontend-user/src/design-system/primitives/index.ts` 与 `frontend-user/package.json`，显式透出共享 `DataStateKind` 并声明 `@studymate/ui` workspace 依赖。
+- 更新 `frontend-user/src/design-system/primitives/DataState.test.tsx`，补齐 `conflict` 状态回归，确认用户端组件已经消费共享语义而不是继续本地分叉。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-040 / FE-041` 从规划态推进到已启动的共享状态契约骨架。
+### 验证结果
 
-### 鍚庣画褰卞搷
+- RED：`npx vitest run packages/ui/src/index.test.ts frontend-user/src/design-system/primitives/DataState.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/index.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/design-system/primitives/DataState.test.tsx`
 
-- `@studymate/ui` 鐜板湪鑷冲皯宸茬粡鎵挎帴浜嗕竴灞傜湡瀹炲叡浜绾︼紝鍚庣画鍙互娌跨潃鍚屼竴璺緞缁х画鍚告敹 token銆乣Drawer`銆乣Inspector` 绛夊熀纭€ primitives锛岃€屼笉蹇呭啀浠庨〉闈㈤噷闆舵暎澶嶅埗鐘舵€佽涔夈€?- 杩欎竴杞繕娌℃湁澶勭悊 `app.css` 涓?`ui-redesign.css` 鐨?token 婕傜Щ锛屼篃娌℃湁璁╃鐞嗙寮€濮嬫秷璐硅繖灞傚叡浜绾︼紱杩欎簺浠嶇劧鏄?`FE-040 / FE-041` 鍚庣画鏇存湁浠峰€肩殑涓嬩竴姝ャ€?
-## 2026-07-09 03:25:42 +08:00 | v1.1.0-alpha.110 | 鎺ㄨ繘 WB-032 闃绘柇鏄庣粏鏍囬鍙鍖栧瓙姝ラ
-### 浠诲姟鍐呭
+### 后续影响
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸涓婁竴杞€滈樆鏂憳瑕佸彲璇诲寲鈥濆啀琛ラ綈鍒伴樆鏂槑缁嗗垪琛ㄥ眰銆?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勨€滃彇鑸嶄緷璧栨牎楠岄棶棰樷€濆尯鍧楅噷锛屼笉鍐嶈姣忔潯闂鏍囬鍋滅暀鍦?`edge-local` 杩欑被鍐呴儴 ID锛岃€屾槸鐩存帴鏄剧ず绫讳技鈥滆繛绾库€淟ocal edge鈥濃€濈殑鍙瀵硅薄鍚嶃€?
-### 瀹為檯鍙樻洿
+- `@studymate/ui` 现在至少已经承接了一层真实共享契约，后续可以沿着同一路径继续吸收 token、`Drawer`、`Inspector` 等基础 primitives，而不必再从页面里零散复制状态语义。
+- 这一轮还没有处理 `app.css` 与 `ui-redesign.css` 的 token 漂移，也没有让管理端开始消费这层共享契约；这些仍然是 `FE-040 / FE-041` 后续更有价值的下一步。
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧?`buildGraphConflictResolutionBlockingIssueTitle(...)`锛屼紭鍏堜粠闃绘柇 message 涓彁鍙?`鑺傜偣 / 杩炵嚎 / 鍒嗙粍` 鐨勫彲璇诲璞″悕锛涙彁鍙栦笉鍒版椂鎵嶅洖閫€鍒?`targetId` 鎴?`ruleType`銆?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛岃鈥滃彇鑸嶄緷璧栨牎楠岄棶棰樷€濇槑缁嗗垪琛ㄥ鐢ㄨ繖灞傛爣棰?helper锛岃€屼笉鏄洿鎺ユ覆鏌?`targetId`銆?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 涓?`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛屽厛鐢?RED 閿佸畾鈥滄槑缁嗘爣棰樺簲灞曠ず鍙瀵硅薄鍚嶁€濓紝鍐嶉獙璇佺粍浠剁骇涓庨〉闈㈢骇璺緞鍧囧凡杞豢銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滈樆鏂憳瑕佷笌闃绘柇鏄庣粏鏍囬閮藉睍绀哄彲璇诲璞″悕鈥濄€?
-### 楠岃瘉缁撴灉
+## 2026-07-09 03:25:42 +08:00 | v1.1.0-alpha.110 | 推进 WB-032 阻断明细标题可读化子步骤
+### 任务内容
 
-- RED锛歚npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
-- RED锛歚npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“阻断摘要可读化”再补齐到阻断明细列表层。
+- 本轮目标是在图谱 Inspector 的“取舍依赖校验问题”区块里，不再让每条问题标题停留在 `edge-local` 这类内部 ID，而是直接显示类似“连线“Local edge””的可读对象名。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionBlockingIssueTitle(...)`，优先从阻断 message 中提取 `节点 / 连线 / 分组` 的可读对象名；提取不到时才回退到 `targetId` 或 `ruleType`。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，让“取舍依赖校验问题”明细列表复用这层标题 helper，而不是直接渲染 `targetId`。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，先用 RED 锁定“明细标题应展示可读对象名”，再验证组件级与页面级路径均已转绿。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“阻断摘要与阻断明细标题都展示可读对象名”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍐茬獊鍗＄墖鐜板湪浠庢憳瑕佸埌鏄庣粏鏍囬閮藉敖閲忛伩鍏嶆毚闇插唴閮ㄥ璞?ID锛岀敤鎴峰湪棰勬鍜岄€愭潯澶勭悊涔嬮棿鍒囨崲鏃舵洿瀹规槗瀵逛笂鍚屼竴涓璞°€?- 鎸夋柊鐨勫揩閫熷師鍨嬫柟鍚戯紝鍚庣画鏇撮€傚悎鎶婄簿鍔涜浆鍚戝叏灞€楠ㄦ灦琛ラ綈锛岃€屼笉鏄户缁湪鍗曚竴鍐茬獊瀛愬満鏅噷娣辨寲銆?
-## 2026-07-09 03:19:49 +08:00 | v1.1.0-alpha.109 | 鎺ㄨ繘 WB-032 鑺傜偣绾ч樆鏂腑鏂囧寲瀛愭楠?### 浠诲姟鍐呭
+- 冲突卡片现在从摘要到明细标题都尽量避免暴露内部对象 ID，用户在预检和逐条处理之间切换时更容易对上同一个对象。
+- 按新的快速原型方向，后续更适合把精力转向全局骨架补齐，而不是继续在单一冲突子场景里深挖。
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸涓婁竴杞€滈妫€闃绘柇鍙绾跨储鈥濊ˉ榻愬埌鑺傜偣绾ч樆鏂被鍨嬨€?- 鏈疆鐩爣鏄 `invalid_source_target` / `invalid_node_size` 杩欑被鑺傜偣绾у啿绐佺殑鑱斿姩鍙栬垗寤鸿鍜岄樆鏂?message 閮戒娇鐢ㄤ腑鏂囪鏄庯紝閬垮厤鍐茬獊鍗＄墖閲屽悓涓€缁勯妫€涓€鍗婁腑鏂囥€佷竴鍗婅嫳鏂囥€?
-### 瀹為檯鍙樻洿
+## 2026-07-09 03:19:49 +08:00 | v1.1.0-alpha.109 | 推进 WB-032 节点级阻断中文化子步骤
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屽皢鑺傜偣鏉ユ簮涓嶅畬鏁淬€佽妭鐐瑰昂瀵搁潪娉曚袱绫婚樆鏂殑 `keep-latest` 寤鸿鏂囨鏀逛负涓枃銆?- 鍚屾灏?`validateGraphConflictResolutionDrafts(...)` 浜у嚭鐨勮妭鐐圭骇闃绘柇 message 鏀逛负涓枃锛屼緥濡傗€滆妭鐐光€淏roken source node鈥濈殑鏉ユ簮淇℃伅涓嶅畬鏁达紝璇疯ˉ榻?source.type/source.id 鎴栨敼涓轰繚鐣欐湇鍔＄銆傗€?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`锛屽厛鐢?RED 閿佸畾鑻辨枃鏂囨闂锛屽啀楠岃瘉寤鸿鏂囨涓庨樆鏂?message 鍧囧凡涓枃鍖栥€?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滆妭鐐圭骇闃绘柇涔熺撼鍏ヤ腑鏂囬妫€璇█鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“预检阻断可读线索”补齐到节点级阻断类型。
+- 本轮目标是让 `invalid_source_target` / `invalid_node_size` 这类节点级冲突的联动取舍建议和阻断 message 都使用中文说明，避免冲突卡片里同一组预检一半中文、一半英文。
 
-- RED锛歚npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，将节点来源不完整、节点尺寸非法两类阻断的 `keep-latest` 建议文案改为中文。
+- 同步将 `validateGraphConflictResolutionDrafts(...)` 产出的节点级阻断 message 改为中文，例如“节点“Broken source node”的来源信息不完整，请补齐 source.type/source.id 或改为保留服务端。”
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，先用 RED 锁定英文文案问题，再验证建议文案与阻断 message 均已中文化。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“节点级阻断也纳入中文预检语言”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
 - `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐨勮妭鐐圭骇闃绘柇鐜板湪鍜岃竟/鍒嗙粍渚濊禆闃绘柇浣跨敤鍚屼竴濂椾腑鏂囪〃杈撅紝鎵归噺寤鸿銆侀妫€鎽樿鍜屾槑缁?message 鏇翠竴鑷淬€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄妸鏇村 error 绾у啿绐佺撼鍏ュ彲鎵ц寤鸿锛屾垨寮€濮嬫⒊鐞?`WB-034` 鎵€闇€鐨勫浘璋卞啿绐佸洖褰掔煩闃点€?
-## 2026-07-09 03:14:25 +08:00 | v1.1.0-alpha.108 | 鎺ㄨ繘 WB-032 棰勬闃绘柇鍙绾跨储瀛愭楠?### 浠诲姟鍐呭
+- 图谱冲突辅助的节点级阻断现在和边/分组依赖阻断使用同一套中文表达，批量建议、预检摘要和明细 message 更一致。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是把更多 error 级冲突纳入可执行建议，或开始梳理 `WB-034` 所需的图谱冲突回归矩阵。
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸涓婁竴杞€滈妫€浠ｈ〃瀵硅薄绀轰緥鈥濆啀琛ヤ竴灞傞樆鏂彲璇绘€с€?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勯樆鏂憳瑕併€佸簲鐢ㄥ墠棰勬鍜屾壒閲忚仈鍔ㄥ彇鑸嶅弽棣堥噷锛屼笉鍐嶅彧鏄剧ず `edge-local` 杩欑被鍐呴儴瀵硅薄 ID锛岃€屾槸浼樺厛灞曠ず鈥滃摢涓璞″洜浠€涔堝師鍥犻樆鏂€濈殑鐭嚎绱€?
-### 瀹為檯鍙樻洿
+## 2026-07-09 03:14:25 +08:00 | v1.1.0-alpha.108 | 推进 WB-032 预检阻断可读线索子步骤
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛岃 `buildGraphConflictResolutionBlockingIssueSummary(...)` 浼樺厛浣跨敤鏍￠獙鍣ㄧ敓鎴愮殑鍙 message锛屽苟鍘嬬缉鎴愰涓師鍥犵煭鍙ワ紱褰?message 鍙槸娉涘寲鐭爜鏃朵粛鍥為€€鍒?`targetId` 鎴?`ruleType`銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`锛岀敤 RED -> GREEN 閿佸畾鎵归噺鑱斿姩鍙嶉銆佸簲鐢ㄥ墠棰勬鍜岄樆鏂憳瑕侀兘浼氬睍绀虹被浼尖€滆繛绾库€淟ocal edge鈥濅細寮曠敤鏈繚鐣欑殑鑺傜偣鈥濈殑瀵硅薄绾х煭鍘熷洜銆?- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛岄攣瀹氱湡瀹炲伐浣滃尯閲屸€滃彇鑸嶄緷璧栨牎楠岄棶棰樷€濅細灞曠ず鍙闃绘柇绾跨储锛岃€屼笉鏄８瀵硅薄 ID銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃簲鐢ㄥ墠棰勬鍜岄樆鏂憳瑕佷紭鍏堝睍绀哄彲璇诲璞″師鍥犫€濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“预检代表对象示例”再补一层阻断可读性。
+- 本轮目标是在图谱 Inspector 的阻断摘要、应用前预检和批量联动取舍反馈里，不再只显示 `edge-local` 这类内部对象 ID，而是优先展示“哪个对象因什么原因阻断”的短线索。
 
-- RED锛歚npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，让 `buildGraphConflictResolutionBlockingIssueSummary(...)` 优先使用校验器生成的可读 message，并压缩成首个原因短句；当 message 只是泛化短码时仍回退到 `targetId` 或 `ruleType`。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，用 RED -> GREEN 锁定批量联动反馈、应用前预检和阻断摘要都会展示类似“连线“Local edge”会引用未保留的节点”的对象级短原因。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，锁定真实工作区里“取舍依赖校验问题”会展示可读阻断线索，而不是裸对象 ID。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-032` 当前边界推进到“应用前预检和阻断摘要优先展示可读对象原因”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
 - `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪鑳藉湪鏈€缁堢偣鍑诲墠鐩存帴鎸囧嚭闃绘柇瀵硅薄鍜岄樆鏂師鍥狅紝鐢ㄦ埛涓嶉渶瑕佷粠鍐呴儴 ID 鍐嶅弽鎺ㄧ敾甯冨璞°€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄妸鏇村鍐茬獊绫诲瀷绾冲叆鍚屼竴濂楀璞＄骇鑱斿姩鍙栬垗绛栫暐锛屽苟缁х画鍑嗗 `WB-034` 鐨勫伐浣滃尯鍥炲綊鐭╅樀銆?
-## 2026-07-09 02:05:19 +08:00 | v1.1.0-alpha.107 | 鎺ㄨ繘 WB-032 棰勬浠ｈ〃瀵硅薄绀轰緥瀛愭楠?### 浠诲姟鍐呭
+- 图谱冲突辅助现在能在最终点击前直接指出阻断对象和阻断原因，用户不需要从内部 ID 再反推画布对象。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是把更多冲突类型纳入同一套对象级联动取舍策略，并继续准备 `WB-034` 的工作区回归矩阵。
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸涓婁竴杞€滈妫€骞跺叆鏈爣璁伴粯璁ゅ洖閫€缁撴灉鈥濆啀琛ュ厖鎴愭洿瀹屾暣鐨勫悎骞跺墠棰勬鍙嶉銆?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勨€滃簲鐢ㄥ墠棰勬鈥濋噷锛岃鐢ㄦ埛涓嶅彧鐪嬪埌鍙栬垗鏁伴噺鍜屾湭鏍囪瀵硅薄鐨勯粯璁ゅ洖閫€缁撴灉锛岃繕鑳界洿鎺ョ湅鍒拌繖杞凡鏍囪鍙栬垗鐨勪唬琛ㄥ璞＄ず渚嬨€?
-### 瀹為檯鍙樻洿
+## 2026-07-09 02:05:19 +08:00 | v1.1.0-alpha.107 | 推进 WB-032 预检代表对象示例子步骤
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屼负 `buildGraphConflictResolutionPreflightMessage(...)` 澧炲姞浠ｈ〃瀵硅薄绀轰緥鎽樿锛氫細鎸?`淇濈暀鏈湴 / 淇濈暀鏈嶅姟绔?/ 绋嶅悗澶勭悊` 鍚勮嚜鎶藉彇浠ｈ〃瀵硅薄锛岀敓鎴愮被浼尖€滀緥濡備繚鐣欐湰鍦帮細鏈湴鑺傜偣锛屼繚鐣欐湇鍔＄锛氭棫鍏崇郴鈥濈殑琛ュ厖璇存槑銆?- 淇濇寔杩欏眰绀轰緥鎽樿缁х画鍋滅暀鍦?helper 鍐呴儴缁勮锛屼笉鎶婇妫€鏍煎紡瑙勫垯鏁ｈ惤鍒版帶鍒跺櫒鎴栧啿绐佸崱鐗囩粍浠朵腑銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 涓?`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛岃ˉ榻?helper 绾т笌椤甸潰绾у洖褰掞紝閿佸畾鈥滃簲鐢ㄥ墠棰勬浼氬甫浠ｈ〃瀵硅薄绀轰緥鈥濈殑琛屼负銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃簲鐢ㄥ墠棰勬鍚屾椂瑙ｉ噴鏁伴噺銆佷唬琛ㄥ璞′笌鏈爣璁伴粯璁ゅ洖閫€缁撴灉鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“预检并入未标记默认回退结果”再补充成更完整的合并前预检反馈。
+- 本轮目标是在图谱 Inspector 的“应用前预检”里，让用户不只看到取舍数量和未标记对象的默认回退结果，还能直接看到这轮已标记取舍的代表对象示例。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，为 `buildGraphConflictResolutionPreflightMessage(...)` 增加代表对象示例摘要：会按 `保留本地 / 保留服务端 / 稍后处理` 各自抽取代表对象，生成类似“例如保留本地：本地节点，保留服务端：旧关系”的补充说明。
+- 保持这层示例摘要继续停留在 helper 内部组装，不把预检格式规则散落到控制器或冲突卡片组件中。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，补齐 helper 级与页面级回归，锁定“应用前预检会带代表对象示例”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“应用前预检同时解释数量、代表对象与未标记默认回退结果”。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 - `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪鑳藉湪鏈€缁堢偣鍑诲墠锛屾妸鈥滄暟閲忕骇缁撴灉鈥濆拰鈥滆繖杞彇鑸嶄富瑕佽鐩栧摢浜涘璞♀€濅竴璧疯娓呮锛岃繘涓€姝ラ檷浣庡璞＄骇浜哄伐鍙栬垗鏃剁殑棰勬涓嶇‘瀹氭劅銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄妸杩欏眰鎽樿缁х画鎵╁睍鎴愭洿瀹屾暣鐨勫璞＄骇鍚堝苟棰勬鍙嶉锛屽苟瑕嗙洊鏇村鍐茬獊绫诲瀷鐨勮仈鍔ㄥ彇鑸嶇瓥鐣ャ€?
-## 2026-07-09 02:00:43 +08:00 | v1.1.0-alpha.106 | 鎺ㄨ繘 WB-032 棰勬骞跺叆鏈爣璁伴粯璁ゅ洖閫€瀛愭楠?### 浠诲姟鍐呭
+- 图谱冲突辅助现在能在最终点击前，把“数量级结果”和“这轮取舍主要覆盖哪些对象”一起说清楚，进一步降低对象级人工取舍时的预检不确定感。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是把这层摘要继续扩展成更完整的对象级合并预检反馈，并覆盖更多冲突类型的联动取舍策略。
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸涓婁竴杞€滃簲鐢ㄥ墠棰勬鎽樿鈥濆啀琛ュ畬鏁翠竴灞傘€?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勫啿绐佸崱鐗囬噷锛岃鈥滃鏋滅幇鍦ㄥ簲鐢ㄢ€濅笉鍙鏄庡凡鏍囪鍙栬垗浼氭€庝箞澶勭悊锛屼篃鐩存帴璇存槑杩樻湁鍝簺鏈爣璁板璞′細榛樿娌跨敤鏈€鏂板浘璋辩増鏈€?
-### 瀹為檯鍙樻洿
+## 2026-07-09 02:00:43 +08:00 | v1.1.0-alpha.106 | 推进 WB-032 预检并入未标记默认回退子步骤
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧?`buildGraphConflictResolutionUnmarkedSummary(...)`锛屾妸鏈爣璁板璞＄殑榛樿鍥為€€缁撴灉缁熶竴鍘嬫垚鍙鐢ㄦ憳瑕侊紝骞惰 `buildGraphConflictResolutionPreflightMessage(...)` 鏀寔鎶婅繖娈电粨鏋滃苟鍏ユ渶缁堥妫€鎻愮ず銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屽熀浜庡綋鍓?`unsavedChangeDetails`銆乣latestHeadConflictDetails` 涓?`conflictResolutionSelections` 璁＄畻鏈爣璁板璞℃憳瑕侊紝鍐嶆妸瀹冧竴骞朵紶缁欑幇鏈夌殑 `resolutionPreflightMessage`銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 涓?`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛岃ˉ榻?helper 绾т笌椤甸潰绾у洖褰掞紝閿佸畾鈥滃簲鐢ㄥ墠棰勬浼氭妸鏈爣璁板璞￠粯璁ゆ部鐢ㄦ渶鏂扮増鏈殑缁撴灉涓€璧疯娓呮鈥濈殑琛屼负銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃簲鐢ㄥ墠棰勬鍚屾椂瑙ｉ噴宸叉爣璁板彇鑸嶄笌鏈爣璁伴粯璁ゅ洖閫€缁撴灉鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“应用前预检摘要”再补完整一层。
+- 本轮目标是在图谱 Inspector 的冲突卡片里，让“如果现在应用”不只说明已标记取舍会怎么处理，也直接说明还有哪些未标记对象会默认沿用最新图谱版本。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionUnmarkedSummary(...)`，把未标记对象的默认回退结果统一压成可复用摘要，并让 `buildGraphConflictResolutionPreflightMessage(...)` 支持把这段结果并入最终预检提示。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，基于当前 `unsavedChangeDetails`、`latestHeadConflictDetails` 与 `conflictResolutionSelections` 计算未标记对象摘要，再把它一并传给现有的 `resolutionPreflightMessage`。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，补齐 helper 级与页面级回归，锁定“应用前预检会把未标记对象默认沿用最新版本的结果一起说清楚”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“应用前预检同时解释已标记取舍与未标记默认回退结果”。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 - `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪鑳藉湪鏈€缁堢偣鍑诲墠锛屾妸鈥滃凡鏍囪瀵硅薄浼氬浣曞悎骞垛€濆拰鈥滄湭鏍囪瀵硅薄浼氬浣曢粯璁ゅ洖閫€鈥濆悓鏃惰娓呮锛屽噺灏戠敤鎴峰湪瀵硅薄绾у彇鑸嶅満鏅噷鐨勫悎骞朵笉纭畾鎰熴€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄妸杩欏棰勬浠庢憳瑕佹墿灞曞埌鏇村畬鏁寸殑瀵硅薄绾у悎骞堕妫€鍙嶉锛屽苟瑕嗙洊鏇村鍐茬獊绫诲瀷鐨勮仈鍔ㄥ彇鑸嶇瓥鐣ャ€?
-## 2026-07-09 01:41:18 +08:00 | v1.1.0-alpha.105 | 鎺ㄨ繘 WB-032 搴旂敤鍓嶉妫€鎽樿瀛愭楠?### 浠诲姟鍐呭
+- 图谱冲突辅助现在能在最终点击前，把“已标记对象会如何合并”和“未标记对象会如何默认回退”同时说清楚，减少用户在对象级取舍场景里的合并不确定感。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是把这套预检从摘要扩展到更完整的对象级合并预检反馈，并覆盖更多冲突类型的联动取舍策略。
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸涓婁竴杞€滄渶缁堥妫€闃绘柇鎽樿鈥濆啀寰€鍓嶈ˉ鎴愭洿瀹屾暣鐨勨€滃鏋滅幇鍦ㄥ簲鐢ㄤ細鍙戠敓浠€涔堚€濋妫€鎻愮ず銆?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勫啿绐佸崱鐗囦腑锛岃鐢ㄦ埛鍦ㄧ湡姝ｇ偣鍑烩€滃簲鐢ㄥ凡鏍囪鍙栬垗鍒板綋鍓嶈崏绋库€濆墠锛屽氨鑳界洿鎺ョ湅鍒颁竴鏉″悎骞跺墠棰勬鎽樿锛氭棦璇存槑褰撳墠璁″垝淇濈暀鍝簺鍙栬垗锛屼篃璇存槑鏄惁浼氳渚濊禆闂闃绘柇銆?
-### 瀹為檯鍙樻洿
+## 2026-07-09 01:41:18 +08:00 | v1.1.0-alpha.105 | 推进 WB-032 应用前预检摘要子步骤
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧?`buildGraphConflictResolutionPreflightMessage(...)`锛岀粺涓€鐢熸垚鍚堝苟鍓嶉妫€鎽樿锛氬綋瀛樺湪闃绘柇鏃讹紝浼氳鏄庘€滃凡鏍囪鍙栬垗浼氳 N 涓緷璧栭棶棰橀樆鏂紙鎽樿锛夆€濓紱褰撴棤闃绘柇鏃讹紝浼氳鏄庘€滃鏋滅幇鍦ㄥ簲鐢細淇濈暀鏈湴 X 椤?/ 淇濈暀鏈嶅姟绔?Y 椤?/ 绋嶅悗澶勭悊 Z 椤光€濄€?- 椤烘墜鎶婂彇鑸嶆暟閲忔眹鎬婚€昏緫鎶芥垚鍐呴儴澶嶇敤鐨?decision summary锛岄伩鍏嶇粨鏋滃弽棣堜笌棰勬鎽樿鍚勮嚜缁存姢涓€濂楄鏁拌鍒欍€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屽熀浜庡綋鍓?`conflictResolutionDrafts` 涓?`conflictResolutionBlockingIssues` 璁＄畻 `resolutionPreflightMessage`锛屽苟浼犵粰鍐茬獊鍗＄墖銆?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屾柊澧炩€滃簲鐢ㄥ墠棰勬鈥濆尯鍧楋紝鍦ㄥ啿绐佸崱鐗囦腑鐩存帴灞曠ず杩欐潯棰勬鎽樿銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 涓?`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`锛岃ˉ榻?helper 涓庣粍浠剁骇鍥炲綊锛岄攣瀹氣€滃簲鐢ㄥ墠棰勬鈥濅細鍦ㄥ崱鐗囦腑鏄剧ず鐨勮涓恒€?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃啿绐佸崱鐗囦細鐩存帴灞曠ず鍚堝苟鍓嶉妫€鎽樿鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“最终预检阻断摘要”再往前补成更完整的“如果现在应用会发生什么”预检提示。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，让用户在真正点击“应用已标记取舍到当前草稿”前，就能直接看到一条合并前预检摘要：既说明当前计划保留哪些取舍，也说明是否会被依赖问题阻断。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionPreflightMessage(...)`，统一生成合并前预检摘要：当存在阻断时，会说明“已标记取舍会被 N 个依赖问题阻断（摘要）”；当无阻断时，会说明“如果现在应用：保留本地 X 项 / 保留服务端 Y 项 / 稍后处理 Z 项”。
+- 顺手把取舍数量汇总逻辑抽成内部复用的 decision summary，避免结果反馈与预检摘要各自维护一套计数规则。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，基于当前 `conflictResolutionDrafts` 与 `conflictResolutionBlockingIssues` 计算 `resolutionPreflightMessage`，并传给冲突卡片。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，新增“应用前预检”区块，在冲突卡片中直接展示这条预检摘要。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 与 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`，补齐 helper 与组件级回归，锁定“应用前预检”会在卡片中显示的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“冲突卡片会直接展示合并前预检摘要”。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
 - `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
@@ -1489,17 +2267,26 @@
 - `npm --workspace frontend-user run typecheck`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶅彧浼氱粰鍑洪樆鏂憳瑕佸拰鎵归噺鍙栬垗鍙嶉锛岃繕浼氬湪鐪熸搴旂敤鍓嶇洿鎺ユ妸鈥滃鏋滅幇鍦ㄥ簲鐢ㄤ細鍙戠敓浠€涔堚€濇彁鍓嶈娓呮锛岀敤鎴蜂笉闇€瑕佺偣鍒版渶鍚庝竴姝ユ墠鐞嗚В褰撳墠鍙栬垗鐨勫悎骞剁粨鏋溿€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄妸杩欏眰棰勬缁х画鎵╁睍鎴愭洿瀹屾暣鐨勫悎骞堕妫€鍙嶉锛屽苟瑕嗙洊鏇村鍐茬獊绫诲瀷鐨勫璞¤仈鍔ㄧ瓥鐣ャ€?
-## 2026-07-09 01:37:00 +08:00 | v1.1.0-alpha.104 | 鎺ㄨ繘 WB-032 鏈€缁堥妫€闃绘柇鎽樿瀛愭楠?### 浠诲姟鍐呭
+- 图谱冲突辅助现在不只会给出阻断摘要和批量取舍反馈，还会在真正应用前直接把“如果现在应用会发生什么”提前讲清楚，用户不需要点到最后一步才理解当前取舍的合并结果。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是把这层预检继续扩展成更完整的合并预检反馈，并覆盖更多冲突类型的对象联动策略。
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪涓婁竴杞€滈樆鏂樊寮傝В閲娾€濆熀纭€涓婏紝鎶婅繖灞傛憳瑕佺户缁墠绉诲埌鐪熸搴旂敤鍙栬垗鍓嶇殑鏈€缁堥妫€鍗＄墖閲屻€?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勨€滃彇鑸嶄緷璧栨牎楠岄棶棰樷€濆尯鍧椾腑锛屼笉鍙垪鍑烘槑缁嗗垪琛紝杩樺厛缁欏嚭涓€鏉＄簿绠€鐨勯樆鏂憳瑕侊紱鍚屾椂璁╂渶缁堥妫€鍏滃簳鏂囨涔熷鐢ㄥ悓涓€濂楁憳瑕侊紝淇濊瘉鍐茬獊鍗＄墖鍜岀姸鎬佹彁绀哄鐢ㄦ埛璇寸殑鏄悓涓€浠朵簨銆?
-### 瀹為檯鍙樻洿
+## 2026-07-09 01:37:00 +08:00 | v1.1.0-alpha.104 | 推进 WB-032 最终预检阻断摘要子步骤
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屽湪鈥滃彇鑸嶄緷璧栨牎楠岄棶棰樷€濆尯鍧楅《閮ㄦ柊澧炴憳瑕佹枃妗堬細浼氬厛鏄剧ず `褰撳墠浠嶉樆鏂細...銆傝鍏堣皟鏁存爣璁板悗鍐嶅簲鐢ㄣ€俙
-- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛岃 `applyMarkedConflictResolutions()` 鍦ㄥ厹搴曢樆鏂彁绀洪噷涔熷鐢ㄥ悓涓€濂?`buildGraphConflictResolutionBlockingIssueSummary(...)`锛岄伩鍏嶆渶缁堥妫€鐨勬彁绀虹户缁仠鐣欏湪鍙湁娉涘寲鏂囨鐨勭姸鎬併€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 涓?`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛岃ˉ榻愮粍浠剁骇鍜岄〉闈㈢骇鍥炲綊锛岄攣瀹氣€滈樆鏂憳瑕佷細鐩存帴鏄剧ず鍦ㄦ渶缁堥妫€鍗＄墖閲屸€濈殑琛屼负銆?- 澶嶇敤骞跺洖褰?`frontend-user/src/modules/graph/lib/graphConflictSummary.ts` / `.test.ts` 閲岀殑闃绘柇鎽樿 helper锛岀‘淇濇憳瑕佹牸寮忎笌涓婁竴杞繚鎸佷竴鑷淬€?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滄渶缁堥妫€鍗＄墖涓庣姸鎬佸厹搴曞叡鐢ㄩ樆鏂憳瑕佲€濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“阻断差异解释”基础上，把这层摘要继续前移到真正应用取舍前的最终预检卡片里。
+- 本轮目标是在图谱 Inspector 的“取舍依赖校验问题”区块中，不只列出明细列表，还先给出一条精简的阻断摘要；同时让最终预检兜底文案也复用同一套摘要，保证冲突卡片和状态提示对用户说的是同一件事。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在“取舍依赖校验问题”区块顶部新增摘要文案：会先显示 `当前仍阻断：...。请先调整标记后再应用。`
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让 `applyMarkedConflictResolutions()` 在兜底阻断提示里也复用同一套 `buildGraphConflictResolutionBlockingIssueSummary(...)`，避免最终预检的提示继续停留在只有泛化文案的状态。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，补齐组件级和页面级回归，锁定“阻断摘要会直接显示在最终预检卡片里”的行为。
+- 复用并回归 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts` / `.test.ts` 里的阻断摘要 helper，确保摘要格式与上一轮保持一致。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“最终预检卡片与状态兜底共用阻断摘要”。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
@@ -1507,33 +2294,26 @@
 - `npm --workspace frontend-user run typecheck`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶅彧浼氬湪鎵归噺鍙栬垗鍙嶉閲岀粰鍑哄墿浣欓樆鏂璞℃憳瑕侊紝涔熶細鍦ㄧ湡姝ｅ簲鐢ㄥ彇鑸嶅墠鐨勬渶缁堥妫€鍗＄墖閲屽厛鎶婇樆鏂憳瑕佽娓呮锛屽噺灏戠敤鎴峰湪鈥滃垪琛ㄥ緢澶氫絾涓嶇煡閬撳厛鐪嬪摢椤光€濇椂鐨勫垽鏂垚鏈€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄妸杩欏鎽樿缁х画鎵╁睍鍒版渶缁堝簲鐢ㄥ墠鏇村畬鏁寸殑鍚堝苟棰勬鍙嶉锛屼互鍙婅鐩栨洿澶氬啿绐佺被鍨嬬殑瀵硅薄鑱斿姩绛栫暐銆?
-## 2026-07-09 01:30:30 +08:00 | v1.1.0-alpha.103 | 鎺ㄨ繘 WB-032 闃绘柇宸紓瑙ｉ噴瀛愭楠?### 浠诲姟鍐呭
+- 图谱冲突辅助现在不只会在批量取舍反馈里给出剩余阻断对象摘要，也会在真正应用取舍前的最终预检卡片里先把阻断摘要讲清楚，减少用户在“列表很多但不知道先看哪项”时的判断成本。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是把这套摘要继续扩展到最终应用前更完整的合并预检反馈，以及覆盖更多冲突类型的对象联动策略。
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪涓婁竴杞€滄壒閲忓彇鑸嶅弽棣堣В閲娾€濆熀纭€涓婏紝鎶娾€滀粛鏈夐樆鏂€濊繖浠朵簨缁х画浠庡彧鏈夋暟閲忔彁绀烘帹杩涘埌鈥滅煡閬撹繕鍗″湪鍝簺瀵硅薄涓娾€濈殑鏇寸粏绮掑害瑙ｉ噴銆?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勬壒閲忚仈鍔ㄥ彇鑸嶅弽棣堜腑锛屽綋闃绘柇灏氭湭瀹屽叏瑙ｉ櫎鏃讹紝涓嶅彧鍛婅瘔鐢ㄦ埛鈥滆繕鍓╁嚑涓緷璧栭棶棰樷€濓紝杩樿缁欏嚭涓€娈电簿绠€鐨勫墿浣欓樆鏂璞℃憳瑕侊紝甯姪鐢ㄦ埛蹇€熷垽鏂笅涓€姝ヨ缁х画璋冨摢浜涘璞°€?
-### 瀹為檯鍙樻洿
+## 2026-07-09 01:30:30 +08:00 | v1.1.0-alpha.103 | 推进 WB-032 阻断差异解释子步骤
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧?`buildGraphConflictResolutionBlockingIssueSummary(...)`锛屾妸鍓╀綑闃绘柇瀵硅薄鍘嬬缉鎴愬彲澶嶇敤鐨勭煭鎽樿锛岄粯璁ゅ睍绀哄墠 2 涓?target锛屽苟鍦ㄨ秴鍑烘椂闄勫甫鎬绘暟銆?- 鏇存柊 `buildGraphConflictResolutionSuggestionOutcomeMessage(...)`锛屼粠鍙帴鏀堕樆鏂暟閲忔敼涓烘帴鏀跺畬鏁撮樆鏂垪琛紱褰撻樆鏂粛瀛樺湪鏃讹紝鍙嶉鏂囨鐜板湪浼氭樉寮忛檮甯︾被浼?`edge-local銆乬roup-local 绛?3 椤筦 鐨勫璞℃憳瑕併€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛岃鎵归噺鍙栬垗鍙嶉鏀逛负浼犲叆鈥滄壒閲忔爣璁板悗鐨勭湡瀹炲墿浣欓樆鏂垪琛ㄢ€濓紝鑰屼笉鏄彧浼犳暟瀛椼€?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`锛岃ˉ榻?helper 绾у洖褰掞紝閿佸畾鈥滈樆鏂湭瑙ｉ櫎鏃朵細杩斿洖瀵硅薄鎽樿鈥濈殑琛屼负锛涘苟鍥炲綊 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx` 涓?`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`锛岀‘淇濆凡瑙ｉ櫎闃绘柇璺緞涓嶅洖閫€銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滄壒閲忓彇鑸嶅弽棣堜細鎸囧嚭鍓╀綑闃绘柇瀵硅薄鎽樿鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“批量取舍反馈解释”基础上，把“仍有阻断”这件事继续从只有数量提示推进到“知道还卡在哪些对象上”的更细粒度解释。
+- 本轮目标是在图谱 Inspector 的批量联动取舍反馈中，当阻断尚未完全解除时，不只告诉用户“还剩几个依赖问题”，还要给出一段精简的剩余阻断对象摘要，帮助用户快速判断下一步该继续调哪些对象。
 
-- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
-- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
-- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
-- `npm --workspace frontend-user run typecheck`
-- `npm run verify:docs`
+### 实际变更
 
-### 鍚庣画褰卞搷
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionBlockingIssueSummary(...)`，把剩余阻断对象压缩成可复用的短摘要，默认展示前 2 个 target，并在超出时附带总数。
+- 更新 `buildGraphConflictResolutionSuggestionOutcomeMessage(...)`，从只接收阻断数量改为接收完整阻断列表；当阻断仍存在时，反馈文案现在会显式附带类似 `edge-local、group-local 等 3 项` 的对象摘要。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让批量取舍反馈改为传入“批量标记后的真实剩余阻断列表”，而不是只传数字。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，补齐 helper 级回归，锁定“阻断未解除时会返回对象摘要”的行为；并回归 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx` 与 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`，确保已解除阻断路径不回退。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“批量取舍反馈会指出剩余阻断对象摘要”。
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶅彧浼氬憡璇夌敤鎴封€滆繕鍓╁嚑涓樆鏂€濓紝涔熶細鍦ㄦ壒閲忚仈鍔ㄥ彇鑸嶅悗缁欏嚭绮剧畝鐨勫墿浣欓樆鏂璞℃憳瑕侊紝璁╀笅涓€姝ヨ皟鏁寸洰鏍囨洿鏄庣‘銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄洿瀹屾暣鐨勫璞¤仈鍔ㄧ瓥鐣ャ€佽鐩栨洿澶氬啿绐佺被鍨嬬殑鎵归噺鍙栬垗杈呭姪锛屼互鍙婃妸杩欑闃绘柇鎽樿杩涗竴姝ユ墿灞曞埌鐪熸搴旂敤鍙栬垗鍓嶇殑鏈€缁堥妫€鍙嶉銆?
-## 2026-07-09 01:26:28 +08:00 | v1.1.0-alpha.102 | 鎺ㄨ繘 WB-032 鎵归噺鍙栬垗鍙嶉瑙ｉ噴瀛愭楠?### 浠诲姟鍐呭
-
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪涓婁竴杞€滆仈鍔ㄥ彇鑸嶆壒閲忓簲鐢ㄢ€濆熀纭€涓婏紝鎶婃壒閲忔爣璁板悗鐨勭敤鎴峰弽棣堜粠鍥哄畾鎻愮ず缁х画鎺ㄨ繘鍒扳€滃甫缁撴灉鎽樿鍜岄妫€缁撹鈥濈殑鍙В閲婄姸鎬併€?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勫啿绐佸崱鐗囦腑锛岀敤鎴风偣鍑?`涓€閿簲鐢?N 椤硅仈鍔ㄥ彇鑸嶅缓璁甡 鍚庯紝涓嶅彧鐭ラ亾鈥滃凡缁忔壒閲忔爣璁扳€濓紝杩樿绔嬪埢鐭ラ亾鏈鏍囪鍖呭惈澶氬皯鏈湴/鏈嶅姟绔彇鑸嶏紝浠ュ強褰撳墠鏄惁宸茬粡瑙ｉ櫎渚濊禆闃绘柇銆佽兘鍚︾户缁簲鐢ㄥ埌鏈€鏂?`head`銆?
-### 瀹為檯鍙樻洿
-
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧?`buildGraphConflictResolutionSuggestionOutcomeMessage(...)`锛岀粺涓€鐢熸垚鎵归噺鑱斿姩鍙栬垗鍚庣殑鍙嶉鏂囨锛氫細姹囨€绘湰娆℃爣璁颁腑鐨?`keep-local / keep-latest / review-later` 鏁伴噺锛屽苟鏍规嵁鍓╀綑闃绘柇鏁伴噺杩斿洖鈥滃凡瑙ｉ櫎渚濊禆闃绘柇锛屽彲缁х画搴旂敤鈥濇垨鈥滀粛鏈?N 涓緷璧栭棶棰樺緟澶勭悊鈥濈殑棰勬瑙ｉ噴銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屽湪 `applyConflictResolutionSuggestions()` 涓敼涓哄熀浜庘€滄壒閲忔爣璁板悗鐨勪笅涓€缁?selections鈥濋噸鏂拌绠楀璞＄骇鍙栬垗鑽夌涓庝緷璧栨牎楠岀粨鏋滐紝鍐嶄娇鐢ㄦ柊 helper 鐢熸垚鍙嶉锛岃€屼笉鏄户缁娇鐢ㄥ浐瀹氭枃妗堛€?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 涓?`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛岃ˉ榻?helper 涓庨〉闈㈢骇鍥炲綊锛岄攣瀹氣€滄壒閲忔爣璁板悗浼氳繑鍥炲甫璁℃暟鎽樿鐨勫弽棣堬紝骞跺湪闃绘柇瑙ｉ櫎鏃剁洿鎺ユ彁绀哄彲浠ョ户缁簲鐢ㄢ€濈殑琛屼负銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滄壒閲忔爣璁拌仈鍔ㄥ缓璁悗浼氳繑鍥炲甫棰勬缁撹鐨勭粨鏋滆В閲娾€濄€?
-### 楠岃瘉缁撴灉
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
@@ -1541,751 +2321,2137 @@
 - `npm --workspace frontend-user run typecheck`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶅彧鏀寔鈥滄暣缁勫缓璁壒閲忔爣璁扳€濓紝杩樹細鍦ㄦ壒閲忔爣璁板悗绔嬪嵆鍛婅瘔鐢ㄦ埛杩欐鍒板簳鏍囪浜嗗摢浜涘彇鑸嶆柟鍚戯紝浠ュ強褰撳墠鏄惁宸茬粡瑙ｉ櫎闃绘柇銆佸彲浠ョ户缁簲鐢紝鍑忓皯鐢ㄦ埛鍦ㄥ啿绐佹€侀噷鍙嶅璇曠偣鎸夐挳鐨勮瘯鎺㈡垚鏈€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄洿瀹屾暣鐨勫璞¤仈鍔ㄧ瓥鐣ャ€佽鐩栨洿澶氬啿绐佺被鍨嬬殑鎵归噺鍙栬垗杈呭姪锛屼互鍙婃洿缁嗙矑搴︾殑闃绘柇宸紓瑙ｉ噴銆?
-## 2026-07-08 19:07:41 +08:00 | v1.1.0-alpha.101 | 鎺ㄨ繘 WB-032 鑱斿姩鍙栬垗鎵归噺搴旂敤瀛愭楠?### 浠诲姟鍐呭
+- 图谱冲突辅助现在不只会告诉用户“还剩几个阻断”，也会在批量联动取舍后给出精简的剩余阻断对象摘要，让下一步调整目标更明确。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的对象联动策略、覆盖更多冲突类型的批量取舍辅助，以及把这种阻断摘要进一步扩展到真正应用取舍前的最终预检反馈。
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪涓婁竴杞€滃悎骞剁粨鏋滃弽棣堚€濆拰鏇存棭鐨勨€滆仈鍔ㄥ彇鑸嶅缓璁€濆熀纭€涓婏紝鎶婂啿绐佸鐞嗙户缁粠鈥滃崟鏉″缓璁彲鐐瑰嚮鈥濇帹杩涘埌鈥滄暣缁勫缓璁彲鎵归噺钀芥垚鍙栬垗鏍囪鈥濄€?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勫啿绐佸崱鐗囦腑锛屽綋鍚屼竴杞緷璧栭樆鏂敓鎴愬鏉¤仈鍔ㄥ缓璁椂锛岀敤鎴蜂笉蹇呴€愭潯鐐瑰嚮锛岃€屾槸鍙互鍏堜竴閿妸杩欑粍寤鸿鎵归噺鍐欏叆褰撳墠瀵硅薄绾у彇鑸嶏紝鍐嶅喅瀹氭槸鍚︾户缁簲鐢ㄥ埌鏈€鏂?head銆?
-### 瀹為檯鍙樻洿
+## 2026-07-09 01:26:28 +08:00 | v1.1.0-alpha.102 | 推进 WB-032 批量取舍反馈解释子步骤
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧?`applyGraphConflictResolutionSuggestions(...)`锛屾妸鑱斿姩寤鸿鎵归噺鍚堝苟杩涘綋鍓?`resolutionSelections`锛屽鐢ㄦ棦鏈夊璞＄骇 decision key锛岄伩鍏嶉〉闈㈠眰閲嶅鎷艰鍙栬垗閿€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`applyConflictResolutionSuggestions()`锛氬綋瀛樺湪鑱斿姩寤鸿鏃讹紝缁熶竴鎵归噺鍐欏叆瀵硅薄绾у彇鑸嶆爣璁般€佷繚鎸?dirty/浜哄伐鍚堝苟鎬侊紝骞惰繑鍥炩€滃凡鎵归噺鏍囪 N 鏉¤仈鍔ㄥ彇鑸嶅缓璁紝璇风户缁‘璁ゅ悗鍐嶅簲鐢ㄢ€濈殑鐘舵€佸弽棣堛€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屽湪鈥滆仈鍔ㄥ彇鑸嶅缓璁€濆尯鍧楁柊澧?`涓€閿簲鐢?N 椤硅仈鍔ㄥ彇鑸嶅缓璁甡 鎸夐挳锛岃鎵归噺鏍囪鍔ㄤ綔鍜岄€愭潯寤鸿鍔ㄤ綔鍏卞瓨銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`銆乣frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 涓?`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛岃ˉ榻?helper銆佺粍浠朵笌椤甸潰绾у洖褰掞紝閿佸畾鈥滄壒閲忔爣璁板缓璁悗鍙竻闄や緷璧栭樆鏂苟缁х画搴旂敤宸叉爣璁板彇鑸嶁€濈殑琛屼负銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滆仈鍔ㄥ缓璁棦鍙€愭潯鐐归€夛紝涔熷彲鏁寸粍鎵归噺鏍囪鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“联动取舍批量应用”基础上，把批量标记后的用户反馈从固定提示继续推进到“带结果摘要和预检结论”的可解释状态。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，用户点击 `一键应用 N 项联动取舍建议` 后，不只知道“已经批量标记”，还要立刻知道本次标记包含多少本地/服务端取舍，以及当前是否已经解除依赖阻断、能否继续应用到最新 `head`。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionSuggestionOutcomeMessage(...)`，统一生成批量联动取舍后的反馈文案：会汇总本次标记中的 `keep-local / keep-latest / review-later` 数量，并根据剩余阻断数量返回“已解除依赖阻断，可继续应用”或“仍有 N 个依赖问题待处理”的预检解释。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，在 `applyConflictResolutionSuggestions()` 中改为基于“批量标记后的下一组 selections”重新计算对象级取舍草稿与依赖校验结果，再使用新 helper 生成反馈，而不是继续使用固定文案。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，补齐 helper 与页面级回归，锁定“批量标记后会返回带计数摘要的反馈，并在阻断解除时直接提示可以继续应用”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“批量标记联动建议后会返回带预检结论的结果解释”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在不只支持“整组建议批量标记”，还会在批量标记后立即告诉用户这次到底标记了哪些取舍方向，以及当前是否已经解除阻断、可以继续应用，减少用户在冲突态里反复试点按钮的试探成本。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的对象联动策略、覆盖更多冲突类型的批量取舍辅助，以及更细粒度的阻断差异解释。
+
+## 2026-07-08 19:07:41 +08:00 | v1.1.0-alpha.101 | 推进 WB-032 联动取舍批量应用子步骤
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“合并结果反馈”和更早的“联动取舍建议”基础上，把冲突处理继续从“单条建议可点击”推进到“整组建议可批量落成取舍标记”。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，当同一轮依赖阻断生成多条联动建议时，用户不必逐条点击，而是可以先一键把这组建议批量写入当前对象级取舍，再决定是否继续应用到最新 head。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `applyGraphConflictResolutionSuggestions(...)`，把联动建议批量合并进当前 `resolutionSelections`，复用既有对象级 decision key，避免页面层重复拼装取舍键。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `applyConflictResolutionSuggestions()`：当存在联动建议时，统一批量写入对象级取舍标记、保持 dirty/人工合并态，并返回“已批量标记 N 条联动取舍建议，请继续确认后再应用”的状态反馈。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在“联动取舍建议”区块新增 `一键应用 N 项联动取舍建议` 按钮，让批量标记动作和逐条建议动作共存。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，补齐 helper、组件与页面级回归，锁定“批量标记建议后可清除依赖阻断并继续应用已标记取舍”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“联动建议既可逐条点选，也可整组批量标记”。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
 - `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶅彧浼氬湪闃绘柇鍙戠敓鏃剁粰鍑衡€滆鎬庝箞淇€濈殑鑱斿姩寤鸿锛屼篃鏀寔鍏堟妸鏁寸粍寤鸿鎵归噺钀芥垚瀵硅薄绾у彇鑸嶆爣璁帮紝鏄庢樉鍑忓皯澶氭潯渚濊禆寤鸿鍦烘櫙涓嬬殑閲嶅鐐瑰嚮銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄洿瀹屾暣鐨勫璞¤仈鍔ㄧ瓥鐣ャ€佽鐩栨洿澶氬啿绐佺被鍨嬬殑鎵归噺鍙栬垗杈呭姪锛屼互鍙娾€滄壒閲忔爣璁颁箣鍚庡啀搴旂敤鈥濈殑鏇存竻鏅扮粨鏋滃弽棣堜笌棰勬瑙ｉ噴銆?
-## 2026-07-08 18:50:34 +08:00 | v1.1.0-alpha.100 | 鎺ㄨ繘 WB-032 鍚堝苟缁撴灉鍙嶉瀛愭楠?### 浠诲姟鍐呭
+- 图谱冲突辅助现在不只会在阻断发生时给出“该怎么修”的联动建议，也支持先把整组建议批量落成对象级取舍标记，明显减少多条依赖建议场景下的重复点击。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的对象联动策略、覆盖更多冲突类型的批量取舍辅助，以及“批量标记之后再应用”的更清晰结果反馈与预检解释。
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪涓婁竴杞€滆妭鐐圭骇鍐茬獊寤鸿鈥濆熀纭€涓婏紝鎶娾€滃簲鐢ㄥ凡鏍囪鍙栬垗鈥濆悗鐨勭粨鏋滃弽棣堜粠鍥哄畾鎻愮ず缁х画鎺ㄨ繘鍒板彲瑙ｉ噴鐨勫悎骞剁粨鏋滄憳瑕併€?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勫啿绐佸崱鐗囦腑锛岀敤鎴锋妸瀵硅薄绾у彇鑸嶅簲鐢ㄥ埌鏈€鏂?head 鍚庯紝绔嬪嵆鐭ラ亾杩欐鍚堝苟鑽夌閲屽埌搴曚繚鐣欎簡澶氬皯鏈湴瀵硅薄銆佹部鐢ㄤ簡澶氬皯鏈嶅姟绔璞★紝浠ュ強澶氬皯瀵硅薄琚爣璁颁负绋嶅悗澶勭悊銆?
-### 瀹為檯鍙樻洿
+## 2026-07-08 18:50:34 +08:00 | v1.1.0-alpha.100 | 推进 WB-032 合并结果反馈子步骤
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧?`buildGraphConflictResolutionOutcomeMessage(...)`锛屾妸瀵硅薄绾у彇鑸嶈崏绋胯浆鎹负鍙鐨勫悎骞剁粨鏋滃弽棣堬紝瑕嗙洊 `keep-local`銆乣keep-latest` 涓?`review-later` 涓夌被鍐崇瓥銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屽湪 `applyMarkedConflictResolutions()` 鎴愬姛鍚庢敼涓轰娇鐢ㄧ粨鏋滄憳瑕佹枃妗堬紝鑰屼笉鏄浐瀹氱殑鈥滃凡鐢熸垚鍚堝苟鑽夌鈥濇彁绀恒€?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 涓?`frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`锛岃ˉ榻?helper 涓庨〉闈㈢骇鍥炲綊锛岄攣瀹氣€滃簲鐢ㄥ彇鑸嶅悗鏄剧ず甯﹁鏁扮殑鍚堝苟缁撴灉鍙嶉鈥濄€?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃璞＄骇鍙栬垗搴旂敤鍚庝細杩斿洖鍙В閲婄殑缁撴灉鎽樿鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“节点级冲突建议”基础上，把“应用已标记取舍”后的结果反馈从固定提示继续推进到可解释的合并结果摘要。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，用户把对象级取舍应用到最新 head 后，立即知道这次合并草稿里到底保留了多少本地对象、沿用了多少服务端对象，以及多少对象被标记为稍后处理。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionOutcomeMessage(...)`，把对象级取舍草稿转换为可读的合并结果反馈，覆盖 `keep-local`、`keep-latest` 与 `review-later` 三类决策。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，在 `applyMarkedConflictResolutions()` 成功后改为使用结果摘要文案，而不是固定的“已生成合并草稿”提示。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts` 与 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补齐 helper 与页面级回归，锁定“应用取舍后显示带计数的合并结果反馈”。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“对象级取舍应用后会返回可解释的结果摘要”。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶅彧浼氬憡璇夌敤鎴封€滃凡缁忕敓鎴愬悎骞惰崏绋库€濓紝杩樹細鐩存帴璇存槑鏈鍚堝苟閲屼繚鐣欎簡澶氬皯鏈湴瀵硅薄銆佹部鐢ㄤ簡澶氬皯鏈嶅姟绔璞★紝浠ュ強鏄惁瀛樺湪鈥滅◢鍚庡鐞嗕絾宸叉部鐢ㄦ渶鏂扮増鏈€濈殑瀵硅薄锛岄檷浣庣敤鎴峰湪澶氱鍚堝苟鍚庣殑涓嶇‘瀹氭劅銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄洿瀹屾暣鐨勫璞¤仈鍔ㄧ瓥鐣ワ紝浠ュ強瑕嗙洊鏇村鍐茬獊绫诲瀷鐨勬壒閲忓彇鑸嶈緟鍔╋紝璁╄繖濂楀绔啿绐佸鐞嗕粠鈥滃崟鏉″缓璁彲鐐瑰嚮鈥濈户缁帹杩涘埌鈥滄暣缁勫彇鑸嶆洿楂樻晥鈥濄€?
-## 2026-07-08 18:45:24 +08:00 | v1.1.0-alpha.99 | 鎺ㄨ繘 WB-032 鑺傜偣绾у啿绐佸缓璁瓙姝ラ
-### 浠诲姟鍐呭
+- 图谱冲突辅助现在不只会告诉用户“已经生成合并草稿”，还会直接说明本次合并里保留了多少本地对象、沿用了多少服务端对象，以及是否存在“稍后处理但已沿用最新版本”的对象，降低用户在多端合并后的不确定感。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的对象联动策略，以及覆盖更多冲突类型的批量取舍辅助，让这套多端冲突处理从“单条建议可点击”继续推进到“整组取舍更高效”。
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪涓婁竴杞€滆仈鍔ㄥ彇鑸嶅缓璁€濆熀纭€涓婏紝鎶娾€滃彧鐭ラ亾鍝噷閿欎簡鈥濈户缁帹杩涘埌鈥滆妭鐐圭骇閿欒涔熺煡閬撲笅涓€姝ユ€庝箞鐐光€濄€?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勫啿绐佸崱鐗囦腑锛屽綋瀵硅薄绾у彇鑸嶈Е鍙?`invalid_source_target` / `invalid_node_size` 闃绘柇鏃讹紝涔熺洿鎺ョ粰鍑哄彲鎵ц鐨勨€滀繚鐣欐湇鍔＄鈥濆缓璁紝閬垮厤鐢ㄦ埛鍋滅暀鍦ㄩ敊璇鏄庨噷鑷鐚滄祴涓嬩竴姝ャ€?
-### 瀹為檯鍙樻洿
+## 2026-07-08 18:45:24 +08:00 | v1.1.0-alpha.99 | 推进 WB-032 节点级冲突建议子步骤
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾墿灞?`buildGraphConflictResolutionSuggestions(...)`锛氬綋鏈湴鑺傜偣鍥犳潵婧愪俊鎭笉瀹屾暣鎴栧昂瀵搁潪娉曡€岄樆鏂璞＄骇鍙栬垗鏃讹紝鐩存帴鐢熸垚 `keep-latest` 寤鸿锛涘悓鏃惰ˉ涓婃洿鏄庣‘鐨勯樆鏂鏄庢枃妗堛€?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`锛岃ˉ榻?`invalid_source_target` / `invalid_node_size` 涓ょ被鑺傜偣绾ч樆鏂殑 helper 鍥炲綊锛岄攣瀹氣€滀細鐢熸垚鍙墽琛屽缓璁€濈殑琛屼负銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滀緷璧栫被闃绘柇涔嬪锛岃妭鐐圭骇缁撴瀯閿欒涔熻兘缁欏嚭鍙墽琛屽彇鑸嶅缓璁€濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“联动取舍建议”基础上，把“只知道哪里错了”继续推进到“节点级错误也知道下一步怎么点”。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，当对象级取舍触发 `invalid_source_target` / `invalid_node_size` 阻断时，也直接给出可执行的“保留服务端”建议，避免用户停留在错误说明里自行猜测下一步。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，扩展 `buildGraphConflictResolutionSuggestions(...)`：当本地节点因来源信息不完整或尺寸非法而阻断对象级取舍时，直接生成 `keep-latest` 建议；同时补上更明确的阻断说明文案。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，补齐 `invalid_source_target` / `invalid_node_size` 两类节点级阻断的 helper 回归，锁定“会生成可执行建议”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“依赖类阻断之外，节点级结构错误也能给出可执行取舍建议”。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶅彧浼氫负 dangling edge / invalid group node 鐢熸垚鑱斿姩寤鸿锛屼篃鑳藉湪鑺傜偣鏉ユ簮涓嶅畬鏁存垨鑺傜偣灏哄闈炴硶鏃剁洿鎺ュ缓璁€滄敼涓轰繚鐣欐湇鍔＄鈥濓紝鎶婃洿澶氶樆鏂被鍨嬭浆鎴愬彲鎵ц鍔ㄤ綔銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄洿瀹屾暣鐨勫璞¤仈鍔ㄧ瓥鐣ャ€佹洿娓呮櫚鐨勫绔悎骞剁粨鏋滃弽棣堬紝浠ュ強瑕嗙洊鏇村鍐茬獊绫诲瀷鐨勬壒閲忓彇鑸嶈緟鍔┿€?
-## 2026-07-08 13:41:12 +08:00 | v1.1.0-alpha.98 | 鏀跺彛 FE-010 FE-020 FE-030 UI-04 楠岃瘉
-### 浠诲姟鍐呭
+- 图谱冲突辅助现在不只会为 dangling edge / invalid group node 生成联动建议，也能在节点来源不完整或节点尺寸非法时直接建议“改为保留服务端”，把更多阻断类型转成可执行动作。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的对象联动策略、更清晰的多端合并结果反馈，以及覆盖更多冲突类型的批量取舍辅助。
 
-- 鎸?`CODEX_MASTER_PROMPT.md` 褰撳墠浼樺厛绾э紝鍏堜笉缁х画鎵╁睍鏂板姛鑳斤紝鑰屾槸鎶?FE-010銆丗E-020銆丗E-030 涓?UI-04 浠庘€滃疄鐜板畬鎴愬緟楠岃瘉鈥濇敹鍙ｅ埌鈥滃凡鍦ㄧ湡瀹炰緷璧栫幆澧冨畬鎴愬洖褰掆€濄€?- 琛ラ綈杩欐壒鍓嶇楠岃瘉閲屾渶鍚庣殑鑴嗗急鐐癸紝纭繚鐢ㄦ埛绔笌绠＄悊绔?smoke 涓嶅啀渚濊禆杩囨椂椤甸潰鏂囨鎴栨槗纰庨€夋嫨鍣ㄣ€?
-### 瀹為檯鍙樻洿
+## 2026-07-08 13:41:12 +08:00 | v1.1.0-alpha.98 | 收口 FE-010 FE-020 FE-030 UI-04 验证
+### 任务内容
 
-- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛屼负鍚庡彴宸ヤ綔鍙板鑸寜閽ˉ `aria-label`銆乣aria-pressed` 鍜?`data-admin-view`锛岃鐢ㄦ埛娌荤悊绛夋ā鍧楀叿澶囩ǔ瀹氱殑鍙闂€т笌鑷姩鍖栧畾浣嶈涔夈€?- 閲嶅啓 `frontend-admin/src/views/AdminWorkspaceView.test.ts`锛屾敼涓洪€氳繃 `[data-admin-view="users"]` 楠岃瘉 users 妯″潡鍔犺浇銆乣/api/v1/admin/users?limit=20` 璇锋眰涓?`Authorization: Bearer admin-token` 澶撮儴锛屼互鍙?`alice` 娓叉煋缁撴灉銆?- 閲嶅啓 `e2e/user-shell.spec.ts`銆乣e2e/v1-review-flow.spec.ts`銆乣e2e/v1-admin-governance.spec.ts`銆乣e2e/v1-graph-workspace.spec.ts`锛岃鏂█涓庡綋鍓嶅３灞傘€佸涔犲伐浣滃尯銆佸悗鍙版不鐞嗗拰鍥捐氨 CanvasLayout 浜や簰淇濇寔涓€鑷达紝骞舵樉寮忚鐩栧浘璋卞鍏ュけ璐ャ€佷繚瀛樼姸鎬併€佸巻鍙叉仮澶嶅け璐ョ瓑鐜扮姸銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/FE-00_ACCEPTANCE_CHECKLIST.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md`銆乣docs/design/UI_04_PRODUCT_REDESIGN.md` 涓?`CHANGELOG.md`锛屾妸 FE/UI 鐪熷疄楠岃瘉鏀跺彛鍐欏洖闀挎湡鏂囨。銆?
-### 楠岃瘉缁撴灉
+- 按 `CODEX_MASTER_PROMPT.md` 当前优先级，先不继续扩展新功能，而是把 FE-010、FE-020、FE-030 与 UI-04 从“实现完成待验证”收口到“已在真实依赖环境完成回归”。
+- 补齐这批前端验证里最后的脆弱点，确保用户端与管理端 smoke 不再依赖过时页面文案或易碎选择器。
 
-- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-admin run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/app/layouts/layoutPolicy.test.ts src/app/layouts/AppShell.test.tsx src/design-system/primitives/DataState.test.tsx src/design-system/primitives/Drawer.test.tsx src/design-system/primitives/Inspector.test.tsx src/modules/graph/components/GraphWorkspaceCanvasChrome.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx` 閫氳繃锛? 涓枃浠跺叡 28 鏉℃祴璇曢€氳繃銆?- `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts` 鍏堝洜鏃ч€夋嫨鍣ㄥけ鏁堣繘鍏?RED锛岃ˉ绋冲畾璇箟涓庢祴璇曞悗 GREEN 閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run build:admin` 閫氳繃銆?- `npx playwright test e2e/user-shell.spec.ts e2e/v1-graph-workspace.spec.ts e2e/v1-review-flow.spec.ts e2e/v1-admin-governance.spec.ts` 閫氳繃锛? 鏉?smoke 鍏ㄩ儴閫氳繃銆?
-### 鍚庣画褰卞搷
+### 实际变更
 
-- FE-010銆丗E-020銆丗E-030 涓?UI-04 鐜板湪涓嶅啀渚濊禆鈥滀箣鍚庢湁瀹屾暣 npm 渚濊禆鏃跺啀楠岃瘉鈥濈殑鍙ｅご鍓嶆彁锛屽悗缁彲浠ユ妸娉ㄦ剰鍔涢泦涓洖 `WB-032` 鐨勫啿绐佸鐞嗘繁鍖栦笌 `WB-034` 鐨勫浘璋卞洖褰掔煩闃点€?- 杩欒疆涓昏鏀跺彛鐨勬槸鐪熷疄楠岃瘉鍊哄姟锛屼笉浠ｈ〃澶氬垎杈ㄧ巼鎴浘銆佽瑙夊鐓у綊妗ｆ垨鏇村ぇ鑼冨洿鍏ㄩ噺 E2E 宸插叏閮ㄥ畬鎴愶紱杩欎簺浠嶉€傚悎浣滀负鍚庣画鐙珛璐ㄩ噺宸ヤ綔鍖呮帹杩涖€?## 2026-07-08 12:54:17 +08:00 | v1.1.0-alpha.97 | 鎺ㄨ繘 WB-032 鑱斿姩鍙栬垗寤鸿瀛愭楠?
-### 浠诲姟鍐呭
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，为后台工作台导航按钮补 `aria-label`、`aria-pressed` 和 `data-admin-view`，让用户治理等模块具备稳定的可访问性与自动化定位语义。
+- 重写 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，改为通过 `[data-admin-view="users"]` 验证 users 模块加载、`/api/v1/admin/users?limit=20` 请求与 `Authorization: Bearer admin-token` 头部，以及 `alice` 渲染结果。
+- 重写 `e2e/user-shell.spec.ts`、`e2e/v1-review-flow.spec.ts`、`e2e/v1-admin-governance.spec.ts`、`e2e/v1-graph-workspace.spec.ts`，让断言与当前壳层、复习工作区、后台治理和图谱 CanvasLayout 交互保持一致，并显式覆盖图谱导入失败、保存状态、历史恢复失败等现状。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/FE-00_ACCEPTANCE_CHECKLIST.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md`、`docs/design/UI_04_PRODUCT_REDESIGN.md` 与 `CHANGELOG.md`，把 FE/UI 真实验证收口写回长期文档。
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪涓婁竴杞€滄湭鏍囪瀵硅薄鎻愮ず鈥濆熀纭€涓婏紝鎶婁緷璧栭樆鏂粠鈥滃彧鍛婅瘔鐢ㄦ埛鍝噷閿欎簡鈥濈户缁帹杩涘埌鈥滃憡璇夌敤鎴蜂笅涓€姝ュ彲浠ユ€庝箞鐐光€濄€?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勫啿绐佸崱鐗囦腑锛屽綋瀵硅薄绾у彇鑸嶈Е鍙?`dangling_edge` / `invalid_group_node` 闃绘柇鏃讹紝鐩存帴缁欏嚭鍙偣鍑荤殑鑱斿姩鍙栬垗寤鸿锛屽府鍔╃敤鎴疯ˉ榻愪緷璧栨垨鏀瑰洖淇濈暀鏈嶅姟绔€?
-### 瀹為檯鍙樻洿
+### 验证结果
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧?`buildGraphConflictResolutionSuggestions(...)`锛氫細鏍规嵁闃绘柇闂銆佸綋鍓嶅浘璋辨枃妗ｃ€佸璞＄骇宸紓鏄庣粏鍜屽凡閫夊彇鑸嶏紝鑷姩鐢熸垚鈥滆仈鍔ㄤ繚鐣欐湰鍦颁緷璧栬妭鐐光€濇垨鈥滄敼涓轰繚鐣欐湇鍔＄鈥濈殑寤鸿銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`conflictResolutionSuggestions` 璁＄畻骞朵紶鍏ュ啿绐佸崱鐗囷紱鏌ユ壘闈㈠悓鏃惰鐩栨湰鍦板樊寮傚拰 latest-head 宸紓锛岄伩鍏嶆仮澶嶈崏绋垮満鏅笅鐨勮仈鍔ㄥ缓璁紡鎺夊璞°€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屽湪鈥滃彇鑸嶄緷璧栨牎楠岄棶棰樷€濆悗杩藉姞鈥滆仈鍔ㄥ彇鑸嶅缓璁€濆尯鍧楋紝鍏佽鐢ㄦ埛鐩存帴鐐瑰嚮蹇嵎鍔ㄤ綔锛屾妸寤鸿杞垚姝ｅ紡鐨勫璞＄骇鍙栬垗鏍囪銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`銆乣frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 涓?`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`锛岃ˉ榻?helper銆佺粍浠朵笌椤甸潰绾у洖褰掞紝閿佸畾鈥滈樆鏂嚭鐜版椂鏈夊缓璁€佺偣鍑诲缓璁悗闃绘柇鍙В闄も€濈殑琛屼负銆?- 鍚屾鏇存柊 `CHANGELOG.md`銆乣docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃璞＄骇渚濊禆闃绘柇鏃佸彲鐩存帴琛ラ綈鑱斿姩鍙栬垗鈥濄€?
-### 楠岃瘉缁撴灉
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-admin run typecheck` 通过。
+- `npm --workspace frontend-user run test -- src/app/layouts/layoutPolicy.test.ts src/app/layouts/AppShell.test.tsx src/design-system/primitives/DataState.test.tsx src/design-system/primitives/Drawer.test.tsx src/design-system/primitives/Inspector.test.tsx src/modules/graph/components/GraphWorkspaceCanvasChrome.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx` 通过，9 个文件共 28 条测试通过。
+- `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts` 先因旧选择器失效进入 RED，补稳定语义与测试后 GREEN 通过。
+- `npm run build:user` 通过。
+- `npm run build:admin` 通过。
+- `npx playwright test e2e/user-shell.spec.ts e2e/v1-graph-workspace.spec.ts e2e/v1-review-flow.spec.ts e2e/v1-admin-governance.spec.ts` 通过，4 条 smoke 全部通过。
+
+### 后续影响
+
+- FE-010、FE-020、FE-030 与 UI-04 现在不再依赖“之后有完整 npm 依赖时再验证”的口头前提，后续可以把注意力集中回 `WB-032` 的冲突处理深化与 `WB-034` 的图谱回归矩阵。
+- 这轮主要收口的是真实验证债务，不代表多分辨率截图、视觉对照归档或更大范围全量 E2E 已全部完成；这些仍适合作为后续独立质量工作包推进。
+## 2026-07-08 12:54:17 +08:00 | v1.1.0-alpha.97 | 推进 WB-032 联动取舍建议子步骤
+
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“未标记对象提示”基础上，把依赖阻断从“只告诉用户哪里错了”继续推进到“告诉用户下一步可以怎么点”。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，当对象级取舍触发 `dangling_edge` / `invalid_group_node` 阻断时，直接给出可点击的联动取舍建议，帮助用户补齐依赖或改回保留服务端。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictResolutionSuggestions(...)`：会根据阻断问题、当前图谱文档、对象级差异明细和已选取舍，自动生成“联动保留本地依赖节点”或“改为保留服务端”的建议。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `conflictResolutionSuggestions` 计算并传入冲突卡片；查找面同时覆盖本地差异和 latest-head 差异，避免恢复草稿场景下的联动建议漏掉对象。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在“取舍依赖校验问题”后追加“联动取舍建议”区块，允许用户直接点击快捷动作，把建议转成正式的对象级取舍标记。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`，补齐 helper、组件与页面级回归，锁定“阻断出现时有建议、点击建议后阻断可解除”的行为。
+- 同步更新 `CHANGELOG.md`、`docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“对象级依赖阻断旁可直接补齐联动取舍”。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶅彧浼氬湪瀵硅薄绾у彇鑸嶆棤鏁堟椂闃绘柇搴旂敤锛岃繕鑳界洿鎺ユ妸鈥滆琛ュ摢浜涜妭鐐光€濇垨鈥滆鎶婂摢涓璞℃敼鍥炴湇鍔＄鈥濊浆鎴愬彲鐐瑰嚮鍔ㄤ綔锛屽噺灏戠敤鎴峰湪鍐茬獊鍒楄〃鍜屼緷璧栧叧绯讳箣闂存潵鍥炲垏鎹€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄洿绯荤粺鐨勫绔?conflict handling锛屼緥濡傛洿瀹屾暣鐨勫璞¤仈鍔ㄧ瓥鐣ャ€佹洿澶氬啿绐佺被鍨嬬殑鍙墽琛屽缓璁紝浠ュ強鏇存竻鏅扮殑澶氱鍚堝苟缁撴灉鍙嶉銆?
-## 2026-07-08 12:33:39 +08:00 | v1.1.0-alpha.96 | 鎺ㄨ繘 WB-032 鏈爣璁板璞℃彁绀哄瓙姝ラ
+- 图谱冲突辅助现在不只会在对象级取舍无效时阻断应用，还能直接把“该补哪些节点”或“该把哪个对象改回服务端”转成可点击动作，减少用户在冲突列表和依赖关系之间来回切换。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更系统的多端 conflict handling，例如更完整的对象联动策略、更多冲突类型的可执行建议，以及更清晰的多端合并结果反馈。
 
-### 浠诲姟鍐呭
+## 2026-07-08 12:33:39 +08:00 | v1.1.0-alpha.96 | 推进 WB-032 未标记对象提示子步骤
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪涓婁竴杞€滃璞＄骇鍙栬垗渚濊禆鏍￠獙鈥濆熀纭€涓婏紝鎶娾€滈儴鍒嗗璞″凡鏍囪銆侀儴鍒嗗璞″皻鏈爣璁扳€濊繖涓€鐪熷疄楂橀鍦烘櫙瑙ｉ噴娓呮銆?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勫啿绐佸崱鐗囦腑锛屾槑纭彁绀鸿繕鏈夊灏戝璞″皻鏈爣璁板彇鑸嶏紝骞跺憡璇夌敤鎴峰鏋滅幇鍦ㄧ洿鎺ュ簲鐢紝杩欎簺瀵硅薄浼氶粯璁ゆ部鐢ㄦ渶鏂板浘璋辩増鏈紝鑰屼笉鏄潤榛樹繚鐣欐湰鍦拌崏绋裤€?
-### 瀹為檯鍙樻洿
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屾柊澧炴湭鏍囪瀵硅薄缁熻涓庢彁绀哄尯鍧楋細鍐茬獊鍗＄墖浼氭眹鎬诲綋鍓嶄粛鏈爣璁扮殑鏈湴/鏈€鏂?head 瀵硅薄锛屽睍绀烘暟閲忋€佸垪鍑轰唬琛ㄩ」锛屽苟鏄庣‘璇存槑鐩存帴搴旂敤鏃剁殑榛樿琛屼负銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾妸浜哄伐鍚堝苟娓呭崟涓殑瀵硅薄绾у彇鑸嶈鏄庢敼涓烘樉寮忓０鏄庘€滄湭鏍囪椤瑰鏋滅洿鎺ュ簲鐢紝浼氶粯璁ゆ部鐢ㄦ渶鏂板浘璋辩増鏈€濓紝璁╅〉闈㈡彁绀恒€丮arkdown 鎽樿鍜屽啿绐佸鐞嗗寘淇濇寔涓€鑷淬€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`銆乣frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 涓?`frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`锛岃ˉ榻愮粍浠剁骇銆侀〉闈㈢骇涓庡鍑虹墿绾у洖褰掞紝閿佸畾鏈爣璁板璞℃暟閲忔彁绀哄拰榛樿琛屼负鏂囨銆?- 鍚屾鏇存柊 `CHANGELOG.md`銆乣docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃璞＄骇鍙栬垗榛樿琛屼负鍙鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“对象级取舍依赖校验”基础上，把“部分对象已标记、部分对象尚未标记”这一真实高频场景解释清楚。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，明确提示还有多少对象尚未标记取舍，并告诉用户如果现在直接应用，这些对象会默认沿用最新图谱版本，而不是静默保留本地草稿。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，新增未标记对象统计与提示区块：冲突卡片会汇总当前仍未标记的本地/最新 head 对象，展示数量、列出代表项，并明确说明直接应用时的默认行为。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，把人工合并清单中的对象级取舍说明改为显式声明“未标记项如果直接应用，会默认沿用最新图谱版本”，让页面提示、Markdown 摘要和冲突处理包保持一致。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`、`frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 与 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，补齐组件级、页面级与导出物级回归，锁定未标记对象数量提示和默认行为文案。
+- 同步更新 `CHANGELOG.md`、`docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“对象级取舍默认行为可见”。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts`
 - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶄粎鑳介樆鏂槑鏄鹃敊璇殑瀵硅薄绾у悎骞讹紝杩樿兘鎶娾€滄湭鏍囪瀵硅薄浼氭€庝箞澶勭悊鈥濇彁鍓嶈娓呮锛屽噺灏戠敤鎴疯浠ヤ负鏈爣璁伴」浼氫繚鐣欐湰鍦扮殑椋庨櫓銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄洿瀹屾暣鐨勮法瀵硅薄鑱斿姩鍙栬垗杈呭姪锛屼互鍙婃洿绯荤粺鐨勫绔?conflict handling銆?
-## 2026-07-08 02:50:42 +08:00 | v1.1.0-alpha.95 | 鎺ㄨ繘 WB-032 瀵硅薄绾у彇鑸嶄緷璧栨牎楠屽瓙姝ラ
+- 图谱冲突辅助现在不仅能阻断明显错误的对象级合并，还能把“未标记对象会怎么处理”提前讲清楚，减少用户误以为未标记项会保留本地的风险。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的跨对象联动取舍辅助，以及更系统的多端 conflict handling。
 
-### 浠诲姟鍐呭
+## 2026-07-08 02:50:42 +08:00 | v1.1.0-alpha.95 | 推进 WB-032 对象级取舍依赖校验子步骤
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪涓婁竴杞€滃璞＄骇鍙栬垗鍙樉寮忓簲鐢ㄢ€濅负鍩虹涓婏紝琛ヤ笂鐪熸鑳介槻姝㈤敊璇悎骞惰崏绋胯惤鍦扮殑鏈€灏忎緷璧栨牎楠屻€?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勫啿绐佸崱鐗囦腑锛屽綋鐢ㄦ埛鍙繚鐣欎簡渚濊禆缂哄け鐨勬湰鍦拌繛绾挎垨鍒嗙粍鏃讹紝鑳藉鍦ㄥ簲鐢ㄥ墠鐩存帴闃绘柇锛屽苟鏄庣‘鍛婅瘔鐢ㄦ埛杩樼己鍝簺璺ㄥ璞′緷璧栥€?
-### 瀹為檯鍙樻洿
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧?`validateGraphConflictResolutionDrafts(...)`锛氬湪鎶婂璞＄骇鍙栬垗鑽夌 rebased 鍒版渶鏂?head 鍚庯紝澶嶇敤 `@studymate/graph-core` 鏍￠獙 dangling edge / invalid group node 绛夌粨鏋勯敊璇紝骞惰繃婊ゆ帀鏈€鏂?head 鏈韩宸插瓨鍦ㄧ殑闂銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屽湪 `applyMarkedConflictResolutions()` 鍓嶆帴鍏ヤ緷璧栨牎楠岋紱鑻ュ綋鍓嶅彇鑸嶄細鐣欎笅璺ㄥ璞′緷璧栭棶棰橈紝鍒欎繚鎸佸啿绐佹€併€侀樆鏂簲鐢ㄥ苟缁欏嚭鏄庣‘鐘舵€佹彁绀恒€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屽湪鍐茬獊杈呭姪鍗＄墖涓柊澧炩€滃彇鑸嶄緷璧栨牎楠岄棶棰樷€濆尯鍧楋紝鍒楀嚭闃绘柇闂锛屽苟鍦ㄥ瓨鍦ㄩ棶棰樻椂绂佺敤 `搴旂敤宸叉爣璁板彇鑸嶅埌褰撳墠鑽夌`銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`銆乣frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`銆乣frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx` 涓?`frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`锛岃ˉ榻?helper銆佺粍浠朵笌椤甸潰绾у洖褰掞紝閿佸畾鈥滀緷璧栫己澶辨椂闃绘柇搴旂敤銆佹樉绀洪棶棰樿鏄庛€佹棦鏈夊啿绐佽矾寰勪粛鍙户缁伐浣溾€濈殑琛屼负銆?- 鍚屾鏇存柊 `CHANGELOG.md`銆乣docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃璞＄骇鍙栬垗鍙樉寮忓簲鐢紝涓斿甫鏈€灏忚法瀵硅薄渚濊禆鏍￠獙鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在上一轮“对象级取舍可显式应用”为基础上，补上真正能防止错误合并草稿落地的最小依赖校验。
+- 本轮目标是在图谱 Inspector 的冲突卡片中，当用户只保留了依赖缺失的本地连线或分组时，能够在应用前直接阻断，并明确告诉用户还缺哪些跨对象依赖。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `validateGraphConflictResolutionDrafts(...)`：在把对象级取舍草稿 rebased 到最新 head 后，复用 `@studymate/graph-core` 校验 dangling edge / invalid group node 等结构错误，并过滤掉最新 head 本身已存在的问题。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，在 `applyMarkedConflictResolutions()` 前接入依赖校验；若当前取舍会留下跨对象依赖问题，则保持冲突态、阻断应用并给出明确状态提示。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在冲突辅助卡片中新增“取舍依赖校验问题”区块，列出阻断问题，并在存在问题时禁用 `应用已标记取舍到当前草稿`。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`、`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补齐 helper、组件与页面级回归，锁定“依赖缺失时阻断应用、显示问题说明、既有冲突路径仍可继续工作”的行为。
+- 同步更新 `CHANGELOG.md`、`docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“对象级取舍可显式应用，且带最小跨对象依赖校验”。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx`
 - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶄細鍐嶆妸鏄庢樉涓嶅畬鏁寸殑瀵硅薄绾у彇鑸嶇洿鎺ヨ惤鎴愬彲淇濆瓨鑽夌锛涚敤鎴峰鏋滃彧淇濈暀浜嗕緷璧栫己澶辩殑鏈湴杩炵嚎鎴栧垎缁勶紝浼氬湪搴旂敤鍓嶅氨琚嫤涓嬪苟寰楀埌鍏蜂綋璇存槑銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄湭鏍囪瀵硅薄鐨勬洿寮烘彁绀恒€佹洿瀹屾暣鐨勮法瀵硅薄鑱斿姩鍙栬垗杈呭姪锛屼互鍙婃洿绯荤粺鐨勫绔?conflict handling銆?
-## 2026-07-07 21:27:40 +08:00 | v1.1.0-alpha.94 | 鎺ㄨ繘 WB-032 瀵硅薄绾у彇鑸嶆樉寮忓簲鐢ㄥ瓙姝ラ
+- 图谱冲突辅助现在不会再把明显不完整的对象级取舍直接落成可保存草稿；用户如果只保留了依赖缺失的本地连线或分组，会在应用前就被拦下并得到具体说明。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是未标记对象的更强提示、更完整的跨对象联动取舍辅助，以及更系统的多端 conflict handling。
 
-### 浠诲姟鍐呭
+## 2026-07-07 21:27:40 +08:00 | v1.1.0-alpha.94 | 推进 WB-032 对象级取舍显式应用子步骤
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸涓婁竴杞€滃璞＄骇鍐茬獊鍙栬垗鑽夌鈥濈户缁帹杩涗负鐪熸鍙墽琛岀殑鏈湴鍚堝苟鍔ㄤ綔銆?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勫啿绐佸崱鐗囦腑鍏佽鐢ㄦ埛灏嗗凡鏍囪鐨?`淇濈暀鏈湴 / 淇濈暀鏈嶅姟绔?/ 绋嶅悗澶勭悊` 鑽夌鏄惧紡搴旂敤鍒版渶鏂?head 涔嬩笂锛岀敓鎴愪竴浠戒粛淇濇寔 dirty銆佷絾宸茬粡瀵归綈鏈€鏂扮増鏈彿鐨勫彲淇濆瓨鍚堝苟鑽夌銆?
-### 瀹為檯鍙樻洿
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧?`applyGraphConflictResolutionDrafts(...)` 绾嚱鏁帮細浠ユ渶鏂板浘璋?head 涓虹増鏈熀绾匡紝淇濈暀褰撳墠鏈湴鏍囬/璇存槑/瑙嗗彛锛屽苟鎶婂凡鏍囪涓?`淇濈暀鏈湴` 鐨勮妭鐐广€佽繛绾裤€佸垎缁勫璞¤鐩栧洖鍚堝苟鑽夌銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`applyMarkedConflictResolutions()`锛氭樉寮忓簲鐢ㄥ璞＄骇鍙栬垗鍚庯紝浼氭妸宸ヤ綔鍖哄垏鍒?rebased draft銆佸皢鍩虹嚎鎺ㄨ繘鍒版渶鏂?head銆佹竻鐞嗗啿绐佹€佸苟淇濇寔鑽夌鍙户缁繚瀛樸€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屽湪鍐茬獊杈呭姪鍗＄墖涓柊澧?`搴旂敤宸叉爣璁板彇鑸嶅埌褰撳墠鑽夌` 鍔ㄤ綔鎸夐挳锛屼粎鍦ㄥ凡鎷垮埌鏈€鏂?head 涓旇嚦灏戝瓨鍦ㄤ竴鏉″彇鑸嶈崏绋挎椂鍙敤銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`銆乣frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 涓?`frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`锛岃ˉ榻愮函鍑芥暟銆佸崱鐗囧姩浣滀笌鈥滃啿绐佸悗搴旂敤鍙栬垗鍐嶄繚瀛樷€濈殑椤甸潰绾у洖褰掋€?- 鍚屾鏇存柊 `CHANGELOG.md`銆乣docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃璞＄骇鍙栬垗鑽夌鍙樉寮忓簲鐢ㄧ敓鎴愬悎骞惰崏绋库€濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“对象级冲突取舍草稿”继续推进为真正可执行的本地合并动作。
+- 本轮目标是在图谱 Inspector 的冲突卡片中允许用户将已标记的 `保留本地 / 保留服务端 / 稍后处理` 草稿显式应用到最新 head 之上，生成一份仍保持 dirty、但已经对齐最新版本号的可保存合并草稿。
 
-- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
-- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
-- `npm --workspace frontend-user run typecheck`
-- `npm run verify:docs`
+### 实际变更
 
-### 鍚庣画褰卞搷
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `applyGraphConflictResolutionDrafts(...)` 纯函数：以最新图谱 head 为版本基线，保留当前本地标题/说明/视口，并把已标记为 `保留本地` 的节点、连线、分组对象覆盖回合并草稿。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `applyMarkedConflictResolutions()`：显式应用对象级取舍后，会把工作区切到 rebased draft、将基线推进到最新 head、清理冲突态并保持草稿可继续保存。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在冲突辅助卡片中新增 `应用已标记取舍到当前草稿` 动作按钮，仅在已拿到最新 head 且至少存在一条取舍草稿时可用。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补齐纯函数、卡片动作与“冲突后应用取舍再保存”的页面级回归。
+- 同步更新 `CHANGELOG.md`、`docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“对象级取舍草稿可显式应用生成合并草稿”。
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪宸茬粡涓嶅彧浼氳褰曞璞＄骇鍙栬垗鎰忓浘锛岃繕鑳芥妸杩欎簺鍙栬垗鏄惧紡搴旂敤鍒版渶鏂?head 涓婏紝鐢熸垚涓€浠藉彲缁х画淇濆瓨鐨勫悎骞惰崏绋匡紝閬垮厤鐢ㄦ埛鍙兘瀵煎嚭鏉愭枡鍚庡洖鍒板閮ㄦ墜宸ユ暣鐞嗐€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄湭鏍囪瀵硅薄鐨勬洿寮烘彁绀恒€佽法瀵硅薄渚濊禆鐨勫啿绐佹牎楠岋紝浠ュ強鏇村畬鏁寸殑澶氱鑷姩/鍗婅嚜鍔ㄥ悎骞剁瓥鐣ャ€?
-## 2026-07-07 21:13:40 +08:00 | v1.1.0-alpha.93 | 鎺ㄨ繘 WB-032 瀵硅薄绾у啿绐佸彇鑸嶈崏绋垮瓙姝ラ
-
-### 浠诲姟鍐呭
-
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸涓婁竴杞€滃璞＄骇鍐茬獊鏄庣粏鈥濈户缁帹杩涗负鍙搷浣滅殑浜哄伐鍚堝苟鍓嶇疆鑽夌銆?- 鏈疆鐩爣鏄湪鍥捐氨 Inspector 鐨勫啿绐佸崱鐗囦腑鍏佽鐢ㄦ埛瀵硅妭鐐?/ 杩炵嚎 / 鍒嗙粍绾у璞″厛鏍囪鈥滀繚鐣欐湰鍦?/ 淇濈暀鏈嶅姟绔?/ 绋嶅悗澶勭悊鈥濓紝骞舵妸杩欎簺鍙栬垗鑽夌甯﹀叆鍐茬獊鎽樿涓庡啿绐佸鐞嗗寘銆?
-### 瀹為檯鍙樻洿
-
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧炲璞＄骇鍙栬垗鑽夌妯″瀷銆佸喅绛?key銆乣resolutionDraft` 瀵煎嚭瀛楁锛屼互鍙婂啿绐佹憳瑕佷腑鐨勨€滃綋鍓嶄汉宸ュ彇鑸嶈崏绋库€濇钀姐€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`conflictResolutionSelections` 鐘舵€佸拰 `handleConflictResolutionChoice(...)` 浜や簰锛涘璞＄骇鍙栬垗涓€鏃︽爣璁帮紝浼氱粰鍑烘樉寮忕姸鎬佹彁绀哄苟杩涘叆鍐茬獊鎽樿 / 澶勭悊鍖呭鍑洪摼璺€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屼负姣忔潯瀵硅薄绾у啿绐佹槑缁嗚ˉ涓?`淇濈暀鏈湴 / 淇濈暀鏈嶅姟绔?/ 绋嶅悗澶勭悊` 鎸夐挳锛屽苟鏄剧ず褰撳墠閫夋嫨鐘舵€併€?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`銆乣frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 涓?`frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`锛岃ˉ榻愬璞＄骇鍙栬垗鑽夌鍦?helper銆佺粍浠跺拰椤甸潰绾у啿绐佹祦涓殑鍥炲綊銆?- 鍚屾鏇存柊 `CHANGELOG.md`銆乣docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃璞＄骇鏄庣粏 + 瀵硅薄绾у彇鑸嶈崏绋库€濄€?
-### 楠岃瘉缁撴灉
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪宸茬粡涓嶅彧浼氬垪鍑哄璞★紝杩樿兘鎻愬墠璁板綍瀵硅薄绾т繚鐣?/ 鑸嶅純鎰忓浘锛屼负鐪熸鐨勮妭鐐圭骇 / 杈圭骇浜哄伐鍚堝苟娴佺▼鎻愪緵浜嗙涓€灞傜姸鎬佹ā鍨嬨€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄熀浜庤繖浜涘璞＄骇鍙栬垗鑽夌鐨勬樉寮忓簲鐢ㄦ祦绋嬶紝浠ュ強鏇村己鐨勫绔?conflict handling銆?
-## 2026-07-07 21:02:14 +08:00 | v1.1.0-alpha.92 | 鎺ㄨ繘 WB-032 瀵硅薄绾у啿绐佹槑缁嗗瓙姝ラ
+- 图谱冲突辅助现在已经不只会记录对象级取舍意图，还能把这些取舍显式应用到最新 head 上，生成一份可继续保存的合并草稿，避免用户只能导出材料后回到外部手工整理。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是未标记对象的更强提示、跨对象依赖的冲突校验，以及更完整的多端自动/半自动合并策略。
 
-### 浠诲姟鍐呭
+## 2026-07-07 21:13:40 +08:00 | v1.1.0-alpha.93 | 推进 WB-032 对象级冲突取舍草稿子步骤
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸宸叉湁鐨勨€滄憳瑕佺骇鍐茬獊鎻愮ず + 浜哄伐鍚堝苟娓呭崟鈥濈户缁笅娌変竴灞傘€?- 鏈疆鐩爣鏄湪鏂板浘璋?Inspector 鐨勫啿绐佸崱鐗囥€丮arkdown 鍐茬獊鎽樿鍜屽啿绐佸鐞嗗寘閲岋紝缁熶竴琛ヤ笂鑺傜偣 / 杩炵嚎 / 鍒嗙粍绾х殑瀵硅薄鏄庣粏锛岃鍚庣画浜哄伐鍚堝苟涓嶅啀鍙緷璧栨€婚噺鍜屽璞″悕鎽樿銆?
-### 瀹為檯鍙樻洿
+### 任务内容
 
-- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`unsavedChangeDetails` 涓?`latestHeadConflictDetails` 璁＄畻锛屽苟鎶婂璞＄骇宸紓鍚屾椂鎺ュ叆鍐茬獊鍗＄墖銆佸啿绐佹憳瑕佸鍑哄拰鍐茬獊澶勭悊鍖呭鍑洪摼璺€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛岃鍐茬獊杈呭姪鍗＄墖鏂板鈥滃缓璁紭鍏堟牳瀵圭殑瀵硅薄鈥濆尯鍧楋紝鎸夌粺涓€鏍煎紡灞曠ず `鑺傜偣锝滄柊澧烇綔...`銆乣杩炵嚎锝滃垹闄わ綔...`銆乣鍒嗙粍锝滀慨鏀癸綔...` 绛夊璞＄骇鏄庣粏銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`銆乣frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 涓?`frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`锛岃ˉ榻愬璞＄骇宸紓鏄庣粏鍦ㄦ憳瑕併€佸鐞嗗寘銆佺粍浠跺拰椤甸潰绾у啿绐佽矾寰勪腑鐨勫洖褰掓柇瑷€銆?- 鍚屾鏇存柊 `CHANGELOG.md`銆乣docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滄憳瑕?+ 娓呭崟 + 瀵硅薄绾у啿绐佹槑缁嗏€濄€?
-### 楠岃瘉缁撴灉
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把上一轮“对象级冲突明细”继续推进为可操作的人工合并前置草稿。
+- 本轮目标是在图谱 Inspector 的冲突卡片中允许用户对节点 / 连线 / 分组级对象先标记“保留本地 / 保留服务端 / 稍后处理”，并把这些取舍草稿带入冲突摘要与冲突处理包。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增对象级取舍草稿模型、决策 key、`resolutionDraft` 导出字段，以及冲突摘要中的“当前人工取舍草稿”段落。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `conflictResolutionSelections` 状态和 `handleConflictResolutionChoice(...)` 交互；对象级取舍一旦标记，会给出显式状态提示并进入冲突摘要 / 处理包导出链路。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，为每条对象级冲突明细补上 `保留本地 / 保留服务端 / 稍后处理` 按钮，并显示当前选择状态。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补齐对象级取舍草稿在 helper、组件和页面级冲突流中的回归。
+- 同步更新 `CHANGELOG.md`、`docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“对象级明细 + 对象级取舍草稿”。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪宸茬粡涓嶅彧浼氬憡璇夌敤鎴封€滄敼浜嗗灏戙€佽鎬庝箞鍚堝苟鈥濓紝杩樹細鎶婄湡姝ｉ渶瑕佷紭鍏堟牳瀵圭殑鑺傜偣 / 杩炵嚎 / 鍒嗙粍瀵硅薄鐩存帴鍒楀嚭鏉ワ紝涓轰笅涓€姝ュ璞＄骇淇濈暀 / 鏀惧純鍙栬垗鍔ㄤ綔鎵撳簳銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄璞＄骇鍐茬獊鏄庣粏涓婄殑鏄惧紡淇濈暀 / 鑸嶅純鎿嶄綔锛屼互鍙婃洿寮虹殑澶氱 conflict handling銆?
-## 2026-07-07 20:45:47 +08:00 | v1.1.0-alpha.91 | 鎺ㄨ繘 WB-032 浜哄伐鍚堝苟娓呭崟瀛愭楠?
-### 浠诲姟鍐呭
+- 图谱冲突辅助现在已经不只会列出对象，还能提前记录对象级保留 / 舍弃意图，为真正的节点级 / 边级人工合并流程提供了第一层状态模型。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是基于这些对象级取舍草稿的显式应用流程，以及更强的多端 conflict handling。
 
-- 缁х画鏀跺彛鍥捐氨鍐茬獊杈呭姪瀵煎嚭鐗╋紝璁┾€滃啿绐佹憳瑕佲€濆拰鈥滃啿绐佸鐞嗗寘鈥濋兘鑳界洿鎺ョ粰鍑哄彲鎵ц鐨勪汉宸ュ悎骞舵竻鍗曪紝鑰屼笉鍙仠鐣欏湪宸紓缃楀垪銆?
-### 瀹為檯鍙樻洿
+## 2026-07-07 21:02:14 +08:00 | v1.1.0-alpha.92 | 推进 WB-032 对象级冲突明细子步骤
 
-- 閲嶅啓 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾仮澶嶅共鍑€鐨勫啿绐佹憳瑕佸疄鐜帮紝骞朵负 Markdown 鍐茬獊鎽樿鏂板鈥滃缓璁殑浜哄伐鍚堝苟姝ラ鈥濇钀姐€?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`锛岃ˉ榻愪汉宸ュ悎骞舵竻鍗曞湪鎽樿涓庡鐞嗗寘涓殑瀵煎嚭鏂█銆?- 椤烘墜鎶?`frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 涓凡婕傜Щ鐨勬寜閽枃妗堟柇瑷€鏀逛负鏇寸ǔ鐨勮涔夊尮閰嶏紝閬垮厤鈥滀繚瀛樹慨鏀?/ 閲嶈浇鏈€鏂板浘璋扁€濇枃妗堝彉鍖栧鑷村浘璋卞洖褰掕鎶ャ€?
-### 楠岃瘉缁撴灉
+### 任务内容
+
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把已有的“摘要级冲突提示 + 人工合并清单”继续下沉一层。
+- 本轮目标是在新图谱 Inspector 的冲突卡片、Markdown 冲突摘要和冲突处理包里，统一补上节点 / 连线 / 分组级的对象明细，让后续人工合并不再只依赖总量和对象名摘要。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `unsavedChangeDetails` 与 `latestHeadConflictDetails` 计算，并把对象级差异同时接入冲突卡片、冲突摘要导出和冲突处理包导出链路。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，让冲突辅助卡片新增“建议优先核对的对象”区块，按统一格式展示 `节点｜新增｜...`、`连线｜删除｜...`、`分组｜修改｜...` 等对象级明细。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补齐对象级差异明细在摘要、处理包、组件和页面级冲突路径中的回归断言。
+- 同步更新 `CHANGELOG.md`、`docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-032` 当前边界推进到“摘要 + 清单 + 对象级冲突明细”。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+- `npm run verify:docs`
+
+### 后续影响
+
+- 图谱冲突辅助现在已经不只会告诉用户“改了多少、该怎么合并”，还会把真正需要优先核对的节点 / 连线 / 分组对象直接列出来，为下一步对象级保留 / 放弃取舍动作打底。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是对象级冲突明细上的显式保留 / 舍弃操作，以及更强的多端 conflict handling。
+
+## 2026-07-07 20:45:47 +08:00 | v1.1.0-alpha.91 | 推进 WB-032 人工合并清单子步骤
+
+### 任务内容
+
+- 继续收口图谱冲突辅助导出物，让“冲突摘要”和“冲突处理包”都能直接给出可执行的人工合并清单，而不只停留在差异罗列。
+
+### 实际变更
+
+- 重写 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，恢复干净的冲突摘要实现，并为 Markdown 冲突摘要新增“建议的人工合并步骤”段落。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，补齐人工合并清单在摘要与处理包中的导出断言。
+- 顺手把 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 中已漂移的按钮文案断言改为更稳的语义匹配，避免“保存修改 / 重载最新图谱”文案变化导致图谱回归误报。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx`
 - `npm run verify:docs`
 
-## 2026-07-02 10:00 | v1.1.0-alpha.90 | 鍓嶇 FE-03锛氶槄璇汇€佺瑪璁般€佸涔犲伐浣滃尯浣撻獙瀵归綈
+## 2026-07-02 10:00 | v1.1.0-alpha.90 | 前端 FE-03：阅读、笔记、复习工作区体验对齐
 
-### 浠诲姟鍐呭
+### 任务内容
 
-- 鍦?FE-01 澶氬竷灞€澹冲眰鍜?FE-02 鍥捐氨 CanvasLayout 鐨勫熀纭€涓婏紝閲嶆瀯闃呰銆佺瑪璁颁笌澶嶄範椤甸潰鐨勭┖闂寸粨鏋勪笌淇℃伅鍒嗗眰銆?- 淇濇寔鐜版湁璧勬枡銆佹壒娉ㄣ€佺瑪璁般€佺増鏈€佸崱鐗囥€佸涔犲拰 AI 鑽夌鎺ュ彛鍙婃暟鎹绾︿笉鍙樸€?
-### 瀹為檯鍙樻洿
+- 在 FE-01 多布局壳层和 FE-02 图谱 CanvasLayout 的基础上，重构阅读、笔记与复习页面的空间结构与信息分层。
+- 保持现有资料、批注、笔记、版本、卡片、复习和 AI 草稿接口及数据契约不变。
 
-- 闃呰鍣ㄥ崌绾т负 Studio 宸ヤ綔鍖猴細璧勬枡璧勬簮鍖恒€侀槄璇讳富鑸炲彴鍜屾壒娉?/ 涔︾ / 鑽夌 Inspector 鏀寔鎸夐渶灞曞紑銆?- 绗旇椤靛崌绾т负 Studio 宸ヤ綔鍖猴細绗旇璧勬簮鍖恒€佸瘜鏂囨湰缂栬緫鍣ㄥ拰鏉ユ簮 / 鍘嗗彶 / 澶嶄範 Inspector 鍒嗙銆?- 澶嶄範椤靛崌绾т负 Focus 宸ヤ綔鍖猴細鍗曚换鍔″崱鐗囪垶鍙般€侀敭鐩樼炕闈笌璇勫垎銆佸涔犺繘搴︺€佹寜闇€鍗＄粍绠＄悊銆?- 鏂板 `frontend-user/src/styles/studio-workspaces.css` 涓庨槄璇汇€佺瑪璁般€佸涔犻〉闈㈠洖褰掓祴璇曘€?- 琛ュ厖 FE-03 浜や粯璇存槑銆佸墠绔竷灞€璁捐鏂囨。銆佸緟鍔炵姸鎬佷笌鍙樻洿璁板綍銆?
-### 楠岃瘉缁撴灉
+### 实际变更
 
-- 宸插畬鎴愪慨鏀?TS/TSX 鏂囦欢鐨?TypeScript 璇硶杞瘧銆佹枃妗ｅ悓姝ャ€佺┖鐧藉瓧绗︿笌浜や粯鍖呭畬鏁存€ф鏌ャ€?- 褰撳墠鎵ц鐜缂哄皯瀹屾暣 npm 渚濊禆缂撳瓨锛岀被鍨嬫鏌ャ€乂itest銆乂ite 鏋勫缓鍜?Playwright 寰呭湪鏈満鎴?CI 鎵ц銆?
-### 鍚庣画褰卞搷
+- 阅读器升级为 Studio 工作区：资料资源区、阅读主舞台和批注 / 书签 / 草稿 Inspector 支持按需展开。
+- 笔记页升级为 Studio 工作区：笔记资源区、富文本编辑器和来源 / 历史 / 复习 Inspector 分离。
+- 复习页升级为 Focus 工作区：单任务卡片舞台、键盘翻面与评分、复习进度、按需卡组管理。
+- 新增 `frontend-user/src/styles/studio-workspaces.css` 与阅读、笔记、复习页面回归测试。
+- 补充 FE-03 交付说明、前端布局设计文档、待办状态与变更记录。
 
-- 鍚庣画 WB-032 鐨勮妭鐐圭骇 / 杈圭骇浜哄伐鍐茬獊鍚堝苟鐣岄潰灏嗘帴鍏ユ柊鐨勫浘璋?Inspector锛屼笉鍐嶅悜鏃т笁鏍忓伐浣滃尯鍫嗗彔鍗＄墖銆?
+### 验证结果
+
+- 已完成修改 TS/TSX 文件的 TypeScript 语法转译、文档同步、空白字符与交付包完整性检查。
+- 当前执行环境缺少完整 npm 依赖缓存，类型检查、Vitest、Vite 构建和 Playwright 待在本机或 CI 执行。
+
+### 后续影响
+
+- 后续 WB-032 的节点级 / 边级人工冲突合并界面将接入新的图谱 Inspector，不再向旧三栏工作区堆叠卡片。
+
 ---
 
-锘?# StudyMate 椤圭洰璁板綍
+﻿
+# StudyMate 项目记录
 
-## 2026-07-02 16:41:18 +08:00 | v1.1.0-alpha.89 | 鍚姩鍓嶇甯冨眬閲嶆瀯 FE-00 / FE-01
-### 浠诲姟鍐呭
-- 鍩轰簬 `master@7b1e8f3a1e77dded69538d075758dc9529b31564`锛屽厛澶勭悊瀹為檯杩愯涓€滃浘璋辩敾甯冭閫氱敤涓夋爮澹冲眰鎸ゅ帇銆佸墠绔唴瀹规壙杞借惤鍚庡悗绔兘鍔涒€濈殑闂銆?- 涓嶈Е纰板浘璋?document銆佺増鏈€佸揩鐓с€佹潵婧?relation銆佸鍏ュ鍑哄拰 `409 graph_version_conflict` 濂戠害锛屽厛寤虹珛鍙壙鎺ュ悗缁浘璋遍噸鏋勭殑鍓嶇甯冨眬鍩虹銆?### 瀹屾垚缁撴灉
-- 鏂板 FE-00 鍓嶇鑳藉姏鐭╅樀銆佸竷灞€閲嶆瀯瑙勬牸鍜岄獙鏀舵竻鍗曪紝鏄庣‘ Standard / Studio / Canvas / Focus 鍥涚被宸ヤ綔妯″紡鍙婂浘璋遍噸鏋勬柇鐐广€?- 鏂板 `frontend-user/src/app/layouts/AppShell.tsx` 涓?`layoutPolicy.ts`锛沗ShellFrame` 宸查檷涓鸿矾鐢卞吋瀹瑰眰銆?- 鍥捐氨鏀圭敤 Canvas 妯″紡銆侀槄璇?绗旇鏀圭敤 Studio 妯″紡銆佸涔犳敼鐢?Focus 妯″紡锛汣anvas / Focus 涓嶅啀娓叉煋閫氱敤 `ContextPanel`锛屽浘璋卞厛鏀跺洖鍏ㄥ眬鍙充晶鏍忕┖闂淬€?- 鏂板 `PrimaryNavigation`銆乣CompactNavigation`銆乣CommandBar`銆乣Drawer`銆乣Inspector`銆乣DataState` 鍙婄浉搴旂殑甯冨眬 / 缁勪欢鏈€灏忓洖褰掓祴璇曘€?- 鏂板 `styles/layouts.css`锛屽皢鏂扮殑甯冨眬鍙樹綋涓庡熀纭€鏋勪欢鏍峰紡浠庢棦鏈夊叏灞€鏍峰紡涓殧绂伙紝涓?FE-020 鍥捐氨 Drawer / Inspector 閲嶆瀯棰勭暀杈圭晫銆?### 楠岃瘉缁撴灉
-- 宸茶繍琛?`git diff --check`锛屾湭鍙戠幇绌虹櫧閿欒锛涘苟浣跨敤鍏ㄥ眬 TypeScript 缂栬瘧鍣ㄨ繘琛屾柊澧?TS / TSX 鏂囦欢璇硶杞瘧妫€鏌ャ€?- 褰撳墠娌欑涓?`npm ci` 鍥?npm 闀滃儚 DNS `EAI_AGAIN` 鏈畬鎴愶紝灏氭湭鑳借繍琛岀敤鎴风 `typecheck`銆乂itest銆佹瀯寤哄拰 Playwright锛涢渶瑕佸湪姝ｅ父寮€鍙戞満鎴栧叿澶囦緷璧栫紦瀛樼殑 CI 鐜澶嶆牳銆?### 鍚庣画褰卞搷
-- 鍥捐氨椤甸潰涓嶅啀鍙楀叏灞€ 336px ContextPanel 鐨勫浐瀹氭尋鍘嬶紝浣嗗唴閮?SourceRail / Inspector 浠嶆槸涓嬩竴姝?FE-020 鐨勬敼閫犵洰鏍囥€?- 鎺ヤ笅鏉ヤ紭鍏堝皢鍥捐氨宸︿晶璧勬簮鍖烘媶涓哄彲鍒囨崲 Drawer锛屽啀鎶婅妭鐐硅鎯呫€佸巻鍙层€佸啿绐佸拰 AI 鑽夌鏀跺彛杩涘彲鎶樺彔 Inspector銆?
-> 璁板綍瑙勫垯锛氶」鐩富瑕佽瑷€涓烘眽璇€傛瘡瀹屾垚涓€涓嫭绔嬩换鍔★紝灏辨妸瀹屾暣缁撴灉杩藉姞鍒版湰鏂囨。寮€澶淬€傛瘡鏉¤褰曞繀椤诲寘鍚椂闂淬€侀」鐩増鏈紪鍙枫€佷换鍔″唴瀹广€佸畬鎴愮粨鏋溿€侀獙璇佺粨鏋滃拰鍚庣画褰卞搷銆?
-## 2026-07-02 15:10:20 +08:00 | v1.1.0-alpha.88 | 鎺ㄨ繘 WB-032 寤跺悗浜哄伐鍚堝苟鐘舵€佹彁绀哄瓙姝ラ
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸褰撳墠鍐茬獊杈呭姪浠庘€滄潗鏂欏凡鐣欏瓨銆佸彲浠ュ畨鍏ㄩ噸杞解€濆啀鎺ㄨ繘涓€姝ャ€?- 鏈疆鐩爣鏄湪鐢ㄦ埛鍐冲畾杩欐鍏堜笉閲嶈浇鏃讹紝鎻愪緵鏄惧紡鐨勨€滃厛淇濈暀鏈湴锛岀◢鍚庝汉宸ュ悎骞垛€濆叆鍙ｅ拰鐘舵€佹彁绀猴紝璁┾€滅户缁繚鐣欐湰鍦拌崏绋库€濅篃鎴愪负鍙鍐崇瓥锛岃€屼笉鏄仠鐣欏湪闅愬惈鎿嶄綔銆?### 瀹屾垚缁撴灉
-- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屽啿绐佽緟鍔╁崱鐗囨柊澧?`鍏堜繚鐣欐湰鍦帮紝绋嶅悗浜哄伐鍚堝苟` 鍔ㄤ綔锛屽苟鏀寔 `manualMergeDeferred` 鐘舵€佸睍绀?`宸叉爣璁颁负绋嶅悗浜哄伐鍚堝苟锛屽綋鍓嶇户缁繚鐣欐湰鍦拌崏绋縛銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`manualMergeDeferred` 鐘舵€佸拰 `deferManualMergeUntilLater()` 浜や簰锛涚敤鎴锋樉寮忛€夋嫨绋嶅悗浜哄伐鍚堝苟鍚庯紝浼氫繚鐣欏綋鍓?dirty 鑽夌鍜屽啿绐佽緟鍔╁崱鐗囷紝鍚屾椂缁欏嚭鍖归厤鐨勭姸鎬佹彁绀恒€?- 閲嶅啓骞惰ˉ寮?`frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`锛岄『鎵嬫竻鐞嗚鏂囦欢鐨勪贡鐮佹枃妗堬紝閿佸畾鍐茬獊鍗＄墖鍦ㄢ€滅◢鍚庝汉宸ュ悎骞垛€濊矾寰勪笅鐨勬寜閽€佹彁绀哄拰鍥炶皟銆?- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`锛岄攣瀹氶〉闈㈢骇鈥滃鍑哄啿绐佸鐞嗗寘 -> 鍏堜繚鐣欐湰鍦帮紝绋嶅悗浜哄伐鍚堝苟 -> 浠嶅彲绋嶅悗鍐嶉噸杞解€濈殑瀹屾暣璺緞銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 鍜?`CHANGELOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滃畨鍏ㄩ噸杞芥彁绀?+ 寤跺悗浜哄伐鍚堝苟鎻愮ず鈥濆苟瀛樸€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶅彧鏄湪鈥滄斁寮冩湰鍦板苟閲嶈浇鈥濊繖鏉¤矾寰勪笂鏇存槑纭紝涔熻兘鏄惧紡琛ㄨ揪鈥滆繖娆″厛淇濈暀鏈湴銆佺◢鍚庝汉宸ュ悎骞垛€濈殑鍐崇瓥鐘舵€侊紝璁╁啿绐佸鐞嗕粠鍗曚竴鍑哄彛鎺ㄨ繘鍒板弻璺緞鐘舵€佸寲銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄洿瀹屾暣鐨勫绔?conflict handling銆佸啿绐佸彇鑸嶆潗鏂欑粍缁囷紝浠ュ強鏇村己鐨勪汉宸ュ悎骞惰緟鍔┿€?
-## 2026-07-02 01:08:10 +08:00 | v1.1.0-alpha.87 | 鎺ㄨ繘 WB-032 鍐茬獊鏉愭枡鐣欏瓨鐘舵€佹爣璁板瓙姝ラ
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸鍐茬獊澶勭疆浠庘€滆矾寰勬洿鏄庣‘鈥濆啀鎺ㄨ繘鍒扳€滅姸鎬佹洿鏄庣‘鈥濄€?- 鏈疆鐩爣鏄湪鐢ㄦ埛鎴愬姛澶嶅埗鎴栧鍑哄啿绐佹潗鏂欏悗锛屾樉寮忔彁绀衡€滃凡鐣欏瓨鍐茬獊鏉愭枡锛屽彲瀹夊叏閲嶈浇鏈€鏂板浘璋扁€濓紝璁╃敤鎴蜂笉鐢ㄥ啀鍑蹇嗗垽鏂嚜宸辨槸鍚﹀凡缁忕暀濂借瘉鎹€?### 瀹屾垚缁撴灉
-- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`conflictArtifactsCaptured` 鐘舵€侊紱褰撳鍒?瀵煎嚭褰撳墠鑽夌 JSON銆佸啿绐佹憳瑕併€佹渶鏂板浘璋?JSON 鎴栧啿绐佸鐞嗗寘鎴愬姛鍚庯紝浼氱粺涓€鐐逛寒璇ョ姸鎬侊紱褰撳啿绐佹€佹秷澶辨椂浼氳嚜鍔ㄦ竻闆躲€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屽啿绐佽緟鍔╁崱鐗囩幇鏀寔 `materialsCaptured`锛屽苟鍦ㄦ潗鏂欏凡鎴愬姛鐣欏瓨鏃舵樉绀?`宸茬暀瀛樺啿绐佹潗鏂欙紝鍙畨鍏ㄩ噸杞芥渶鏂板浘璋盽銆?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 涓?`GraphWorkspacePage.test.tsx`锛岄攣瀹氭潗鏂欏凡鐣欏瓨鏃剁殑鏄惧紡鎻愮ず涓庨〉闈㈢骇琛屼负銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 鍜?`CHANGELOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滄潗鏂欑暀瀛?+ 鐣欏瓨鐘舵€佸彲瑙?+ 澶勭疆寮曞鈥濄€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶄粎鍛婅瘔鐢ㄦ埛鈥滄€庝箞澶勭悊鈥濓紝杩樹細鍦ㄦ潗鏂欏凡缁忕暀瀛樺悗鏄惧紡鍛婅瘔鐢ㄦ埛鈥滃彲浠ュ畨鍏ㄩ噸杞解€濓紝璁╁啿绐佸喅绛栦粠闈欐€佽鏄庡彉鎴愬甫鐘舵€佹劅鐨勬祦绋嬨€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄€滀粎淇濈暀鏈湴浣嗘殏涓嶉噸杞解€濈殑涓撻棬寮曞锛屾垨鏇村畬鏁寸殑澶氱 conflict handling銆?
-## 2026-07-02 01:03:10 +08:00 | v1.1.0-alpha.86 | 鎺ㄨ繘 WB-032 鍐茬獊澶勭疆寮曞瀛愭楠?### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸褰撳墠鍐茬獊杈呭姪浠庘€滄潗鏂欏噯澶囧厖鍒嗏€濈户缁帹杩涘埌鈥滃缃矾寰勬洿鏄庣‘鈥濄€?- 鏈疆鐩爣鏄湪鍐茬獊鍗＄墖閲岀洿鎺ュ憡璇夌敤鎴蜂笁绫诲吀鍨嬪喅绛栬矾寰勶紝骞舵妸鈥滄斁寮冩湰鍦板苟閲嶈浇鏈€鏂板浘璋扁€濈殑鍔ㄤ綔涓嬫矇鍒板崱鐗囨湰韬紝鍑忓皯鏉ュ洖瀵绘壘鍏ュ彛鐨勬垚鏈€?### 瀹屾垚缁撴灉
-- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屽湪鍐茬獊杈呭姪鍗＄墖涓柊澧炰袱鏉℃樉寮忓紩瀵硷細
-  - `濡傛灉纭鏀惧純鏈湴淇敼锛氬彲鐩存帴閲嶈浇鏈€鏂板浘璋盽
-  - `濡傛灉鎵撶畻绋嶅悗浜哄伐鍚堝苟锛氬厛瀵煎嚭鍐茬獊澶勭悊鍖咃紝鍐嶉噸杞芥渶鏂板浘璋盽
-- 鍚屾枃浠舵柊澧炲崱鐗囧唴鍔ㄤ綔 `鏀惧純鏈湴骞堕噸杞芥渶鏂板浘璋盽锛岃鐢ㄦ埛鍦ㄥ啿绐佺幇鍦哄氨鑳藉畬鎴愭渶鍚庝竴姝ワ紝鑰屼笉蹇呭啀鍥炲埌鐘舵€佹爮鎵惧叆鍙ｃ€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾妸鍗＄墖鍐呭姩浣滄帴鍒版棦鏈?`reloadLatestGraph()` 鍐崇瓥娴侊紝淇濇寔纭鏀惧純銆佹媺鍙栨渶鏂?head銆侀噸缃巻鍙插拰鐘舵€佹彁绀虹殑鍘熸湁琛屼负涓€鑷淬€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 涓?`GraphWorkspacePage.test.tsx`锛岄攣瀹氭樉寮忓缃枃妗堛€佸崱鐗囧唴閲嶈浇鎸夐挳鍜岄〉闈㈢骇纭娴佺▼銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 鍜?`CHANGELOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滄潗鏂欑暀瀛?+ 鏄惧紡澶勭疆寮曞 + 鍗＄墖鍐呴噸杞藉叆鍙ｂ€濄€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪宸茬粡涓嶅彧鏄湪鍚屼竴寮犲崱鐗囬噷鍫嗗姩浣滄寜閽紝鑰屾槸寮€濮嬫樉寮忚〃杈锯€滄斁寮冩湰鍦扳€濆拰鈥滅◢鍚庝汉宸ュ悎骞垛€濊繖涓ゆ潯鏈€甯歌鐨勫缃矾寰勶紝绂诲畬鏁村啿绐佽В鍐虫祦鏇磋繎涓€姝ャ€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄€滀繚鐣欐湰鍦板悗鏆備笉閲嶈浇鈥濈殑澶勭疆璇存槑銆佸鍑哄悗鐘舵€佹爣璁帮紝鎴栨洿瀹屾暣鐨勫绔?conflict handling銆?
-## 2026-07-02 00:57:10 +08:00 | v1.1.0-alpha.85 | 鎺ㄨ繘 WB-032 鍐茬獊澶勭悊鍖呭鍑哄瓙姝ラ
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸鈥滅暀瀛樻潗鏂欌€濅粠鍒嗘暎鐨勫涓寜閽啀鎺ㄨ繘鎴愭洿鎺ヨ繎浜哄伐鍚堝苟鐨勫崟涓€瀵煎嚭鍏ュ彛銆?- 鏈疆鐩爣鏄湪 dirty 鍐茬獊鎬佷笅鎻愪緵 `瀵煎嚭鍐茬獊澶勭悊鍖卄锛屾妸鏈湴鑽夌 JSON銆佹湇鍔＄鏈€鏂板浘璋?JSON 鍜屽彲璇诲啿绐佹憳瑕佷竴璧锋墦鍖咃紝鍑忓皯鍚庣画浜哄伐姣斿鏃堕噸鏂版嫾鏉愭枡鐨勬垚鏈€?### 瀹屾垚缁撴灉
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧?`buildGraphConflictBundleArtifact(...)`锛屾妸褰撳墠鍥捐氨鍏冧俊鎭€佹湰鍦拌崏绋挎憳瑕併€佹湰鍦拌崏绋?JSON銆佹渶鏂板浘璋?JSON 鍜屽啿绐佹憳瑕佹姤鍛婃敹鍙ｄ负鍗曚釜 JSON 鍖呫€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屽綋鍐茬獊杈呭姪鍗＄墖宸叉嬁鍒版湇鍔＄鏈€鏂?head 鏃讹紝棰濆灞曠ず `瀵煎嚭鍐茬獊澶勭悊鍖卄銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`exportConflictBundle()`锛岀洿鎺ュ熀浜庡綋鍓嶅伐浣滃尯銆佹渶鏂?head 鍜屽啿绐佹憳瑕?artifact 瀵煎嚭鍗曚竴澶勭悊鍖咃紝骞朵繚鎸佸啿绐佸缓璁姸鎬佷笉琚竻鎺夈€?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`銆乣GraphWorkspaceStageChrome.test.tsx` 鍜?`GraphWorkspacePage.test.tsx`锛岄攣瀹氬鐞嗗寘鏍煎紡銆佹寜閽嚭鐜版潯浠跺拰椤甸潰绾х姸鎬佸弽棣堛€?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 鍜?`CHANGELOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滄湰鍦拌崏绋?JSON + 鏈€鏂板浘璋?JSON + 鍙鎽樿 + 鍗曟枃浠跺啿绐佸鐞嗗寘鈥濄€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶅彧鏄湪鍐茬獊鐜板満缁欏嚭鑻ュ共鈥滃鍒?瀵煎嚭鈥濇寜閽紝鑰屾槸宸茬粡鑳芥妸鍚庣画浜哄伐姣斿鏈€甯搁渶瑕佺殑涓夌被鏉愭枡鏀跺彛鎴愪竴涓鐞嗗寘锛屾槑鏄剧缉鐭€滃厛鐣欒瘉鎹€佸悗鍋氬喅绛栤€濈殑璺緞銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄槑纭殑鈥滀繚鐣欐湰鍦?/ 鏀惧純鏈湴 / 绋嶅悗浜哄伐鍚堝苟鈥濆缃紩瀵硷紝浠ュ強鏇村畬鏁寸殑澶氱 conflict handling銆?
-## 2026-07-02 00:51:30 +08:00 | v1.1.0-alpha.84 | 鎺ㄨ繘 WB-032 鏈嶅姟绔渶鏂板浘璋?JSON 鐣欏瓨瀛愭楠?### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸鍐茬獊杈呭姪浠庘€滅暀瀛樻湰鍦拌崏绋库€濆拰鈥滃甫璧板彲璇绘憳瑕佲€濆啀寰€鍓嶆帹涓€姝ャ€?- 鏈疆鐩爣鏄湪 dirty 鍐茬獊鎬佷笅涔熻兘涓€閿甫璧扳€滄湇鍔＄鏈€鏂板浘璋?JSON鈥濓紝璁╃敤鎴峰悗缁仛浜哄伐姣斿銆佸閮?diff 鎴栧崐鎵嬪伐鍚堝苟鏃讹紝涓嶅繀鑷繁閲嶆柊鍘绘姄鏈€鏂?head銆?### 瀹屾垚缁撴灉
-- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛岃鍐茬獊杈呭姪鍗＄墖鍦ㄦ嬁鍒版渶鏂?head 鍚庨澶栨彁渚?`澶嶅埗鏈€鏂板浘璋?JSON` / `瀵煎嚭鏈€鏂板浘璋?JSON`銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`copyLatestConflictJson()` 涓?`exportLatestConflictJson()`锛岀洿鎺ュ熀浜庡凡鎷夊彇鐨?`latestConflictDetail` 鏋勫缓 StudyMate JSON锛屽苟淇濇寔鍐茬獊寤鸿鐘舵€佷笉琚緟鍔╁姩浣滄竻鎺夈€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 涓?`GraphWorkspacePage.test.tsx`锛岄攣瀹氭渶鏂板浘璋?JSON 鐣欏瓨鎸夐挳鐨勫嚭鐜版潯浠躲€佷氦浜掑拰鐘舵€佸弽棣堛€?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 鍜?`CHANGELOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滄湰鍦拌崏绋?JSON + 鍙鍐茬獊鎽樿 + 鏈€鏂板浘璋?JSON鈥濅笁杞ㄧ暀瀛樿緟鍔┿€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪宸茬粡鍙互鍚屾椂甯﹁蛋鈥滄湰鍦拌崏绋?JSON鈥濃€滄湇鍔＄鏈€鏂板浘璋?JSON鈥濆拰鈥滀汉绫诲彲璇绘憳瑕佲€濓紝杩欎负鍚庣画浜哄伐姣斿銆佸閮?diff 鍜屽悎骞跺彇鑸嶆彁渚涗簡鏇村畬鏁寸殑鍘熷鏉愭枡銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄洿鏄庣‘鐨勨€滀繚鐣欐湰鍦?/ 鏀惧純鏈湴 / 绋嶅悗浜哄伐鍚堝苟鈥濆缃紩瀵硷紝浠ュ強鏇村畬鏁寸殑澶氱 conflict handling銆?
-## 2026-07-02 00:45:30 +08:00 | v1.1.0-alpha.83 | 鎺ㄨ繘 WB-032 鍙甫璧扮殑鍥捐氨鍐茬獊鎽樿瀛愭楠?### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪鈥滃叧閿璞″悕绾у啿绐佹憳瑕佲€濆熀纭€涓婏紝鍐嶈ˉ涓€灞傜湡姝ｅ彲甯﹁蛋鐨勫啿绐佸彇鑸嶄俊鎭€?- 鏈疆鐩爣鏄笉璁╃敤鎴峰湪鍐茬獊鐜板満鍙兘澶嶅埗鍘熷鑽夌 JSON锛岃€屾槸杩樿兘涓€閿鍒舵垨瀵煎嚭涓€浠戒汉绫诲彲璇荤殑鈥滃浘璋卞啿绐佹憳瑕佲€濓紝鏂逛究鍦ㄩ噸杞藉墠鍚屾缁欒嚜宸便€佸悓浜嬫垨鍚庣画浜哄伐鍚堝苟娴佺▼銆?### 瀹屾垚缁撴灉
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛屾柊澧?`buildGraphConflictReportArtifact(...)`锛屾妸褰撳墠鍥捐氨鏍囬銆佺増鏈€佸綋鍓嶆湭淇濆瓨淇敼鎽樿鍜屸€滀笌鏈€鏂板浘璋辩浉姣斺€濈殑宸紓鎽樿缁勮鎴愬彲澶嶅埗/瀵煎嚭鐨?Markdown 鎶ュ憡銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`copyConflictSummaryReport()` 涓?`exportConflictSummaryReport()`锛岃 dirty 鍐茬獊鎬佷笅鍙互鐩存帴澶嶅埗鎴栧鍑轰汉绫诲彲璇绘憳瑕侊紝骞朵繚鎸佲€滃缓璁噸杞芥渶鏂板浘璋扁€濈殑鍐茬獊鐘舵€佷笉琚緟鍔╁姩浣滄竻鎺夈€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屽湪鍐茬獊杈呭姪鍗＄墖閲屾柊澧?`澶嶅埗鍐茬獊鎽樿` / `瀵煎嚭鍐茬獊鎽樿` 鎸夐挳锛屾妸鈥滅暀瀛樺彲璇诲彇鑸嶄俊鎭€濆拰鈥滅暀瀛樺畬鏁?JSON 鑽夌鈥濇媶鎴愪袱鏉℃樉寮忚矾寰勩€?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`銆乣GraphWorkspaceStageChrome.test.tsx`銆乣GraphWorkspacePage.test.tsx`锛岄攣瀹氭憳瑕佹姤鍛婃牸寮忋€佹寜閽氦浜掑拰椤甸潰绾х姸鎬佸弽棣堛€?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 鍜?`CHANGELOG.md`锛屾妸 `WB-032` 鐨勫綋鍓嶈竟鐣屾帹杩涘埌鈥滃彲璇诲啿绐佹憳瑕?+ 鍘熷鑽夌 JSON 鍙岃建鐣欏瓨杈呭姪鈥濄€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鍐茬獊杈呭姪鐜板湪涓嶅啀鍙彁渚涒€滃畬鏁?JSON 鑽夌鐣欏瓨鈥濊繖涓€鏉″亸宸ョ▼鍖栫殑璺緞锛屼篃鑳界洿鎺ュ甫璧颁竴浠芥憳瑕佸寲銆佸彲娌熼€氱殑鍐茬獊鎶ュ憡锛岄檷浣庣敤鎴峰湪閲嶈浇鍓嶅仛鍒ゆ柇鍜屽悓姝ヤ笂涓嬫枃鐨勯棬妲涖€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄洿缁曗€滀繚鐣欐湰鍦?/ 鏀惧純鏈湴 / 鍚庣画浜哄伐鍚堝苟鈥濈殑鏇村己鍙栬垗杈呭姪锛屼互鍙婃洿瀹屾暣鐨勫绔?conflict handling銆?
-## 2026-07-02 00:38:10 +08:00 | v1.1.0-alpha.82 | 鎺ㄨ繘 WB-032 鍏抽敭瀵硅薄鍚嶇骇鍐茬獊鎽樿瀛愭楠?### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪鈥滈潰鍚戞渶鏂?head 鐨勫啿绐佸樊寮傛憳瑕佲€濆熀纭€涓婏紝鍐嶆妸鎽樿绮掑害浠庘€滃彧鏈夋暟閲忊€濇帹杩涘埌鈥滄暟閲?+ 鍏抽敭瀵硅薄鍚嶁€濄€?- 鏈疆鐩爣鏄鐢ㄦ埛鍦ㄥ啿绐佸崱鐗囬噷涓嶅彧鐪嬪埌鈥滄柊澧?1 涓妭鐐光€濓紝鑰屾槸鑳芥洿蹇煡閬撯€滄柊澧炵殑鏄柊姒傚康鑺傜偣鈥濃€滄爣棰樺拰鏈€鏂板浘璋变笉涓€鑷粹€濈瓑鏇村叿浣撶殑鎻愮ず銆?### 瀹屾垚缁撴灉
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`锛岃鎽樿鍦ㄤ繚鎸侀珮灞傛瑙堢殑鍓嶆彁涓嬶紝琛ュ厖鍏抽敭瀵硅薄鍚嶏細鏍囬/璇存槑宸紓浼氭樉绀哄綋鍓嶅€间笌鍩虹嚎鍊硷紝鑺傜偣/杩炵嚎/鍒嗙粍宸紓浼氬睍绀哄墠涓や釜鍏抽敭鍚嶇О骞跺湪闇€瑕佹椂杩藉姞鈥滅瓑鈥濄€?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`锛岃ˉ榻愨€滃叧閿璞″悕鎽樿鈥濆拰鈥滆秴杩囦袱涓璞℃椂鐨勬牱鏈埅鏂€濆洖褰掞紝閿佸畾鎽樿鍙ｅ緞銆?- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 鍜?`GraphWorkspaceStageChrome.test.tsx`锛岃椤甸潰涓庣粍浠跺洖褰掔洿鎺ラ獙璇佲€滄柊姒傚康鈥濃€淕raph on server鈥濊繖绫绘洿鍏蜂綋鐨勫啿绐佹彁绀猴紝鑰屼笉鏄彧鐩暟閲忋€?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 鍜?`CHANGELOG.md`锛屾妸 `WB-032` 鐨勫綋鍓嶈竟鐣屾槑纭负鈥滄湰鍦拌崏绋跨暀瀛樿緟鍔?+ 鏈湴鎽樿 + 鏈€鏂?head 鎽樿 + 鍏抽敭瀵硅薄鍚嶇骇鎻愮ず鈥濄€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鍐茬獊杈呭姪鍗＄墖鐜板湪宸茬粡涓嶅彧鏄€滄湁宸紓銆佸樊寮傛湁鍑犳潯鈥濓紝鑰屾槸鑳藉湪淇濈暀鎽樿绠€娲佸害鐨勫墠鎻愪笅锛屾妸鏈€鍏抽敭鐨勫璞″悕鐩存帴甯﹀嚭鏉ワ紝鏄捐憲闄嶄綆鐢ㄦ埛鐞嗚В鍐茬獊涓婁笅鏂囩殑鎴愭湰銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄繚鐣?鏀惧純/鍚庣画浜哄伐鍚堝苟鐨勫彇鑸嶈緟鍔╋紝浠ュ強鏇村畬鏁寸殑澶氱 conflict handling锛岃鍐茬獊鍗＄墖涓嶅彧瑙ｉ噴闂锛岃繕鑳芥洿绉瀬鍦板府鍔╃敤鎴峰仛鍐崇瓥銆?
-## 2026-07-02 00:33:20 +08:00 | v1.1.0-alpha.81 | 鎺ㄨ繘 WB-032 闈㈠悜鏈€鏂?head 鐨勫啿绐佸樊寮傛憳瑕佸瓙姝ラ
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪鈥滃綋鍓嶆湭淇濆瓨淇敼鎽樿鈥濅箣鍚庯紝鍐嶈ˉ涓€灞傜湡姝ｉ潰鍚戞湇鍔＄鏈€鏂板浘璋辩殑鍐茬獊宸紓鎻愮ず銆?- 鏈疆鐩爣鏄笉璁╁啿绐佽緟鍔╁崱鐗囧彧鍋滅暀鍦ㄢ€滀綘鏈湴鏀逛簡浠€涔堚€濓紝鑰屾槸杩涗竴姝ュ憡璇夌敤鎴封€滆繖浜涙湰鍦颁慨鏀逛笌鏈嶅姟绔渶鏂?head 鐩告瘮涓昏宸湪鍝噷鈥濄€?### 瀹屾垚缁撴灉
-- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛氬綋宸ヤ綔鍖鸿繘鍏?dirty 鍐茬獊鎬佷笖寤鸿閲嶈浇鏈€鏂板浘璋辨椂锛屼細闈欓粯鎷夊彇涓€娆℃湇鍔＄鏈€鏂?graph head锛屽苟鎶婄粨鏋滀繚瀛樺湪鍐茬獊杈呭姪鐘舵€侀噷锛岃€屼笉鎵撴柇鐢ㄦ埛褰撳墠鍐崇瓥娴併€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛氬啿绐佽緟鍔╁崱鐗囩幇鍦ㄩ櫎浜嗏€滃綋鍓嶆湭淇濆瓨淇敼鈥濆锛岃繕浼氬睍绀衡€滀笌鏈€鏂板浘璋辩浉姣斺€濈殑绗簩缁勫樊寮傛憳瑕侊紱濡傛灉鏈€鏂?head 灏氬湪鎷夊彇涓垨鏆傛椂涓嶅彲鐢紝涔熶細缁欏嚭瀵瑰簲璇存槑銆?- 缁х画澶嶇敤 `graphConflictSummary` helper锛岃鏈湴 vs 鏈€鏂?head 鐨勫樊寮傛憳瑕佷繚鎸佸拰鈥滃綋鍓嶆湭淇濆瓨淇敼鎽樿鈥濅竴鑷寸殑鍙ｅ緞锛岄伩鍏嶄袱濂椾笉鍚岀殑宸紓瑙勫垯鍦?UI 涓婁簰鐩告墦鏋躲€?- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 鍜?`GraphWorkspaceStageChrome.test.tsx`锛岄攣瀹氣€滃啿绐佺幇鍦哄悓鏃跺睍绀烘湰鍦版湭淇濆瓨淇敼鎽樿涓庨潰鍚戞渶鏂?head 鐨勫樊寮傛憳瑕佲€濈殑椤甸潰涓庣粍浠惰涓恒€?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 鍜?`CHANGELOG.md`锛屾妸 `WB-032` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滄湰鍦拌崏绋跨暀瀛樿緟鍔?+ 褰撳墠鏈繚瀛樹慨鏀规憳瑕?+ 鏈€鏂?head 宸紓鎽樿鈥濄€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨宸ヤ綔鍖虹幇鍦ㄥ湪 dirty 鍐茬獊鎬佷笅涓嶅啀鍙細璇粹€滀綘鏈湴鏈夋湭淇濆瓨淇敼鈥濓紝鑰屾槸浼氬苟鍒楀睍绀衡€滄湰鍦版敼浜嗕粈涔堚€濆拰鈥滀笌鏈€鏂板浘璋辩浉姣斿樊浜嗕粈涔堚€濓紝璁╃敤鎴峰湪鍐冲畾鐣欏瓨銆佹斁寮冩垨閲嶈浇鍓嶆湁鏇村畬鏁寸殑涓婁笅鏂囥€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄洿缁嗙矑搴︾殑鍐茬獊宸紓銆佸悎骞?淇濈暀鍙栬垗杈呭姪锛屼互鍙婃洿瀹屾暣鐨勫绔?conflict handling锛岃鐢ㄦ埛涓嶅彧鐪嬪埌鎽樿锛岃繕鑳芥洿涓诲姩鍦板鐞嗗啿绐併€?
-## 2026-07-02 00:27:40 +08:00 | v1.1.0-alpha.80 | 鎺ㄨ繘 WB-032 褰撳墠鏈繚瀛樹慨鏀规憳瑕佸瓙姝ラ
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪鈥滃啿绐佹€佹湰鍦拌崏绋跨暀瀛樿緟鍔┾€濅箣鍚庯紝鍐嶈ˉ涓€灞傛洿鍙悊瑙ｇ殑鍐茬獊鎽樿銆?- 鏈疆鐩爣鏄鐢ㄦ埛鍦?dirty 鍐茬獊鎬佷笅涓嶄粎鐭ラ亾鈥滃彲浠ュ鍒?瀵煎嚭鏈湴鑽夌鈥濓紝杩樼煡閬撯€滃綋鍓嶈繖浠芥湰鍦拌崏绋跨浉瀵规渶鍚庝竴娆″凡鍚屾鎴愬姛鐨勫浘璋卞埌搴曟敼浜嗕粈涔堚€濄€?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts` 鍙婂搴旀祴璇曪紝鍩轰簬鈥滃綋鍓嶅伐浣滃尯鍥捐氨鈥濅笌鈥滄渶鍚庝竴娆″凡鍚屾鎴愬姛鐨勫浘璋卞熀绾库€濈敓鎴愬綋鍓嶆湭淇濆瓨淇敼鎽樿锛岃鐩栨爣棰?璇存槑鍙樺寲銆佽妭鐐?杩炵嚎/鍒嗙粍鐨勬柊澧炪€佷慨鏀广€佸垹闄わ紝浠ュ強浠呰鍙ｅ彉鍖栨椂鐨勫厹搴曟彁绀恒€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾樉寮忕淮鎶?`lastSyncedDetailRef` 浣滀负鏈€鍚庡悓姝ュ熀绾匡紝骞跺湪 dirty 鍐茬獊鎬佷笅鎶婃憳瑕佷紶缁欏啿绐佽緟鍔╁崱鐗囥€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛岃鍐茬獊杈呭姪鍗＄墖鏄剧ず鈥滃綋鍓嶆湭淇濆瓨淇敼鎽樿鈥濓紝鎶娾€滀綘灏嗘斁寮冧粈涔堚€濈洿鎺ユ斁鍒板啿绐佺幇鍦猴紝鑰屼笉鏄彧缁欏姩浣滄寜閽€?- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 涓?`GraphWorkspaceStageChrome.test.tsx`锛岄攣瀹氣€滃啿绐佺幇鍦烘樉绀轰慨鏀规憳瑕併€佸悓鏃朵繚鐣欏鍒?瀵煎嚭/閲嶈浇鍔ㄤ綔鈥濈殑椤甸潰涓庣粍浠惰涓恒€?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 鍜?`CHANGELOG.md`锛屾妸 `WB-032` 鐨勮竟鐣屾槑纭负鈥滃厛鐪嬫湰鍦版湭淇濆瓨淇敼鎽樿锛屽啀鍐冲畾鏄惁鐣欏瓨鎴栨斁寮冣€濄€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨宸ヤ綔鍖虹幇鍦ㄥ湪 dirty 鍐茬獊鎬佷笅涓嶅啀鍙槸鈥滆兘涓嶈兘鐣欏瓨褰撳墠鑽夌鈥濈殑闂锛岃€屾槸浼氬厛鎶婂綋鍓嶆湭淇濆瓨淇敼鎽樿灞曠ず鍑烘潵锛屽府鍔╃敤鎴锋洿娓呮鍦板垽鏂嚜宸辨槸涓嶆槸瑕佸厛鐣欏瓨銆佹槸鍚﹀彲浠ユ帴鍙楁斁寮冦€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄潰鍚戔€滄湇鍔＄鏈€鏂?head鈥濈殑鏇村畬鏁村啿绐佸樊寮傚睍绀轰笌鏇村己鐨勫绔?conflict handling锛岃鐢ㄦ埛涓嶅彧鐭ラ亾鑷繁鏈湴鏀逛簡浠€涔堬紝杩樿兘鐭ラ亾杩欎簺鏀瑰姩涓庢渶鏂扮増鏈殑鍏崇郴銆?
-## 2026-07-01 20:21:30 +08:00 | v1.1.0-alpha.79 | 鎺ㄨ繘 WB-032 鍐茬獊鎬佹湰鍦拌崏绋跨暀瀛樿緟鍔╁瓙姝ラ
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪鈥滄樉寮忛噸杞芥渶鏂板浘璋扁€濅箣鍚庯紝鍐嶈ˉ涓€灞傛洿绋冲Ε鐨勫啿绐佸彇鑸嶈緟鍔┿€?- 鏈疆鐩爣鏄伩鍏嶇敤鎴峰湪鐗堟湰鍐茬獊鏃跺彧鑳戒簩閫変竴鍦扳€滅珛鍒绘斁寮冨苟閲嶈浇鈥濇垨鈥滆嚜宸辨懜绱㈡€庝箞鐣欏瓨鏈湴淇敼鈥濓紝鑰屾槸鎶婄暀瀛樻湰鍦拌崏绋跨殑鍔ㄤ綔鏄惧紡鏀惧埌鍐茬獊鐜板満銆?### 瀹屾垚缁撴灉
-- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屾柊澧炲浘璋卞啿绐佽緟鍔╁崱鐗囷紱褰撳綋鍓嶅伐浣滃尯澶勪簬 dirty 鍐茬獊鎬佹椂锛屼細鏄庣‘灞曠ず `澶嶅埗褰撳墠鑽夌 JSON` 鍜?`瀵煎嚭褰撳墠鑽夌 JSON`銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`copyConflictDraftJson()` 涓?`exportConflictDraftJson()`锛氱洿鎺ュ熀浜庡綋鍓嶅伐浣滃尯鐨勫疄鏃跺浘璋辨瀯寤?StudyMate JSON锛屽湪鏀惧純閲嶈浇鍓嶄负鏈湴淇敼鎻愪緵鐣欏瓨璺緞锛屽苟淇濇寔鈥滈噸鏂板姞杞芥渶鏂板浘璋扁€濈殑鍐茬獊鍐崇瓥鐘舵€佷笉琚緟鍔╁姩浣滄竻鎺夈€?- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 鍜?`GraphWorkspaceStageChrome.test.tsx`锛岃ˉ榻愰〉闈㈢骇涓庣粍浠剁骇鍥炲綊锛岄攣瀹氣€滃啿绐佺幇鍦烘樉绀虹暀瀛樿緟鍔╁姩浣溿€佺偣鍑昏緟鍔╁姩浣滃悗浠嶄繚鐣欓噸杞藉喅绛栨祦鈥濈殑琛屼负銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 鍜?`CHANGELOG.md`锛屾妸 `WB-032` 鐨勫綋鍓嶈竟鐣屼粠鈥滄樉寮忛噸杞解€濇帹杩涘埌鈥滃厛鐣欏瓨鏈湴淇敼锛屽啀鍐冲畾鏄惁閲嶈浇鈥濄€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨宸ヤ綔鍖虹幇鍦ㄥ湪 dirty 鍐茬獊鎬佷笅涓嶅啀鍙湁鈥滆涓嶈鏀惧純骞堕噸杞解€濊繖涓€鏉″崟绾垮喅绛栵紝鑰屾槸鎶娾€滃厛澶嶅埗/瀵煎嚭褰撳墠鑽夌锛屽啀鍐冲畾鏄惁鏀惧純鈥濆彉鎴愭樉寮忋€佸氨鍦般€佸彲娴嬭瘯鐨勮緟鍔╂祦绋嬨€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄啿绐佸樊寮傛憳瑕佸拰鏇村畬鏁寸殑澶氱 conflict handling锛岃鐢ㄦ埛涓嶄粎鑳界暀瀛樻湰鍦颁慨鏀癸紝杩樿兘鏇存竻妤氬湴鐞嗚В鑷繁鍗冲皢鏀惧純鐨勫唴瀹逛笌鏈嶅姟绔渶鏂?head 鐨勫樊寮傘€?
-## 2026-07-01 20:08:30 +08:00 | v1.1.0-alpha.78 | 鎺ㄨ繘 WB-032 鏄惧紡閲嶈浇鏈€鏂板浘璋卞喅绛栨祦瀛愭楠?### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屾妸姝ゅ墠鈥滃彟涓€绐楀彛姝ｅ湪缂栬緫 / 宸蹭繚瀛樻洿楂樼増鏈€濈殑鎻愰啋锛岃繘涓€姝ュ崌绾т负鐢ㄦ埛鍙墽琛岀殑鏈€灏忓喅绛栨祦銆?- 鏈疆鐩爣鏄厛鏀跺彛瀹夊叏鐨勬樉寮忛噸杞借竟鐣岋細褰撳綋鍓嶆爣绛鹃〉宸茬粡钀藉悗鏃讹紝鍏佽鐢ㄦ埛涓诲姩鎷夊彇鏈€鏂板浘璋憋紱濡傛灉鏈湴浠嶆湁鏈繚瀛樹慨鏀癸紝蹇呴』鏄庣‘纭鏀惧純鍚庢墠鑳界户缁€?### 瀹屾垚缁撴灉
-- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛岃鍥捐氨鐘舵€佹爮鏀寔鍙€夊姩浣滄寜閽紝骞跺湪闇€瑕佹椂灞曠ず `閲嶆柊鍔犺浇鏈€鏂板浘璋盽銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊澧?`reloadLatestGraph()` 娴佺▼锛歞irty 鐘舵€佷笅鍏堝脊纭锛岄殢鍚庨噸鏂版媺鍙栨渶鏂?`getGraph(...)` head銆侀噸缃?history/save-state銆佸埛鏂?snapshot 鍒楄〃锛屽苟鍦ㄦ垚鍔熷悗鏄庣‘鎻愮ず鈥滃凡閲嶆柊鍔犺浇鏈€鏂板浘璋憋紝鏈繚瀛樻洿鏀瑰凡鏀惧純鈥濄€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`锛岃鈥滃彟涓€绐楀彛宸蹭繚瀛樻洿楂樼増鏈€濅笌 `batch-save` 鍛戒腑 `graph_version_conflict` 鏃堕兘鑳界ǔ瀹氫繚鐣欌€滃缓璁噸杞芥渶鏂板浘璋扁€濈殑椤甸潰鐘舵€侊紝涓嶅啀琚悗缁け璐ユ枃妗堟剰澶栨竻鎺夈€?- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`銆乣GraphWorkspaceStageChrome.test.tsx` 鍜?`useGraphWorkspacePersistence.test.tsx`锛岃ˉ榻愰〉闈㈢骇銆佺姸鎬佹爮绾т笌 hook 绾у洖褰掞紝閿佸畾鈥滃嚭鐜板啿绐佸悗灞曠ず閲嶈浇鍔ㄤ綔銆乨irty 鏃剁‘璁ゆ斁寮冦€侀噸杞藉悗娓呯悊澶辫触鐘舵€佲€濈殑琛屼负銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 鍜?`CHANGELOG.md`锛屾妸 `WB-032` 鐨勫啿绐佸鐞嗚竟鐣屼粠鈥滃墠缃彁閱掆€濇帹杩涘埌鈥滅敤鎴峰彲鎺х殑鏄惧紡閲嶈浇鍔ㄤ綔鈥濄€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 鍏堝洜鐗堟湰鍐茬獊璺緞娌℃湁淇濈暀閲嶈浇鍔ㄤ綔鑰?RED锛屼慨姝ｇ姸鎬佹祦杞『搴忓悗閫氳繃銆?- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx` 鍏堝洜娴嬭瘯鏀灦鏈ˉ `onReloadLatestSuggestionChange` 鑰?RED锛岃ˉ榻?harness 涓庡洖褰掓柇瑷€鍚庨€氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨宸ヤ綔鍖虹幇鍦ㄤ笉鍙細鍛婅瘔鐢ㄦ埛鈥滀綘宸茬粡钀藉悗浜庢渶鏂扮増鏈€濓紝杩樹細鎶娾€滄斁寮冨綋鍓嶆湭淇濆瓨淇敼骞堕噸杞芥渶鏂板浘璋扁€濆彉鎴愪竴涓槑纭€佸彲棰勬湡銆佸彲娴嬭瘯鐨勫姩浣滐紝鍑忓皯鐢ㄦ埛鍋滃湪澶辫触鎬佸嵈涓嶇煡閬撲笅涓€姝ヨ鎬庝箞鍋氱殑鎯呭喌銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ洿鍊煎緱缁х画琛ョ殑鏄啿绐佸樊寮傚睍绀恒€佹湰鍦颁慨鏀瑰鍑?澶嶅埗杈呭姪锛屼互鍙婃洿瀹屾暣鐨勫绔?conflict handling锛岃€屼笉鏄啀鍋滅暀鍦ㄥ彧鏈夋彁閱掓垨鍙湁澶辫触鏂囨鐨勭姸鎬併€?
-## 2026-07-01 19:57:20 +08:00 | v1.1.0-alpha.77 | 鎺ㄨ繘 WB-032 璺ㄧ獥鍙ｅ啿绐佹彁绀轰笌 stale 鑽夌瑙ｉ噴瀛愭楠?### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪鈥滃悓鍥捐氨鏈湴鑽夌鎭㈠鈥濅箣鍚庯紝鍐嶈ˉ涓婁竴灞傛洿涓诲姩鐨勫啿绐佹彁绀猴細鐢ㄦ埛涓嶅簲鍙湪淇濆瓨鏃舵姤 `409` 鏃舵墠绗竴娆＄煡閬撳彟涓€涓獥鍙ｅ凡缁忕紪杈戞垨淇濆瓨浜嗗悓涓€鍥捐氨銆?- 鏈疆鍚屾椂琛?stale local draft 鐨勫彲瑙ｉ噴鍙嶉锛岄伩鍏嶅伐浣滃尯闈欓粯涓㈠純鏃ц崏绋挎椂锛岀敤鎴疯浠ヤ负绯荤粺鎶婂唴瀹瑰悶鎺変簡銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphWorkspaceConcurrencySignal.ts` 涓庡搴旀祴璇曪紝鎸?`graphId + sessionId` 鎶婂綋鍓嶇獥鍙ｇ殑 `dirty/currentVersion` 鐘舵€佸啓鍏?`localStorage`锛屼綔涓鸿法绐楀彛杞婚噺 signal銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`锛氬伐浣滃尯鐜板湪浼氱洃鍚悓鍥捐氨鐨?`storage` 浜嬩欢锛涙娴嬪埌鍙︿竴绐楀彛浠嶅湪缂栬緫鏃讹紝鎻愮ず鈥滆淇濆瓨鍓嶇‘璁ゆ渶鏂扮増鏈€濓紱妫€娴嬪埌鍙︿竴绐楀彛宸蹭繚瀛樻洿楂樼増鏈椂锛屾彁绀衡€滆鍒锋柊鍥捐氨鍚庡啀缁х画缂栬緫鈥濄€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛氬綋鏈湴鑽夌鍥犱负鏈嶅姟绔?head 宸叉帹杩涜€岃鏀惧純鏃讹紝椤甸潰浼氭槑纭彁绀衡€滄湰鍦拌崏绋垮熀浜庢棫鐗堟湰锛屽凡鏀惧純鎭㈠骞跺姞杞芥渶鏂板浘璋扁€濓紝涓嶅啀闈欓粯鍥為€€鍒版渶鏂扮敾甯冦€?- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`銆乣useGraphWorkspacePersistence.test.tsx` 鍜?`graphPersistenceState.test.ts`锛屾妸 stale 鑽夌瑙ｉ噴鏂囨涓庤法绐楀彛鍐茬獊鎻愮ず鍥哄畾涓洪〉闈㈢骇/Hook 绾у洖褰掋€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 鍏堝洜缂哄皯骞跺彂 signal helper 涓?stale draft 瑙ｉ噴鏂囨鑰?RED锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨宸ヤ綔鍖虹幇鍦ㄥ凡缁忎笉鍙槸鍦ㄢ€滀繚瀛樺け璐ュ悗涓嶄涪鏈湴缂栬緫鈥濓紝鑰屾槸鑳芥洿鏃╁憡璇夌敤鎴封€滃彟涓€涓獥鍙ｄ篃鍦ㄥ姩杩欏紶鍥锯€濓紝浠庤€岄檷浣庨潤榛樺啿绐佸拰璇搷浣滄鐜囥€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ユ渶鍊煎緱缁х画琛ョ殑鏄樉寮忓埛鏂?閲嶈浇纭鍜屾洿瀹屾暣鐨勫啿绐佸喅绛栨祦锛岃鈥滄彁閱掆€濆崌绾ф垚鈥滅敤鎴峰彲鎺х殑鎭㈠/鍙栬垗鍔ㄤ綔鈥濄€?
-## 2026-07-01 19:49:30 +08:00 | v1.1.0-alpha.76 | 鎺ㄨ繘 WB-032 鍚屽浘璋辨湰鍦拌崏绋挎仮澶嶅瓙姝ラ
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽湪鈥滀繚瀛樺啿绐佸彲瑙佲€濆拰鈥渄irty 鏃剁姝㈡仮澶嶅揩鐓р€濅箣鍚庯紝琛ヤ笂鍚屼竴鍥捐氨閲嶆柊鎵撳紑鏃剁殑鏈湴鏈繚瀛樿崏绋挎仮澶嶈兘鍔涖€?- 鏈疆鐩爣鏄厛鏀跺彛鏈€灏忓畨鍏ㄦ仮澶嶈竟鐣岋細鍙湁鏈嶅姟绔?head 鐗堟湰鏈彉鍖栨椂鎵嶆仮澶嶆湰鍦拌崏绋匡紱濡傛灉 head 宸叉帹杩涳紝鍒欏畞鍙斁寮冩棫鑽夌锛屼篃涓嶈兘闈欓粯瑕嗙洊褰撳墠鍥捐氨銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphWorkspaceDraftRecovery.ts` 涓?`graphWorkspaceDraftRecovery.test.ts`锛屾妸鍥捐氨鏈湴鑽夌鎭㈠瑙勫垯鏀跺彛涓虹嫭绔?helper锛氭寜 `graphId` 钀界洏 `title` / `description` / `document` / `currentVersion`锛屾敮鎸佽鍙栥€佹竻鐞嗗拰鍩轰簬鐗堟湰涓€鑷存€х殑鎭㈠鍒ゅ畾銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`锛氬綋鍓嶅伐浣滃尯涓€鏃﹁繘鍏?`dirty` 鐘舵€侊紝灏辨妸鑽夌鍐欏叆 `sessionStorage`锛涗繚瀛樻垚鍔熸垨閲嶆柊鍥炲埌闈?dirty 鐘舵€佹椂锛岃嚜鍔ㄦ竻鐞嗗搴斿浘璋辫崏绋裤€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛氬伐浣滃尯棣栨鍔犺浇鎴栧垏鎹㈠浘璋辨椂锛屼細浼樺厛妫€鏌ュ悓鍥捐氨鏈湴鑽夌锛涜嫢 `currentVersion` 涓庢湇鍔＄涓€鑷达紝鍒欐仮澶嶆湰鍦拌崏绋垮苟缁存寔 dirty 鐘舵€侊紱鑻ョ増鏈笉涓€鑷达紝鍒欐竻鐞?stale draft锛岀户缁互鏈嶅姟绔?head 涓哄噯銆?- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`锛屾柊澧為〉闈㈢骇鍥炲綊閿佸畾鈥滃悓鍥捐氨 + 鍚岀増鏈€濋噸寮€鍚庝細鐪嬪埌鎭㈠鎻愮ず銆佺户缁浜?dirty 鐘舵€侊紝涓旀湰鍦拌妭鐐逛粛鑳藉湪鐢诲竷涓壘鍒般€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/GraphWorkspacePage.test.tsx` 鍏堝洜缂哄皯鎭㈠妯″潡鑰?RED锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨宸ヤ綔鍖虹幇鍦ㄥ凡缁忓叿澶団€滃悓鍥捐氨鏈繚瀛樼紪杈戞壘鍥炩€濈殑鏈€灏忔仮澶嶈兘鍔涳紝鐢ㄦ埛鍒锋柊鎴栭噸鏂拌繘鍏ュ悓涓€鍥捐氨鏃讹紝涓嶅啀鍙兘渚濊禆杩滅 autosave 鎴栨墜鍔ㄤ繚瀛樻墠鑳戒繚浣忓垰鍋氱殑淇敼銆?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ュ簲缁х画琛ュ绐楀彛/澶氱鍐茬獊鎻愮ず銆乻tale draft 鐨勫彲瑙ｉ噴鍙嶉锛屼互鍙婃洿瀹屾暣鐨勬仮澶嶅喅绛栨祦锛岄伩鍏嶇敤鎴峰湪骞跺彂缂栬緫鍦烘櫙涓嬪彧鐪嬪埌鈥滆崏绋挎秷澶扁€濊€屼笉鐭ラ亾鍘熷洜銆?
-## 2026-07-01 19:33:56 +08:00 | v1.1.0-alpha.75 | 鎺ㄨ繘 WB-032 鍥捐氨蹇収鎭㈠鍓嶄繚鎶ゅ瓙姝ラ
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛岃ˉ涓婁繚瀛樺啿绐佸彲瑙佹€т箣鍚庣殑涓嬩竴鏉℃仮澶嶅畨鍏ㄨ竟鐣岋細褰撳墠鐢诲竷浠嶆湁鏈湴鏈繚瀛樹慨鏀规椂锛屼笉鍏佽鐩存帴鎭㈠鍘嗗彶蹇収銆?- 鏈疆鐩爣涓嶆槸瀹屾垚瀹屾暣鐨?autosave 鎭㈠閾捐矾锛岃€屾槸鍏堥樆鏂€渄irty 鐢诲竷涓€閿仮澶嶅揩鐓у鑷存湰鍦扮紪杈戣闈欓粯瑕嗙洊鈥濈殑楂橀闄╄矾寰勩€?### 瀹屾垚缁撴灉
-- 鏇存柊 `frontend-user/src/modules/graph/lib/graphPersistenceState.ts`锛屾柊澧炲揩鐓ф仮澶嶅墠淇濇姢鐘舵€侊紝鏄庣‘杈撳嚭鈥滃綋鍓嶅浘璋变粛鏈夋湭淇濆瓨淇敼锛岃鍏堜繚瀛樺悗鍐嶆仮澶嶅揩鐓р€濇彁绀猴紝骞朵繚鎸佷繚瀛樻€佷负 `dirty`銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`锛歚restoreSnapshot(...)` 鐜板湪浼氬厛妫€鏌?`options.dirty`锛涘瓨鍦ㄦ湭淇濆瓨缂栬緫鏃剁洿鎺ラ樆鏂仮澶嶈姹傦紝涓嶈繘鍏ヨ繙绔?restore API锛屼篃涓嶉噸缃巻鍙茬姸鎬併€?- 鏇存柊 `frontend-user/src/modules/graph/lib/graphPersistenceState.test.ts`锛岄攣瀹氭仮澶嶅墠淇濇姢鐘舵€佸璞°€?- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`锛屾柊澧為〉闈㈢骇鍥炲綊锛氬厛鍒堕€?dirty 缂栬緫锛屽啀鐐瑰嚮鎭㈠蹇収鏃讹紝搴旂户缁樉绀衡€滄湁鏈繚瀛樹慨鏀光€濈姸鎬佸苟缁欏嚭淇濇姢鎻愮ず锛屽悓鏃朵笉寰楀彂鍑?`restoreGraphSnapshot(...)` 璇锋眰銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/GraphWorkspacePage.test.tsx` 鍏堝洜缂哄皯鎭㈠鍓嶄繚鎶?helper 鍜?dirty guard 鑰?RED锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨宸ヤ綔鍖虹幇鍦ㄥ凡缁忎笉浠呰兘闃叉鏃х増鏈繚瀛橀潤榛樿鐩栵紝涔熻兘闃叉 dirty 鐘舵€佷笅鐨勫揩鐓ф仮澶嶉潤榛樻浛鎹㈠綋鍓嶇敾甯冿紝`WB-032` 鐨勨€滄仮澶嶅畨鍏ㄢ€濊竟鐣屽洜姝ゆ洿瀹屾暣浜嗕竴灞傘€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涗笅涓€姝ヤ粛搴斾紭鍏堣ˉ autosave 鑽夌鎭㈠涓庢洿瀹屾暣鐨勫绐楀彛鍐茬獊鎻愮ず锛岃淇濆瓨銆佹仮澶嶄笌绂婚〉涓夋潯閾捐矾鐪熸闂幆銆?
-## 2026-07-01 14:55:51 +08:00 | v1.1.0-alpha.74 | 鎺ㄨ繘 WB-032 鍥捐氨淇濆瓨鐗堟湰鍐茬獊鍙鎬у瓙姝ラ
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-032`锛屽厛浠庨闄╂渶鐩存帴鐨勪竴鍒€鍒囧叆锛氶伩鍏嶆棫鏍囩椤点€佹棫鑽夌鎴栬惤鍚庣増鏈殑 batch-save 闈欓粯瑕嗙洊宸茬粡鏇存柊杩囩殑 graph head銆?- 鏈疆涓嶆妸 `WB-032` 璇姤鎴愭暣浣撳畬鎴愶紝鑰屾槸鍏堟敹鍙ｂ€滀繚瀛樺啿绐佸繀椤诲彲瑙併€佸け璐ュ悗鏈湴鑴忕紪杈戜笉鑳戒涪鈥濈殑鏈€灏忓彲闈犳€ц竟鐣岋紝涓哄悗缁?autosave 鎭㈠鍜?snapshot 瀹夊叏鎭㈠缁х画鎵撳簳銆?### 瀹屾垚缁撴灉
-- 鏇存柊 `backend/internal/modules/graph/service/service.go`锛歚BatchSave(...)` 鐜板湪浼氬湪浠讳綍鎸佷箙鍖栧墠鏍￠獙 `request.document.version == graph.current_version`锛涘鏋滃鎴风鐗堟湰钀藉悗锛屽垯杩斿洖 `409 graph_version_conflict`锛屽苟鐩存帴闃绘柇鍐欏叆銆?- 鏇存柊 `backend/internal/modules/graph/service/service_test.go`锛氭柊澧炲洖褰掓祴璇曢攣瀹氭棫鐗堟湰淇濆瓨蹇呴』澶辫触锛屼笖涓嶅緱鍐欏叆 `graphs.current_version`銆乣graph_versions` 鎴?Mongo current document銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx`锛氭柊澧炲啿绐佸け璐ユ€佸洖褰掞紝閿佸畾淇濆瓨澶辫触鍚庝粛淇濇寔 `dirty:true` 鍜屽啿绐佹枃妗堬紝纭繚鏈湴鏈繚瀛樼紪杈戜笉浼氳澶辫触娴佺▼鍚炴帀銆?- 鍚屾鏇存柊 `docs/architecture/GRAPH_API_LIFECYCLE.md`銆乣docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 鍜?`CHANGELOG.md`锛屾妸 `WB-032` 鏍囪涓鸿繘琛屼腑锛屽苟鎶?`batch-save` 鐨?`409 graph_version_conflict` 濂戠害鍐欏叆鏂囨。銆?### 楠岃瘉缁撴灉
-- `go test ./internal/modules/graph/service` 鍏堝洜鏂版祴璇曞懡涓€滄棫鐗堟湰淇濆瓨琚潤榛樿鐩栤€濊€?RED锛岃ˉ涓婄増鏈墠缃牎楠屽悗杞豢銆?- `go test ./internal/modules/graph/...` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨淇濆瓨閾捐矾鐜板湪鑷冲皯宸茬粡鍏峰鈥滄棫鐗堟湰涓嶈兘闈欓粯瑕嗙洊鏂?head鈥濈殑鏈€灏忓畨鍏ㄨ竟鐣岋紝鍚庣画 autosave 涓庡绐楀彛缂栬緫鍙互鍦ㄦ槑纭啿绐佷俊鍙蜂笂缁х画寤鸿锛岃€屼笉闇€瑕佸厛鍥炲ご琛ュ簳灞傜増鏈繚鎶ゃ€?- `WB-032` 浠嶅浜庤繘琛屼腑锛涙帴涓嬫潵鏈€鍊煎緱缁х画鎺ㄨ繘鐨勬槸 autosave 鑽夌鎭㈠銆乻napshot 鎭㈠鍓嶄繚鎶わ紝浠ュ強鏇存槑纭殑澶氱鍐茬獊鎻愮ず涓庣敤鎴峰喅绛栨祦銆?
-## 2026-07-01 15:05:00 +08:00 | v1.1.0-alpha.73 | 瀹屾垚 WB-031 鍥捐氨瀵煎嚭銆佺缉鐣ュ浘涓庡竷灞€濂戠害鏀跺彛
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-031`锛屾妸鍥捐氨鐜版湁鐨?JSON/SVG/PNG 瀵煎嚭銆佺缉鐣ュ浘涓昏褰曞瓧娈靛拰鏉ユ簮娉抽亾甯冨眬鑳藉姏鏁寸悊鎴愮粺涓€濂戠害锛岄伩鍏嶈繖浜涜兘鍔涢暱鏈熷垎鏁ｅ湪鍓嶇灞€閮?helper銆佹暟鎹簱瀛楁鍜岄殣鍚疄鐜伴噷銆?- 鏈疆閲嶇偣涓嶆槸缁х画鎵╁紶鏂扮殑鍥捐氨鍔熻兘锛岃€屾槸鍏堟妸鈥滃鍑轰骇鐗╂€庝箞瀹氫箟鈥濃€済raph head 濡備綍鎸傜缉鐣ュ浘鈥濃€滃竷灞€鑳藉姏濡備綍杩涘叆缁熶竴 API 鐢熷懡鍛ㄦ湡鈥濊繖涓変欢浜嬫敹鍙ｆ竻妤氾紝涓哄悗缁?autosave銆佸啿绐佸鐞嗗拰宸ョ▼鍥捐氨瀵煎叆鎻愪緵绋冲畾杈圭晫銆?### 瀹屾垚缁撴灉
-- 鏂板 `docs/architecture/GRAPH_EXPORT_LAYOUT_CONTRACT.md`锛岄泦涓鏄?JSON/SVG/PNG 瀵煎嚭杈圭晫銆乣thumbnailFileId` head 瀛楁銆佷互鍙?`POST /api/v1/graphs/:id/layouts/preview` 鐨勮姹?鍝嶅簲涓庝笉鎺ㄨ繘鐗堟湰璇箟銆?- 鏇存柊鍚庣 graph DTO銆乻ummary builder 鍜屽墠绔?API types锛岃 `thumbnailFileId` 浠庢暟鎹簱瀛楁鎻愬崌涓哄墠鍚庣鍏变韩鐨?graph 鎽樿濂戠害銆?- 鏂板鍚庣鏉ユ簮娉抽亾甯冨眬棰勮鍏ュ彛锛歚POST /graphs/:id/layouts/preview`銆傝鎺ュ彛浼氱敤鏈嶅姟绔潈濞?`graphId` / `version` 褰掍竴鍖栧鎴风鏂囨。鑽夌锛岃繑鍥炲竷灞€鍚庣殑 document銆乴aneCount 鍜?selectedNodeIds锛屼絾涓嶄細鍐欏叆 current document銆乻napshot 鎴?graph version銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屽浘璋卞伐浣滃尯鐢熸垚鏉ユ簮娉抽亾鏃朵紭鍏堣皟鐢ㄥ悗绔?preview API锛涙帴鍙ｄ笉鍙敤鏃朵粛鍥為€€鍒版湰鍦?`buildGraphSourceSwimlaneDocument(...)`锛屼繚鎸佹湰鍦板閿欎笌缁熶竴濂戠害骞跺瓨銆?### 楠岃瘉缁撴灉
-- `go test ./internal/modules/graph/service ./internal/modules/graph/handler` 鍏堝洜缂哄け `PreviewLayout` DTO/handler/service 鑰?RED锛岃ˉ瀹炵幇鍚庤浆缁裤€?- `go test ./internal/modules/graph/...` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts` 鍏堝洜缂哄け `previewGraphLayout(...)` 鑰?RED锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨甯冨眬鐜板湪宸茬粡涓嶅啀鍙槸宸ヤ綔鍖哄唴閮ㄨ涓猴紝鑰屾槸杩涘叆浜嗙粺涓€ graph API 濂戠害锛涘悗缁棤璁烘帴鏇村甯冨眬绠楁硶銆佸伐绋嬪浘妯℃澘杩樻槸鍚庡彴娌荤悊鍏ュ彛锛岄兘鏈変簡绋冲畾鐨?request/response 褰㈢姸銆?- `thumbnailFileId` 鐜板湪鎴愪负 graph head 鐨勬樉寮忎竴閮ㄥ垎锛屽悗缁?`WB-032` 鍜屾洿杩滅殑鍒嗕韩/鎼滅储鍗＄墖灞曠ず鍙互鐩存帴鍥寸粫杩欎釜瀛楁寤虹珛寮傛缂╃暐鍥鹃摼璺紝鑰屼笉闇€瑕佸啀娆″洖澶存敼 summary contract銆?
-## 2026-07-01 14:40:00 +08:00 | v1.1.0-alpha.72 | 瀹屾垚 WB-030 鍥捐氨 API 鐢熷懡鍛ㄦ湡濂戠害鏀跺彛
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-030`锛屾妸鍥捐氨鍚庣宸插瓨鍦ㄧ殑 graph/document/snapshot/version/relation 璇诲啓璺緞鏁寸悊鎴愬崟涓€鐢熷懡鍛ㄦ湡濂戠害锛屽苟琛ヤ笂鑳介攣瀹氱増鏈帹杩涜涔夌殑鍚庣涓庡墠绔祴璇曘€?- 鏈疆閲嶇偣涓嶆槸鎵╁紶鏂扮殑鍥捐氨鍔熻兘锛岃€屾槸鍏堜慨鎺夆€渞estore 鍚?current document 鐗堟湰鍙峰彲鑳藉洖鍐欐棫鍊尖€濆拰鈥済raph summary mode 鍙兘涓庢仮澶嶅悗鏂囨。璇箟婕傜Щ鈥濊繖涓や釜鐢熷懡鍛ㄦ湡椋庨櫓锛屼负鍚庣画鑷姩淇濆瓨銆佸啿绐佸鐞嗗拰瀵煎嚭鑳藉姏鎵撳湴鍩恒€?### 瀹屾垚缁撴灉
-- 鏂板 `docs/architecture/GRAPH_API_LIFECYCLE.md`锛岄泦涓鏄?graph head銆丮ongo current document銆丮ongo snapshot銆丮ySQL version 绱㈠紩鍜?source relation 鐨勮亴璐ｈ竟鐣屻€乪ndpoint 鐭╅樀銆佺増鏈帹杩涜鍒欙紝浠ュ強 restore 浠ユ棫鍐呭鐢熸垚鏂?head 鐨勮涔夈€?- 閲嶆瀯 `backend/internal/modules/graph/service/service.go` 鐨勪緷璧栦负鏈€灏忔帴鍙ｏ紝骞舵柊澧?`backend/internal/modules/graph/service/service_test.go`锛岄攣瀹?create graph 鍒濆鍖?version 1銆乥atch-save 鎺ㄨ繘 head 鐗堟湰骞惰惤鍦?lifecycle artifact銆乺estore snapshot 鐢熸垚鏂?head 涓旈噸绠?`graph.mode` 鐨勮涓恒€?- 鏇存柊 `backend/internal/modules/graph/dto/document_contract.go` 涓?`backend/internal/modules/graph/dto/document_contract_test.go`锛岃鎵€鏈夊啓鍏ュ瀷 graph 璺緞閮戒互鏈嶅姟绔潈濞佽鐩?`graphId` / `version`锛屼笉鍐嶄俊浠诲鎴风鎴栨棫 snapshot 鑷甫鐨勮繃鏈熺増鏈彿銆?- 鏂板 `frontend-user/src/api/graphs.test.ts`锛屾妸 batch-save銆乻napshots銆乺estore銆丮arkdown/Mermaid import銆乿alidate 鍜?diagram templates 鐨?path / method / body 濂戠害鍥哄畾涓嬫潵锛岄伩鍏嶅墠绔皟鐢ㄧ偣鍚庣画婕傜Щ銆?### 楠岃瘉缁撴灉
-- `go test ./internal/modules/graph/service` 鍒濆浠?RED 鏂瑰紡鏆撮湶 service 渚濊禆鏃犳硶娉ㄥ叆 fake銆佷互鍙?restore 鍚?`document.version` 涓?`currentVersion` 涓嶄竴鑷寸殑闂锛涘畬鎴愰噸鏋勫拰淇鍚庤浆缁裤€?- `go test ./internal/modules/graph/dto ./internal/modules/graph/service` 閫氳繃銆?- `go test ./internal/modules/graph/...` 閫氳繃锛実raph dto / handler / repository / service 鍥炲綊鍏ㄧ豢銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?2 鏉?graph-core 鐢ㄤ緥鍏ㄧ豢銆?- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃锛?2 鏉″浘璋卞墠绔敤渚嬪叏缁裤€?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鐢熷懡鍛ㄦ湡鐜板湪宸茬粡鏄庣‘鐢辨湇鍔＄鎺屾帶 head version锛宺estore/import/batch-save 杩欑被鏁翠唤鏂囨。鏇挎崲娴佺▼涓嶅啀闈欓粯甯﹀洖鏃х増鏈彿锛涘悗缁?`WB-032` 鍋?autosave / conflict handling 鏃跺彲浠ョ洿鎺ュ缓绔嬪湪杩欐潯杈圭晫涓娿€?- `WB-030` 瀹屾垚鍚庯紝涓嬩竴宸ヤ綔鍖呭簲杩涘叆 `WB-031`锛屼紭鍏堣ˉ鍥捐氨瀵煎嚭浜х墿銆佺缉鐣ュ浘鍜屽竷灞€浠诲姟妯″瀷锛岃褰撳墠宸茬粡绋冲畾鐨?lifecycle 濂戠害鐪熸鎵胯浇鏇村畬鏁寸殑鍥捐氨浜у搧鍖栬兘鍔涖€?
-## 2026-07-01 14:12:29 +08:00 | v1.1.0-alpha.71 | 瀹屾垚 WB-023 鍥捐氨鍐呮牳娴嬭瘯涓庤縼绉诲洖褰?### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-023`锛屾妸鍥捐氨鍐呮牳鐨勨€滃簭鍒楀寲銆佸鍏ラ敊璇€佹棫鏁版嵁鍏煎銆佸巻鍙叉爤杈圭晫鈥濆洖褰掓祴璇曡ˉ榻愬埌 `@studymate/graph-core`銆?- 鏈疆閲嶇偣涓嶆墿寮犳柊鐨勫浘璋卞姛鑳斤紝鑰屾槸閿佸畾 `.smtg` 鏃ф暟鎹縼绉诲吋瀹瑰拰 history 鐘舵€佹満杈圭晫锛岄伩鍏嶅悗缁?`WB-030` 杩涘叆 API 鐢熷懡鍛ㄦ湡鏁寸悊鏃跺啀娆″紩鍏ュ鍏ュ洖褰掋€?### 瀹屾垚缁撴灉
-- 鎵╁睍 `packages/graph-core/test/graphProductization.test.ts`锛屾柊澧炴棫 root-level `.smtg` 缂哄け `schemaVersion` 鐨勫吋瀹瑰鍏ャ€侀潪娉?JSON / 鏁扮粍 root / 闈炴硶 `document` 鍖呰鎷掔粷銆乭istory readable label / fallback label锛屼互鍙?past/future 鏍堜笂闄愬洖褰掓祴璇曘€?- 鏇存柊 `packages/graph-core/src/file-format.ts`锛屽皢缂哄け `schemaVersion` 鐨勬棫 StudyMate 鍥捐氨鎸?v1 鍏煎瀵煎叆澶勭悊锛屽悓鏃剁户缁嫆缁濇暟缁?root 鍜岄潪瀵硅薄 `document` 鍖呰锛岄伩鍏嶅鏉惧吋瀹硅鏀捐繃鍧?payload銆?- 澶嶆牳 graph-core history 琛屼负锛岀‘璁?undo / redo / fallback label 涓庢爤瑁佸壀閫昏緫宸茬敱鍥炲綊娴嬭瘯閿佸畾锛屾棤闇€鍐嶅湪鍓嶇鍖呰灞傞噸澶嶇淮鎶ら澶栧吋瀹瑰垎鏀€?### 楠岃瘉缁撴灉
-- `npm --workspace @studymate/graph-core run test -- --testNamePattern="legacy root documents|graph history respects|graph history stores readable|round trips and rejects invalid schema"` 鍏堝洜缂哄け `schemaVersion` 鏃у浘璋辫鎷掔粷銆佷互鍙婃暟缁?root 琚鏀捐鑰屽け璐ワ紝琛ュ疄鐜板悗閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?2 鏉?graph-core 鐢ㄤ緥鍏ㄧ豢銆?- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?### 鍚庣画褰卞搷
-- graph-core 鐜板湪宸茬粡鏄庣‘鍖哄垎鈥滄棫鐗堢己鐪?schema 鐨勫吋瀹瑰鍏モ€濆拰鈥滅粨鏋勯潪娉?payload 鐨勬嫆缁濆鍏モ€濓紝鍚庣画鍥捐氨 API 濂戠害鏁寸悊鍙互鐩存帴澶嶇敤杩欏眰杈圭晫锛岃€屼笉蹇呭啀鍦?hook 鎴?handler 涓ˉ鍏滃簳銆?- `WB-023` 瀹屾垚鍚庯紝涓嬩竴宸ヤ綔鍖呭簲鍥炲埌 `WB-030`锛屼紭鍏堟敹鍙ｅ浘璋?document/node/edge/group/snapshot 鐢熷懡鍛ㄦ湡濂戠害锛屽苟鎶婂墠鍚庣鐜板湪宸茬粡绋冲畾涓嬫矇鐨?core 鑳藉姏鎺ュ洖缁熶竴 API 杈圭晫銆?
-## 2026-07-01 14:03:06 +08:00 | v1.1.0-alpha.70 | 瀹屾垚 WB-022 鍥捐氨 import / export / validation 缁熶竴鎺ュ彛
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-022`锛屾妸鍥捐氨宸ヤ綔鍖洪噷鍒嗘暎鍦?`useGraphImportExport.ts`銆乧ontroller 鍜?JSON helper 涓殑 import/export/validation 鍒嗘敮鏀跺彛鎴愮粺涓€鎺ュ彛銆?- 鏈疆閲嶇偣涓嶆柊澧炴柊鐨勫鍏ユ牸寮忥紝鑰屾槸鎶婄幇鏈?Markdown / Mermaid / StudyMate JSON / SVG / validate 琛屼负缁熶竴鍒板崟涓€ facade锛屽苟淇濈暀宸叉湁鍏煎鎬т笌鍥炲綊瑕嗙洊銆?### 瀹屾垚缁撴灉
-- 閲嶅啓 `frontend-user/src/modules/graph/lib/graphFileImportExport.ts`锛屾柊澧炵粺涓€ facade锛歚buildGraphExportArtifact(...)` 缁熶竴 JSON/SVG 瀵煎嚭鎻忚堪锛宍parseGraphJsonImport(...)` 缁熶竴 JSON 瀵煎叆闃绘柇璁℃暟涓庣姸鎬佹秷鎭紝`buildRemoteGraphImportOutcome(...)` 缁熶竴 Markdown/Mermaid 杩滅瀵煎叆褰掍竴鍖栵紝`buildGraphValidationOutcome(...)` 缁熶竴 validate 鐘舵€佹憳瑕併€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphImportExport.ts`锛岃 hook 鍙繚鐣欎笅杞姐€丳NG 娓叉煋銆佽繙绔?API 璋冪敤鍜屼繚瀛樻€佸壇浣滅敤锛屼笉鍐嶉噸澶嶇淮鎶ゅ鍏ユā寮忓垎鏀枃妗堝拰閿欒璁℃暟閫昏緫銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾妸杩滅 `validateGraph(...)` 鐨勭姸鎬佹秷鎭嫾瑁呬篃鍒囧埌缁熶竴 facade锛岄伩鍏?controller 鍐嶆澶嶅埗瑙勫垯銆?- 鎵╁睍 `frontend-user/src/modules/graph/lib/graphFileImportExport.test.ts`锛岃ˉ榻愮粺涓€ facade 鐨?JSON/SVG 瀵煎嚭銆丣SON 闃绘柇瀵煎叆銆丮arkdown/Mermaid 褰掍竴鍖栧拰 validate 鐘舵€佹憳瑕佹祴璇曘€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphFileImportExport.test.ts` 鍏堝洜缁熶竴鎺ュ彛缂哄け澶辫触锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphImportExport.test.tsx src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/hooks/useGraphViewportCamera.test.tsx src/modules/graph/hooks/useGraphSelectionState.test.tsx src/modules/graph/lib/graphHistory.test.ts` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨瀵煎叆/瀵煎嚭/鏍￠獙鐜板湪宸茬粡鍏峰鍗曚竴鐨勫墠绔函閫昏緫鍏ュ彛锛屽悗缁?`WB-023` 鍙互鏇翠笓娉ㄥ湪 graph-core 搴忓垪鍖栥€佸鍏ラ敊璇€佹棫鏁版嵁鍏煎鍜屽巻鍙叉爤鍥炲綊娴嬭瘯锛岃€屼笉鏄户缁湪 hook/controller 涓拷韪垎鏀紓绉汇€?- 杩欐鏀跺彛涓昏鑱氱劍鎺ュ彛缁熶竴锛屾病鏈夌户缁墿寮犳柊鐨勫鍏ュ崗璁紱PlantUML / OpenAPI / SQL DDL 涔嬬被宸ョ▼鍥捐氨瀵煎叆浠嶅睘浜庡悗缁?`WB-051` 鍙婂叾鍓嶇疆宸ヤ綔銆?
-## 2026-07-01 09:50:06 +08:00 | v1.1.0-alpha.69 | 瀹屾垚 WB-021 鍥捐氨 viewport / selection / history 鐘舵€佹娊绂?### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-021`锛屾妸鍥捐氨宸ヤ綔鍖洪噷鍓╀綑鐨?selection / viewport / history 鐘舵€佽浆绉讳粠鈥滃墠绔?hook 鍚勮嚜缁存姢鈥濈户缁敹鍙ｅ埌 `@studymate/graph-core` 绾€昏緫杈圭晫銆?- 鏈疆閲嶇偣涓嶆墿寮?import/export 鎴栨寔涔呭寲鑳藉姏锛屽彧璁╅€夋嫨銆佸閫夈€佺缉鏀?閲嶇疆瑙嗛噹銆佹挙閿€/閲嶅仛杞崲鍏峰绋冲畾鐨勫叡浜姸鎬佹ā鍨嬩笌鍥炲綊娴嬭瘯銆?### 瀹屾垚缁撴灉
-- 鏇存柊 `packages/graph-core/src/selection.ts`銆乣viewport.ts` 涓?`history.ts`锛屾柊澧?`replaceGraphNodeSelection(...)`銆乣zoomGraphViewport(...)`銆乣resetGraphViewport(...)`锛屽苟鎶?core history label/undo/redo 杞崲娓呯悊涓哄彲澶嶇敤瀹炵幇銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphSelectionState.ts`锛屽皢鏄惧紡澶氶€夋浛鎹€佸崟閫夈€乼oggle銆佹閫夌粺涓€濮旀墭缁?`@studymate/graph-core` selection helper锛屼笉鍐嶅垎鍒淮鎶ゆ暎钀界殑 `selectedNodeId` / `selectedNodeIds` 鍐欐硶銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphViewportCamera.ts`锛岃宸ュ叿鏍忕缉鏀俱€佹粴杞缉鏀惧拰閲嶇疆瑙嗛噹鍏ㄩ儴澶嶇敤 graph-core viewport transition helper銆?- 閲嶅啓 `frontend-user/src/modules/graph/lib/graphHistory.ts`锛岃鍓嶇 undo/redo/history 鎹曡幏鍖呰灞傚鎵樼粰 graph-core history state锛屽悓鏃朵繚鐣?StudyMate 鑷繁鐨?`GraphDocumentPayload` 瑙勮寖鍖栦笌淇濆瓨杈圭晫鎽樿銆?- 鏇存柊 graph-core 涓庡墠绔浘璋辨祴璇曪紝琛ラ綈鏄惧紡澶氶€夋浛鎹€乿iewport zoom/reset銆乭istory label 鍜?undo/redo 鍖呰灞傚洖褰掋€?### 楠岃瘉缁撴灉
-- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?0 鏉?graph-core 鐢ㄤ緥鍏ㄧ豢銆?- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphSelectionState.test.tsx src/modules/graph/hooks/useGraphViewportCamera.test.tsx src/modules/graph/lib/graphHistory.test.ts` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨宸ヤ綔鍖虹殑閫夋嫨銆佽閲庡拰鍘嗗彶鐘舵€佺幇鍦ㄥ凡缁忓叿澶囨洿鏄庣‘鐨勨€渃ore 鐘舵€佹満 + 鍓嶇鍖呰灞傗€濊竟鐣岋紝鍚庣画 `WB-022` 鍙互涓撴敞缁熶竴 import / export / validation锛岃€屼笉鏄户缁湪 controller 閲屽鍒剁姸鎬佽浆绉婚€昏緫銆?- 鏈疆椤烘墜娓呯悊浜?`graphHistory.ts` 鐨勫巻鍙蹭贡鐮佹爣绛撅紝浣嗘病鏈夋墿鏁ｅ埌鏇村ぇ鑼冨洿 UI 鏂囨锛涘叾浠栧浘璋辨棫鏂囨缂栫爜闂浠嶅簲鍦ㄧ嫭绔嬪伐浣滃寘閲屾湁璁″垝鏀跺彛銆?
-## 2026-07-01 09:27:42 +08:00 | v1.1.0-alpha.68 | 瀹屾垚 WB-020 鍥捐氨鏂囨。妯″瀷涓庣増鏈瓥鐣ユ敹鍙?### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-020`锛屾妸鍥捐氨 `GraphDocument` / `schemaVersion` / 鍏煎璇诲啓榛樿鍖栦粠鈥滃垎鏁ｅ湪鍓嶅悗绔澶勭‖缂栫爜鈥濇敹鍙ｆ垚鏄惧紡濂戠害銆?- 鏈疆閲嶇偣涓嶆墿寮?viewport/history/import-export 鏂拌兘鍔涳紝鍙ǔ瀹氭棫鍥捐氨 payload銆佺┖鏂囨。銆丮ongo current document 涓?snapshot 鐨勫吋瀹硅鍙栬矾寰勩€?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphDocumentPayload.ts` 涓?`graphDocumentPayload.test.ts`锛屾妸鐢ㄦ埛绔浘璋?payload 鍏煎閫傞厤闆嗕腑璧锋潵锛屽苟澶嶇敤 `@studymate/graph-core` 鐨?`normalizeGraphDocument(...)` 涓?`supportedGraphSchemaVersion`銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`锛岃宸ヤ綔鍖?`normalizeDocument(...)` / `createEmptyDocument(...)` 缁熶竴濮旀墭缁欐柊鐨?payload 閫傞厤灞傦紝鑰屼笉鏄户缁湪椤甸潰渚ф暎钀?`schemaVersion: 1` 鍜岀┖瀵硅薄/绌烘暟缁勯粯璁ゅ€笺€?- 鏂板 `backend/internal/modules/graph/dto/document_contract.go` 涓?`document_contract_test.go`锛屾彁渚?`SupportedGraphSchemaVersion`銆乣NormalizeDocumentPayload(...)` 涓?`NewEmptyDocumentPayload(...)` 涓変釜鍏变韩濂戠害鍏ュ彛銆?- 鏇存柊鍚庣 graph repository/service/helpers锛歁ongo current document 涓?snapshot 璇诲嚭鍚庝細鍐嶆缁忚繃鍏变韩榛樿鍖栵紱鎵归噺淇濆瓨銆佸鍏ャ€佸揩鐓ф仮澶嶅拰绌烘枃妗ｅ垱寤轰篃閮藉鐢ㄥ悓涓€灞?helper锛屼笉鍐嶅悇鑷ˉ `SchemaVersion = 1`銆?- 鏂板 `docs/architecture/GRAPH_DOCUMENT_CONTRACT.md`锛屽苟鍚屾鏇存柊 `README.md`銆乣docs/DEVELOPMENT.md`銆乣docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屾妸 `WB-020` 鏍囪涓哄畬鎴愬苟鍒囨崲涓嬩竴浼樺厛绾у埌 `WB-021`銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphDocumentPayload.test.ts src/modules/graph/lib/graphWorkspaceLoadState.test.ts` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 鏉＄敤渚嬪叏缁裤€?- `cd backend && go test ./internal/modules/graph/dto ./internal/modules/graph/repository ./internal/modules/graph/service` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鏂囨。濂戠害鐜板湪宸茬粡鍏峰娓呮櫚鐨勫崟涓€鏉ユ簮鍜屾樉寮忓吋瀹瑰眰锛屽悗缁?`WB-021` 鍙互鏇翠笓娉ㄥ湪 viewport / selection / history 鐘舵€佹娊绂伙紝鑰屼笉鏄户缁湪璇诲啓榛樿鍊间笂鏉ュ洖淇ˉ銆?- 褰撳墠浠嶄繚鐣欏墠绔伐浣滃尯榛樿 viewport `{ x: 140, y: 120, zoom: 1 }` 涓庡悗绔┖鏂囨。 `{ x: 0, y: 0, zoom: 1 }` 鐨勮涔夊樊寮傦紝杩欐槸鏈夋剰淇濈暀鐨?UI/鎸佷箙鍖栬竟鐣岋紝涓嶅睘浜庢湰杞鍚堝苟鐨勮寖鍥淬€?
-## 2026-07-01 09:11:18 +08:00 | v1.1.0-alpha.67 | 瀹屾垚 WB-014 鎼滅储鏂囨。涓庡洖褰掕褰曟敹鍙?### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-014`锛屾妸 `/api/v1/search` 鐨勫綋鍓嶅绾︺€佹潈闄愮煩闃点€侀〉闈㈣竟鐣屽拰鑷姩鍖栭獙璇佸叆鍙ｉ泦涓矇娣€涓嬫潵銆?- 鏈疆閲嶇偣涓嶆槸缁х画鍔犳悳绱㈠姛鑳斤紝鑰屾槸鎶婂凡缁忔敹鍙ｇ殑鎼滅储鑳藉姏鍙樻垚鍚庣画鍙鐢ㄣ€佸彲杩借釜銆佸彲鎵ц鐨勫伐绋嬭祫浜с€?### 瀹屾垚缁撴灉
-- 鏂板 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`锛岄泦涓褰曟悳绱?endpoint銆佹煡璇㈠弬鏁般€乬rouped payload銆佹潈闄?鍙鎬с€佹帓搴?鎽樿瑙勫垯锛屼互鍙婄敤鎴风 URL 绛涢€夊拰褰撳墠鎵规鍒嗛〉杈圭晫銆?- 鏇存柊 `package.json`锛屾柊澧?`test:search:frontend`銆乣test:search:backend`銆乣test:search:e2e` 鍜?`verify:search`锛屾妸鎼滅储涓撻」鍥炲綊浠庨浂鏁ｅ懡浠ゆ敹鍙ｆ垚鍥哄畾鍏ュ彛銆?- 鏇存柊 `README.md`銆乣docs/DEVELOPMENT.md`銆佽矾绾?鐗堟湰鏂囨。鍜屽彉鏇磋褰曪紝璁╀富鏂囨。鏄庣‘鐭ラ亾鎼滅储濂戠害鎬昏〃鍜?`npm run verify:search` 鐨勫瓨鍦ㄣ€?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屽皢 `WB-014` 鏍囪涓哄畬鎴愶紝骞舵妸涓嬩竴浼樺厛绾у垏鍥?`WB-020` 鍥捐氨鏂囨。妯″瀷涓庣増鏈瓥鐣ャ€?### 楠岃瘉缁撴灉
-- `npm run verify:search` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛堜粎瀛樺湪鏃㈡湁 CRLF 鎻愮ず锛屾棤 diff 閿欒锛夈€?- `npm run ci` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鎼滅储閾捐矾鐜板湪宸茬粡涓嶅彧鏄€滀唬鐮佸拰娴嬭瘯瀛樺湪鈥濓紝鑰屾槸鍏峰浜嗗崟鐐规枃妗ｅ拰鍥哄畾楠岃瘉鍛戒护锛涘悗缁敼 `SearchIndexer`銆佹悳绱㈤〉鎴栫煡璇嗛摼鎺ユ椂锛屾洿瀹规槗鍒ゆ柇鏈夋病鏈夊彂鐢熷绾︽紓绉汇€?- 涓嬩竴浼樺厛绾у簲鍒囨崲鍒?`WB-020`锛屽紑濮嬫敹鍙ｅ浘璋?`GraphDocument` / schema version / 鐗堟湰绛栫暐杩欐潯涓荤嚎锛岃€屼笉鏄户缁湪鎼滅储灞傚仛閲嶅鏁寸悊銆?
-## 2026-07-01 09:05:12 +08:00 | v1.1.0-alpha.66 | 瀹屾垚 WB-013 鎼滅储椤典綋楠屼笌椤甸潰绾у洖褰掕ˉ寮?### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-013`锛屽湪涓嶄慨鏀?`/api/v1/search` grouped payload 濂戠害鐨勫墠鎻愪笅锛岃ˉ鐢ㄦ埛绔悳绱㈤〉鐨勭┖鎬併€侀敊璇€併€佺被鍨嬬瓫閫夈€佹潵婧愯烦杞拰鍒嗛〉鍥炲綊銆?- 鏈疆閲嶇偣鏀跺彛鈥滅湡瀹炲彲楠岃瘉鐨勯〉闈氦浜掆€濓紝涓嶅亣瑁呭悗绔凡缁忔敮鎸?offset/page 鍒嗛〉銆?### 瀹屾垚缁撴灉
-- 鏇存柊 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`锛屾柊澧?URL 椹卞姩鐨?`types` 绫诲瀷绛涢€夛紝璁╅〉闈㈢姸鎬併€佸湴鍧€鏍忓拰 `searchAll(...)` 璇锋眰淇濇寔鍚屾銆?- 鏂板 `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx`锛屾寜椤甸潰绾?TDD 鍥炲綊瑕嗙洊鏃犲叧閿瘝绌烘€併€佸悗绔敊璇€併€佺瓫閫夎姹傚舰鐘讹紝浠ュ強鏉ユ簮閾炬帴涓庡垎椤靛垏鎹€?- 鏇存柊鎼滅储椤电粨鏋滃睍绀猴細姣忕粍褰撳墠鎵规鏈€澶氳姹?`12` 鏉＄粨鏋滐紝骞舵寜姣忛〉 `4` 鏉″垏鎹紱鐣岄潰浼氭槑纭鏄庤繖鍙槸褰撳墠鎵规鍐呭垎椤碉紝涓嶄唬琛ㄥ悗绔凡鏈?offset/page 濂戠害銆?- 鏇存柊 `frontend-user/src/styles/search-review.css`銆乣README.md`銆乣docs/DEVELOPMENT.md`銆佽矾绾?鐗堟湰鏂囨。鍜屽彉鏇磋褰曪紝鎶婃悳绱㈤〉鏈€鏂颁氦浜掕竟鐣屽啓鍥炴枃妗ｃ€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test` 閫氳繃锛?2 涓祴璇曟枃浠躲€?47 鏉＄敤渚嬪叏缁裤€?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛堜粎瀛樺湪鏃㈡湁 CRLF 鎻愮ず锛屾棤 diff 閿欒锛夈€?- `npm run ci` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鎼滅储椤电幇鍦ㄥ凡缁忓叿澶囨渶灏忓彲鐢ㄧ殑椤甸潰浜や簰鎶ゆ爮锛屽悗缁唬鐞嗕笉闇€瑕佸啀闈犳墜宸ョ偣鐐圭偣鍒ゆ柇绛涢€夈€佺┖鎬佸拰鏉ユ簮璺宠浆鏄惁閫€鍖栥€?- 涓嬩竴浼樺厛绾у簲鍒囨崲鍒?`WB-014`锛屾妸鎼滅储 API / 椤甸潰浜や簰鐨勫綋鍓嶅绾︿笌楠岃瘉璁板綍缁х画娌夋穩鍒版枃妗ｄ笌鍥炲綊娓呭崟閲屻€?
-## 2026-07-01 02:09:34 +08:00 | v1.1.0-alpha.65 | 瀹屾垚 WB-012 鎼滅储鏉冮檺涓庡彲瑙佹€ц繃婊よˉ寮?### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-012`锛屾妸 fallback 鎼滅储鐨勬潈闄?鍙鎬х害鏉熶粠鈥滆浠ｇ爜鎺ㄦ柇鈥濇敹鍙ｆ垚鍙洖褰掓祴璇曘€?- 鏈疆閲嶇偣瑕嗙洊鍖垮悕鐭矾銆乷wner 褰掑睘鍜屾湭鍙戝竷鍐呭杩囨护锛屼笉鏀瑰彉鎼滅储璺敱涓?grouped payload 缁撴瀯銆?### 瀹屾垚缁撴灉
-- 鏇存柊 `backend/internal/modules/search/service/indexer.go`锛屾妸鏌ヨ鎷艰鎶芥垚绾?`searchQuerySpec`锛屼究浜庡湪涓嶈繛鎺ョ湡瀹炴暟鎹簱鐨勫墠鎻愪笅鍥炲綊鍚勭被鍨嬬粨鏋滅殑鍙鎬ф潯浠躲€?- 鏇存柊 `backend/internal/modules/search/service/indexer_test.go`锛屾柊澧炴潈闄愮煩闃垫祴璇曪細鍖垮悕璇锋眰浼氱洿鎺ョ煭璺?`note/graph/card`锛沗material/post` 缁х画鏄惧紡闄愬畾鍏紑鍐呭锛沗card` 浠呰繑鍥?owner 鑷繁鐨?`active` 鍗＄墖锛沗graph` 浠呰繑鍥?`active` 涓斺€渙wner 鎴?public鈥濈殑鍥捐氨銆?- 椤烘墜琛ヤ笂 graph 鎼滅储缂哄け鐨?`status = active` 杩囨护锛岄伩鍏嶆妸闈炴椿璺冨浘璋卞甫杩涙悳绱㈠€欓€夐泦銆?- 鏇存柊 `README.md`銆乣docs/DEVELOPMENT.md`銆佽矾绾?鐗堟湰鏂囨。鍜屾墽琛岃褰曪紝鎶婃悳绱㈡潈闄愮煩闃靛啓鍥炴枃妗ｏ紝鍑忓皯鍚庣画浠ｇ悊璇垽銆?### 楠岃瘉缁撴灉
-- `go test ./internal/modules/search/service` 閫氳繃銆?- `go test ./internal/modules/search/...` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃銆?- `npm run ci` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鎼滅储鐜板湪涓嶄粎濂戠害绋冲畾銆佺粨鏋滆川閲忓彲鍥炲綊锛岃繛鏍稿績鏉冮檺鐭╅樀涔熷凡缁忚鏄惧紡閿佷綇锛涘悗缁彲浠ユ洿鏀惧績鍦扮户缁仛鐢ㄦ埛绔悳绱綋楠屽拰浜や簰鍥炲綊銆?- 涓嬩竴浼樺厛绾у簲鍒囨崲鍒?`WB-013`锛岃ˉ鎼滅储椤电殑绌烘€併€侀敊璇€併€佺瓫閫変笌鏉ユ簮璺宠浆鍥炲綊銆?
-## 2026-07-01 02:00:32 +08:00 | v1.1.0-alpha.64 | 瀹屾垚 WB-011 鑱氬悎鎼滅储缁撴灉璐ㄩ噺琛ュ己
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-011`锛屽湪涓嶆敼鎼滅储璺敱涓?grouped payload 缁撴瀯鐨勫墠鎻愪笅锛岃ˉ寮?fallback 鎼滅储鐨勭粍鍐呮帓搴忓拰鎽樿灞曠ず璐ㄩ噺銆?- 鏈疆閲嶇偣鍙敹鍙ｂ€滄爣棰樺懡涓紭鍏堚€濆拰鈥滄憳瑕佸彲璇婚瑙堚€濅袱鏉℃渶灏忚鍒欙紝涓嶅紩鍏ユ柊绱㈠紩寮曟搸锛屼篃涓嶆墿灞曞埌鏉冮檺鐭╅樀銆?### 瀹屾垚缁撴灉
-- 鏇存柊 `backend/internal/modules/search/service/indexer.go`锛岃 MySQL fallback 鍏堟姄鍙栦竴灏忔壒鍊欓€夛紝鍐嶆寜鈥滄爣棰樺懡涓紭鍏堛€佹憳瑕佸懡涓涔嬧€濈殑瑙勫垯绋冲畾鎺掑簭锛屽悓绾х户缁繚鐣欐暟鎹簱杩斿洖鐨勬渶鏂伴『搴忋€?- 鏂板 `backend/internal/modules/search/service/indexer_test.go`锛岄€氳繃绾€昏緫娴嬭瘯閿佸畾鏍囬鍛戒腑浼樺厛瑙勫垯锛屼互鍙婇暱鎽樿鎶樺彔绌虹櫧骞惰鍓埌 160 涓瓧绗︿互鍐呯殑琛屼负銆?- 鎼滅储缁撴灉鎽樿鐜板湪浼氱粺涓€鍘嬫垚鍗曡棰勮锛岄伩鍏嶆妸鏁存甯栧瓙姝ｆ枃鎴栭暱鏂囨湰鍘熸牱鐏岃繘鎼滅储缁撴灉鍗＄墖銆?- 鏇存柊 `docs/DEVELOPMENT.md`銆乣README.md`銆佽矾绾?鐗堟湰鏂囨。鍜屾墽琛岃褰曪紝鎶婃悳绱㈢粨鏋滆川閲忚鍒欏啓鍥炴枃妗ｏ紝閬垮厤鍚庣画缁х画渚濊禆鈥滄洿鏂板€掑簭浣嗙浉鍏虫€т笉娓呮鈥濈殑闅愬惈琛屼负銆?### 楠岃瘉缁撴灉
-- `go test ./internal/modules/search/service` 閫氳繃銆?- `go test ./internal/modules/search/...` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃銆?- `npm run ci` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鎼滅储 fallback 鐜板湪宸茬粡鍏峰鏇寸ǔ瀹氱殑缁勫唴鎺掑簭鍜屾洿鍙鐨勬憳瑕侀瑙堬紝鍚庣画缁х画琛ュ己鏃跺彲浠ユ妸閲嶇偣鏀惧湪鏉冮檺/鍙鎬х煩闃靛拰鏇村己鐨勭储寮曟娊璞★紝鑰屼笉鏄户缁慨鍩虹灞曠ず璐ㄩ噺銆?- 涓嬩竴浼樺厛绾у簲鍒囨崲鍒?`WB-012`锛岀郴缁熻ˉ榻愮鏈夌瑪璁般€佺鏈夊浘璋卞拰鏈彂甯冨唴瀹圭殑鏉冮檺杩囨护娴嬭瘯銆?
-## 2026-07-01 01:55:11 +08:00 | v1.1.0-alpha.63 | 瀹屾垚 WB-010 缁熶竴鎼滅储濂戠害鏀跺彛
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-010`锛屽湪鐜版湁 search module 鍩虹涓婂浐瀹氭悳绱㈠绾︼紝鑰屼笉鏄噸鍋氭悳绱㈡ā鍧椼€?- 鏈疆閲嶇偣鏀跺彛榛樿鍒嗙粍銆侀潪娉?`types` 鏍￠獙銆乣limit` 杈圭晫锛屼互鍙婂墠绔?DTO / 寮€鍙戞枃妗ｄ腑鐨勮繑鍥炲瓧娈佃涔夈€?### 瀹屾垚缁撴灉
-- 鏇存柊 `backend/internal/modules/search/service/service.go` 涓?`handler.go`锛岃鐪佺暐 `types` 鎴栦紶绌哄€兼椂绋冲畾鍥為€€鍒?`material/post/note/graph/card` 浜旂粍榛樿鎼滅储锛涙湭鐭ョ被鍨嬩細鍦?service 灞傜洿鎺ヨ繑鍥?`400 invalid_search_type`锛屼笉鍐嶇户缁惤鍒?indexer銆?- 璋冩暣 `limit` 瑙勫垯锛氱己鐪佹垨闈炴硶鏃跺洖閫€鍒?`20`锛岃秴涓婇檺鏃堕挸鍒朵负 `50`锛岄伩鍏嶅ぇ椤靛弬鏁板張琚潤榛樻敹鍥炲埌榛樿鍊笺€?- 琛ュ厖鍚庣 `search/service`銆乣search/handler` 娴嬭瘯锛岃鐩栫┖ `types` 榛樿琛屼负銆侀潪娉曠被鍨嬬煭璺け璐ュ拰鍒嗛〉涓婇檺杈圭晫銆?- 鏇存柊 `frontend-user/src/api/types.ts`锛屾樉寮忓浐瀹?`SearchResult.type` 涓?`source` 鐨勮仈鍚堢被鍨嬶紱琛ュ厖 `searchShare.test.ts`锛岄攣瀹氱敤鎴风鍦ㄦ棤绫诲瀷绛涢€夋椂涓嶄細鍙戦€佺┖ `types=` 鍙傛暟銆?- 鏇存柊 `docs/DEVELOPMENT.md`銆乣README.md`銆佽矾绾?鐗堟湰鏂囨。鍜屾墽琛岃褰曪紝鏄庣‘ `source` 琛ㄧず鏉ユ簮鍩熻€屼笉鏄簳灞傚瓨鍌ㄥ紩鎿庛€?### 楠岃瘉缁撴灉
-- `go test ./internal/modules/search/service` 閫氳繃銆?- `go test ./internal/modules/search/handler` 閫氳繃銆?- `go test ./internal/modules/search/...` 閫氳繃銆?- `npm --workspace frontend-user run test -- src/api/searchShare.test.ts` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃銆?- `npm run ci` 閫氳繃銆?### 鍚庣画褰卞搷
-- 缁熶竴鎼滅储鐜板湪宸茬粡浠庘€滄湁鎺ュ彛鈥濊繘鍏モ€滃绾︾ǔ瀹氣€濋樁娈碉紝鍚庣画宸ヤ綔鍙互鏇磋仛鐒﹀湪缁撴灉璐ㄩ噺銆佹帓搴忚鍒欍€佹潈闄愯繃婊ゅ拰鐢ㄦ埛绔氦浜掑洖褰掞紝鑰屼笉鏄户缁慨璇锋眰杈圭晫婕傜Щ銆?- 涓嬩竴浼樺厛绾у簲鍒囨崲鍒?`WB-011`锛岀户缁ˉ璧勬枡銆佺瑪璁般€佸浘璋便€佸笘瀛愬洓绫荤粨鏋滅殑鑱氬悎璐ㄩ噺涓庢憳瑕?鎺掑簭瑙勫垯銆?
-## 2026-07-01 01:45:11 +08:00 | v1.1.0-alpha.62 | 瀹屾垚 WB-004 鐗堟湰涓庨噷绋嬬鏂囨。瀵归綈
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-004`锛屾妸澶栧眰鐗堟湰鏂囨。銆佸彂甯冩竻鍗曞拰鎵ц鏂囨。涓庡凡缁忓畬鎴愮殑 `WB-002`銆乣WB-003` 宸ョ▼鍩虹嚎閲嶆柊瀵归綈銆?- 涓嶆墿鏁ｅ埌鏂板姛鑳藉紑鍙戯紝鍙敹鍙?README銆丷OADMAP銆乂ERSION_PLAN銆丆HANGELOG銆乺elease checklist 涓庢墽琛岃褰曘€?### 瀹屾垚缁撴灉
-- 鏇存柊 `README.md`锛岃ˉ璁?`WB-002` 鐨勯厤缃畨鍏ㄦ敹鍙ｃ€乣WB-003` 鐨勬渶灏?CI 璐ㄩ噺闂ㄧ銆佹樉寮?`MYSQL_DSN` / `JWT_SECRET` 瑕佹眰锛屼互鍙?Playwright 榛樿 preview 绔彛 `44173` / `44174`銆?- 鏇存柊 `docs/planning/ROADMAP.md` 涓?`docs/planning/VERSION_PLAN.md`锛屾妸閰嶇疆瀹夊叏銆丟o 鏍煎紡闂ㄧ銆侀厤缃畨鍏ㄥ洖褰掓鏌ュ拰褰撳墠瀹屾暣楠岃瘉鍩虹嚎鍐欏洖閲岀▼纰戞枃妗ｃ€?- 鏇存柊 `CHANGELOG.md` 涓?`docs/planning/versions/v1.0.0-release.md`锛屽悓姝?release gate銆佺幆澧冨彉閲忚姹傚拰 Playwright 绔彛绾﹀畾锛岄伩鍏嶅彂甯冩枃妗ｇ户缁粸鍚庝簬浠ｇ爜銆?- 鏇存柊 `docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屽皢 `WB-004` 鏍囪涓哄畬鎴愶紝骞舵妸涓嬩竴浼樺厛绾ч噸鏂版敹鍙ｅ埌 `WB-010` 缁熶竴鎼滅储濂戠害銆?### 楠岃瘉缁撴灉
-- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃銆?- `npm run ci` 閫氳繃锛岀‘璁ゆ枃妗ｆ敹鍙ｅ悗褰撳墠榛樿楠岃瘉閾捐矾浠嶄繚鎸佸叏缁裤€?### 鍚庣画褰卞搷
-- 鐜板湪澶栧眰璇存槑銆佸彂甯冩竻鍗曞拰鎵ц闈㈤兘宸茬粡涓庣湡瀹炲伐绋嬪熀绾垮悓姝ワ紝鍚庣画鎺ㄨ繘涓嶄細鍐嶈鈥滈厤缃畨鍏ㄦ湭鏀跺彛鈥濃€淐I 闂ㄧ鏈ˉ榻愨€濊繖绫昏繃鏈熸枃妗ｈ瀵笺€?- 涓嬩竴浼樺厛绾у簲鍒囨崲鍒?`WB-010`锛屽厛鍥哄畾缁熶竴鎼滅储濂戠害锛屽啀缁х画鍋氭潈闄愪笌鐢ㄦ埛绔洖褰掕ˉ寮恒€?
-## 2026-07-01 01:37:48 +08:00 | v1.1.0-alpha.61 | 瀹屾垚 WB-003 鏈€灏?CI 璐ㄩ噺闂ㄧ琛ュ己
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `WB-003`锛屽湪宸叉湁 GitHub Actions 鐨勫熀纭€涓婅ˉ鏈€灏忚川閲忛棬绂侊紝鑰屼笉鏄噸鍐欐暣鏉℃祦姘寸嚎銆?- 浼樺厛閿佷綇鏈€瀹规槗鍥為€€鐨勪袱绫婚棶棰橈細Go 鏈牸寮忓寲鏂囦欢鍜屽凡绂佺敤鐨勫嵄闄╅厤缃粯璁ゅ€笺€?### 瀹屾垚缁撴灉
-- 鏂板 `scripts/check-go-format.mjs`锛屾樉寮忔鏌?`backend/` 涓嬪叏閮?Go 鏂囦欢鏄惁閫氳繃 `gofmt`銆?- 鏂板 `scripts/check-config-safety.mjs`锛屾鏌?`backend/internal/config/config.go`銆乣.env.example` 鍜?`docs/DEVELOPMENT.md` 涓槸鍚﹀洖閫€鍒板凡绂佺敤鐨勫嵄闄╅粯璁ゅ€笺€?- 鏇存柊鏍?`package.json`锛屾柊澧?`verify:backend:format`銆乣verify:config-safety`锛屽苟鎶婂畠浠撼鍏?`npm run lint`銆?- 鏇存柊 `.github/workflows/ci.yml`锛屽湪 typecheck 鍓嶆樉寮忓鍔?Go 鏍煎紡鍜岄厤缃畨鍏ㄦ鏌ユ楠ゃ€?- 瀵?`backend/` 鍏ㄩ噺 Go 鏂囦欢鎵ц `gofmt -w`锛屼慨澶嶄粨搴撲腑鍘熸湰灏卞瓨鍦ㄧ殑澶ф壒鏈牸寮忓寲鏂囦欢锛屼娇鏂伴棬绂佸彲瀹為檯閫氳繃銆?- 鏇存柊 `playwright.config.ts` 涓?`e2e/v1-admin-governance.spec.ts`锛屾妸 E2E preview 榛樿绔彛浠?4173/4174 鏀跺彛涓烘洿绋崇殑 44173/44174锛屽苟鏀寔鐜鍙橀噺瑕嗙洊锛岃В鍐冲綋鍓?Windows 鐜涓嬬殑 preview 缁戝畾澶辫触銆?- 鏇存柊 `docs/DEVELOPMENT.md`锛屽悓姝ユ柊鐨勯棬绂佽剼鏈拰 Playwright 榛樿绔彛銆?### 楠岃瘉缁撴灉
-- `npm run verify:backend:format` 閫氳繃锛岀‘璁?138 涓?Go 鏂囦欢鍧囧凡婊¤冻 `gofmt`銆?- `npm run verify:config-safety` 閫氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥閫氳繃銆?- `npm run ci` 閫氳繃锛屽畬鏁磋鐩?lint銆乥uild銆乂itest銆乬raph-core銆丳laywright銆佸悗绔祴璇曚笌鏂囨。鏍￠獙銆?### 鍚庣画褰卞搷
-- 鐜板湪 `gofmt` 涓庨厤缃畨鍏ㄥ凡缁忎粠鈥滅害瀹氣€濆彉鎴愪簡浼氶樆鏂?CI 鐨勬樉寮忛棬绂併€?- 涓嬩竴浼樺厛绾у簲杞埌 `WB-004`锛屾妸 README 鍜岄噷绋嬬鏂囨。涓庢湰杞凡缁忚惤鍦扮殑宸ョ▼鍩虹嚎缁х画瀵归綈銆?
-## 2026-07-01 01:30:47 +08:00 | v1.1.0-alpha.60 | 瀹屾垚 WB-002 鐜鍙橀噺涓庡畨鍏ㄩ粯璁ゅ€兼敹鍙?### 浠诲姟鍐呭
-- 娌跨潃 `CODEX_MASTER_PROMPT.md` 缁х画鎵ц `WB-002`锛屾敹鍙ｇ幆澧冨彉閲忓拰鍗遍櫓榛樿鍊硷紝涓嶆墿鏁ｅ埌涓氬姟鍔熻兘寮€鍙戙€?- 鐩爣鏄Щ闄ゅ彲鐩存帴杩愯鐨勬晱鎰?fallback锛屾槑纭紑鍙?娴嬭瘯/鐢熶骇鐨勬渶灏忛厤缃竟鐣岋紝骞惰鍚姩澶辫触淇℃伅鍙銆?### 瀹屾垚缁撴灉
-- 鏇存柊 `backend/internal/config/config.go`锛岀Щ闄?`JWT_SECRET` 涓?`MYSQL_DSN` 鐨勫嵄闄?fallback锛屽苟鏂板 `ValidateMySQLConfig` 涓?`ValidateServerConfig`銆?- 鏂板 `backend/internal/config/config_test.go`锛岃鐩栧畨鍏ㄧ┖ fallback銆丮ySQL 蹇呭～鏍￠獙銆佸崰浣?JWT secret 鎷掔粷銆佺鐞嗗憳寮曞閰嶇疆瀹屾暣鎬х瓑鍦烘櫙銆?- 鏇存柊 `backend/internal/app/server.go`锛屽湪鏈嶅姟鍚姩鍓嶆樉寮忔牎楠?`MYSQL_DSN`銆乣JWT_SECRET` 鍜岀鐞嗗憳寮曞閰嶇疆銆?- 鏇存柊 `backend/cmd/migrate/main.go` 涓?`backend/cmd/backfill-note-documents/main.go`锛岃鏁版嵁搴撶浉鍏冲懡浠ゅ湪缂哄け鍏抽敭鐜鍙橀噺鏃剁洿鎺ュけ璐ワ紝骞惰緭鍑烘槑纭敊璇€?- 鏇存柊 `.env.example`锛屼繚鐣欏崰浣嶅瀷 `JWT_SECRET` 鎻愮ず锛岀Щ闄?root 寮卞彛浠?DSN 鍜岄粯璁ゅ惎鐢ㄧ殑绠＄悊鍛樺紩瀵艰处鍙枫€?- 鏇存柊 `docs/DEVELOPMENT.md`锛屾妸鍚庣鍚姩绀轰緥鏀逛负涓撶敤鏁版嵁搴撹处鍙蜂笌鏄惧紡鐜鍙橀噺鏂瑰紡锛屽苟琛ュ厖寮€鍙戙€佹祴璇曘€佺敓浜х幆澧冨垎灞傚缓璁€?### 楠岃瘉缁撴灉
-- `gofmt -w backend/internal/config/config.go backend/internal/config/config_test.go backend/internal/app/server.go backend/cmd/migrate/main.go backend/cmd/backfill-note-documents/main.go` 閫氳繃銆?- `cd backend && go test ./internal/config` 閫氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `npm run typecheck` 閫氳繃銆?- `cd backend && $env:JWT_SECRET=''; $env:MYSQL_DSN=''; go run ./cmd/server` 鎸夐鏈熷け璐ワ紝鎶ラ敊 `MYSQL_DSN is required; JWT_SECRET is required`銆?- `cd backend && $env:MYSQL_DSN=''; go run ./cmd/migrate` 鎸夐鏈熷け璐ワ紝鎶ラ敊 `MYSQL_DSN is required`銆?### 鍚庣画褰卞搷
-- 鏈湴鐜濡傛灉姝ゅ墠渚濊禆 `config.Load()` 鐨勯殣寮?fallback锛屽皢闇€瑕佹樉寮忚缃?`MYSQL_DSN` 鍜?`JWT_SECRET` 鍚庡啀鍚姩銆?- 褰撳墠涓嬩竴浼樺厛绾у簲杞悜 `WB-003`锛屽湪鐜版湁 CI 鍩虹涓婃樉寮忚ˉ `gofmt`銆乻ecret scan 鍜屾洿娓呮櫚鐨勮川閲忛棬绂併€?
-## 2026-07-01 01:24:51 +08:00 | v1.1.0-alpha.59 | 瀹屾垚 WB-001 鍩虹嚎鏍搁獙涓庢墽琛屾枃妗ｆ敹鍙?### 浠诲姟鍐呭
-- 鎸?`CODEX_MASTER_PROMPT.md` 鎵ц `WB-001`锛屽厛鏍搁獙褰撳墠鍒嗘敮鐪熷疄鍩虹嚎锛屽啀鍐冲畾鍚庣画宸ヤ綔鍖咃紝涓嶇洿鎺ヨ繘鍏ュぇ鑼冨洿鍔熻兘寮€鍙戙€?- 鍙厑璁镐慨鏀规墽琛屾枃妗ｅ拰 `.env.example` 鑽夋锛屼笉鏀瑰彉杩愯鏃朵笟鍔￠€昏緫銆?### 瀹屾垚缁撴灉
-- 鏍搁獙鍑哄綋鍓嶄粨搴撳凡缁忕湡瀹炲叿澶?`search`銆乣share`銆佸悗鍙版不鐞?API銆丟itHub Actions CI銆乣@studymate/graph-core` 娴嬭瘯鍖咃紝浠ュ強宸叉媶钖勭殑 `frontend-user/src/app/App.tsx` 鍜?`frontend-admin/src/App.vue`銆?- 鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`锛岀籂姝ｂ€滄悳绱㈠悗绔己澶扁€濃€淐I 缂哄け鈥濃€滃墠绔牴鏂囦欢杩囧ぇ鈥濈瓑杩囨湡鍒ゆ柇銆?- 鏂板 `docs/engineering/WB-001_BASELINE_AUDIT.md`锛屽浐瀹?2026-07-01 鐨勭湡瀹炴瀯寤?娴嬭瘯鐭╅樀銆侀厤缃闄┿€佹枃妗ｆ紓绉诲拰鍚庣画鏂囦欢绾ц鍒掋€?- 鏇存柊 `docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屽皢鍚庣画閲嶇偣璋冩暣涓衡€滆ˉ寮虹幇鏈夎兘鍔涒€濊€屼笉鏄€滀粠闆跺垱寤鸿兘鍔涒€濓紝骞舵妸 `WB-001` 鏍囪涓哄凡鏍搁獙瀹屾垚銆?- 鏇存柊 `.env.example`锛岀Щ闄ゅ彲鐩存帴浣跨敤鐨?root 寮卞彛浠ょず渚嬶紝琛ュ叏 `MONGO_TIMEOUT`銆乣REDIS_TIMEOUT`銆乣NOTE_READ_MODEL` 绛夊綋鍓嶄唬鐮佸凡璇诲彇鐨勭幆澧冨彉閲忋€?### 楠岃瘉缁撴灉
-- `npm run verify:docs` 閫氳繃銆?- `npm run typecheck` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓敤渚嬮€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:user` 閫氳繃锛?1 涓枃浠躲€?42 涓敤渚嬮€氳繃銆?- `npm run test:admin` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run build:admin` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍚庣画 Codex 杩涘叆浠撳簱鏃讹紝灏嗕笉鍐嶈鈥滄悳绱㈡湭瀹炵幇鈥濃€淐I 鏈缓绔嬧€濃€淎pp 鏍规枃浠惰繃澶р€濈瓑杩囨湡鍒ゆ柇璇銆?- 褰撳墠鏈€搴斾紭鍏堟帹杩涚殑鏄?`WB-002` 鐜鍙橀噺涓庡畨鍏ㄩ粯璁ゅ€兼敹鍙ｏ紝浠ュ強 `WB-003` 鍦ㄧ幇鏈?CI 鍩虹涓婄殑璐ㄩ噺闂ㄧ琛ュ己銆?- `backend/internal/config/config.go` 涓殑鍗遍櫓 fallback 浠嶆湭绉婚櫎锛屼笅涓€宸ヤ綔鍖呴渶瑕佷紭鍏堝鐞嗐€?
-## 2026-07-01 01:12:37 +08:00 | v1.1.0-alpha.58 | 宸ョ▼鍥捐妭鐐规敮鎸佺粨鏋勫寲妯″紡閫夋嫨
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鑷敱/UML/ERD/C4/娴佺▼鍥炬ā寮忚兘鍔涳紝鎶婂伐绋嬪浘鑺傜偣鐨?`diagramKind` 浠庤嚜鐢辨枃鏈緭鍏ュ崌绾т负缁撴瀯鍖栭€夋嫨銆?- 淇濇寔 `metadata.content.diagramKind` 浠嶄负瀛楃涓诧紝涓嶆敼 Graph API銆乣.smtg` 鍚堢害鎴栧悗绔ā鍨嬨€?### 瀹屾垚缁撴灉
-- 鏂板 `GraphNodeMetadataEditorField` descriptor 绫诲瀷鍜?`graphDiagramModeOptions`锛屽浐瀹氭敮鎸?`free/uml/erd/c4/flowchart` 浜旂妯″紡銆?- 鏇存柊 `getGraphNodeMetadataEditorFields`锛屼负 `diagramKind` 杩斿洖鍙€夐」锛屽叾浠?URL銆佸浘鐗囥€丳DF銆佸涔犺妭鐐瑰瓧娈典繚鎸佸師杈撳叆妗嗚涓恒€?- 鏇存柊 `GraphWorkspaceSelectionPanel`锛屽甫 `options` 鐨?metadata 瀛楁娓叉煋涓洪敭鐩樺彲杈剧殑 `<select>`锛屽苟缁х画閫氳繃鐜版湁鍥炶皟鍐欏洖涓嶅彲鍙樻枃妗ｃ€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphNodeMetadata` 鍏堢孩锛屽け璐ュ師鍥犱负 `diagramKind` descriptor 缂哄皯浜旂妯″紡閫夐」銆?- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel` 鍏堢孩锛屽け璐ュ師鍥犱负宸ョ▼鍥剧被鍨嬩粛娓叉煋涓烘櫘閫?input銆?- `npm --workspace frontend-user run test -- graphNodeMetadata` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphNodeMetadata GraphWorkspaceSelectionPanel GraphWorkspacePage graphTemplateApplication graphNodeTypes` 閫氳繃锛? 涓枃浠躲€?6 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛屼粎鏈夋棦鏈?CRLF 鎻愮ず銆?### 鍚庣画褰卞搷
-- 宸ョ▼鍥捐妭鐐圭殑妯″紡 metadata 鐜板湪鍙ǔ瀹氱敤浜庢ā鏉裤€佸鍏ヨ崏绋垮拰鍚庣画妯″紡涓撳睘鏍￠獙锛岄伩鍏嶅ぇ灏忓啓鎴栦换鎰忔枃鏈鑷磋鍒欐紓绉汇€?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆丆RDT銆乄ebGL/Pixi銆乀auri 妗岄潰绔€丳roject Graph `.prg` 鍏煎鎴栨彃浠跺競鍦恒€?
-## 2026-07-01 01:06:53 +08:00 | v1.1.0-alpha.57 | 宸ョ▼鍥炬ā鏉胯浆鎹负 Mermaid 瀵煎叆鑽夌
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘 v0.8 妯℃澘涓績涓庡鍏ヨ崏绋胯兘鍔涳紝璁?`diagram` 妯″紡妯℃澘濂楃敤鍚庤繘鍏?Mermaid 鑽夌锛岃€屼笉鏄拰瀛︿範妯℃澘涓€鏍峰浐瀹氱敓鎴?Markdown 澶х翰銆?- 涓嶆敼鍙?`DiagramTemplatePayload`銆佸鍏?API 鎴?`.smtg` 鍚堢害锛屽彧鎷嗗嚭鍓嶇绾嚱鏁板苟璋冩暣 controller 缂栨帓銆?### 瀹屾垚缁撴灉
-- 鏂板 `buildGraphTemplateImportDraft`锛屽涔犳ā鏉跨户缁緭鍑?Markdown 鏍囬澶х翰锛屽伐绋嬪浘妯℃澘鎸?`sampleLines` 绋冲畾鐢熸垚 `flowchart TD` Mermaid 杩炵嚎鑽夌銆?- 鏇存柊 `useGraphWorkspaceController.tsx` 鐨?`applyTemplate`锛屽彧娑堣垂绾嚱鏁拌繑鍥炵殑 `importMode/importSource/status`锛屽噺灏?controller 鍐呰仈鏍煎紡缁勮銆?- 琛ュ厖绾嚱鏁板拰 `GraphWorkspacePage` 娴嬭瘯锛岃鐩栧涔犳ā鏉?Markdown 鍥炲綊銆乁ML 妯℃澘 Mermaid 鑽夌銆佸鍏ユā寮忓垏鎹㈠拰鍙鐘舵€佹彁绀恒€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphTemplateApplication` 鍏堢孩锛屽け璐ュ師鍥犱负绾嚱鏁版ā鍧楀皻涓嶅瓨鍦ㄣ€?- `npm --workspace frontend-user run test -- GraphWorkspacePage` 鍏堢孩锛屽け璐ュ師鍥犱负宸ョ▼鍥炬ā鏉夸粛璧?Markdown 骞舵樉绀烘棫鐘舵€併€?- `npm --workspace frontend-user run test -- graphTemplateApplication` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- GraphWorkspacePage` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphTemplateApplication GraphWorkspacePage GraphWorkspaceShell GraphWorkspaceImportPanel useGraphImportExport` 閫氳繃锛? 涓枃浠躲€?1 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛屼粎鏈夋棦鏈?CRLF 鎻愮ず銆?### 鍚庣画褰卞搷
-- 宸ョ▼鍥炬ā鏉跨幇鍦ㄥ凡浠庘€滃睍绀哄崱鈥濊繘鍏ョ幇鏈?Mermaid 瀵煎叆鑽夌閾捐矾锛屽悗缁彲缁х画琛?SQL/OpenAPI 鑽夌瑙ｆ瀽鍜屾ā寮忎笓灞炴牎楠屻€?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆丆RDT銆乄ebGL/Pixi銆乀auri 妗岄潰绔€丳roject Graph `.prg` 鍏煎鎴栨彃浠跺競鍦恒€?
-## 2026-06-30 20:33:01 +08:00 | v1.1.0-alpha.56 | 澧炲己宸ョ▼鍥炬ā鏉夸腑蹇冧俊鎭?### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘 v0.8 宸ョ▼鍥捐兘鍔涳紝鍦ㄤ笉鏂板绔偣銆佷笉寮曞叆鏂板簱銆佷笉瀹炵幇 SQL/OpenAPI 瀵煎叆鐨勫墠鎻愪笅锛岃宸叉湁妯℃澘涓績鍏峰涓撲笟宸ョ▼鍥炬ā鏉垮拰鏇村彲璇荤殑棰勮淇℃伅銆?- 淇濇寔 `DiagramTemplatePayload` 鍚堢害涓嶅彉锛岀户缁€氳繃 `/diagram/templates` 杩斿洖妯℃澘鍒楄〃銆?### 瀹屾垚缁撴灉
-- 鍦?`ListDiagramTemplates` 涓柊澧?UML 绫诲浘銆丒RD 鏁版嵁妯″瀷銆丆4 涓婁笅鏂囧浘鍜屾祦绋嬪浘 4 涓伐绋嬪浘妯℃澘锛宍mode` 浣跨敤 `diagram`锛宍category` 鍒嗗埆涓?`uml/erd/c4/flowchart`銆?- 鏇存柊 `GraphWorkspaceSourceRail` 妯℃澘鍗＄墖锛屽睍绀衡€滃涔犻棴鐜?宸ョ▼鍥?+ category鈥濈殑妯″紡鏍囩锛屽苟鏄剧ず鍓嶄笁鏉?`sampleLines` 楠ㄦ灦棰勮銆?- 琛ュ厖鍚庣 service 娴嬭瘯鍜屽墠绔?SourceRail 娴嬭瘯锛岃鐩栦笓涓氭ā鏉垮瓨鍦ㄣ€佸垎绫绘纭€佹牱渚嬬嚎涓嶅皯浜?4 鏉★紝浠ュ強鍓嶇妯″紡/棰勮灞曠ず鍜岀偣鍑诲鐢ㄥ洖璋冦€?### 楠岃瘉缁撴灉
-- `go test ./internal/modules/graph/service` 鍏堢孩锛屽け璐ュ師鍥犱负宸ョ▼鍥炬ā鏉垮垪琛ㄤ负绌恒€?- `npm --workspace frontend-user run test -- GraphWorkspaceShell` 鍏堢孩锛屽け璐ュ師鍥犱负妯℃澘鍗℃湭鏄剧ず鈥滃伐绋嬪浘 / uml鈥濆拰鏍蜂緥楠ㄦ灦棰勮銆?- `go test ./internal/modules/graph/service` 閫氳繃銆?- `npm --workspace frontend-user run test -- GraphWorkspaceShell` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `go test ./internal/modules/graph/...` 閫氳繃銆?- `npm --workspace frontend-user run test -- GraphWorkspaceShell GraphWorkspacePage graphNodeTypes graphNodeMetadata` 閫氳繃锛? 涓枃浠躲€?0 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛屼粎鏈夋棦鏈?CRLF 鎻愮ず銆?### 鍚庣画褰卞搷
-- 妯℃澘涓績鐜板湪鑳藉悓鏃舵湇鍔″涔犻棴鐜拰宸ョ▼鍥捐崏绋匡紝涓哄悗缁ā鏉垮簲鐢ㄧ敓鎴愬伐绋嬪浘鑺傜偣銆佸浘褰㈠簱闈㈡澘鍜?SQL/OpenAPI 瀵煎叆鑽夌鎵撳熀纭€銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆丆RDT銆乄ebGL/Pixi銆乀auri 妗岄潰绔€丳roject Graph `.prg` 鍏煎鎴栨彃浠跺競鍦恒€?
-## 2026-06-30 20:28:31 +08:00 | v1.1.0-alpha.55 | 鏀寔宸ョ▼鍥捐妭鐐瑰熀纭€鍒涘缓绫诲瀷
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘 P1/P2 浜ょ晫鐨勫璞℃ā鍨嬫垚鐔熷害锛岃宸ョ▼鍥捐妭鐐逛笉鍙瓨鍦ㄤ簬瀵煎叆鎬?metadata 缂栬緫涓紝涔熻兘閫氳繃鐜版湁鍥捐氨宸ュ叿鏍忓垱寤恒€?- 涓嶅紩鍏ユā鏉夸腑蹇冦€佸浘褰㈠簱闈㈡澘銆丼QL/OpenAPI 瀵煎叆鎴栨柊鍚庣绔偣锛屽彧鎵╁睍褰撳墠鍓嶇鑺傜偣鍒涘缓绫诲瀷鍜?draft 閰嶇疆銆?### 瀹屾垚缁撴灉
-- 鎵╁睍 `GraphNodeCreationType`锛屾柊澧?`diagram`銆?- 鏇存柊 `graphNodeTypeOptions`锛屽湪鏂板缓鑺傜偣涓嬫媺妗嗕腑鍔犲叆鈥滃伐绋嬪浘鈥濓紝榛樿鏍囬涓衡€滃伐绋嬪浘鑺傜偣鈥濓紝灏哄涓?280 脳 160銆?- 琛ュ厖 `graphNodeTypes.test.ts` 鍜?`GraphWorkspaceShell.test.tsx`锛岃鐩栧伐绋嬪浘绫诲瀷鏆撮湶銆乨raft 鏋勫缓鍜屽伐鍏锋爮涓嬫媺鍥炶皟銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphNodeTypes GraphWorkspaceShell` 鍏堢孩锛屽け璐ュ師鍥犱负宸ョ▼鍥鹃€夐」缂哄け锛宍diagram` draft 鍥為€€涓烘蹇佃妭鐐广€?- `npm --workspace frontend-user run test -- graphNodeTypes GraphWorkspaceShell` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphNodeTypes graphNodeMetadata GraphWorkspaceShell GraphWorkspaceSelectionPanel GraphWorkspacePage graphWorkspaceMutations` 閫氳繃锛? 涓枃浠躲€?1 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛屼粎鏈夋棦鏈?CRLF 鎻愮ず銆?### 鍚庣画褰卞搷
-- 宸ョ▼鍥捐妭鐐瑰凡杩涘叆鐜版湁鐢诲竷鍒涘缓鍏ュ彛锛屽苟鍙鐢ㄥ墠涓€闃舵鐨?`diagramKind/diagramShape/diagramSourceId` metadata 缂栬緫锛涘悗缁彲浠ョ户缁帹杩涙ā鏉夸腑蹇冦€佸浘褰㈠簱闈㈡澘鍜屽鍏ヨ崏绋挎牎楠屻€?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆丆RDT銆乄ebGL/Pixi銆乀auri 妗岄潰绔€丳roject Graph `.prg` 鍏煎鎴栨彃浠跺競鍦恒€?
-## 2026-06-30 20:25:23 +08:00 | v1.1.0-alpha.54 | 淇濈暀鍥捐氨鍗＄墖鍐欏叆鐨勭粨鏋勫寲鏉ユ簮
-### 浠诲姟鍐呭
-- 缁х画瀹屽杽鍥捐氨鑺傜偣鐢熸垚鍗＄墖骞跺弬涓庡涔犵殑瀛︿範闂幆锛岃纭鍐欏叆澶嶄範鍗＄墖鏃讹紝鍗充娇鍥捐氨鑺傜偣娌℃湁鏄惧紡 `source`锛屼篃鑳戒粠缁撴瀯鍖?metadata 淇濈暀鏉ユ簮銆?- 涓嶆敼鍙?`CommitGraphCardDraftsRequest`銆乧ard API 鎴?`.smtg` 鍚堢害锛屽彧澧炲己鍚庣 create card request 鐨勬潵婧愭帹鏂€?### 瀹屾垚缁撴灉
-- 鏂板 `inferCardSourceFromMetadata`锛屽湪 `BuildCardCreateRequests` 涓繚鐣欐樉寮?`node.Source` 浼樺厛绾э紱褰撴樉寮忔潵婧愮己澶辨椂锛屾寜 `noteId`銆乣cardId`銆乣materialId`銆乣aiDraftId`銆乣aiTaskId`銆乣diagramSourceId` 鎺ㄦ柇 `SourceType/SourceID`銆?- 琛ュ厖 service helper 娴嬭瘯锛岃鐩栬嚜鐢辨暣鐞嗙殑 `rich-note` 鑺傜偣鍙湁 `metadata.content.noteId` 鏃讹紝纭鍐欏叆鍗＄墖浠嶇敓鎴?`note/note-1` 鏉ユ簮銆?- 淇濇寔宸叉湁缂哄け鑺傜偣銆佺┖鐧借崏绋垮拰鏄惧紡鏉ユ簮淇濈暀琛屼负涓嶅彉銆?### 楠岃瘉缁撴灉
-- `go test ./internal/modules/graph/service` 鍏堢孩锛屽け璐ュ師鍥犱负 metadata fallback 鏈疄鐜帮紝create request 鐨?`SourceType/SourceID` 涓虹┖銆?- `go test ./internal/modules/graph/service` 閫氳繃銆?- `go test ./internal/modules/graph/...` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛屼粎鏈夋棦鏈?CRLF 鎻愮ず銆?### 鍚庣画褰卞搷
-- 鍥捐氨鑺傜偣鐜板湪浠庘€滅敓鎴愬崱鐗囪崏绋库€濆埌鈥滅‘璁ゅ啓鍏ュ涔犲崱鐗団€濋兘鑳芥惡甯︽潵婧愮嚎绱紝鍚庣画鍙互缁х画鍋?UI 灞傚涔犲啓鍏ユ垚鍔熷悗鐨勫浘璋卞弽閾炬彁绀烘垨瀵煎叆鑽夌鏍￠獙灞曠ず銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆丆RDT銆乄ebGL/Pixi銆乀auri 妗岄潰绔€丳roject Graph `.prg` 鍏煎鎴栨彃浠跺競鍦恒€?
-## 2026-06-30 20:22:18 +08:00 | v1.1.0-alpha.53 | 璁╁浘璋卞崱鐗囪崏绋挎惡甯︾粨鏋勫寲鏉ユ簮绾跨储
-### 浠诲姟鍐呭
-- 缁х画鎵撻€氭潵婧愬弽閾俱€佺粨鏋勫寲 metadata 涓庡崱鐗囩敓鎴?澶嶄範纭娴侊紝璁╁浘璋辫妭鐐圭敓鎴愬崱鐗囪崏绋挎椂鑳藉甫鍑鸿祫鏂欍€佺瑪璁般€佸崱鐗囥€丄I 鑽夌鍜屽伐绋嬪浘瀵煎叆绛変笂涓嬫枃銆?- 涓嶆敼鍙?`/graphs/:id/ai/generate-cards` 璇锋眰鍚堢害銆丟raph API 鎴?`.smtg` 鏂囦欢鏍煎紡锛屽彧澧炲己鍚庣鑽夌瑙ｉ噴鏂囨銆?### 瀹屾垚缁撴灉
-- 鏂板 `BuildCardDraftExplanation`锛屽湪淇濈暀鍘熸湁鍥哄畾璇存槑鐨勫熀纭€涓婏紝浠?`metadata.content` 鎸夌ǔ瀹氶『搴忔彁鍙?`materialId`銆乣materialUrl`銆乣noteId`銆乣cardId`銆乣deckId`銆乣aiDraftId`銆乣aiTaskId`銆乣diagramKind`銆乣diagramShape` 鍜?`diagramSourceId`銆?- 鏇存柊 `BuildCardDrafts`锛岀敓鎴?`GraphCardDraftPayload.explanation` 鏃惰拷鍔犫€滄潵婧愮嚎绱⑩€濓紝甯姪鐢ㄦ埛鍦ㄧ‘璁ゅ啓鍏ュ崱缁勫墠鐞嗚В鍗＄墖鑽夌鏉ヨ嚜鍝瀛︿範闂幆涓婁笅鏂囥€?- 琛ュ厖鍚庣 service helper 娴嬭瘯锛岄攣瀹氬崱鐗囪妭鐐圭殑 `cardId/deckId/aiDraftId` 浼氳繘鍏ヨ崏绋胯В閲婏紝閬垮厤缁撴瀯鍖?metadata 鍙仠鐣欏湪鍓嶇缂栬緫闈㈡澘銆?### 楠岃瘉缁撴灉
-- `go test ./internal/modules/graph/service` 鍏堢孩锛屽け璐ュ師鍥犱负鑽夌 explanation 浠嶆槸鍥哄畾鏂囨锛屾湭鍖呭惈鈥滃崱鐗?ID card-1鈥濈瓑缁撴瀯鍖栫嚎绱€?- `go test ./internal/modules/graph/service` 閫氳繃銆?- `go test ./internal/modules/graph/...` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛屼粎鏈夋棦鏈?CRLF 鎻愮ず銆?### 鍚庣画褰卞搷
-- 鍥捐氨鑺傜偣鐨勭粨鏋勫寲 metadata 宸茶繘鍏ュ崱鐗囪崏绋跨‘璁ゆ祦锛屽悗缁彲浠ョ户缁妸澶嶄範鍐欏叆缁撴灉鍙嶉摼鍥炲浘璋憋紝鎴栦负瀵煎叆鑽夌鏍￠獙闈㈡澘灞曠ず杩欎簺鏉ユ簮绾跨储銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆丆RDT銆乄ebGL/Pixi銆乀auri 妗岄潰绔€丳roject Graph `.prg` 鍏煎鎴栨彃浠跺競鍦恒€?
-## 2026-06-30 20:16:44 +08:00 | v1.1.0-alpha.52 | 鎵╁睍鍥捐氨瀛︿範鑺傜偣缁撴瀯鍖?metadata 缂栬緫
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鑺傜偣瀵硅薄妯″瀷鍜岀紪杈戦潰鏉挎垚鐔熷害锛屽湪涓嶆敼鍙?Graph API 鍜?`.smtg` 鍚堢害鐨勫墠鎻愪笅锛岃璧勬枡銆佺瑪璁般€佸崱鐗囥€丄I 鑽夌/浠诲姟鍜屽鍏ユ€佸伐绋嬪浘鑺傜偣鍏峰缁撴瀯鍖?metadata 缂栬緫鍏ュ彛銆?- 淇濇寔鐜版湁 URL銆佸浘鐗囥€佸叕寮忋€丳DF 閿氱偣瀛楁琛屼负涓嶅彉锛屽苟缁х画閫氳繃涓嶅彲鍙樻洿鏂板啓鍏?`metadata.content`銆?### 瀹屾垚缁撴灉
-- 鎵╁睍 `GraphNodeMetadataField`锛屾柊澧?`materialId`銆乣materialUrl`銆乣noteId`銆乣cardId`銆乣deckId`銆乣aiDraftId`銆乣aiTaskId`銆乣diagramKind`銆乣diagramShape` 鍜?`diagramSourceId`銆?- 鏇存柊 `getGraphNodeMetadataEditorFields`锛屼负 `material`銆乣rich-note`銆乣card`銆乣ai` 鍜屽鍏ユ€?`diagram` 鑺傜偣杩斿洖绫诲瀷鍖栫紪杈戝瓧娈碉紱宸ョ▼鍥惧瓧娈靛彧鏀寔鑽夌/瀵煎叆鎬佺紪杈戯紝涓嶆柊澧炲垱寤烘祦绋嬫垨鍚庣绔偣銆?- 琛ュ己 `GraphWorkspaceSelectionPanel` 缁勪欢娴嬭瘯锛岀‘璁ゅ崱鐗囪妭鐐逛細灞曠ず鈥滃崱鐗?ID / 鍗＄粍 ID鈥濈紪杈戞锛屽苟鎶婂彉鏇村鎵樼粰鐜版湁 `onNodeMetadataFieldChange`銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphNodeMetadata` 鍏堢孩锛屽け璐ュ師鍥犱负瀛︿範鑺傜偣鍜?`diagram` 鑺傜偣浠嶈繑鍥炵┖缂栬緫瀛楁銆?- `npm --workspace frontend-user run test -- graphNodeMetadata` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphNodeMetadata GraphWorkspaceSelectionPanel GraphWorkspacePage graphSourceBacklinks` 閫氳繃锛? 涓枃浠躲€?2 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛屼粎鏈夋棦鏈?CRLF 鎻愮ず銆?### 鍚庣画褰卞搷
-- 瀛︿範闂幆鑺傜偣鐜板湪鍙互鍦ㄩ€変腑闈㈡澘涓淮鎶ゆ潵婧?鍗＄粍/AI 鑽夌绛夌粨鏋勫寲瀛楁锛屽悗缁彲缁х画鎶婅繖浜?metadata 涓庡崱鐗囩敓鎴愩€佸涔犵‘璁ゅ拰瀵煎叆鑽夌鏍￠獙闈㈡澘鎵撻€氥€?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆丆RDT銆乄ebGL/Pixi銆乀auri 妗岄潰绔€丳roject Graph `.prg` 鍏煎鎴栨彃浠跺競鍦恒€?
-## 2026-06-30 20:12:21 +08:00 | v1.1.0-alpha.51 | 寮哄寲鍥捐氨鏉ユ簮鍙嶉摼瀛︿範闂幆鎻愮ず
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘 P0 绋冲畾娌荤悊锛屽畬鍠勬潵婧愬弽閾惧拰瀛︿範闂幆锛岃璧勬枡銆丳DF 鎵规敞銆佺瑪璁般€佸崱鐗囥€丄I 鑽夌/浠诲姟鑺傜偣涓嶄粎鑳借烦鍥炴潵婧愶紝涔熻兘瑙ｉ噴褰撳墠澶勪簬瀛︿範闂幆鐨勫摢涓€姝ャ€?- 涓嶆敼鍙?Graph API銆乣.smtg` 鍚堢害鎴栧崱鐗囩敓鎴愭帴鍙ｏ紝鍙寮哄墠绔潵婧愬弽閾炬ā鍨嬪拰閫変腑鑺傜偣闈㈡澘灞曠ず銆?### 瀹屾垚缁撴灉
-- 鎵╁睍 `buildGraphSourceBacklink`锛屼负璧勬枡銆佺瑪璁般€佸崱鐗囥€佹壒娉ㄣ€丳DF 閿氱偣銆丄I 鑽夌鍜?AI 浠诲姟杩斿洖 `learningStepLabel` 涓?`description`锛岃ˉ鍏呪€滆祫鏂欓槄璇?/ 绗旇娌夋穩 / 鍗＄墖澶嶄範 / 璧勬枡鎵规敞 / PDF 閿氱偣 / AI 鑽夌纭 / AI 浠诲姟杩借釜鈥濈瓑瀛︿範闃舵銆?- 鍏煎 `ai-draft`銆乣ai_draft`銆乣ai-task`銆乣ai_task` 绛夋潵婧愮被鍨嬪埆鍚嶏紝閬垮厤瀵煎叆鎴?AI payload 浣跨敤涓嶅悓鍛藉悕鏃朵涪澶卞弽閾俱€?- 鏇存柊 `GraphWorkspaceSelectionPanel` 鐨勫崟鑺傜偣鏉ユ簮鍗＄墖锛屽睍绀烘潵婧愮被鍨嬨€佹潵婧?ID銆佸涔犻樁娈靛拰涓嬩竴姝ヨ鏄庯紝骞朵繚鐣欏師鏈夎烦杞寜閽紱鐜版湁鈥滅敓鎴愬崱鐗囪崏绋?/ 纭鍐欏叆鍗＄粍鈥濅粛鐢卞揩鐓т笌鑽夌闈㈡澘鎵挎帴銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphSourceBacklinks GraphWorkspaceSelectionPanel` 鍏堢孩锛屽け璐ュ師鍥犱负缂哄皯瀛︿範闃舵/璇存槑瀛楁锛屼笖 `ai-draft` 鍒悕鏈瘑鍒€?- `npm --workspace frontend-user run test -- graphSourceBacklinks GraphWorkspaceSelectionPanel` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- GraphWorkspacePage GraphWorkspaceSourceSummary GraphWorkspaceRecoveryPanel graphSourceBacklinks GraphWorkspaceSelectionPanel` 閫氳繃锛? 涓枃浠躲€?0 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛屼粎鏈夋棦鏈?CRLF 鎻愮ず銆?### 鍚庣画褰卞搷
-- 閫変腑鑺傜偣闈㈡澘鐜板湪鑳芥妸鏉ユ簮璺宠浆鍜屽涔犻棴鐜覆璧锋潵锛屽悗缁彲浠ョ户缁墿灞曡妭鐐瑰璞℃ā鍨嬪拰缂栬緫闈㈡澘锛岃 URL銆佸浘鐗囥€佸叕寮忋€丳DF 閿氱偣銆佸崱鐗囥€佽祫鏂欍€佺瑪璁般€丄I 鑽夌鍜屽伐绋嬪浘鑺傜偣淇濇寔鏇寸粺涓€鐨勭粨鏋勫寲 metadata銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆丆RDT銆乄ebGL/Pixi銆乀auri 妗岄潰绔€丳roject Graph `.prg` 鍏煎鎴栨彃浠跺競鍦恒€?
-## 2026-06-12 01:22:43 +08:00 | v1.1.0-alpha.50 | 澧炲己鍥捐氨鍘嗗彶涓庝繚瀛樿竟鐣屾憳瑕?### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘 P0 绋冲畾娌荤悊锛屽己鍖?autosave/dirty/pending/saved/failed 涓?Undo/Redo 杈圭晫鐨勫彲瑙ｉ噴鎬с€?- 涓嶆敼鍙?Graph API銆乣.smtg` 鍚堢害鎴栧悗绔繚瀛橀€昏緫锛屽彧涓哄墠绔伐浣滃尯鎻愪緵绋冲畾鐨勫巻鍙茶竟鐣屾憳瑕侊紝璁╀繚瀛樸€佸鍏ャ€佹仮澶嶃€佹ā鏉垮簲鐢ㄧ瓑鍘嗗彶鐐硅兘鍦ㄦ不鐞嗛潰鏉夸腑琚В閲娿€?### 瀹屾垚缁撴灉
-- 鏂板 `buildGraphHistoryBoundarySummary`锛屽皢 `history.lastLabel`銆乽ndo/redo 鏁伴噺鍜屽綋鍓?saveState 杞崲涓哄彲璇荤殑鏈€杩戝巻鍙茬偣銆佷繚瀛樿竟鐣屽拰椋庨櫓鎻愮ず銆?- 鎵╁睍 `buildGraphSettingsSections` 鐨?autosave 鍖哄煙锛屽睍绀烘渶杩戝巻鍙茬偣銆佸巻鍙茶竟鐣屽拰 Undo/Redo 鐘舵€併€?- 鏇存柊 `useGraphWorkspaceController.tsx`锛屾妸褰撳墠 `historyState` 鍜?`saveState` 浼犲叆璁剧疆闈㈡澘锛屼繚鎸佺幇鏈変繚瀛樸€佸鍏ャ€佹仮澶嶅拰鎾ら攢/閲嶅仛琛屼负涓嶅彉銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphHistory graphSettingsPanel` 鍏堢孩锛屽け璐ュ師鍥犱负缂哄皯 `buildGraphHistoryBoundarySummary`锛屼笖 autosave 璁剧疆鍖烘湭灞曠ず鏈€杩戝巻鍙茬偣銆?- `npm --workspace frontend-user run test -- graphHistory graphSettingsPanel` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphHistory graphSettingsPanel GraphWorkspacePanels GraphWorkspacePage useGraphWorkspacePersistence` 閫氳繃锛? 涓枃浠躲€?3 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛屼粎鏈夋棦鏈?CRLF 鎻愮ず銆?### 鍚庣画褰卞搷
-- 璁剧疆闈㈡澘鐜板湪鑳藉悓鏃惰В閲婁繚瀛樼姸鎬佸拰鍘嗗彶杈圭晫锛屽悗缁彲浠ョ户缁畬鍠勬潵婧愬弽閾句笌瀛︿範闂幆锛屾妸鍥捐氨鑺傜偣鍒板崱鐗囩敓鎴?澶嶄範纭娴佸仛鎴愭洿寮虹殑绔埌绔綋楠屻€?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆丆RDT銆乄ebGL/Pixi銆乀auri 妗岄潰绔€丳roject Graph `.prg` 鍏煎鎴栨彃浠跺競鍦恒€?
-## 2026-06-12 01:16:12 +08:00 | v1.1.0-alpha.49 | 寮哄寲鍥捐氨鏍￠獙闈㈡澘瑙ｉ噴淇℃伅
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘 P0 绋冲畾娌荤悊锛屽己鍖?GraphWorkspace validation panel锛岃瀛ょ珛鑺傜偣銆佺己鏉ユ簮銆侀噸澶嶆爣棰樸€佹偓鎸傝竟銆佽法鎶樺彔鍒嗙粍杈广€佺┖鍒嗙粍銆侀潪娉曞昂瀵搞€佹棤鏁堟潵婧?target 鍜屽鐩爣杈瑰紓甯哥瓑闂鍏峰鍙瑙ｉ噴銆?- 涓嶆敼鍙樺悗绔牎楠屻€丟raph API 鎴?`.smtg` 鍚堢害锛屽彧澧炲己鐢ㄦ埛绔鍒欒В閲娿€佷弗閲嶇骇璇存槑銆佸畾浣嶆彁绀哄拰淇寤鸿銆?### 瀹屾垚缁撴灉
-- 鎵╁睍 `frontend-user/src/modules/graph/lib/graphValidationPanel.ts`锛屼负鐜版湁鏍￠獙 ruleType 澧炲姞涓枃瑙勫垯鍚嶃€乻everity 鏂囨銆佸奖鍝嶈鏄庛€乼arget 鎽樿鍜屼慨澶嶅缓璁紝骞朵繚鐣欐湭鐭ヨ鍒?fallback銆?- 鏇存柊 `GraphValidationIssueList`锛岃鍒欐眹鎬绘樉绀轰腑鏂囧悕绉帮紝鍗曟潯闂鏄剧ず鈥滃畾浣?/ 褰卞搷 / 淇寤鸿鈥濓紝璁╁鍏ュけ璐ュ拰鏍￠獙澶辫触鏇村彲瑙ｉ噴銆?- 鏇存柊 `GraphWorkspacePanels.test.tsx`銆乣GraphWorkspaceImportPanel.test.tsx` 鍜?`graphValidationPanel.test.ts`锛岃鐩栬鍒欒В閲娿€佷骇鍝佸寲瑙勫垯娓呭崟銆佸鍏ラ潰鏉挎牎楠屽睍绀哄拰绌烘€佸洖褰掋€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphValidationPanel GraphWorkspacePanels` 鍏堢孩锛屽け璐ュ師鍥犱负闈㈡澘浠嶆樉绀哄師濮?`ruleType`锛岀己灏戜腑鏂囪鍒欏悕銆佸奖鍝嶅拰淇寤鸿銆?- `npm --workspace frontend-user run test -- graphValidationPanel GraphWorkspacePanels` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphValidationPanel GraphWorkspacePanels GraphWorkspacePage graphFileImportExport GraphWorkspaceImportPanel` 閫氳繃锛? 涓枃浠躲€?3 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛屼粎鏈夋棦鏈?CRLF 鎻愮ず銆?### 鍚庣画褰卞搷
-- 鏍￠獙闈㈡澘宸蹭粠鍘熷瑙勫垯鍒楄〃鍗囩骇涓哄彲瑙ｉ噴娌荤悊闈㈡澘锛屽悗缁彲浠ョ户缁帹杩?autosave/dirty/pending/saved/failed 涓?Undo/Redo 杈圭晫纭寲銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆丆RDT銆乄ebGL/Pixi銆乀auri 妗岄潰绔€丳roject Graph `.prg` 鍏煎鎴栨彃浠跺競鍦恒€?
-## 2026-06-12 01:08:52 +08:00 | v1.1.0-alpha.48 | 寮哄寲鍥捐氨璁剧疆闈㈡澘娌荤悊淇℃伅
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘 P0 绋冲畾娌荤悊锛屽湪涓嶆敼鍙?Graph API 鍜?`.smtg` 鍚堢害鐨勫墠鎻愪笅锛屾妸 GraphWorkspace 璁剧疆闈㈡澘浠庤鏄庢竻鍗曞寮轰负鏇存竻鏅扮殑宸ヤ綔鍖烘不鐞嗗尯鍩熴€?- 鑱氱劍鏄剧ず鍋忓ソ銆佸鍏ュ鍑恒€乤utosave 鐘舵€佸拰澶у浘鎬ц兘鎻愮ず锛岃澶辫触瀵煎叆/瀵煎嚭銆乸ending/failed 淇濆瓨鍜?200/300/20 鍩哄噯瑙勬ā鍏峰鍙В閲婃枃妗堛€?### 瀹屾垚缁撴灉
-- 鎵╁睍 `frontend-user/src/modules/graph/lib/graphSettingsPanel.ts`锛屼负姣忎釜璁剧疆鍒嗗尯澧炲姞 `summary` 鍜?`actions`锛岃鐩栧皬鍦板浘銆佹潵婧愭吵閬撱€佸揩鎹烽敭銆丣SON 鏍￠獙銆佸鍏ュけ璐ヤ繚鐣欏綋鍓嶇敾甯冦€佸鍑哄け璐ョ姸鎬佸洖鍐欍€乨irty/pending/failed 淇濆瓨娌荤悊鍜屽ぇ鍥炬暣鐞嗗缓璁€?- 鏇存柊 `GraphSettingsPanel` 娓叉煋鎽樿鍜岀姸鎬佹爣绛撅紝璁╄缃潰鏉挎洿娓呮鍦板尯鍒嗘樉绀恒€佸鍏ュ鍑恒€佽嚜鍔ㄤ繚瀛樸€佹€ц兘鍜屽揩鎹烽敭鍖哄煙銆?- 琛ュ己 `graphSettingsPanel.test.ts` 鍜?`GraphWorkspacePanels.test.tsx`锛岄攣瀹?failed/pending 淇濆瓨鐘舵€併€佸ぇ鍥炬€ц兘寤鸿銆佸鍏ュ鍑哄け璐ヨВ閲婂拰璁剧疆鏍囩娓叉煋銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphSettingsPanel` 鍏堢孩锛屽け璐ュ師鍥犱负璁剧疆鍒嗗尯缂哄皯 `summary/actions` 鍜?failed/pending 淇濆瓨娌荤悊璇箟銆?- `npm --workspace frontend-user run test -- graphSettingsPanel GraphWorkspacePanels` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphSettingsPanel GraphWorkspacePanels GraphWorkspacePage GraphWorkspaceShell` 閫氳繃锛? 涓枃浠躲€?6 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run verify:docs` 閫氳繃銆?- `git diff --check` 閫氳繃锛屼粎鏈夋棦鏈?CRLF 鎻愮ず銆?### 鍚庣画褰卞搷
-- 璁剧疆闈㈡澘宸叉洿鎺ヨ繎 Project Graph 绾у伐浣滃尯娌荤悊鍏ュ彛锛屽悗缁彲浠ョ户缁己鍖?validation panel 鐨勮鍒欎腑鏂囧悕銆佷弗閲嶇骇璇存槑銆佸畾浣嶅姩浣滃拰淇寤鸿銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆丆RDT銆乄ebGL/Pixi銆乀auri 妗岄潰绔€丳roject Graph `.prg` 鍏煎鎴栨彃浠跺競鍦恒€?
-## 2026-06-12 01:02:24 +08:00 | v1.1.0-alpha.47 | 鎷嗗嚭鍥捐氨鑺傜偣杩炵嚎鍒嗙粍 mutation
-### 浠诲姟鍐呭
-- 浠?P0 绋冲畾娌荤悊寮€濮嬶紝缁х画鎷?`useGraphWorkspaceController.tsx` 涓殑 node/edge/group 鏂板銆佸垹闄ゃ€佸鍒躲€佽繛绾裤€佸垎缁勫拰鎶樺彔 mutation銆?- 淇濇寔鐜版湁 React + Vite + TypeScript銆乣@studymate/graph-core`銆丟raph API 鍜?`.smtg` 鍚堢害涓嶅彉锛屽彧鎶婂伐浣滃尯閫夋嫨鎬併€乭istory label銆乻tatus 鏂囨鍜屼笉鍙彉鏇存柊灏佽鍒板墠绔函鍑芥暟銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphWorkspaceMutations.ts`锛屾彁渚涘垱寤鸿妭鐐广€佸垱寤鸿繛绾裤€佸垹闄ら€変腑鑺傜偣/杩炵嚎銆佸垹闄ゅ彸閿妭鐐广€佸鍒惰妭鐐广€佸垱寤哄垎缁勫拰鍒囨崲鍒嗙粍鎶樺彔鐨勫伐浣滃尯 mutation 缁撴灉銆?- 鏂板 `graphWorkspaceMutations.test.ts`锛岃鐩栨柊澧炶妭鐐广€佽繛绾垮幓閲嶅け璐ヨВ閲娿€佸垹闄よ妭鐐规竻鐞嗚竟鍜屽垎缁勩€佸垹闄よ繛绾裤€佸鍒惰妭鐐?metadata 娣辨嫹璐濄€佸崟/澶氳妭鐐瑰垎缁勫拰鎶樺彔 no-op銆?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀浉鍏冲姩浣滄敼涓鸿皟鐢ㄧ函鍑芥暟锛屽苟閫氳繃缁熶竴 `applyWorkspaceMutation` 鍚屾鏂囨。銆侀€夋嫨鎬併€佽繛绾挎ā寮忋€侀€変腑杈瑰拰鐘舵€佹枃妗堬紱鏈疆缁熻浠庣害 1603 琛屼笅闄嶅埌 1596 琛屻€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphWorkspaceMutations` 鍏堢孩锛屽け璐ュ師鍥犱负 `graphWorkspaceMutations` 妯″潡灏氫笉瀛樺湪銆?- `npm --workspace frontend-user run test -- graphWorkspaceMutations` 缁匡紝1 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphWorkspaceMutations GraphWorkspacePage useGraphKeyboardActions useGraphContextMenu` 閫氳繃锛? 涓枃浠躲€?9 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run build:user` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鑺傜偣/杩炵嚎/鍒嗙粍鐨勬牳蹇冨伐浣滃尯鍙樻洿宸叉湁鐙珛绾嚱鏁板拰 immutability 鍥炲綊锛屽悗缁彲浠ョ户缁妸 settings panel銆乿alidation panel銆乤utosave/history 杈圭晫鎸夊悓鏍?TDD 灏忓垏鐗囨帹杩涖€?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆丆RDT銆乄ebGL/Pixi銆乀auri 妗岄潰绔€丳roject Graph `.prg` 鍏煎鎴栨彃浠跺競鍦恒€?
-## 2026-06-06 18:32:23 +08:00 | v1.1.0-alpha.46 | 鎷嗗嚭鍥捐氨鎵归噺鏍峰紡鍙樻洿閫昏緫
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鍜?Project Graph 绾ф壒閲忕紪杈戜綋楠岋紝鎶婇€変腑鑺傜偣棰滆壊銆佸己璋冨拰灏哄 preset 鐨勬壒閲?mutation 浠?`useGraphWorkspaceController.tsx` 涓嬫矇銆?- 淇濈暀鐜版湁 tone銆乪mphasis銆乻ize preset 璇箟銆佹湭閫変腑鑺傜偣寮曠敤涓嶅彉鍜屼笉鍙彉鏇存柊琛屼负锛屼笉鏀?Graph API 鎴?`.smtg` 鏂囦欢鍚堢害銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphBatchAppearance.ts`锛屾彁渚?`applyGraphBatchTone`銆乣applyGraphBatchEmphasis` 鍜?`applyGraphBatchSizePreset` 绾嚱鏁般€?- 鏂板 `graphBatchAppearance.test.ts`锛岃鐩栨壒閲?tone銆佹壒閲?emphasis 淇濈暀宸叉湁 tone銆佹壒閲忓昂瀵?preset锛屼互鍙婃湭閫変腑鑺傜偣寮曠敤涓嶅彉銆?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀Щ闄ゅ唴鑱旀壒閲忔牱寮?map 閫昏緫锛沜ontroller 浠?1488 琛岀户缁笅闄嶅埌 1486 琛屻€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphBatchAppearance` 鍏堢孩鍚庣豢锛屾渶缁?1 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphBatchAppearance GraphWorkspaceSelectionPanel GraphWorkspacePage` 閫氳繃锛? 涓枃浠躲€?4 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?9 涓敤鎴风娴嬭瘯鏂囦欢銆?21 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 鎵归噺澶栬缂栬緫宸叉垚涓哄彲娴嬭瘯绾€昏緫锛屽悗缁彲浠ョ户缁媶 node/edge/group mutations锛屽寘鎷柊澧炪€佸垹闄ゃ€佸鍒躲€佸垎缁勩€佹姌鍙犲拰杩炵嚎銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 13:30:59 +08:00 | v1.1.0-alpha.45 | 鎷嗗嚭鍥捐氨鏉ユ簮娉抽亾鏂囨。鍙樻洿閫昏緫
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鍜屽涔犻棴鐜潵婧愮粍缁囪兘鍔涳紝鎶婃潵婧愭吵閬撶敓鎴愬悗鐨勮妭鐐逛綅缃€佺敓鎴愬垎缁勬浛鎹㈠拰閫夋嫨鎬佸洖鍐欎粠 `useGraphWorkspaceController.tsx` 涓嬫矇銆?- 淇濈暀鐜版湁鏉ユ簮娉抽亾甯冨眬銆佹棫鐢熸垚娉抽亾鏇挎崲銆佹墜鍔ㄥ垎缁勪繚鐣欍€佺敓鎴愬垎缁?metadata銆佽妭鐐瑰紩鐢ㄤ繚鐣欏拰涓嶅彲鍙樻洿鏂拌涓猴紝涓嶆敼 Graph API 鎴?`.smtg` 鏂囦欢鍚堢害銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphSourceSwimlanes.ts`锛屾彁渚?`buildGraphSourceSwimlaneDocument` 绾嚱鏁帮紝灏佽 graph-core 娉抽亾甯冨眬鍒板墠绔枃妗ｅ彉鏇寸殑鏄犲皠銆?- 鏂板 `graphSourceSwimlanes.test.ts`锛岃鐩栫敓鎴愭潵婧愭吵閬撱€佹浛鎹㈤噸鍙犳棫鐢熸垚娉抽亾銆佷繚鐣欐墜鍔ㄥ垎缁勩€佷繚鐣欐湭閫変腑鑺傜偣寮曠敤锛屼互鍙婇€変腑鑺傜偣涓嶈冻鏃惰繑鍥炲師鏂囨。銆?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀Щ闄ゅ唴鑱旀潵婧愭吵閬?layoutNodes銆佹棫娉抽亾杩囨护鍜?group payload 澶嶅埗閫昏緫锛沜ontroller 浠?1505 琛岀户缁笅闄嶅埌 1488 琛屻€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphSourceSwimlanes` 鍏堢孩鍚庣豢锛屾渶缁?1 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphSourceSwimlanes graphSourceLayout GraphWorkspaceSelectionPanel GraphWorkspacePage` 閫氳繃锛? 涓枃浠躲€?6 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?8 涓敤鎴风娴嬭瘯鏂囦欢銆?18 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 鏉ユ簮鏁寸悊銆佹潵婧愬垎缁勫拰鏉ユ簮娉抽亾宸插舰鎴愯繛缁殑鍙祴璇曟潵婧愮粍缁囬€昏緫锛屽悗缁彲浠ョ户缁媶鎵归噺鏍峰紡鍜?node/edge/group mutations銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 13:21:03 +08:00 | v1.1.0-alpha.44 | 鎷嗗嚭鍥捐氨鏉ユ簮甯冨眬涓庡垎缁勯€昏緫
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鍜屽涔犻棴鐜暣鐞嗚兘鍔涳紝鎶婃寜鏉ユ簮绫诲瀷鍒嗗垪/鍒嗚鏁寸悊銆佹潵婧愬垎缁勭敓鎴愮殑鍧愭爣鍜屽垎缁勮绠椾粠 `useGraphWorkspaceController.tsx` 涓嬫矇銆?- 淇濈暀鐜版湁鏉ユ簮 bucket 椤哄簭銆佹潵婧愭爣绛炬帓搴忋€佹湭閫変腑鑺傜偣涓嶅彉銆佹潵婧愬垎缁勬爣棰樸€佺敾甯冭竟鐣?clamp 鍜屼笉鍙彉鏇存柊琛屼负锛屼笉鏀?Graph API 鎴?`.smtg` 鏂囦欢鍚堢害銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphSourceLayout.ts`锛屾彁渚?`organizeGraphNodesBySource` 鍜?`buildGraphSourceGroups` 绾嚱鏁般€?- 鏂板 `graphSourceLayout.test.ts`锛岃鐩栨寜鏉ユ簮绫诲瀷鍒嗗垪銆佹寜鏉ユ簮绫诲瀷鍒嗚銆佹湭閫変腑鑺傜偣寮曠敤涓嶅彉銆佸師鑺傜偣涓嶅彉锛屼互鍙婃潵婧愬垎缁勮竟鐣屽拰 `makeGroupId`銆?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀Щ闄ゅ唴鑱旀潵婧愭暣鐞?placement銆佹潵婧愬垎缁?bounds 鍜?group payload 鐢熸垚閫昏緫锛沜ontroller 浠?1576 琛岀户缁笅闄嶅埌 1505 琛屻€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphSourceLayout` 鍏堢孩鍚庣豢锛屾渶缁?1 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphSourceLayout GraphWorkspaceSelectionPanel GraphWorkspacePage` 閫氳繃锛? 涓枃浠躲€?4 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?7 涓敤鎴风娴嬭瘯鏂囦欢銆?16 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 鏉ユ簮鏁寸悊涓庢潵婧愬垎缁勫凡鎴愪负鍙祴璇曠函閫昏緫锛屽悗缁彲浠ョ户缁媶鏉ユ簮娉抽亾鐢熸垚銆佹壒閲忔牱寮忓拰 node/edge/group mutations銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 13:11:46 +08:00 | v1.1.0-alpha.43 | 鎷嗗嚭鍥捐氨閫変腑鑺傜偣甯冨眬閫昏緫
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鍜?Project Graph 绾ф壒閲忕紪杈戜綋楠岋紝鎶婇€変腑鑺傜偣瀵归綈涓庡潎鍒嗙殑鍧愭爣璁＄畻浠?`useGraphWorkspaceController.tsx` 涓嬫矇銆?- 淇濈暀鐜版湁宸﹀榻愩€侀《閮ㄥ榻愩€佹按骞冲眳涓€佸瀭鐩村眳涓€佹按骞?鍨傜洿鍧囧垎銆佺敾甯冭竟鐣?clamp 鍜屼笉鍙彉鏇存柊琛屼负锛屼笉鏀?Graph API 鎴?`.smtg` 鏂囦欢鍚堢害銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphSelectionLayout.ts`锛屾彁渚?`alignSelectedGraphNodes` 鍜?`distributeSelectedGraphNodes` 绾嚱鏁般€?- 鏂板 `graphSelectionLayout.test.ts`锛岃鐩栧榻愪笉淇敼鏈€変腑鑺傜偣銆佸眳涓榻愯竟鐣?clamp銆佹按骞冲潎鍒嗙ǔ瀹氶『搴忥紝浠ュ強閫変腑鏁伴噺涓嶈冻鏃惰繑鍥炲師鑺傜偣鏁扮粍銆?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀Щ闄ゅ唴鑱斿榻?鍧囧垎鍧愭爣璁＄畻鍜岃妭鐐?map 鍙樻洿閫昏緫锛沜ontroller 浠?1643 琛岀户缁笅闄嶅埌 1576 琛屻€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphSelectionLayout` 鍏堢孩鍚庣豢锛屾渶缁?1 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphSelectionLayout GraphWorkspaceSelectionPanel GraphWorkspacePage` 閫氳繃锛? 涓枃浠躲€?5 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?6 涓敤鎴风娴嬭瘯鏂囦欢銆?13 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 閫変腑鑺傜偣甯冨眬缂栬緫宸叉垚涓哄彲娴嬭瘯绾€昏緫锛屽悗缁彲浠ョ户缁媶鎸夋潵婧愭暣鐞嗐€佹潵婧愬垎缁勩€佹壒閲忔牱寮忓拰 node/edge/group mutations銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 13:03:53 +08:00 | v1.1.0-alpha.42 | 鎷嗗嚭鍥捐氨鎷栧姩鏂囨。鍙樻洿閫昏緫
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鎷嗗垎锛屾妸鍗曡妭鐐?澶氳妭鐐规嫋鍔ㄦ椂鐨勫潗鏍囪绠椼€佸惛闄勮緟鍔╃嚎銆佽竟鐣?clamp 鍜屼笅涓€鐗堣妭鐐瑰垪琛ㄧ敓鎴愪粠 `useGraphWorkspaceController.tsx` 涓嬫矇銆?- 淇濈暀鐜版湁鎷栧姩鏃朵笉璁板綍 history銆佺姸鎬佹彁绀恒€乿iewport zoom delta銆佸榻愬惛闄勩€侀殣钘忚妭鐐硅繃婊ゅ拰涓嶅彲鍙樻洿鏂拌涓猴紝涓嶆敼 Graph API 鎴?`.smtg` 鏂囦欢鍚堢害銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphDragMove.ts`锛屾彁渚?`buildGraphDragMove` 绾嚱鏁帮紝缁熶竴杩斿洖 `nodes`銆乣alignmentGuides` 鍜屾嫋鍔ㄧ姸鎬佹枃妗堛€?- 鏂板 `graphDragMove.test.ts`锛岃鐩栧崟鑺傜偣鎸?viewport zoom 绉诲姩涓斾笉淇敼鍘熸枃妗ｃ€佸鑺傜偣鎸?origins 绉诲姩骞?clamp 鍒扮敾甯冭竟鐣屻€?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀Щ闄ゅ唴鑱斿崟鑺傜偣/澶氳妭鐐规嫋鍔ㄥ潗鏍囪绠椼€佸惛闄勮绠楀拰鑺傜偣 map 鍙樻洿閫昏緫锛沜ontroller 浠?1689 琛岀户缁笅闄嶅埌 1643 琛屻€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- graphDragMove` 鍏堢孩鍚庣豢锛屾渶缁?1 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- graphDragMove useGraphDragState GraphWorkspacePage GraphWorkspaceStageChrome graphKeyboardShortcuts` 閫氳繃锛? 涓枃浠躲€?9 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?5 涓敤鎴风娴嬭瘯鏂囦欢銆?09 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 鑺傜偣鎷栧姩鐨勬枃妗ｅ彉鏇村凡缁忔垚涓哄彲娴嬭瘯绾€昏緫锛屽悗缁彲浠ョ户缁媶 pan/marquee pointer effect銆佽妭鐐?杈?鍒嗙粍 mutations 鍜屾嫋鍔ㄦ€ц兘鑺傛祦銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 12:55:35 +08:00 | v1.1.0-alpha.41 | 鎷嗗嚭鍥捐氨鎷栨嫿鐘舵€?Hook
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鎷嗗垎锛屾妸鐢诲竷鎷栨嫿鐘舵€併€佹閫夋鍜屽榻愯緟鍔╃嚎鐘舵€佷粠 `useGraphWorkspaceController.tsx` 涓嬫矇銆?- 淇濈暀鐜版湁鐢诲竷骞崇Щ銆丼hift 妗嗛€夈€佸崟鑺傜偣鎷栧姩銆佸鑺傜偣鎷栧姩銆佸榻愯緟鍔╃嚎銆丒scape 娓呯悊鍜屾嫋鎷藉彇娑堣涓猴紝涓嶆敼 Graph API 鎴?`.smtg` 鏂囦欢鍚堢害銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/hooks/useGraphDragState.ts`锛岀粺涓€绠＄悊 `dragState`銆乣selectionBox`銆乣alignmentGuides`銆乣beginMarquee`銆乣updateMarquee`銆乣beginPan`銆乣beginNodeDrag`銆乣beginMultiNodeDrag` 鍜?`clearActiveDrag`銆?- 鏂板 `useGraphDragState.test.tsx`锛岃鐩栨閫夊紑濮?鏇存柊銆佺敾甯冨钩绉汇€佸崟鑺傜偣鎷栨嫿銆佸鑺傜偣鎷栨嫿銆佽緟鍔╃嚎璁剧疆鍜屾竻鐞嗐€?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀Щ闄ゆ湰鍦?drag/selectionBox/alignmentGuides state 鍜岀洿鎺ユ瀯閫?DragState 鐨勪唬鐮侊紱controller 浠?1719 琛岀户缁笅闄嶅埌 1689 琛屻€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- useGraphDragState` 鍏堢孩鍚庣豢锛屾渶缁?1 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- useGraphDragState GraphWorkspacePage GraphWorkspaceStageChrome graphKeyboardShortcuts` 閫氳繃锛? 涓枃浠躲€?7 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?4 涓敤鎴风娴嬭瘯鏂囦欢銆?07 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- pointer drag 鐨勭姸鎬佽竟鐣屽凡缁忕嫭绔嬶紝鍚庣画鍙互缁х画鎷嗙Щ鍔ㄦ椂鐨勬枃妗ｅ彉鏇淬€佸榻愬惛闄勮绠楀拰 node/edge/group mutations锛屾妸澶у瀷 controller 缁х画鍘嬬缉鍒扮紪鎺掑眰銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 12:45:34 +08:00 | v1.1.0-alpha.40 | 鎷嗗嚭鍥捐氨鑺傜偣閫夋嫨鐘舵€?Hook
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鎷嗗垎锛屾妸鑺傜偣鍗曢€夈€佸閫?toggle銆佹樉寮忓閫夈€佹閫夊懡涓拰鑺傜偣閫夋嫨鏃舵竻鐞嗚竟閫夋嫨鐨勮涓轰粠 `useGraphWorkspaceController.tsx` 涓嬫矇銆?- 淇濈暀鐜版湁閿洏鍏ㄩ€夈€佹潵婧愭吵閬撴暣鐞嗗悗閫夋嫨銆佹閫夈€佸閫夋嫋鍔ㄣ€佸鍒惰妭鐐广€佸彸閿垹闄よ妭鐐瑰拰杈归€夋嫨娓呯悊琛屼负锛屼笉鏀?Graph API 鎴?`.smtg` 鏂囦欢鍚堢害銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/hooks/useGraphSelectionState.ts`锛岀粺涓€绠＄悊 `selectedNodeId`銆乣selectedNodeIds`銆乣selectSingleNode`銆乣toggleNodeSelection`銆乣selectNodeIds`銆乣selectNodesInWorldRect`銆乣clearNodeSelection` 鍜?`resetNodeSelection`銆?- 鏂板 `useGraphSelectionState.test.tsx`锛岃鐩栧崟閫夈€乼oggle 澶氶€夈€佹竻绌恒€侀噸缃€佹樉寮忓閫夈€侀殣钘忚妭鐐硅繃婊ゅ拰妗嗛€夌煩褰㈠懡涓€?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀Щ闄ゆ湰鍦拌妭鐐归€夋嫨 state 鍜岀洿鎺ヨ皟鐢?graph-core selection helper 鐨勪唬鐮侊紱閿洏鍏ㄩ€夈€佹潵婧愭吵閬撱€佹閫夈€佽妭鐐规嫋鍔ㄣ€佸鍒惰妭鐐瑰拰鍙抽敭鍒犻櫎鑺傜偣鏀逛负閫氳繃 `useGraphSelectionState` 鍒嗗彂锛沜ontroller 浠?1736 琛岀户缁笅闄嶅埌 1719 琛屻€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- useGraphSelectionState` 鍏堢孩鍚庣豢锛屾渶缁?1 涓枃浠躲€? 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- useGraphSelectionState GraphWorkspacePage GraphWorkspaceSelectionPanel GraphWorkspaceStageChrome graphKeyboardShortcuts` 閫氳繃锛? 涓枃浠躲€?1 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?3 涓敤鎴风娴嬭瘯鏂囦欢銆?05 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- selection/marquee/multi-select 宸叉湁鐙珛鐘舵€?hook锛屽悗缁彲浠ョ户缁媶鐢诲竷 pointer drag 鐘舵€佹満鍜?node/edge/group mutations锛屾妸澶у瀷 controller 缁х画鍘嬬缉鍒扮紪鎺掑眰銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 08:25:31 +08:00 | v1.1.0-alpha.39 | 鎷嗗嚭鍥捐氨 Camera 涓庤鍙?Hook
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鎷嗗垎锛屾妸灏忓湴鍥?viewport銆佽妭鐐硅仛鐒︺€佹粴杞缉鏀俱€佸伐鍏锋爮缂╂斁銆侀噸缃閲庡拰瀵艰埅 focus preview 浠?`useGraphWorkspaceController.tsx` 涓嬫矇銆?- 淇濈暀鐜版湁鑱氱劍鑺傜偣銆佹悳绱㈠畾浣嶃€侀敭鐩橀噸缃閲庛€佸伐鍏锋爮缂╂斁銆佸皬鍦板浘鏄剧ず鍜屾潵婧愯烦杞惤鐐归瑙堣涓恒€?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/hooks/useGraphViewportCamera.ts`锛岀粺涓€绠＄悊 `minimapViewport`銆乣focusPreview`銆乣focusNode`銆乣zoomGraph`銆乣resetViewport` 鍜?`handleWheel`銆?- 鏂板 `useGraphViewportCamera.test.tsx`锛岃鐩栧皬鍦板浘 ready 鐘舵€併€佽妭鐐硅仛鐒﹂€夋嫨涓庤鍙ｅ彉鏇淬€佹寜閽?婊氳疆缂╂斁銆侀噸缃閲庛€佸鑸?focus preview 娑堣垂鍜?2600ms 鍚庤繃鏈熴€?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀Щ闄ゆ湰鍦?minimap 璁＄畻銆乫ocus preview effect銆乣focusNode`銆乣zoomGraph` 鍜?`handleWheel`锛屾敼鐢?`useGraphViewportCamera`锛沜ontroller 浠?1804 琛岀户缁笅闄嶅埌 1736 琛屻€?- 淇 focus preview 璁℃椂鍣ㄨ竟鐣岋細棰勮瑙﹀彂瀵艰嚧 `graphDetail` 鏇存柊鏃朵笉鍐嶆竻鎺夎繃鏈熷畾鏃跺櫒锛岄瑙堢姸鎬佷細鎸夐鏈熻嚜鍔ㄦ秷澶便€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- useGraphViewportCamera` 鍏堢孩鍚庣豢锛屾渶缁?3 涓?hook 鐢ㄤ緥閫氳繃銆?- `npm --workspace frontend-user run test -- useGraphViewportCamera GraphWorkspacePage GraphWorkspaceStageChrome graphKeyboardShortcuts` 閫氳繃锛? 涓枃浠躲€?8 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?2 涓敤鎴风娴嬭瘯鏂囦欢銆?03 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚墿灞曞悗鐨?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- camera/viewport 宸叉垚涓虹嫭绔?hook锛屽悗缁彲浠ョ户缁媶 selection/marquee/multi-select 鍜?node/edge/group mutations 鐘舵€佹満锛屾妸澶у瀷 controller 杩涗竴姝ュ帇鍒版洿鎺ヨ繎缂栨帓灞傘€?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 08:06:34 +08:00 | v1.1.0-alpha.38 | 鎷嗗嚭鍥捐氨鍙抽敭鑿滃崟鐘舵€?Hook
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鎷嗗垎锛屾妸鍙抽敭鑿滃崟鎵撳紑銆佸畾浣嶃€佽妭鐐?杈归€夋嫨鑱斿姩銆佹樉寮忓叧闂拰澶栭儴鐐瑰嚮/婊氬姩鍏抽棴浠?`useGraphWorkspaceController.tsx` 涓笅娌夈€?- 淇濈暀鐜版湁鍙抽敭鑿滃崟 UI銆佽妭鐐?杈?鐢诲竷鍙抽敭鍏ュ彛鍜岃彍鍗曞姩浣滃洖璋冿紝涓嶆敼鍙?Graph API 鎴栧浘璋辨枃浠跺悎绾︺€?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/hooks/useGraphContextMenu.ts`锛岀粺涓€绠＄悊 context menu 鐘舵€併€乣openContextMenu`銆乣closeContextMenu` 鍜?dismiss 鐢熷懡鍛ㄦ湡銆?- 鏂板 `useGraphContextMenu.test.tsx`锛岃鐩栬妭鐐?杈?鐢诲竷鍙抽敭鑿滃崟鍧愭爣銆佽妭鐐?杈归€夋嫨鍥炶皟銆佹樉寮忓叧闂€佸閮ㄧ偣鍑诲叧闂拰婊氬姩鍏抽棴銆?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀Щ闄ゆ湰鍦?`contextMenu` state銆佹棫 `openContextMenu` 鍑芥暟鍜屽唴鑱?dismiss effect锛屾敼鐢?`useGraphContextMenu`锛沜ontroller 浠?1822 琛岀户缁笅闄嶅埌 1804 琛屻€?- 娓呯悊 `useGraphWorkspaceEffects.ts` 涓笉鍐嶄娇鐢ㄧ殑 `useGraphContextMenuDismiss`銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- useGraphContextMenu` 鍏堢孩鍚庣豢锛屾渶缁?2 涓?hook 鐢ㄤ緥閫氳繃銆?- `npm --workspace frontend-user run test -- useGraphContextMenu GraphWorkspacePage GraphWorkspacePanels GraphWorkspaceStageChrome` 閫氳繃锛? 涓枃浠躲€?7 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?1 涓敤鎴风娴嬭瘯鏂囦欢銆?00 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚墿灞曞悗鐨?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 鍙抽敭鑿滃崟杈撳叆鐢熷懡鍛ㄦ湡宸叉垚涓虹嫭绔?hook锛屽悗缁彲浠ョ户缁妸鑿滃崟鍔ㄤ綔鍒嗗彂銆乻election/marquee/multi-select 鍜?camera/viewport 鐘舵€佹満浠庡ぇ鍨?controller 涓Щ鍑恒€?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 07:56:20 +08:00 | v1.1.0-alpha.37 | 鎷嗗嚭鍥捐氨閿洏蹇嵎閿?Hook
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鎷嗗垎锛屾妸鍏ㄥ眬 `keydown` 鐩戝惉銆佸揩鎹烽敭涓婁笅鏂囧垽鏂拰 action 鍒嗗彂浠?`useGraphWorkspaceController.tsx` 涓嬫矇銆?- 淇濈暀鐜版湁淇濆瓨銆乁ndo/Redo銆佸叏閫夈€佸垹闄ゃ€佽仛鐒︺€佸垎缁勩€侀摼璺ā寮忋€侀噸缃閲庛€侀敭鐩樺府鍔╁拰 Escape 娓呯悊琛屼负銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/hooks/useGraphKeyboardActions.ts`锛岀粺涓€鎵挎帴 `resolveGraphKeyboardShortcut` 鐨?action 鍒嗗彂鍜?keydown 鐢熷懡鍛ㄦ湡銆?- 鏂板 `useGraphKeyboardActions.test.tsx`锛岃鐩栬緭鍏ユ鍐呬粛鍙繚瀛?鎾ら攢/閲嶅仛銆佽緭鍏ユ鍐呭拷鐣ョ敾甯冪紪杈戝揩鎹烽敭銆侀€夋嫨/鑱氱劍/鍒嗙粍/閾捐矾/閲嶇疆/Escape 绛夊父鐢ㄦ搷浣溿€?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀Щ闄ゅ唴鑱?keydown effect锛屾敼涓哄悜 `useGraphKeyboardActions` 浼犻€掑綋鍓嶉€夋嫨鎬併€佸彲瑙佽妭鐐瑰拰鍔ㄤ綔鍥炶皟锛沜ontroller 浠?1857 琛岀户缁笅闄嶅埌 1822 琛屻€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- useGraphKeyboardActions` 鍏堢孩鍚庣豢锛屾渶缁?3 涓?hook 鐢ㄤ緥閫氳繃銆?- `npm --workspace frontend-user run test -- useGraphKeyboardActions graphKeyboardShortcuts GraphWorkspacePage GraphWorkspaceShell GraphWorkspacePanels` 閫氳繃锛? 涓枃浠躲€?0 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?0 涓敤鎴风娴嬭瘯鏂囦欢銆?8 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚墿灞曞悗鐨?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 蹇嵎閿涓哄凡缁忔垚涓虹嫭绔?hook锛屽悗缁彲浠ョ户缁媶 context menu 鍜?selection/marquee 鐘舵€佹満锛岄€愭鎶婃垚鐔熺紪杈戝櫒鐨勮緭鍏ヤ笌閫夋嫨鎿嶄綔浠?controller 涓Щ鍑恒€?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 07:41:41 +08:00 | v1.1.0-alpha.36 | 鎷嗗嚭鍥捐氨瀵煎叆瀵煎嚭鎵ц Hook
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鍜?Phase 5 鎷嗗垎锛屾妸 Markdown/Mermaid 杩滅瀵煎叆銆丼tudyMate JSON 鏈湴瀵煎叆銆丳NG/SVG/JSON 瀵煎嚭鍜屽鍑哄け璐ョ姸鎬佷粠 `useGraphWorkspaceController.tsx` 涓嬫矇銆?- 淇濈暀鐜版湁 Graph API銆乣.smtg` / `application/vnd.studymate.graph+json` 鏂囦欢鍚堢害銆丣SON 瀵煎叆鏍￠獙鍜?Markdown/Mermaid 瀵煎叆鍚庡揩鐓у埛鏂拌涓恒€?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/hooks/useGraphImportExport.ts`锛岀粺涓€绠＄悊 JSON/Markdown/Mermaid 瀵煎叆銆丳NG/SVG/JSON 瀵煎嚭銆佸畨鍏ㄦ枃浠跺悕鍜屽鍏ュ鍑虹姸鎬佹彁绀恒€?- 鏂板 `useGraphImportExport.test.tsx`锛岃鐩?JSON 瀵煎叆鎴愬姛銆丣SON 闃绘柇閿欒銆丮arkdown 杩滅瀵煎叆骞跺埛鏂板揩鐓с€丳NG/SVG/JSON 瀹夊叏鏂囦欢鍚嶅鍑猴紝浠ュ強绌哄唴瀹?涓嬭浇/PNG 娓叉煋澶辫触鐘舵€併€?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀Щ闄ゆ湰鍦板鍏ュ鍑哄嚱鏁颁綋锛屾敼涓鸿浆鍙?`useGraphImportExport` 鎿嶄綔锛沜ontroller 浠?1938 琛岀户缁笅闄嶅埌 1857 琛屻€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- useGraphImportExport` 鍏堢孩鍚庣豢锛屾渶缁?5 涓?hook 鐢ㄤ緥閫氳繃銆?- `npm --workspace frontend-user run test -- useGraphImportExport GraphWorkspacePage GraphWorkspaceImportPanel graphFileImportExport graphCanvasExport` 閫氳繃锛? 涓枃浠躲€?3 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?9 涓敤鎴风娴嬭瘯鏂囦欢銆?5 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚墿灞曞悗鐨?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 瀵煎叆瀵煎嚭鎵ц閫昏緫宸茬粡褰㈡垚鐙珛杈圭晫锛屽悗缁彲浠ョ户缁媶 keyboard/context menu/selection 鐘舵€佹満锛屽苟鎶婃枃浠舵垚鐔熷害娴嬭瘯鎵╁睍鍒版洿澶у浘瀵煎嚭鑰楁椂涓庡け璐ュ満鏅€?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 07:25:40 +08:00 | v1.1.0-alpha.35 | 鎷嗗嚭鍥捐氨淇濆瓨涓庡揩鐓ф寔涔呭寲 Hook
-### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鎷嗗垎锛屾妸淇濆瓨銆佷繚瀛樼姸鎬併€佽嚜鍔ㄤ繚瀛樼敓鍛藉懆鏈熴€佺椤典繚鎶ゃ€佸揩鐓у垪琛ㄥ姞杞藉拰蹇収鎭㈠浠?`useGraphWorkspaceController.tsx` 涓媶鍒扮嫭绔?hook銆?- 淇濈暀鐜版湁 Graph API銆乣.smtg` 鏂囦欢鏍煎紡銆佷繚瀛?鎭㈠ UI 鍜岀姸鎬佹彁绀鸿涓猴紝涓嶆敼鍙樺鍏ャ€佸垏鍥俱€佸垱寤哄浘璋辩瓑璋冪敤鏂瑰绾︺€?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`锛岀粺涓€绠＄悊 `idle/dirty/pending/saved/failed` 淇濆瓨鎬佷腑鐨?`pending/saved/failed` 杞崲銆乣saving`銆佸揩鐓у垪琛ㄣ€佹墜鍔?鑷姩淇濆瓨鍜屽揩鐓ф仮澶嶃€?- 鏂板 `useGraphWorkspacePersistence.test.tsx`锛岃鐩栦繚瀛樺悗鏍囪 history saved 骞跺埛鏂板揩鐓с€佸揩鐓ф仮澶嶈蛋缁熶竴 reset history 璺緞銆佸揩鐓у垪琛?鎭㈠ API 澶辫触鏃朵繚鐣欏彲缂栬緫鐘舵€佸苟鏄剧ず澶辫触銆?- 鏇存柊 `useGraphWorkspaceController.tsx`锛岀Щ闄ゆ湰鍦颁繚瀛?蹇収鐘舵€佸拰 `saveCurrentGraph` / `handleRestoreSnapshot` 瀹炵幇锛屾敼鐢?`useGraphWorkspacePersistence` 杩斿洖鐨勬搷浣滐紱controller 浠?2012 琛岀户缁笅闄嶅埌 1938 琛屻€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- useGraphWorkspacePersistence` 鍏堢孩鍚庣豢锛屾渶缁?3 涓?hook 鐢ㄤ緥閫氳繃銆?- `npm --workspace frontend-user run test -- useGraphWorkspacePersistence GraphWorkspacePage GraphWorkspaceRecoveryPanel GraphWorkspaceShell` 閫氳繃锛? 涓枃浠躲€?4 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?8 涓敤鎴风娴嬭瘯鏂囦欢銆?0 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚墿灞曞悗鐨?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 淇濆瓨銆佽嚜鍔ㄤ繚瀛樸€佺椤典繚鎶ゅ拰蹇収鎭㈠宸茬粡浠庡ぇ鍨?controller 涓舰鎴愮嫭绔嬭竟鐣岋紝鍚庣画鍙互缁х画鎶婂鍏ユ墽琛屽垎鏀笅娌変负 `useGraphImportExport`锛屽苟杩涗竴姝ユ媶鍒?keyboard/context menu/selection 鐘舵€佹満銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 00:42:51 +08:00 | v1.1.0-alpha.34 | 鎷嗗嚭鍥捐氨瀵煎叆涓庢牎楠岄潰鏉?### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鎷嗗垎锛屾妸鍙充晶 rail 涓殑 Markdown/Mermaid/JSON 瀵煎叆銆佸鍏ユ枃鏈尯銆佸鍏ユ寜閽€佹牎楠屾寜閽拰楠岃瘉缁撴灉鍒楄〃浠?`useGraphWorkspaceController.tsx` 涓媶鍑恒€?- 淇濈暀鐜版湁瀵煎叆妯″紡銆佸鍏ユ簮鏂囨湰銆佷繚瀛樹腑绂佺敤銆佹牎楠屽浘璋卞拰楠岃瘉闈㈡澘灞曠ず琛屼负锛屼笉鏀瑰彉 Graph API 鎴?`.smtg` 鏂囦欢鍚堢害銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/components/GraphWorkspaceImportPanel.tsx`锛屾壙鎺ュ鍏ユ牸寮?segmented control銆佸彲璁块棶 textarea銆佸鍏?鏍￠獙鎿嶄綔鍜?`GraphValidationIssueList`銆?- 鏂板 `GraphWorkspaceImportPanel.test.tsx`锛岃鐩栧鍏ユā寮忓垏鎹€佸鍏ュ唴瀹瑰彉鏇淬€佸鍏?鏍￠獙鍥炶皟銆佷繚瀛樹腑绂佺敤鍜岄獙璇侀棶棰樺睍绀恒€?- 鏇存柊 `useGraphWorkspaceController.tsx`锛屾妸瀵煎叆涓庢牎楠?JSX 鏇挎崲涓?`GraphWorkspaceImportPanel` 璋冪敤锛宑ontroller 缁х画涓嬮檷鍒?2012 琛屻€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- GraphWorkspaceImportPanel` 鍏堢孩鍚庣豢锛屾渶缁?3 涓粍浠剁敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- GraphWorkspaceImportPanel GraphWorkspacePage GraphWorkspacePanels` 閫氳繃锛? 涓枃浠躲€?4 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run lint` 閫氳繃锛寃orkspace typecheck 鍜屾枃妗ｆ牎楠屽潎閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?7 涓敤鎴风娴嬭瘯鏂囦欢銆?7 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚墿灞曞悗鐨?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 瀵煎叆涓庢牎楠?UI 宸叉垚涓虹嫭绔嬬粍浠讹紝鍚庣画鍙互缁х画鎶?`handleImport` / JSON-Mermaid-Markdown 鍒嗘敮涓嬫矇鍒?`useGraphImportExport`锛岃繘涓€姝ュ噺灏?controller 涓殑鍓綔鐢ㄩ€昏緫銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鎷嗗垎銆?
-## 2026-06-06 00:34:54 +08:00 | v1.1.0-alpha.33 | 鎷嗗嚭鍥捐氨鑺傜偣涓庤繛绾胯鎯呴潰鏉?### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鎷嗗垎锛屼紭鍏堟妸鍙充晶 rail 涓殑鈥滈€変腑鍐呭 / 鑺傜偣涓庤繛绾库€濊鎯呯紪杈戝尯浠?`useGraphWorkspaceController.tsx` 涓笅娌変负绾鍥剧粍浠躲€?- 淇濈暀鐜版湁鑺傜偣鏍囬銆佺瑪璁般€乁RL/鍥剧墖/鍏紡/PDF metadata銆侀鑹层€佸己璋冦€佸昂瀵搞€佽竟鏍囩銆佽竟褰㈡€併€佸垎缁勬爣棰樸€佸垎缁勬姌鍙犮€佸閫夋暣鐞嗗拰鏉ユ簮鍙嶉摼琛屼负銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/components/GraphWorkspaceSelectionPanel.tsx`锛屾壙鎺ュ崟鑺傜偣璇︽儏銆佸閫夋壒閲忔搷浣溿€佽竟璇︽儏缂栬緫銆佸垎缁勫垪琛ㄥ拰绌烘€佹搷浣滄彁绀恒€?- 鏂板 `GraphWorkspaceSelectionPanel.test.tsx`锛岃鐩栬妭鐐规爣棰?URL metadata 缂栬緫銆佹潵婧愬弽閾惧洖璋冦€佽竟鏍囩/鐩寸嚎鏇茬嚎鍥炶皟銆佸閫夋潵婧愭暣鐞嗐€佸垎缁勬爣棰樼紪杈戝拰绌烘€佹彁绀恒€?- 鏇存柊 `useGraphWorkspaceController.tsx`锛屾妸璇︽儏 rail JSX 鏇挎崲涓?`GraphWorkspaceSelectionPanel` 璋冪敤锛宑ontroller 鍙繚鐣欎笉鍙彉 document mutation銆乭istory 鍜屼繚瀛樼姸鎬佸洖璋冦€?- 娓呯悊 controller 涓殢璇︽儏闈㈡澘鎷嗗嚭鍚庝笉鍐嶉渶瑕佺殑鍥炬爣銆佽妭鐐规牱寮忓拰 metadata 灞曠ず imports銆?- 鏂囦欢瑙勬ā缁х画涓嬮檷锛歚useGraphWorkspaceController.tsx` 浠?2321 琛岄檷鍒?2049 琛岋紝鏂板璇︽儏缁勪欢 497 琛岋紝绗﹀悎鏅€氫笟鍔＄粍浠?500 琛屽唴鐨勯樁娈电洰鏍囥€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel` 鍏堢孩鍚庣豢锛屾渶缁?4 涓粍浠剁敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel GraphWorkspacePage GraphWorkspaceRecoveryPanel GraphWorkspaceSourceSummary` 閫氳繃锛? 涓枃浠躲€?6 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run lint` 閫氳繃锛屽寘鍚叏宸ヤ綔鍖?typecheck 鍜屾枃妗ｅ悓姝ラ獙璇併€?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?6 涓敤鎴风娴嬭瘯鏂囦欢銆?4 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚墿灞曞悗鐨?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 鑺傜偣/杩炵嚎璇︽儏缂栬緫宸茬粡鏈夌嫭绔嬬粍浠跺拰娴嬭瘯淇濇姢锛屽悗缁彲浠ョ户缁妸 controller 鍐呯殑鐢诲竷 pointer drag銆乵arquee銆佸閫夌姸鎬佹満鍜屽鍏ュ鍑?hook 鎷嗗嚭銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鐨勫眬閮ㄦ紨杩涖€?
-## 2026-06-06 00:17:47 +08:00 | v1.1.0-alpha.32 | 鎷嗗垎鍥捐氨鏍稿績妯″潡骞惰ˉ缂栬緫鍣ㄦ垚鐔熷害鍥炲綊
-### 浠诲姟鍐呭
-- 缁х画鎵ц StudyMate 鍥捐氨宸ヤ綔鍖?Project Graph 瀵规爣璁″垝锛屼紭鍏堝鐞?`@studymate/graph-core` 鍗曟枃浠惰繃澶х殑缁撴瀯椋庨櫓锛屽苟琛ュ墠绔妭鐐?杩炵嚎缂栬緫銆佸悗绔姹傝竟鐣屽拰 E2E 澶辫触鐘舵€佽鐩栥€?- 淇濇寔鐜版湁 Graph API銆乣.smtg` schemaVersion 1 鍜屽墠绔?`GraphWorkspacePage` 鍏ュ彛鍏煎锛屼笉寮曞叆 WebGL/Pixi銆丆RDT銆乀auri 鎴?`.prg` 鍏煎銆?### 瀹屾垚缁撴灉
-- 鏂板 `packages/graph-core/src/model.ts`銆乣source.ts`銆乣mutations.ts`銆乣validation.ts`銆乣file-format.ts`銆乣history.ts`銆乣templates.ts`銆乣fixtures.ts`銆乣selection.ts`銆乣viewport.ts` 鍜?`utils.ts`锛屾妸鍘?`index.ts` 鎷嗘垚鑱氱劍妯″潡骞朵繚鐣?barrel 瀵煎嚭銆?- 鏂板 `packages/graph-core/test/graphCoreModules.test.ts`锛岄攣瀹氭ā鍧楀寲鍏ュ彛浠嶈兘鏆撮湶鏂囨。瑙勮寖鍖栥€侀獙璇併€乣.smtg` 瀵煎叆瀵煎嚭銆乭istory銆佹ā鏉裤€乫ixture銆乻election 鍜?viewport 鑳藉姏銆?- 鏇存柊鐢ㄦ埛绔浘璋遍〉闈㈡祴璇曪紝瑕嗙洊閫変腑 URL 鑺傜偣鍚庣紪杈戞爣棰樺拰绫诲瀷 metadata銆侀€変腑杈瑰悗缂栬緫鍏崇郴鏍囩鍜岀洿绾?鏇茬嚎褰㈡€侊紝骞堕獙璇佷繚瀛?payload銆?- 鎵╁睍 `e2e/v1-graph-workspace.spec.ts`锛屽湪 200 鑺傜偣銆?00 杈广€?0 鍒嗙粍 smoke 涓ˉ蹇嵎閿潰鏉裤€丣SON 瀵煎叆澶辫触銆佸揩鐓ф仮澶嶅け璐ュ拰鏉ユ簮鍙嶉摼璺宠浆銆?- 鏇存柊鍚庣 graph handler锛屾棤鏁?JSON/binding 璇锋眰缁熶竴杩斿洖 400 `invalid_graph_request`锛岄伩鍏嶅浘璋变繚瀛樸€佹仮澶嶃€佸鍏ュ拰 AI 鑽夌鍏ュ彛鎶婂鎴风閿欒璇姤涓?500銆?- 鏇存柊鍚庣鍥捐氨鏍￠獙 helper锛宍metadata.targetNodeIds` 鍚屾椂鍏煎 JSON 瑙ｇ爜寰楀埌鐨?`[]any` 鍜屾湇鍔″唴閮ㄦ瀯閫犵殑 `[]string`锛岄伩鍏嶅鐩爣杈规紡妫€鎮寕鐩爣銆?- 鏇存柊 `frontend-user/tsconfig.json`锛屽厑璁稿墠绔?noEmit typecheck 娑堣垂 graph-core 鍐呴儴 `.ts` 妯″潡 import銆?### 楠岃瘉缁撴灉
-- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?7 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm --workspace frontend-user run test -- GraphWorkspacePage` 閫氳繃锛? 涓〉闈㈢骇鍥捐氨鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `cd backend && go test ./internal/modules/graph/...` 閫氳繃銆?- `npm run lint` 閫氳繃锛屽寘鍚叏宸ヤ綔鍖?typecheck 鍜屾枃妗ｅ悓姝ラ獙璇併€?- `npm run build:user` 閫氳繃銆?- `npm run test:user` 閫氳繃锛?5 涓敤鎴风娴嬭瘯鏂囦欢銆?0 涓敤渚嬪叏閮ㄩ€氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚墿灞曞悗鐨?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- `graph-core` 鏈€澶у疄鐜版枃浠跺凡闄嶅埌绾?220 琛岋紝鍚庣画鍙互鎸夋ā鍧楃户缁ˉ鏂囦欢鏍煎紡銆侀獙璇佸拰鎬ц兘 fixture 娴嬭瘯锛岃€屼笉鍐嶆妸閫昏緫鍘嬪洖鍗曚竴鍏ュ彛銆?- 鍥捐氨鍓嶇鐨勮妭鐐?杩炵嚎璇︽儏缂栬緫宸叉湁椤甸潰绾у洖褰掍繚鎶わ紝涓嬩竴姝ラ€傚悎缁х画鎶婅鎯?rail 浠?controller 涓媶鎴愬鍣ㄥ拰绾鍥剧粍浠躲€?- 鍚庣鍥捐氨璇锋眰杈圭晫鏇寸ǔ瀹氾紝鍚庣画琛?service 绾ф寔涔呭寲娴嬭瘯鏃朵粛寤鸿鍏堟娊 repository/document interface锛岄伩鍏嶅崟鍏冩祴璇曚緷璧栫湡瀹?MySQL/Mongo銆?
-## 2026-06-05 20:37:23 +08:00 | v1.1.0-alpha.31 | 鎷嗗嚭鍥捐氨鍙充晶鏉ユ簮涓庢仮澶嶉潰鏉?### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘鍥捐氨宸ヤ綔鍖?Phase 1 鎷嗗垎锛屼紭鍏堟妸鍙充晶 rail 涓拰瀛︿範闂幆/鎭㈠閾捐矾鐩稿叧鐨勭函灞曠ず鍖轰粠 `useGraphWorkspaceController.tsx` 涓嬁鍑烘潵銆?- 淇濈暀褰撳墠鏉ユ簮鍙嶉摼銆佹潵婧愭憳瑕併€佸崱鐗囪崏绋跨紪杈戙€佸啓鍏ュ崱缁勫拰蹇収鎭㈠琛屼负锛屼笉鏀瑰彉鐜版湁 Graph API 涓?`.smtg` 鏂囦欢鍚堢害銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/components/GraphWorkspaceSourceSummary.tsx`锛屾壙鎺ユ潵婧愮被鍨嬬粺璁°€佸绔?鏃犳潵婧愯妭鐐规彁绀恒€佸墠 5 涓潵婧愬垪琛ㄣ€佹潵婧愬弽閾炬寜閽拰绌烘€併€?- 鏂板 `frontend-user/src/modules/graph/components/GraphWorkspaceRecoveryPanel.tsx`锛屾壙鎺ョ敓鎴愬崱鐗囪崏绋挎寜閽€乨eck 閫夋嫨銆佽崏绋块棶棰?绛旀缂栬緫銆佺‘璁ゅ啓鍏ュ崱缁勫拰蹇収鎭㈠鍒楄〃銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾妸鏉ユ簮鎽樿涓庡揩鐓?鍗＄墖鑽夌 UI 鏇挎崲涓虹粍浠惰皟鐢紝controller 浠?2609 琛岀户缁檷鍒?2487 琛屻€?- 鏂板 `GraphWorkspaceSourceSummary.test.tsx` 涓?`GraphWorkspaceRecoveryPanel.test.tsx`锛岃鐩栨潵婧愮粺璁°€佸弽閾捐烦杞洖璋冦€佺┖鎬併€佹潵婧愭姌鍙犳彁绀恒€佸崱鐗囪崏绋跨紪杈戙€佺‘璁ゅ啓鍏ュ拰蹇収鎭㈠鍥炶皟銆?- 鏇存柊 `docs/planning/VERSION_PLAN.md` 涓?`docs/planning/versions/v0.6.0-graph-product.md`锛屽悓姝ヨ褰曞彸渚?rail 鐨勬潵婧愭憳瑕併€佸揩鐓ф仮澶嶅拰鍗＄墖鑽夌闈㈡澘宸叉媶鍑恒€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test -- GraphWorkspaceRecoveryPanel GraphWorkspaceSourceSummary GraphWorkspaceStageChrome GraphWorkspaceShell` 閫氳繃锛? 涓枃浠躲€?1 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm run lint` 閫氳繃锛屽寘鍚叏宸ヤ綔鍖?typecheck 鍜屾枃妗ｅ悓姝ラ獙璇併€?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?6 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?5 涓枃浠躲€?8 涓敤鎴风鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 鍥捐氨鏉ユ簮鎽樿鍜屾仮澶?鍗＄墖鑽夌閾捐矾鐜板湪鏈夌嫭绔嬬粍浠舵祴璇曚繚鎶わ紝鍚庣画鍙互缁х画鎷嗚妭鐐?杩炵嚎璇︽儏缂栬緫鍖猴紝鑰屼笉闇€瑕佸悓鏃惰Е纰版潵婧愪笌鎭㈠ UI銆?- 褰撳墠浠嶄笉杩涘叆澶氫汉鍗忎綔銆乄ebGL/Pixi銆乀auri 鎴?`.prg` 鍏煎锛岀户缁部鐜版湁 Web 鍥捐氨鏋舵瀯鍋氬彲楠岃瘉鐨勫眬閮ㄤ骇鍝佸寲銆?
-## 2026-06-05 20:24:42 +08:00 | v1.1.0-alpha.30 | 鎷嗗嚭鍥捐氨鐢诲竷 Stage 绾鍥剧粍浠?### 浠诲姟鍐呭
-- 缁х画鎺ㄨ繘 StudyMate 鍥捐氨宸ヤ綔鍖?Project Graph 瀵规爣璁″垝锛屼紭鍏堟媶鍒?`useGraphWorkspaceController.tsx` 鐨勭敾甯?JSX锛岄伩鍏嶇户缁妸 stage status銆亀orld銆乵inimap 鍜岀┖鎬佹覆鏌撳爢鍦ㄥぇ鍨?controller 涓€?- 淇濈暀鐜版湁鑺傜偣銆佽竟銆佸垎缁勩€佹閫夈€佸皬鍦板浘銆佸彸閿彍鍗曘€侀敭鐩樻寚鍗楀拰閫夋嫨鎬佽涓猴紝鍙妸瑙嗗浘琛ㄩ潰涓嬫矇鍒板彲娴嬭瘯缁勪欢銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`锛屾媶鍑?`GraphStageStatus`銆乣GraphStageCanvas`銆乣GraphStageMinimap` 鍜?`GraphStageEmptyState`銆?- `GraphStageCanvas` 鍙帴鏀舵枃妗ｃ€侀€変腑鎬併€佺敾甯冩祴閲忓紩鐢ㄥ拰浜嬩欢鍥炶皟锛涜妭鐐?杈?鍒嗙粍 mutation銆佸巻鍙层€佷繚瀛樺拰瀵煎叆瀵煎嚭浠嶇暀鍦?controller锛岄伩鍏嶆媶鍒嗘椂鏀瑰彉涓氬姟鐘舵€佹満銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾妸 stage status/world/minimap/empty state 娓叉煋鏇挎崲涓虹函瑙嗗浘缁勪欢璋冪敤锛宑ontroller 浠?2785 琛岄檷鍒?2609 琛屻€?- 鏂板 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`锛岃鐩栫姸鎬佹潯 aria-live銆佸榻愭彁绀恒€佸皬鍦板浘閫変腑鎬併€佺┖鎬佹彁绀猴紝浠ュ強鑺傜偣鐐瑰嚮銆佽竟閫夋嫨鍜屽垎缁勬姌鍙犲洖璋冨鎵樸€?- 鏇存柊 `docs/planning/VERSION_PLAN.md` 涓?`docs/planning/versions/v0.6.0-graph-product.md`锛屽悓姝ヨ褰?stage 绾鍥剧粍浠跺凡鎷嗗嚭锛屽彸渚ц鎯?rail 鍜岀敾甯冧氦浜掔姸鎬佹満浠嶆槸鍚庣画鎷嗗垎閲嶇偣銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test -- GraphWorkspaceStageChrome GraphWorkspaceShell` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm run lint` 閫氳繃锛屽寘鍚叏宸ヤ綔鍖?typecheck 鍜屾枃妗ｅ悓姝ラ獙璇併€?- `npm run build:user` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?6 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:user` 閫氳繃锛?3 涓枃浠躲€?3 涓敤鎴风鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `cd backend && go test ./...` 閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚?200 鑺傜偣鍥捐氨 smoke銆?### 鍚庣画褰卞搷
-- 鐢诲竷娓叉煋琛ㄩ潰鐜板湪鍏峰鐙珛缁勪欢娴嬭瘯淇濇姢锛屽悗缁彲浠ョ户缁妸 pointer drag銆乵arquee銆佸閫夈€乧ontext menu 鍜?detail rail 鍒嗗埆鎷嗘垚鏇村皬 hook/component銆?- 褰撳墠娌℃湁寮曞叆 WebGL/Pixi銆丆RDT銆乀auri 鎴?`.prg` 鍏煎锛屼粛娌跨幇鏈?Web 鍥捐氨鏋舵瀯鍋氬眬閮ㄦ紨杩涖€?
-## 2026-06-05 10:28:51 +08:00 | v1.1.0-alpha.29 | 琛ラ綈鍥捐氨宸ュ叿鏍忔墿灞曡妭鐐圭被鍨嬪叆鍙?### 浠诲姟鍐呭
-- 瀵归綈 Project Graph 绾ц妭鐐圭紪杈戜綋楠岃姹傦紝鎶婃蹇点€佺瑪璁般€佽祫鏂欍€佸崱鐗囥€丄I銆佸浘鐗囥€乁RL銆佸叕寮忋€丳DF 閿氱偣涔濈被 StudyMate 鑺傜偣浠庢暎钀藉湪 controller 閲岀殑榛樿鍊兼敹鏁涗负缁熶竴閰嶇疆銆?- 閬垮厤缁х画澧炲姞涓荤晫闈㈡寜閽爢锛屾敼鐢ㄢ€滆妭鐐圭被鍨嬩笅鎷?+ 鏂板缓鎸夐挳鈥濈殑绱у噾鍏ュ彛鏆撮湶鎵╁睍鑺傜偣绫诲瀷銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphNodeTypes.test.ts`锛屽厛浠ョ己澶?helper 褰㈡垚 RED锛屽啀瑕嗙洊涔濈被鑺傜偣閫夐」銆侀粯璁ゆ爣棰?灏哄鍜屾潵婧?label 缁ф壙銆?- 鏂板 `frontend-user/src/modules/graph/lib/graphNodeTypes.ts`锛屽鍑鸿妭鐐圭被鍨?union銆侀厤缃垪琛ㄣ€佺被鍨嬫煡璇㈠拰 `buildGraphNodeDraft`銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾柊寤鸿妭鐐规祦绋嬪鐢ㄨ妭鐐圭被鍨嬮厤缃紝宸ュ叿鏍忔柊澧炲彲璁块棶鐨勨€滈€夋嫨鏂板缓鑺傜偣绫诲瀷鈥濅笅鎷夊拰鍔ㄦ€佲€滄柊寤篨鑺傜偣鈥濇寜閽€?- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`锛岃鐩栦粠宸ュ叿鏍忛€夋嫨 URL 绫诲瀷骞跺垱寤?URL 鑺傜偣鍚庤繘鍏?dirty 淇濆瓨鐘舵€併€?- 鏇存柊 `frontend-user/src/styles/graph.css`锛屼负鑺傜偣绫诲瀷涓嬫媺琛ュ厖绱у噾鏍峰紡銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphNodeTypes.test.ts` 鍏堢孩鍚庣豢锛屾渶缁?3 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/lib/graphKeyboardShortcuts.test.ts` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm run build:user` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鐢ㄦ埛鐜板湪鍙互浠庝富宸ュ叿鏍忓垱寤哄叏閮?StudyMate 浜у搧鍖栬妭鐐圭被鍨嬶紱鍚庣画鍙户缁ˉ鑺傜偣璇︽儏闈㈡澘涓?URL/鍏紡/PDF 閿氱偣鐨勪笓灞炲瓧娈电紪杈戝拰閿洏鑿滃崟鍏ュ彛銆?- 鑺傜偣绫诲瀷閰嶇疆宸茶劚绂诲ぇ鍨?controller锛屽悗缁鍏ャ€丄I 鑽夌鍜屾ā鏉夸篃鍙鐢ㄥ悓涓€濂楅粯璁ゅ€笺€?
-## 2026-06-05 10:23:12 +08:00 | v1.1.0-alpha.28 | 涓嬫矇鍥捐氨 PNG 瀵煎嚭娓叉煋杈圭晫
-### 浠诲姟鍐呭
-- 缁х画鎷嗗垎 `useGraphWorkspaceController.tsx`锛屾妸 PNG 瀵煎嚭涓殑 SVG Blob銆両mage 鍔犺浇銆乧anvas 缁樺埗鍜?object URL 鐢熷懡鍛ㄦ湡浠?controller 涓笅娌変负鍙祴璇?helper銆?- 淇濈暀鐜版湁 PNG/SVG/JSON 瀵煎嚭鍏ュ彛鍜岀敤鎴峰彲瑙佹枃妗堬紝閲嶇偣闄嶄綆瀵煎嚭澶辫触鏃惰祫婧愰噴鏀句笌娴忚鍣?API 缁嗚妭鐨勫洖褰掗闄┿€?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphCanvasExport.test.ts`锛屽厛浠ョ己澶?helper 褰㈡垚 RED锛屽啀瑕嗙洊 SVG 娓叉煋鎴?PNG blob銆乧anvas 灏哄銆佽儗鏅～鍏呫€佸浘鐗囩粯鍒跺拰澶辫触鏃跺洖鏀?object URL銆?- 鏂板 `frontend-user/src/modules/graph/lib/graphCanvasExport.ts`锛屽鍑?`renderGraphPngBlobFromSvg`锛屽苟鍦?`finally` 涓粺涓€鍥炴敹 object URL銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛孭NG 瀵煎嚭鎸夐挳澶嶇敤鏂?helper锛宑ontroller 涓嶅啀鐩存帴绠＄悊 Image/canvas/toBlob 缁嗚妭銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphCanvasExport.test.ts` 鍏堢孩鍚庣豢锛屾渶缁?2 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/GraphWorkspacePage.test.tsx` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?### 鍚庣画褰卞搷
-- PNG 瀵煎嚭鑳藉姏鍏峰娴忚鍣ㄨ祫婧愮敓鍛藉懆鏈熷崟鍏冩祴璇曚繚鎶わ紱涓嬩竴姝ラ€傚悎缁х画鎶?SVG/JSON 涓嬭浇鍖呰銆丮arkdown/Mermaid/JSON 瀵煎叆鐘舵€佸拰淇濆瓨鎭㈠娴佺▼鎷嗘垚鏇村皬 hook銆?- 澶ц妯?Pixi/WebGL 杩佺Щ浠嶄笉杩涘叆褰撳墠闃舵锛岀户缁寜 DOM/SVG 灞€閮ㄤ紭鍖栬矾绾挎帹杩涖€?
-## 2026-06-05 10:19:20 +08:00 | v1.1.0-alpha.27 | 鎶藉嚭鍥捐氨宸ヤ綔鍖哄姞杞界姸鎬佽竟鐣屽苟瀹屾垚鍏ㄩ摼楠岃瘉
-### 浠诲姟鍐呭
-- 寤剁画鍥捐氨宸ヤ綔鍖?controller 鎷嗗垎锛屾妸鏁版嵁鍔犺浇銆佸垵濮嬪浘璋遍€夋嫨銆佽鎯呰鑼冨寲鍜屽揩鐓уけ璐?ready 鏂囨浠庡ぇ鍨?hook 涓笅娌変负鍙祴璇?helper銆?- 鍦ㄧ户缁媶鍒嗗墠琛ヨ窇鍥捐氨浜у搧鍖栨渶缁堥獙璇侀摼锛岀‘璁や笂涓€闃舵绱鑳藉姏鍦ㄥ綋鍓嶄粨搴撶湡瀹炵姸鎬佷笅浠嶅彲鏋勫缓銆佹祴璇曞拰 E2E 鎵撳紑銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphWorkspaceLoadState.test.ts`锛屽厛浠ョ己澶?helper 褰㈡垚 RED锛屽啀瑕嗙洊璇锋眰鍥捐氨浼樺厛绾с€佽崏绋跨墝缁勯粯璁ゅ€笺€佺己澶?document 瑙勮寖鍖栧拰蹇収澶辫触鏂囨淇濈暀銆?- 鏂板 `frontend-user/src/modules/graph/lib/graphWorkspaceLoadState.ts`锛屽鍑?`buildGraphWorkspaceResourceState`銆乣normalizeGraphWorkspaceDetail` 鍜?`buildGraphWorkspaceLoadedStatus`銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屽姞杞姐€佸垱寤洪寮犲浘璋卞拰鍒囨崲鍥捐氨璺緞澶嶇敤鏂?helper锛涗繚鐣欎繚瀛樸€佸鍏ャ€佹仮澶嶇瓑鏃㈡湁閫昏緫涓嶆墿鏁ｆ湰娆℃敼鍔ㄨ寖鍥淬€?### 楠岃瘉缁撴灉
-- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?6 涓?graph-core 鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `cd backend; go test ./...` 閫氳繃銆?- `npm run lint` 閫氳繃锛屽寘鍚叏宸ヤ綔鍖?typecheck 鍜屾枃妗ｅ悓姝ラ獙璇併€?- `npm run build:user` 閫氳繃銆?- `npm run test:user` 閫氳繃锛?7 涓枃浠躲€?1 涓敤鎴风鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm run test:e2e` 閫氳繃锛? 涓?Playwright 鐢ㄤ緥鍏ㄩ儴閫氳繃锛屽寘鍚?200 鑺傜偣鍥捐氨鎵撳紑涓?JSON 瀵煎嚭 smoke銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphWorkspaceLoadState.test.ts` 鍏堢孩鍚庣豢锛屾渶缁?4 涓敤渚嬮€氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts` 閫氳繃锛? 涓枃浠躲€? 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鍔犺浇鐘舵€佽竟鐣屽凡缁忎粠 controller 涓户缁笅娌夛紱`useGraphWorkspaceController.tsx` 浠嶇害 114KB / 2971 琛岋紝涓嬩竴姝ラ€傚悎缁х画鎷嗘暟鎹繚瀛?瀵煎叆瀵煎嚭 hook 鎴栫敾甯?pointer drag 鐘舵€併€?- `.prg` 鍏煎銆佸鐩爣杈?UI銆佸鏉傝嚜鍔ㄥ竷灞€銆佸浜哄崗浣溿€乀auri 鍜?WebGL/Pixi 閲嶅啓浠嶆寜璁″垝寤跺悗銆?
-## 2026-06-05 10:09:20 +08:00 | v1.1.0-alpha.26 | 琛ュ浘璋卞伐浣滃尯淇濆瓨銆佸揩鐓т笌 JSON 瀵煎叆澶辫触椤甸潰鍥炲綊
-### 浠诲姟鍐呭
-- 寤剁画 autosave/dirty/snapshot 浜у搧鍖栧垏鐗囷紝鎶婁笂涓€杞函閫昏緫鐘舵€?helper 鎺ㄨ繘鍒扮湡瀹炲伐浣滃尯 UI 鍥炲綊娴嬭瘯銆?- 瑕嗙洊淇濆瓨澶辫触銆佸揩鐓ф仮澶嶅け璐ャ€佸揩鐓у垪琛ㄥけ璐ュ拰 StudyMate JSON 瀵煎叆鏍￠獙澶辫触锛岀‘淇濈敤鎴峰彲瑙佺姸鎬佹槑纭笖涓嶈瑙﹁繙绋嬩繚瀛樸€?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`锛岄€氳繃 mock graph API 娓叉煋鐪熷疄 `GraphWorkspacePage`銆?- 瑕嗙洊鎵归噺淇濆瓨澶辫触鏃跺睍绀洪敊璇秷鎭拰 `淇濆瓨澶辫触` 鐘舵€併€?- 瑕嗙洊蹇収鎭㈠澶辫触鏃跺睍绀洪敊璇秷鎭拰 `淇濆瓨澶辫触` 鐘舵€併€?- 瑕嗙洊蹇収鍒楄〃鍔犺浇澶辫触鏃朵粛鍙户缁紪杈戯紝骞朵繚鐣欌€滄殏鏃舵棤娉曟仮澶嶅巻鍙茬増鏈€濈殑鎻愮ず銆?- 瑕嗙洊 JSON 瀵煎叆缁撴瀯閿欒鏃跺睍绀哄け璐ョ姸鎬侊紝涓嶈皟鐢?`batchSaveGraph` 杩滅▼淇濆瓨銆?- 淇 `loadGraphWorkspace` / `openGraph` 鍦ㄥ揩鐓у垪琛ㄥ姞杞藉け璐ュ悗鍙堢敤鈥滃伐浣滃彴宸插氨缁?宸插垏鎹⑩€濊鐩栧け璐ユ彁绀虹殑闂銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/modules/graph/GraphWorkspacePage.test.tsx` 鍏堟毚闇插揩鐓у垪琛ㄥけ璐ユ彁绀鸿瑕嗙洊鐨勯棶棰橈紝淇鍚庨€氳繃锛? 涓〉闈㈢骇鐢ㄤ緥鍏ㄩ儴閫氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 閫氳繃锛? 涓枃浠躲€?6 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨宸ヤ綔鍖轰繚瀛?蹇収/瀵煎叆澶辫触璺緞鐜板湪鍏峰鐪熷疄 UI 鍥炲綊淇濇姢锛涗笅涓€姝ラ€傚悎琛ラ敭鐩?鏉ユ簮鍙嶉摼/鍗＄墖鑽夌娴佺▼鐨勯〉闈㈢骇鐢ㄤ緥锛屾垨缁х画鎷?controller 鐨勫姞杞?store 杈圭晫銆?
-## 2026-06-05 10:01:08 +08:00 | v1.1.0-alpha.25 | 鎶藉嚭鍥捐氨淇濆瓨銆佺椤典繚鎶や笌蹇収鎭㈠鐘舵€佽竟鐣?### 浠诲姟鍐呭
-- 缁х画鎷嗗垎 `useGraphWorkspaceController.tsx`锛屾妸 autosave/dirty/snapshot 鐩稿叧鐘舵€佹枃妗堜粠澶у瀷 controller 涓笅娌変负鍙祴璇?helper銆?- 寮哄寲淇濆瓨鐘舵€佺殑鍙鎬э紝纭繚淇濆瓨鎴愬姛/澶辫触銆佸揩鐓ф仮澶嶆垚鍔?澶辫触銆佸揩鐓у垪琛ㄥ姞杞藉け璐ュ拰绂婚〉淇濇姢閮芥湁鏄庣‘鐘舵€佽〃杈俱€?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphPersistenceState.ts` 涓庢祴璇曪紝瑕嗙洊绂婚〉淇濇姢鏂囨銆佷繚瀛樻垚鍔?澶辫触鐘舵€併€佸揩鐓ф仮澶嶆垚鍔?澶辫触鐘舵€併€佸揩鐓у垪琛ㄥけ璐ユ彁绀哄拰淇濆瓨鐘舵€佷腑鏂囨爣绛俱€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屼繚瀛樺拰蹇収鎭㈠璺緞澶嶇敤 persistence helper锛涘揩鐓ф仮澶嶆垚鍔熻繘鍏?`saved`锛屽け璐ヨ繘鍏?`failed`銆?- `loadSnapshots` 鐜板湪杩斿洖鍔犺浇鏄惁鎴愬姛锛涗繚瀛樻垨鎭㈠鍚庡鏋滃揩鐓у垪琛ㄥ姞杞藉け璐ワ紝浼氫繚鐣欌€滃彲缁х画缂栬緫浣嗘殏鏃舵棤娉曟仮澶嶅巻鍙茬増鏈€濈殑娓呮櫚鎻愮ず銆?- 椤堕儴淇濆瓨鐘舵€佷粠鑻辨枃鏋氫妇 `idle/dirty/pending/saved/failed` 鏀逛负涓枃鍙鏍囩锛屽苟鍚屾鏇存柊 `aria-label`銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphPersistenceState.test.ts` 鍏堝洜 helper 缂哄け澶辫触锛岃ˉ瀹炵幇鍚庨€氳繃锛涙柊澧炰繚瀛樼姸鎬?label 娴嬭瘯涔熷厛澶辫触鍚庤浆缁裤€?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/lib/graphSettingsPanel.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 閫氳繃锛? 涓枃浠躲€?4 涓敤渚嬪叏閮ㄩ€氳繃銆?### 鍚庣画褰卞搷
-- autosave/dirty/snapshot 鐘舵€佽竟鐣屽凡缁忓叿澶囩函閫昏緫娴嬭瘯淇濇姢锛涗笅涓€姝ラ€傚悎缁х画琛ュ浘璋卞伐浣滃尯椤甸潰绾ф祴璇曪紝瑕嗙洊淇濆瓨澶辫触銆佸揩鐓ф仮澶嶅け璐ュ拰绂婚〉淇濇姢鐨勭湡瀹?UI 琛屼负銆?
-## 2026-06-05 09:55:04 +08:00 | v1.1.0-alpha.24 | 鍔犲己鍥捐氨楠岃瘉闈㈡澘涓庢潵婧愬绔嬭妭鐐规憳瑕?### 浠诲姟鍐呭
-- 缁х画瀹屽杽鐭ヨ瘑鍥捐氨宸ヤ綔鍖虹殑 validation panel 涓?source summary锛岃楠岃瘉缁撴灉涓嶅啀鍙槸骞抽摵 issue锛屾潵婧愭憳瑕佷篃鑳芥樉绀哄绔?鏃犳潵婧愯妭鐐规儏鍐点€?- 鎸?TDD 鍏堣ˉ graph-core 鏉ユ簮鎽樿娴嬭瘯鍜屽墠绔?validation panel helper 娴嬭瘯锛屽啀瀹炵幇骞跺洖鎺ュ伐浣滃尯闈㈡澘銆?### 瀹屾垚缁撴灉
-- 鎵╁睍 `packages/graph-core/src/index.ts` 鐨?`summarizeGraphSourceReferences`锛屾柊澧?`isolatedNodeCount`銆乣isolatedNodeIds`銆乣missingSourceNodeCount` 鍜?`missingSourceNodeIds`锛屽苟鍦?`sourceSwimlaneLayout.test.ts` 瑕嗙洊鑷敱鑺傜偣缁熻銆?- 鏂板 `frontend-user/src/modules/graph/lib/graphValidationPanel.ts` 涓庢祴璇曪紝鎸?severity 鍜?ruleType 姹囨€婚獙璇佺粨鏋滐紝鐢熸垚閿欒/璀﹀憡/鎻愮ず璁℃暟鍜岃鍒欏垎缁勩€?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspacePanels.tsx`锛宍GraphValidationIssueList` 鍏堟樉绀洪獙璇佹憳瑕佷笌瑙勫垯鍒嗙粍锛屽啀淇濈暀鍘熸湁 issue 鏄庣粏鍜岀┖鐘舵€併€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾潵婧愭憳瑕侀潰鏉挎樉绀衡€滃绔?鏃犳潵婧愨€濊妭鐐规暟閲忥紝鍗充娇褰撳墠鍥捐氨娌℃湁浠讳綍鏉ユ簮寮曠敤涔熻兘灞曠ず杩欎竴鐘舵€併€?### 楠岃瘉缁撴灉
-- `npm --workspace @studymate/graph-core run test` 鍏堝洜鏉ユ簮鎽樿缂哄皯瀛ょ珛鑺傜偣瀛楁澶辫触锛岃ˉ瀹炵幇鍚庨€氳繃锛?6 涓?graph-core 娴嬭瘯鍏ㄩ儴閫氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphValidationPanel.test.ts` 鍏堝洜 helper 缂哄け澶辫触锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/components/GraphWorkspacePanels.test.tsx src/modules/graph/lib/graphValidationPanel.test.ts` 鍏堝洜楠岃瘉闈㈡澘鏈樉绀烘憳瑕佸け璐ワ紝琛ュ疄鐜板悗閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphValidationPanel.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx src/modules/graph/lib/graphSettingsPanel.test.ts src/modules/graph/lib/graphSourceBacklinks.test.ts` 閫氳繃锛? 涓枃浠躲€?1 涓敤渚嬪叏閮ㄩ€氳繃銆?### 鍚庣画褰卞搷
-- 楠岃瘉闈㈡澘涓庢潵婧愭憳瑕佺幇鍦ㄩ兘鍏峰鏇存槑纭殑浜у搧鐘舵€佽〃杈撅紱涓嬩竴姝ラ€傚悎缁х画鎷?autosave/dirty/snapshot 娴佺▼锛岃ˉ淇濆瓨澶辫触鍜屽揩鐓ф仮澶嶅け璐ョ殑鍓嶇娴嬭瘯銆?
-## 2026-06-05 09:48:40 +08:00 | v1.1.0-alpha.23 | 鏀舵暃鍥捐氨璁剧疆闈㈡澘閰嶇疆涓庢覆鏌撹竟鐣?### 浠诲姟鍐呭
-- 缁х画鎷嗗垎 `useGraphWorkspaceController.tsx`锛屾妸璁剧疆闈㈡澘涓殑鏄剧ず鍋忓ソ銆佸鍏ュ鍑恒€佽嚜鍔ㄤ繚瀛樸€佹€ц兘鎻愮ず鍜屽揩鎹烽敭璇存槑鏀舵暃涓虹粨鏋勫寲閰嶇疆涓庡彲澶嶇敤缁勪欢銆?- 鎸?TDD 鍏堣ˉ璁剧疆閰嶇疆鍜岄潰鏉跨粍浠舵祴璇曪紝鍐嶅疄鐜板苟鎺ュ叆宸ヤ綔鍖哄彸渚ф爮銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphSettingsPanel.ts` 涓庢祴璇曪紝鍥哄畾璁剧疆闈㈡澘浜旂被 product section锛屽苟鏍规嵁鑺傜偣/杈?鍒嗙粍鏁伴噺鍜屼繚瀛樼姸鎬佺敓鎴愯嚜鍔ㄤ繚瀛樹笌鎬ц兘鎻愮ず銆?- 鎵╁睍 `frontend-user/src/modules/graph/components/GraphWorkspacePanels.tsx`锛屾柊澧?`GraphSettingsPanel` 缁勪欢锛岄伩鍏嶇户缁湪澶у瀷 controller 涓‖缂栫爜璁剧疆璇存槑 JSX銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾牴鎹綋鍓嶅浘璋辫妯°€佷繚瀛樼姸鎬佸拰 autosave delay 鐢熸垚 settings sections锛屽苟鍦ㄥ彸渚ф爮灞曠ず鈥滆缃?/ 鍋忓ソ涓庤鏄庘€濆尯鍧椼€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphSettingsPanel.test.ts` 鍏堝洜 helper 缂哄け澶辫触锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/components/GraphWorkspacePanels.test.tsx` 鍏堝洜 `GraphSettingsPanel` 鏈鍑哄け璐ワ紝琛ュ疄鐜板悗閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphSettingsPanel.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx src/modules/graph/lib/graphSourceBacklinks.test.ts src/modules/graph/lib/graphKeyboardShortcuts.test.ts` 閫氳繃锛? 涓枃浠躲€?3 涓敤渚嬪叏閮ㄩ€氳繃銆?### 鍚庣画褰卞搷
-- 璁剧疆璇存槑宸茬粡浠?controller 涓笅娌変负鍙祴璇曡竟鐣岋紱涓嬩竴姝ラ€傚悎缁х画鎶?validation panel 鍜?autosave/snapshot 娴佺▼鎷嗕负鐙珛妯″潡锛屽苟琛ユ洿瀹屾暣鐨勫伐浣滃尯浜や簰娴嬭瘯銆?
-## 2026-06-05 09:42:46 +08:00 | v1.1.0-alpha.22 | 琛ラ綈鍥捐氨鏉ユ簮鍙嶉摼鍒版壒娉ㄣ€丳DF 椤靛拰 AI 鑽夌
-### 浠诲姟鍐呭
-- 缁х画瀹屽杽鐭ヨ瘑鍥捐氨瀛︿範闂幆锛岃鍥捐氨鑺傜偣鍜屾潵婧愭憳瑕侀潰鏉垮彲浠ユ洿绋冲畾鍦板洖鍒拌祫鏂欍€佺瑪璁般€丳DF 鎵规敞銆佸崱鐗囧拰 AI 涓婁笅鏂囥€?- 鎸?TDD 鍏堣ˉ鍓嶇鏉ユ簮鍙嶉摼 helper 娴嬭瘯鍜屽悗绔?reader graph draft metadata 娴嬭瘯锛屽啀瀹炵幇骞跺洖鎺ュ浘璋卞伐浣滃尯涓?ReaderPage銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphSourceBacklinks.ts` 涓庢祴璇曪紝缁熶竴瑙ｆ瀽 material銆乶ote銆乧ard銆乤nnotation銆乸df-anchor銆乤i_draft銆乤i_task 绛夋潵婧愮被鍨嬬殑璺宠浆鐩爣涓庢寜閽枃妗堛€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屽彸閿彍鍗曘€佽妭鐐硅鎯呭拰鏉ユ簮鎽樿鍒楄〃閮藉鐢ㄥ悓涓€鏉ユ簮鍙嶉摼 helper锛涘彲瑙ｆ瀽鏉ユ簮浼氱洿鎺ユ樉绀衡€滃洖鍒伴槄璇诲櫒/鍥炲埌鎵规敞/鏌ョ湅 AI 鑽夌鈥濈瓑鍏ュ彛銆?- 鏇存柊 `backend/internal/modules/reader/service/graph_drafts.go` 涓庢祴璇曪紝璁╀粠 PDF 鎵规敞鐢熸垚鐨勫浘璋辫崏绋胯妭鐐瑰甫涓?`materialId`銆乣annotationId` 鍜?`page` metadata锛岄伩鍏嶆壒娉ㄨ妭鐐瑰彧鏈?annotation id 鑰屾棤娉曞洖鍒板師璧勬枡椤点€?- 鏇存柊 `frontend-user/src/pages/ReaderPage.tsx` 涓庢祴璇曪紝鏀寔 `/reader/:materialId?page=...&annotation=...` 杩欑被浠庡浘璋卞弽閾捐繘鍏ョ殑鍒濆 PDF 椤佃惤鐐广€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphSourceBacklinks.test.ts` 鍏堝洜 helper 缂哄け澶辫触锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `cd backend; go test ./internal/modules/reader/service` 鍏堝洜鎵规敞鑺傜偣 metadata 缂哄皯 `materialId/page/annotationId` 澶辫触锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `npm --workspace frontend-user run test -- --run src/pages/ReaderPage.test.tsx` 鍏堝洜 page query 鏈敓鏁堝け璐ワ紝琛ュ疄鐜板悗閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphSourceBacklinks.test.ts src/modules/graph/lib/graphKeyboardShortcuts.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx src/pages/ReaderPage.test.tsx` 閫氳繃锛? 涓枃浠躲€?7 涓敤渚嬪叏閮ㄩ€氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鏉ユ簮鍙嶉摼宸茬粡瑕嗙洊瀛︿範闂幆閲岀殑鍏抽敭瀵硅薄锛涘悗缁彲缁х画鎶?settings panel銆乿alidation panel 鍜?autosave/snapshot 杈圭晫浠?controller 涓媶鍑猴紝骞惰ˉ UI smoke 瑕嗙洊鏉ユ簮鎸夐挳瀹為檯鐐瑰嚮銆?
-## 2026-06-05 01:00:00 +08:00 | v1.1.0-alpha.21 | 鎶藉嚭鍥捐氨宸ヤ綔鍖洪敭鐩樺揩鎹烽敭鎰忓浘瑙ｆ瀽
-### 浠诲姟鍐呭
-- 缁х画鎷嗗垎 `useGraphWorkspaceController.tsx`锛屾妸 keydown 浜嬩欢涓殑蹇嵎閿鍒欐娊鎴愬彲娴嬭瘯鐨勬剰鍥捐В鏋?helper銆?- 淇濈暀鍘熸湁淇濆瓨銆佹挙閿€/閲嶅仛銆佸叏閫夈€佸垹闄ゃ€佽仛鐒︺€佸垎缁勩€佽繛绾裤€侀噸缃閲庡拰 Escape 琛屼负锛屽彧鎶婃寜閿垽鏂粠 React effect 涓Щ鍑恒€?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/graph/lib/graphKeyboardShortcuts.test.ts`锛岃鐩栬緭鍏ユ鍐呭鐨勪繚瀛?history/鍏ㄩ€?鍒犻櫎/鐒︾偣/鍒嗙粍/杩炵嚎/瑙嗛噹閲嶇疆/Escape 瑙勫垯銆?- 鏂板 `frontend-user/src/modules/graph/lib/graphKeyboardShortcuts.ts`锛屽鍑?`resolveGraphKeyboardShortcut` 鍜屾槑纭殑 shortcut action union銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛岃 keydown effect 鍏堣В鏋?action 鍐嶆墽琛?UI 鍓綔鐢紝鍑忓皯澶у瀷 hook 鍐呴儴鏉′欢鍒嗘敮銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphKeyboardShortcuts.test.ts` 鍏堝洜 helper 鏂囦欢缂哄け澶辫触锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphKeyboardShortcuts.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 閫氳繃锛? 涓枃浠躲€?5 涓敤渚嬪叏閮ㄩ€氳繃銆?### 鍚庣画褰卞搷
-- 蹇嵎閿鍒欏凡鍏峰鍗曞厓娴嬭瘯淇濇姢锛涘悗缁彲缁х画鎶?source backlinks銆乻ettings panel銆佸鍏?淇濆瓨杈圭晫浠?controller 涓媶鎴愭洿灏忔ā鍧椼€?
-## 2026-06-05 00:56:07 +08:00 | v1.1.0-alpha.20 | 涓嬫矇鍥捐氨鑺傜偣銆佽竟涓庡垎缁?mutation 绾€昏緫
-### 浠诲姟鍐呭
-- 缁х画鎷嗗垎 `useGraphWorkspaceController.tsx`锛屾妸鍒犻櫎鑺傜偣銆佸垱寤鸿繛绾裤€佸鍒惰妭鐐广€佸垱寤哄垎缁勫拰鎶樺彔鍒嗙粍鐨勬枃妗?mutation 涓嬫矇鍒?`@studymate/graph-core`銆?- 鎸?TDD 鍏堣ˉ graph-core mutation 娴嬭瘯锛屽啀瀹炵幇涓嶅彲鍙?helper 骞跺洖鎺ョ敤鎴风 controller銆?### 瀹屾垚缁撴灉
-- 鏂板 `packages/graph-core/test/graphMutations.test.ts`锛岃鐩栧垹闄よ妭鐐规椂娓呯悊杈瑰拰鍒嗙粍銆佽繛绾垮幓閲嶃€佸鍒惰妭鐐?metadata/source 鎷疯礉涓庤垶鍙拌竟鐣岄挸鍒躲€佹寜閫変腑鑺傜偣 bounds 鍒涘缓鍒嗙粍銆佸垎缁勬姌鍙犲垏鎹€?- 鎵╁睍 `packages/graph-core/src/index.ts`锛屾柊澧?`removeGraphNodesFromDocument`銆乣appendGraphNodeToDocument`銆乣appendGraphEdgeToDocument`銆乣duplicateGraphNodeInDocument`銆乣createGraphGroupForNodes` 鍜?`toggleGraphGroupCollapse`銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛岃鍒犻櫎銆佽繛绾裤€佸鍒躲€佸垎缁勫拰鎶樺彔鎿嶄綔澶嶇敤 graph-core mutation helper锛岀户缁噺灏?controller 鍐呴儴鎵嬪啓鏂囨。鏀瑰啓鍒嗘敮銆?### 楠岃瘉缁撴灉
-- `npm --workspace @studymate/graph-core run test` 鍏堝洜 mutation helper 鏈鍑哄け璐ワ紝琛ュ疄鐜板悗閫氳繃锛?6 涓?graph-core 娴嬭瘯鍏ㄩ儴閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 閫氳繃銆?### 鍚庣画褰卞搷
-- 鑺傜偣/杈?鍒嗙粍鐨勬牳蹇冩枃妗?mutation 宸插叿澶?UI 鏃犲叧娴嬭瘯淇濇姢锛涗笅涓€姝ラ€傚悎缁х画鎷?keyboard shortcut 瑙勫垯銆乻ettings/source panel 閫昏緫鍜屽墿浣欏鍏?淇濆瓨杈圭晫銆?
-## 2026-06-05 00:47:28 +08:00 | v1.1.0-alpha.19 | 涓嬫矇鍥捐氨 viewport 涓?minimap 鐩告満閫昏緫
-### 浠诲姟鍐呭
-- 缁х画鎷嗗垎 `useGraphWorkspaceController.tsx`锛屾妸 viewport/camera/minimap 鐨勫潗鏍囨姇褰变笌瑙嗛噹璁＄畻涓嬫矇鍒?`@studymate/graph-core`銆?- 鎸?TDD 鍏堣ˉ graph-core viewport 娴嬭瘯锛屽啀瀹炵幇绾€昏緫 helper 骞跺洖鎺ョ敤鎴风 controller 涓?workspace helper銆?### 瀹屾垚缁撴灉
-- 鏂板 `packages/graph-core/test/graphViewport.test.ts`锛岃鐩?zoom clamp銆佺煩褰㈠眳涓€乧lient point 鍒板浘璋卞潗鏍囨姇褰便€乵inimap viewport 鏄犲皠鍜屼笉鍙祴鑸炲彴灏哄鍏滃簳銆?- 鎵╁睍 `packages/graph-core/src/index.ts`锛屾柊澧?`GraphViewport`銆乣GraphRect`銆乣GraphStageSize`銆乣clampGraphZoom`銆乣centerGraphViewportOnRect`銆乣projectClientPointToGraph` 鍜?`buildGraphMinimapViewport`銆?- 鏇存柊 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts` 涓?`frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛岃缂╂斁闄愬埗銆佽仛鐒﹁妭鐐广€佹嫋鎷芥姇褰卞拰 minimap 瑙嗗彛澶嶇敤 graph-core helper銆?### 楠岃瘉缁撴灉
-- `npm --workspace @studymate/graph-core run test` 閫氳繃锛?1 涓?graph-core 娴嬭瘯鍏ㄩ儴閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 閫氳繃銆?### 鍚庣画褰卞搷
-- viewport/camera 宸叉垚涓哄彲澶嶇敤绾€昏緫杈圭晫锛涗笅涓€姝ラ€傚悎缁х画鎷?node/edge/group mutations銆乲eyboard shortcut 瑙勫垯鍜?settings/source panel 閫昏緫銆?
-## 2026-06-05 00:40:55 +08:00 | v1.1.0-alpha.18 | 涓嬫矇鍥捐氨 selection 涓?marquee 绾€昏緫
-### 浠诲姟鍐呭
-- 缁х画鎷嗗垎 `useGraphWorkspaceController.tsx`锛屾妸 selection / marquee 鍛戒腑閫昏緫浠庡ぇ鍨?hook 涓笅娌夊埌 `@studymate/graph-core`銆?- 鎸?TDD 鍏堣ˉ graph-core 閫夋嫨鎬佹祴璇曪紝鍐嶅疄鐜板苟鍥炴帴鐢ㄦ埛绔?controller銆?### 瀹屾垚缁撴灉
-- 鏂板 `packages/graph-core/test/graphSelection.test.ts`锛岃鐩栧崟閫夈€佹竻绌恒€佸閫?toggle銆佺┖ ID 蹇界暐銆佹閫夌煩褰㈠弽鍚戝綊涓€鍜岄殣钘忚妭鐐硅繃婊ゃ€?- 鎵╁睍 `packages/graph-core/src/index.ts`锛屾柊澧?`GraphSelectionState`銆乣createGraphSelectionState`銆乣setGraphNodeSelection`銆乣clearGraphNodeSelection`銆乣toggleGraphNodeSelection` 鍜?`selectGraphNodesInRect`銆?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛岃鍗曢€夈€佹竻绌恒€佸鍑忛€夋嫨鍜屾閫夊懡涓鐢?graph-core helper锛屽噺灏?hook 鍐呴儴鎵嬪啓鐘舵€佸垎鏀€?### 楠岃瘉缁撴灉
-- `npm --workspace @studymate/graph-core run test` 鍏堝洜 selection helper 鏈鍑哄け璐ワ紝琛ュ疄鐜板悗閫氳繃锛?6 涓?graph-core 娴嬭瘯鍏ㄩ儴閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 閫氳繃銆?### 鍚庣画褰卞搷
-- selection / marquee 宸叉垚涓哄彲澶嶇敤绾€昏緫杈圭晫锛涗笅涓€姝ュ彲缁х画鎸夊悓鏍锋柟寮忔媶 camera/viewport銆乶ode/edge/group mutations 鍜?keyboard shortcut 瑙勫垯銆?
-## 2026-06-05 00:29:33 +08:00 | v1.1.0-alpha.17 | 鍥捐氨宸ヤ綔鍖?JSON 鏂囦欢銆侀獙璇佽鍒欎笌 200 鑺傜偣 smoke
-### 浠诲姟鍐呭
-- 寤剁画鍥捐氨浜у搧鍖栨敹鍙ｏ紝鎸?TDD 鍏堣ˉ `@studymate/graph-core` 绾€昏緫娴嬭瘯锛屽啀瀹炵幇鏂囨。瑙勮寖鍖栥€侀獙璇佽鍒欍€乣.smtg` 瀵煎叆瀵煎嚭銆佸涔犳ā鏉裤€乭istory label 鍜屽熀鍑嗗す鍏枫€?- 鍦ㄤ笉鐮村潖鐜版湁 Graph API 鍚堢害鐨勫墠鎻愪笅锛屾墿灞曞悗绔?`ValidateGraph` 瑙勫垯鍜屽涔犳ā鏉垮唴瀹广€?- 鐢ㄦ埛绔帴鍏?StudyMate JSON 瀵煎叆瀵煎嚭銆佹槑纭?`idle/dirty/pending/saved/failed` 淇濆瓨鐘舵€併€佺椤典繚鎶ゅ拰鍥捐氨 200 鑺傜偣 E2E smoke銆?### 瀹屾垚缁撴灉
-- 鏂板 `packages/graph-core/test/graphProductization.test.ts`锛岃鐩?normalize銆乿alidate銆丼MTG JSON 寰€杩斻€乭istory label銆佸洓绫诲涔犳ā鏉垮拰 200/300/20 鍩哄噯澶瑰叿銆?- 鎵╁睍 `packages/graph-core/src/index.ts`锛屾柊澧?graph document clone/normalize銆乣validateGraphDocument`銆乣serializeStudymateGraphJson`銆乣parseStudymateGraphJson`銆乭istory state銆佸涔犳ā鏉裤€佸熀鍑嗘暟鎹拰瀹夊叏鏂囦欢鍚嶈兘鍔涖€?- 鎵╁睍 `backend/internal/modules/graph/service/helpers.go` 涓庢祴璇曪紝楠岃瘉瀛ょ珛鑺傜偣銆佺己鏉ユ簮銆侀噸澶嶆爣棰樸€佹偓鎸傝竟銆佽法鎶樺彔鍒嗙粍杈广€佺┖鍒嗙粍銆侀潪娉曞昂瀵稿拰鏃犳晥鏉ユ簮 target锛涙ā鏉夸粠 UML/ERD/C4 鏇挎崲涓哄涔犺祫鏂欐⒊鐞嗐€佽涔︾瑪璁般€佹蹇电綉缁溿€佸涔犲崱鐗囧噯澶囥€?- 鏂板 `frontend-user/src/modules/graph/lib/graphFileImportExport.ts` 涓庢祴璇曪紝鎺ュ叆 `.smtg` / `application/vnd.studymate.graph+json` 瀵煎叆瀵煎嚭锛涘伐浣滃尯鏂板 JSON 瀵煎叆妯″紡銆丣SON 瀵煎嚭鎸夐挳銆佷繚瀛樼姸鎬併€佺椤靛墠淇濇姢鍜屾洿娓呮櫚鐨勫涔犳ā鏉挎枃妗堛€?- 鏂板 `e2e/v1-graph-workspace.spec.ts`锛岄€氳繃鎷︽埅 API 鍔犺浇 200 鑺傜偣銆?00 杈广€?0 鍒嗙粍鍥捐氨锛岄獙璇佸浘璋卞伐浣滃尯鍙墦寮€骞跺睍绀?JSON 瀵煎嚭鍏ュ彛銆?### 楠岃瘉缁撴灉
-- `npm --workspace @studymate/graph-core run test` 鍏堝洜鏂板 API 鏈鍑哄け璐ワ紝琛ュ疄鐜板悗閫氳繃锛?2 涓祴璇曞叏閮ㄩ€氳繃銆?- `go test ./internal/modules/graph/service` 鍏堝洜楠岃瘉瑙勫垯鍜屾ā鏉夸粛涓烘棫瀹炵幇澶辫触锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts` 鍏堝洜 helper 缂哄け澶辫触锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `npm run test:user` 閫氳繃锛岀敤鎴风 11 涓祴璇曟枃浠躲€?0 涓敤渚嬪叏閮ㄩ€氳繃銆?- `npm run build:user` 涓?`npm run build:admin` 閫氳繃銆?- `npx playwright test e2e/v1-graph-workspace.spec.ts` 閫氳繃锛岀‘璁?200 鑺傜偣鍥捐氨 smoke 鍙敤銆?- `npm run test:e2e` 閫氳繃锛? 鏉?Playwright smoke 鍏ㄩ儴閫氳繃銆?### 鍚庣画褰卞搷
-- 鍥捐氨鏍稿績鑳藉姏宸茬粡浠庡ぇ hook 涓户缁绉诲埌鍙祴璇曠函閫昏緫杈圭晫锛涘悗缁€傚悎缁х画鎷?`useGraphWorkspaceController.tsx` 鐨勬暟鎹姞杞姐€佺敾甯冧氦浜掋€乿alidation/draft 鍜?settings 闈㈡澘銆?- `.prg` 鍏煎銆佸鐩爣杈?UI銆佸鏉傝嚜鍔ㄥ竷灞€銆佹彃浠跺競鍦恒€丆RDT銆乀auri 鍜?WebGL/Pixi 閲嶅啓浠嶆寜璁″垝寤跺悗锛涘闇€瑕?Project Graph 鏂囦欢鍏煎锛屽簲浠ュ悗缁浆鎹㈠櫒鐗堟湰瀹炵幇銆?
-## 2026-06-02 23:08:40 +08:00 | v1.1.0-alpha.16 | 琛?Reader API銆侀〉闈€乭andler 涓?service 娴嬭瘯纭寲
-### 浠诲姟鍐呭
-- 寤剁画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝鍥寸粫闃呰鍣ㄩ摼璺ˉ榻愮敤鎴风 API 鍚堢害娴嬭瘯銆侀〉闈㈠洖褰掓祴璇曞拰鍚庣 handler / service 杈圭晫娴嬭瘯銆?- 缁х画閬靛惊 TDD锛氬厛璁╁悗绔?`reader/handler`銆乣reader/service` 鐨?fake 渚濊禆娴嬭瘯鍥犳敞鍏ヨ竟鐣屼笉瓒宠€岀紪璇戝け璐ワ紝鍐嶆敹绐勪緷璧栨帴鍙ｅ苟閲嶈窇鐩爣娴嬭瘯銆?- 鍚屾鏇存柊 README銆佽矾绾垮浘銆佺増鏈鍒掋€佸彉鏇磋褰曞拰椤圭洰鏃ュ織锛屽苟鍦ㄥ垏鐗囧畬鎴愬悗琛ヨ窇瀹屾暣 CI 涓庤鐩栫巼姹囨€汇€?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/api/reader.test.ts`锛岃鐩?`getReaderState`銆乣updateReaderProgress`銆乣createReaderAnnotation`銆乣deleteReaderAnnotation`銆乣generateAnnotationCardDrafts` 鍜?`generateAnnotationGraphDrafts` 鐨勯壌鏉冨ご銆佽矾寰勪笌璇锋眰浣撱€?- 鏂板 `frontend-user/src/pages/ReaderPage.test.tsx`锛岃鐩栭槄璇昏繘搴﹀洖鍐欍€佹坊鍔犱功绛俱€佷繚瀛樻壒娉ㄥ悗鍒锋柊鐘舵€侊紝浠ュ強璧勬枡鏍囬銆丳DF 椤电爜鍜?`rects` 鍧愭爣鐗囨鏉ユ簮灞曠ず銆?- 鏂板 `backend/internal/modules/reader/handler/handler_test.go`锛岃鐩?`UpdateProgress`銆乣CreateAnnotation` 鍜?`GenerateGraphDrafts` 鐨勯壌鏉冪敤鎴枫€乵aterial id銆佽姹備綋涓?success envelope銆?- 鏂板 `backend/internal/modules/reader/service/service_test.go`锛岃鐩栫┖鎵规敞鎷掔粷銆侀粯璁ら鑹蹭笌瀹¤璁板綍銆佹壒娉ㄩ€夋嫨缂哄彛鍜岃祫鏂欏彲瑙佹€ц竟鐣屻€?- 鏇存柊 `backend/internal/modules/reader/handler/handler.go` 涓?`backend/internal/modules/reader/service/service.go`锛屽皢瀵瑰叿浣?`Service` / repository / material / audit / AI service 鐨勪緷璧栨敹绐勪负鏈€灏忔帴鍙ｏ紝骞朵繚鐣欑紪璇戞湡鏂█锛屼究浜庡悗缁户缁ˉ fake 鎴?fixture 娴嬭瘯銆?### 楠岃瘉缁撴灉
-- `cd backend; go test ./internal/modules/reader/handler` 鍏堝洜 `NewHandler` 鍙帴鏀跺叿浣?service 鑰屾棤娉曟敞鍏?fake service锛屽舰鎴愮紪璇戞湡 RED锛涙敹绐勪负 `readerService` interface 鍚庨€氳繃銆?- `cd backend; go test ./internal/modules/reader/service` 鍏堝洜 `NewService` 鍙帴鏀跺叿浣?repository / material / audit 渚濊禆鑰屾棤娉曟敞鍏?fake锛屽舰鎴愮紪璇戞湡 RED锛涙敹绐勪负鏈€灏忔帴鍙ｅ悗閫氳繃銆?- `npm --workspace frontend-user run test -- --run src/api/reader.test.ts src/pages/ReaderPage.test.tsx` 閫氳繃锛岃鐩?Reader API 鍚堢害涓庨〉闈㈠洖褰?5 涓敤渚嬨€?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€? 鏉?Playwright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?- `npm run test:coverage` 閫氳繃锛涘綋鍓嶈鐩栫巼缂哄彛鏇存柊涓猴細`frontend-user` 姹囨€?`46.18%`銆乣frontend-admin` 姹囨€?`60.27%`锛屽悗绔?`reader/service` 鎻愬崌鍒?`40.6%`锛屼絾浠嶄笌 `note/service`銆乣card/service`銆乣graph/service`銆乣share/service` 绛?service/repository 鍖呬竴璧锋瀯鎴愪富瑕佺己鍙ｃ€?### 鍚庣画褰卞搷
-- Reader 閾捐矾鐜板湪鍏峰 API client銆侀〉闈㈠眰銆乭andler 灞傚拰 service 灞傜殑鑷姩鍖栦繚鎶わ紝鍚庣画鍙户缁悜 `note/service` 鍙婃潵婧愯拷韪棴鐜ˉ fake / repository fixture 娴嬭瘯銆?- 鍓嶇涓庡悗绔暣浣撹鐩栫巼浠嶆槑鏄句綆浜?80%锛屽悗缁紭鍏堢户缁ˉ `ReaderPage.tsx`銆乣appShared.tsx`銆乣workspaceControllerHelpers.ts` 浠ュ強 reader/note/card/graph service 灞傜殑缁嗙矑搴﹀洖褰掋€?
-## 2026-06-02 22:42:39 +08:00 | v1.1.0-alpha.15 | 鎶藉嚭 SearchIndexer 涓庡浘璋?history 鐘舵€佹満
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝鍦ㄤ笉鏀瑰彉鐜版湁鍏紑 API 濂戠害鐨勫墠鎻愪笅锛屼负鍚庣鎼滅储閾捐矾琛ュ彲鏇挎崲绱㈠紩杈圭晫銆?- 缁х画鎷嗗垎 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屼紭鍏堟妸 history/autosave/undo-redo 鐘舵€佽浆绉绘娊鎴愬彲娴嬭瘯绾€昏緫銆?- 鍚屾鏇存柊 README銆佽矾绾垮浘銆佺増鏈鍒掋€佸彉鏇磋褰曞拰椤圭洰鏃ュ織锛屽苟閲嶆柊璺?CI 涓庤鐩栫巼姹囨€汇€?### 瀹屾垚缁撴灉
-- 鏂板 `backend/internal/modules/search/service/indexer.go`锛屽紩鍏ュ唴閮?`SearchIndexer` 鎶借薄锛岄粯璁ゅ疄鐜颁粛涓?MySQL fallback锛屼笉鏀瑰彉 `GET /api/v1/search` 璺敱濂戠害銆?- 鎵╁睍 `backend/internal/modules/search/service/service_test.go`锛岃ˉ grouped search 閫氳繃 fake indexer 鑱氬悎缁撴灉銆乴imit 榛樿鍊间笌閿欒閫忎紶娴嬭瘯銆?- 鏂板 `frontend-user/src/modules/graph/lib/graphHistory.ts` 涓?`frontend-user/src/modules/graph/lib/graphHistory.test.ts`锛岄攣瀹?history 鎹曡幏銆乺eset銆乽ndo/redo 涓?saved 鐘舵€佽浆绉汇€?- 鏇存柊 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`锛屾妸 history/autosave/undo-redo 鐘舵€佸垏鍒?`graphHistory.ts` 涓?`shouldAutosaveGraph` 杈圭晫涓婏紝缁х画缂╁皬澶ф帶鍒跺櫒鍐呴儴鑱岃矗銆?### 楠岃瘉缁撴灉
-- `go test ./internal/modules/search/service` 鍏堝洜缂哄皯 `NewServiceWithIndexer` 缂栬瘧澶辫触锛屽畬鎴?RED锛涜ˉ瀹炵幇鍚庨€氳繃銆?- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphHistory.test.ts` 鍏堝洜缂哄皯 `graphHistory.ts` 澶辫触锛岃ˉ瀹炵幇鍚庨€氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€? 鏉?Playwright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?- `npm run test:coverage` 閫氳繃锛涘綋鏃惰鐩栫巼缂哄彛璁板綍涓猴細`frontend-user` 姹囨€?`44.49%`銆乣frontend-admin` 姹囨€?`60.27%`锛屽悗绔?`search/service` 鎻愬崌鍒?`56.4%`锛屼絾 `share/service`銆乣reader/service`銆乣note/service`銆乣card/service`銆乣graph/service` 绛?service/repository 浠嶉渶缁х画琛?fixture 娴嬭瘯銆?### 鍚庣画褰卞搷
-- 鎼滅储閾捐矾鐜板湪宸茬粡鍏峰淇濇寔 MySQL fallback 涓嶅彉鐨勫悓鏃跺垏鎹㈠悗缁?adapter 鐨勮竟鐣岋紝涓嬩竴姝ラ€傚悎缁х画琛?`search/share` service 灞?fake 鎴?repository fixture銆?- 鍥捐氨宸ヤ綔鍖哄凡缁忓厛鎶?history/autosave/undo-redo 杩欎竴缁勭姸鎬佷粠澶ф帶鍒跺櫒涓嫀鍑烘潵锛屽悗缁彲娌垮悓涓€鏂瑰紡缁х画涓嬫矇鏁版嵁鍔犺浇銆佺敾甯冧氦浜掋€乿alidation/draft 涓庤缃潰鏉块€昏緫銆?## 2026-06-02 14:01:58 +08:00 | v1.1.0-alpha.14 | 琛ュ悗鍙版不鐞?Playwright smoke
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝涓虹鐞嗙鍚庡彴娌荤悊琛?Playwright smoke銆?- 璁?E2E 鍚屾椂鍚姩鐢ㄦ埛绔拰绠＄悊绔?preview锛岃鐩栫鐞嗙宸叉湁 admin session 涓嬬殑 users 娌荤悊妯″潡鍔犺浇銆?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鏂板 `e2e/v1-admin-governance.spec.ts`銆?- 鏇存柊 `package.json` 鐨?`test:e2e`锛屽悓鏃舵瀯寤虹敤鎴风鍜岀鐞嗙銆?- 鏂板 `frontend-admin` 鐨?`preview` 鑴氭湰锛屽苟鎶?`playwright.config.ts` 鏀逛负鍚屾椂鍚姩 4173 鐢ㄦ埛绔拰 4174 绠＄悊绔?preview銆?- 鍚庡彴 smoke 閫氳繃 `localStorage` 鍐欏叆 `studymate.admin.session`锛屾嫤鎴?`/api/v1/admin/me`銆乣/overview`銆乣/moderation` 鍜?`/users?limit=20`锛岄獙璇?users 妯″潡鍔犺浇 `alice` 涓旇姹傛惡甯?`Bearer admin-token`銆?### 楠岃瘉缁撴灉
-- `npm run test:e2e` 閫氳繃锛孭laywright smoke 浠?4 鏉℃墿灞曚负 5 鏉°€?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€? 鏉?Playwright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- v1.1 宸茶鐩栧叕鍏遍〉銆佸涔犻槦鍒楀拰鍚庡彴娌荤悊鐨勫叧閿?smoke锛屽悗缁彲缁х画琛?AI 浠诲姟娌荤悊銆佽祫鏂欐枃浠舵不鐞嗘垨鍥捐氨鍙椾繚鎶ゅ伐浣滄祦銆?
-## 2026-06-02 13:55:57 +08:00 | v1.1.0-alpha.13 | 琛ュ涔犻槦鍒?Playwright smoke
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝涓哄彈淇濇姢鐨勭敤鎴风 `/review` 澶嶄範闃熷垪琛?Playwright smoke銆?- 鐢ㄦ祴璇曞唴 session 鍜?API 鎷︽埅瑕嗙洊鍒版湡鍗＄墖灞曠ず銆佺炕闈€丟ood 璇勫垎鍜屽涔犲洖鍐欒姹傘€?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鏂板 `e2e/v1-review-flow.spec.ts`銆?- 閫氳繃 `localStorage` 鍐欏叆 `studymate.session`锛岄獙璇佸彈淇濇姢璺敱涓嶄緷璧栫湡瀹炵櫥褰曞嵆鍙繘鍏ュ涔犻〉銆?- 鎷︽埅 `/api/v1/decks`銆乣/api/v1/decks/:id/cards`銆乣/api/v1/review/today` 鍜?`/api/v1/cards/:id/review`銆?- 楠岃瘉鍥炲啓璇锋眰鎼哄甫 `Bearer access-token`锛屽苟鎻愪氦 `{ rating: "good" }`銆?### 楠岃瘉缁撴灉
-- `npm run test:e2e` 閫氳繃锛孭laywright smoke 浠?3 鏉℃墿灞曚负 4 鏉°€?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€? 鏉?Playwright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- 澶嶄範闂幆鐜板湪鍚屾椂鍏峰鐢ㄦ埛绔?API 鍚堢害銆侀〉闈㈢骇 Vitest銆佸悗绔?handler 娴嬭瘯鍜?Playwright smoke锛涘悗缁彲缁х画琛ュ悗鍙版不鐞?smoke銆?
-## 2026-06-02 13:47:00 +08:00 | v1.1.0-alpha.12 | 琛ュ悗绔?AI handler 杈圭晫娴嬭瘯
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝涓哄悗绔?AI handler 琛?tasks銆乽sage 鍜?drafts 璇诲彇鍏ュ彛娴嬭瘯銆?- 鍏堟坊鍔?fake service handler 娴嬭瘯褰㈡垚缂栬瘧鏈?RED锛屽啀鎶?AI handler 浠庡叿浣?service 渚濊禆鏀剁獎涓烘渶灏忔帴鍙ｃ€?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鏂板 `backend/internal/modules/ai/handler/handler_test.go`銆?- 娴嬭瘯 `/ai/tasks`銆乣/ai/usage`銆乣/ai/drafts` 鍧囦娇鐢ㄨ璇佺敤鎴疯皟鐢?service锛屽苟杩斿洖 success envelope銆?- 鏇存柊 `backend/internal/modules/ai/handler/handler.go`锛屽厑璁搁€氳繃鏈€灏?`aiService` interface 娉ㄥ叆 fake锛屽悓鏃朵繚鐣欑湡瀹?AI service 鐨勮矾鐢卞吋瀹广€?### 楠岃瘉缁撴灉
-- `cd backend; go test ./internal/modules/ai/handler` 鍏堝洜 `NewHandler` 鍙帴鍙楀叿浣?service 缂栬瘧澶辫触锛屽畬鎴?RED銆?- `cd backend; go test ./internal/modules/ai/handler` 鍦ㄦ帴鍙ｆ敹绐勫悗閫氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- AI tasks/usage/drafts 璇诲彇鍏ュ彛鍏峰鍚庣 handler 灞備繚鎶わ紝鍚庣画鍙户缁ˉ AI service repository fixture 鎴栧悗鍙?AI 浠诲姟娌荤悊 smoke銆?
-## 2026-06-02 13:42:00 +08:00 | v1.1.0-alpha.11 | 琛ュ悗绔?graph commit handler 杈圭晫娴嬭瘯
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝涓哄悗绔?graph handler 琛ュ浘璋卞彉鏇磋崏绋跨‘璁ゅ叆鍙ｆ祴璇曘€?- 鍏堟坊鍔?fake service handler 娴嬭瘯褰㈡垚缂栬瘧鏈?RED锛屽啀鎶?graph handler 浠庡叿浣?service 渚濊禆鏀剁獎涓烘渶灏忔帴鍙ｃ€?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鏂板 `backend/internal/modules/graph/handler/handler_test.go`銆?- 娴嬭瘯 `POST /graphs/:id/ai/commit-changes` 浼氫紶閫掕璇佺敤鎴枫€佺洰鏍?graph id銆乣draftIds` 鍜岄€愯崏绋?`nodeSelections`銆?- 鏇存柊 `backend/internal/modules/graph/handler/handler.go`锛屽厑璁搁€氳繃鏈€灏?`graphService` interface 娉ㄥ叆 fake锛屽悓鏃朵繚鐣欑湡瀹?`graphservice.Service` 鐨勮矾鐢卞吋瀹广€?### 楠岃瘉缁撴灉
-- `cd backend; go test ./internal/modules/graph/handler` 鍏堝洜 `NewHandler` 鍙帴鍙楀叿浣?service 缂栬瘧澶辫触锛屽畬鎴?RED銆?- `cd backend; go test ./internal/modules/graph/handler` 鍦ㄦ帴鍙ｆ敹绐勫悗閫氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- 鍥捐氨鍙樻洿鑽夌纭鐨勫墠绔〉闈€佸墠绔?API 鍚堢害鍜屽悗绔?handler 杈圭晫鍧囨湁鑷姩鍖栦繚鎶わ紝鍚庣画鍙户缁ˉ graph service/repository fixture銆?
-## 2026-06-02 13:37:49 +08:00 | v1.1.0-alpha.10 | 琛ュ浘璋卞彉鏇磋崏绋跨‘璁?API 鍚堢害娴嬭瘯
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝涓虹敤鎴风 AI/graph 鑽夌纭閾捐矾琛?API client 鍚堢害娴嬭瘯銆?- 閿佸畾 `commitGraphChangeDraftSelection` 鐨?endpoint銆丠TTP method銆侀壌鏉冨ご鍜岃姹備綋銆?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鎵╁睍 `frontend-user/src/api/reviewAi.test.ts`銆?- 鏂板鍥捐氨鍙樻洿鑽夌纭鐢ㄤ緥锛岃皟鐢?`/api/v1/graphs/graph-1/ai/commit-changes`銆?- 楠岃瘉璇锋眰浣撲繚鐣?`draftIds` 鍜岄€愯崏绋?`nodeSelections`锛岀‘淇濋〉闈㈤€夋嫨鐨勫€欓€夎妭鐐逛笉浼氬湪 API 灞傝涓㈠け銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/api/reviewAi.test.ts` 閫氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- AI 鍥捐氨鑽夌纭娴佺幇鍦ㄥ悓鏃跺叿澶?API 鍚堢害娴嬭瘯鍜岄〉闈㈢骇娴嬭瘯淇濇姢锛屽悗缁彲缁х画琛ュ悗绔?graph commit handler/service 鐨勭粏绮掑害 fixture銆?
-## 2026-06-02 13:33:00 +08:00 | v1.1.0-alpha.9 | 琛?AiPage 鍥捐氨鍙樻洿鑽夌纭娴嬭瘯
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝涓虹敤鎴风 AiPage 琛ュ浘璋卞彉鏇磋崏绋跨‘璁ら〉闈㈡祴璇曘€?- 瑕嗙洊寰呯‘璁?`graph_change` 鑽夌鍐欏叆鎵€閫夌洰鏍囧浘璋辩殑 UI 娴併€?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鎵╁睍 `frontend-user/src/pages/AiPage.test.tsx`銆?- 閫氳繃 mock API 鍒濆鍖栧浘璋卞彉鏇磋崏绋裤€佺洰鏍囧浘璋卞垪琛ㄥ拰鐩爣鍥捐氨璇︽儏銆?- 娴嬭瘯鍊欓€夎妭鐐瑰湪椤甸潰涓睍绀猴紝骞剁偣鍑烩€滄妸 1 鏉″浘璋卞彉鏇村啓鍏ユ墍閫夊浘璋扁€濄€?- 楠岃瘉 `commitGraphChangeDraftSelection` 鏀跺埌 `draftIds` 鍜?`nodeSelections`锛屼繚鐣?`node-a` 涓?`node-b` 鐨勮妭鐐归€夋嫨銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/pages/AiPage.test.tsx` 閫氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- AI 鑽夌鍒板涔犵郴缁熴€佸埌鐩爣鍥捐氨鐨勪袱涓‘璁ゆ祦閮芥湁椤甸潰绾ф祴璇曚繚鎶わ紝鍚庣画鍙户缁ˉ鍚庣 AI/graph commit handler/service 娴嬭瘯銆?
-## 2026-06-02 12:47:00 +08:00 | v1.1.0-alpha.8 | 琛?AiPage 鑽夌纭椤甸潰娴嬭瘯
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝涓虹敤鎴风 AiPage 琛ラ〉闈㈢骇 AI 鍗＄墖鑽夌纭娴嬭瘯銆?- 瑕嗙洊寰呯‘璁?`card_draft` 鍐欏叆鎵€閫夊涔?deck 鐨?UI 娴併€?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/pages/AiPage.test.tsx`銆?- 閫氳繃 mock API 鍒濆鍖?AI 鑽夌銆佺敤閲忔憳瑕併€乨eck 鍒楄〃鍜岀┖鍥捐氨鍒楄〃銆?- 娴嬭瘯鐢ㄦ埛鐐瑰嚮鈥滄妸 1 寮犲緟纭鍗＄墖鑽夌鍐欏叆澶嶄範绯荤粺鈥濆悗锛宍bulkCreateDeckCards` 鏀跺埌 draftId銆乫ront銆乥ack銆乻ourceType 鍜?sourceId銆?- 楠岃瘉纭瀹屾垚鍚庢樉绀衡€滃凡鎶?1 寮?AI 鑽夌鍐欏叆澶嶄範绯荤粺銆傗€濄€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/pages/AiPage.test.tsx` 閫氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- AI 鑽夌鍒板涔犵郴缁熺殑纭娴佸凡鏈?API 鍚堢害鍜岄〉闈㈢骇娴嬭瘯淇濇姢锛屽悗缁彲缁х画琛ュ浘璋卞彉鏇磋崏绋跨‘璁ゆ祦銆?
-## 2026-06-02 12:43:00 +08:00 | v1.1.0-alpha.7 | 琛?ReviewWorkspace 椤甸潰绾у涔犲洖鍐欐祴璇?### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝涓虹敤鎴风 ReviewWorkspace 琛ラ〉闈㈢骇鍥炲綊娴嬭瘯銆?- 瑕嗙洊浠婃棩闃熷垪灞曠ず銆佹樉绀虹瓟妗堛€佽瘎鍒嗘寜閽拰澶嶄範鍥炲啓璋冪敤銆?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`銆?- 閫氳繃 mock API 鍒濆鍖栧崱缁勩€佸崱鐗囧垪琛ㄥ拰浠婃棩闃熷垪銆?- 娴嬭瘯鐢ㄦ埛鐐瑰嚮鈥滄樉绀虹瓟妗堚€濆悗鍙互鐪嬪埌绛旀锛屽苟鐐瑰嚮 `Good` 瑙﹀彂 `reviewCard`銆?- 楠岃瘉璇勫垎鍚庢樉绀衡€滃凡璁板綍澶嶄範鈥濇秷鎭苟娓呯┖浠婃棩闃熷垪銆?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/modules/review/ReviewWorkspacePage.test.tsx` 閫氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- 澶嶄範闂幆宸叉湁 API 鍚堢害銆佸悗绔?handler 鍜岄〉闈㈢骇娴嬭瘯淇濇姢锛屽悗缁彲浠ョ户缁ˉ AI 鑽夌纭 UI 鎴栧悗绔?service fixture銆?
-## 2026-06-02 12:39:00 +08:00 | v1.1.0-alpha.6 | 琛ュ悗绔?card handler 杈圭晫娴嬭瘯
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝涓哄涔?Card/Deck handler 琛ヨ竟鐣屾祴璇曘€?- 璁?card handler 鍙互閫氳繃 fake service 鍋氬崟鍏冩祴璇曪紝涓嶇洿鎺ヤ緷璧栫湡瀹炴暟鎹簱銆?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鏂板 `backend/internal/modules/card/handler/handler_test.go`銆?- 瑕嗙洊鍒涘缓鍗＄粍鏃剁殑璁よ瘉鐢ㄦ埛銆佽姹備綋缁戝畾鍜?201 鍝嶅簲銆?- 瑕嗙洊浠婃棩澶嶄範闃熷垪鐨?success envelope 涓?due item銆?- 瑕嗙洊澶嶄範鍥炲啓鐨?card id銆乺ating 鍜?elapsedMs 浼犻€掋€?- `card/handler` 鐨?service 渚濊禆鏀逛负鏈€灏忔帴鍙ｏ紝骞朵繚鐣欏叿浣?service 鐨勭紪璇戞湡鎺ュ彛鏂█銆?### 楠岃瘉缁撴灉
-- `cd backend; go test ./internal/modules/card/handler` 閫氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- 澶嶄範闂幆宸叉湁鐢ㄦ埛绔?API 鍚堢害娴嬭瘯鍜屽悗绔?handler 杈圭晫娴嬭瘯锛屽悗缁彲缁х画琛?ReviewWorkspace UI smoke 鎴?service 灞傛暟鎹簱 fixture銆?
-## 2026-06-02 12:36:00 +08:00 | v1.1.0-alpha.5 | 琛?review/AI 鐢ㄦ埛绔?API 鍚堢害娴嬭瘯
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝涓哄涔犱笌 AI 鑽夌闂幆琛ョ敤鎴风 API client 鍚堢害娴嬭瘯銆?- 瑕嗙洊 Deck/Card銆佷粖鏃ュ涔犻槦鍒椼€佸涔犲洖鍐欏拰 AI tasks/usage/drafts 璇锋眰杈圭晫銆?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/api/reviewAi.test.ts`銆?- 瑕嗙洊 `createDeck` 鐨勮璇佸ご銆佸彲瑙佹€т笌璇锋眰杞借嵎銆?- 瑕嗙洊 `bulkCreateDeckCards` 浠?AI draft 鎵归噺纭鎴愬崱鐗囩殑璇锋眰杞借嵎銆?- 瑕嗙洊 `getTodayReviewQueue`銆乣reviewCard`銆乣listAiTasks`銆乣getAiUsageSummary`銆乣listAiDrafts` 鐨勮矾寰勪笌閴存潈澶淬€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/api/reviewAi.test.ts` 閫氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- 鍚庣画鍙户缁ˉ review workspace UI smoke 鍜屽悗绔?card handler/service 娴嬭瘯锛岄€愭鎶婂涔犻棴鐜粠 API 鍚堢害鎺ㄨ繘鍒扮鍒扮鐢ㄦ埛娴併€?
-## 2026-06-02 12:32:00 +08:00 | v1.1.0-alpha.4 | 鏀舵暃鍏叡棣栭〉 E2E 浠ｇ悊鍣０
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝鍑忓皯鍏叡棣栭〉 Playwright smoke 瀵规湰鍦板悗绔殑闅愬紡渚濊禆銆?- 淇濇寔褰撳墠鍏叡澹冲眰銆佹悳绱㈤〉鍜屽垎浜〉 smoke 浠嶅湪鍚屼竴鍓嶇棰勮鏈嶅姟涓嬭繍琛屻€?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鏇存柊 `e2e/user-shell.spec.ts`锛屽 `/api/v1/materials` 鍜?`/api/v1/posts` 澧炲姞绌烘垚鍔熷搷搴旀嫤鎴€?- Playwright 杩愯鏃朵笉鍐嶈緭鍑烘棤鏈湴鍚庣瀵艰嚧鐨?Vite proxy `ECONNREFUSED` 鍣０銆?### 楠岃瘉缁撴灉
-- `npm run test:e2e` 閫氳繃锛? 鏉?Playwright smoke 鍧囬€氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- 鍚庣画鏂板鍏叡椤?smoke 鏃跺簲浼樺厛鏄惧紡 mock API 杈圭晫锛岃 E2E 杈撳嚭鍙毚闇茬湡瀹炲け璐ャ€?
-## 2026-06-02 12:29:00 +08:00 | v1.1.0-alpha.3 | 澧炲姞鎼滅储涓庡垎浜彧璇婚〉 Playwright smoke
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝琛ョ敤鎴风鍏叡鎼滅储鍜屽垎浜彧璇婚〉鐨勭鍒扮 smoke銆?- 閬垮厤渚濊禆鏈湴鍚庣锛屼娇鐢?Playwright route 鎷︽埅鍥哄畾 API 鍝嶅簲銆?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鏂板 `e2e/v1-public-flows.spec.ts`銆?- 鎼滅储椤?smoke 瑕嗙洊 `/search?q=鍥捐氨` 璋冪敤 grouped backend result 骞舵樉绀虹粨鏋滃崱鐗囥€?- 鍒嗕韩椤?smoke 瑕嗙洊 `/share/token-1` 璋冪敤 public resolve 骞舵樉绀哄彧璇荤洰鏍囥€佹憳瑕佸拰鍘熷椤甸潰閾炬帴銆?### 楠岃瘉缁撴灉
-- `npm run test:e2e` 閫氳繃锛孭laywright 浠?1 鏉″叕鍏卞３灞?smoke 鎵╁睍涓?3 鏉°€?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- 鍚庣画鍙户缁ˉ鍚庡彴娌荤悊鍜屽涔犻槦鍒?Playwright smoke锛屽苟鎶婂悗绔唬鐞嗘嫆缁濇棩蹇椾粠鍏叡澹冲眰娴嬭瘯閲屾敹鏁涙帀銆?
-## 2026-06-02 12:26:00 +08:00 | v1.1.0-alpha.2 | 琛ュ悗绔?search/share/admin handler 杈圭晫娴嬭瘯
-### 浠诲姟鍐呭
-- 缁х画 v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栵紝琛ュ悗绔?search/share/admin 鐨?handler 灞傚洖褰掓祴璇曘€?- 璁?search/share handler 鍙互閫氳繃 fake service 鍋氬崟鍏冩祴璇曪紝涓嶇洿鎺ヤ緷璧栫湡瀹炴暟鎹簱銆?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鏂板 `backend/internal/modules/search/handler/handler_test.go`锛岃鐩栨煡璇㈠弬鏁般€佺被鍨嬭繃婊ゃ€乴imit 浼犻€掑拰閿欒 envelope銆?- 鏂板 `backend/internal/modules/share/handler/handler_test.go`锛岃鐩栧垱寤哄垎浜摼鎺ユ椂鐨勮璇佺敤鎴枫€佽姹備綋缁戝畾鍜屾垚鍔熷搷搴?envelope銆?- 鏂板 `backend/internal/modules/admin/handler/handler_test.go`锛岃鐩栧悗鍙?limit 鏌ヨ鍙傛暟瑙ｆ瀽銆?- `search/handler` 涓?`share/handler` 鐨?service 渚濊禆鏀逛负鏈€灏忔帴鍙ｏ紝骞朵繚鐣欏叿浣?service 鐨勭紪璇戞湡鎺ュ彛鏂█銆?### 楠岃瘉缁撴灉
-- `cd backend; go test ./internal/modules/search/handler ./internal/modules/share/handler ./internal/modules/admin/handler` 閫氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- 鍚庣画鍙户缁寜鍚屼竴鏂瑰紡琛?review/AI/admin service 缁嗙矑搴︽祴璇曪紝骞跺湪闇€瑕佹暟鎹簱琛屼负鏃跺啀寮曞叆杞婚噺 fixture 鎴?repository interface銆?
-## 2026-06-02 12:20:00 +08:00 | v1.1.0-alpha.1 | 鍔犲帤 search/share/admin 娴嬭瘯鍩虹嚎
-### 浠诲姟鍐呭
-- 鍦?`v1.0.0` 鏈湴鍙戝竷鏍囩涔嬪悗锛屾寜鍚庣画閲岀▼纰戣璁¤繘鍏?v1.1 浜у搧璐ㄩ噺涓庢祴璇曠‖鍖栥€?- 浼樺厛涓?v1 鏂板鐨勬悳绱€佸垎浜拰鍚庡彴娌荤悊鍏ュ彛琛ヨ嚜鍔ㄥ寲鍥炲綊娴嬭瘯銆?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 瀹屾垚缁撴灉
-- 鏂板 `frontend-user/src/api/searchShare.test.ts`锛岃鐩?grouped search 鏌ヨ鍙傛暟銆侀壌鏉冨ご銆乷wner share link 鍒涘缓杞借嵎鍜?public token resolve 缂栫爜璺緞銆?- 鏂板 `frontend-admin/src/views/AdminWorkspaceView.test.ts`锛岃鐩栧凡鏈?admin session 涓嬫不鐞嗛〉鍔犺浇 `/api/v1/admin/users?limit=20` 骞舵惡甯?Bearer token銆?- README 褰撳墠闃舵浠?v1.0.0 鍙戝竷鎺ㄨ繘鏇存柊涓?v1.1 璐ㄩ噺纭寲锛涚増鏈鍒掑拰璺嚎鍥炬柊澧?v1.1 娴嬭瘯纭寲閫€鍑烘爣鍑嗐€?### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- --run src/api/searchShare.test.ts` 閫氳繃銆?- `npm --workspace frontend-admin run test -- --run src/views/AdminWorkspaceView.test.ts` 閫氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- 鍚庣画鍙户缁ˉ鍚庣 search/share/admin/review handler/service 娴嬭瘯锛屽苟杩藉姞 Playwright 鎼滅储銆佸垎浜彧璇婚〉銆佸悗鍙版不鐞嗗拰澶嶄範闃熷垪 smoke flow銆?
-## 2026-06-01 22:03:47 +08:00 | v0.0.73 | 鏀跺彛 NOTE_READ_MODEL銆佽鐩栫巼闂ㄧ涓庢湰鍦板寲妗嗘灦
-### 浠诲姟鍐呭
-- 鎸?v1.0.0 A 闃舵瑕佹眰锛屽畬鎴愬綋鍓嶆湭鎻愪氦鐨?`NOTE_READ_MODEL` 璇诲彇寮€鍏虫敹鍙ｃ€?- 琛ラ綈鍙戝竷鍓嶈鐩栫巼鍛戒护锛屾槑纭瘡涓噷绋嬬浠嶄互瀹屾暣 CI 涓虹‖闂ㄧ銆?- 鍏堝缓绔?`zh-CN` 婧愯瑷€涓?`en-US` 鍗犱綅瀛楀吀妗嗘灦锛屼笉鎶婂畬鏁磋嫳鏂囩炕璇戜綔涓?v1.0.0 闃诲椤广€?### 瀹屾垚缁撴灉
-- 鍚庣绗旇鏈嶅姟鏀寔 `NOTE_READ_MODEL=mysql_primary|mongo_primary`锛宍mongo_primary` 浼樺厛璇诲彇 MongoDB `note_documents.html` 骞跺湪缂哄け鎴栧け璐ユ椂鍥為€€ MySQL銆?- 鏂板鏍硅剼鏈?`test:coverage` 鍙婄敤鎴风銆佺鐞嗙銆佸浘璋辨牳蹇冦€佸悗绔鐩栫巼瀛愬懡浠ゃ€?- 鏂板 `frontend-user/src/i18n/dictionary.ts` 鍜?`frontend-admin/src/i18n/dictionary.ts`锛屽苟娣诲姞瀛楀吀閿竴鑷存€ф祴璇曘€?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 楠岃瘉缁撴灉
-- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- B 闃舵鍙互鍦ㄥ凡鏈夎鐩栫巼鍜屽瓧鍏告鏋朵繚鎶や笅缁х画鎷嗗垎瓒呭ぇ鏂囦欢銆?- 鍙戝竷鍓嶉渶瑕侀澶栬繍琛?`npm run test:coverage` 骞惰褰曡鐩栫巼缂哄彛銆?## 2026-06-01 22:18:00 +08:00 | v0.0.74 | 鎷嗗垎 API client銆佸叏灞€鏍峰紡鍜屽浘璋卞伐浣滃尯 helper
-### 浠诲姟鍐呭
-- 鎸?B 闃舵瑕佹眰缁х画闄嶄綆瓒呭ぇ鏂囦欢缁存姢椋庨櫓銆?- 浼樺厛澶勭悊鐢ㄦ埛绔?API client銆佸叏灞€鏍峰紡鍜屽浘璋辨帶鍒跺櫒涓彲瀹夊叏鎶界鐨勭函 helper銆?### 瀹屾垚缁撴灉
-- `frontend-user/src/api/client.ts` 鏀逛负绋冲畾 barrel锛屾帴鍙ｅ疄鐜版寜 auth銆乫iles銆乧ommunity銆乵aterials銆乶otes銆乺eader銆乬raphs銆乺eview銆乤i 鍩熸媶鍒嗐€?- `frontend-user/src/styles.css` 鏀逛负瀵煎叆鍏ュ彛锛屾牱寮忔寜 app銆亀orkspace銆乬raph銆乺eader-notes銆乻earch-review銆乺esponsive 鍒嗗眰銆?- `useGraphWorkspaceController.tsx` 鎶藉嚭鍥捐氨鏂囨。銆佸嚑浣曘€佹潵婧愬垎缁勩€佸鍑哄拰鐒︾偣瀵艰埅 helper 鍒?`frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`銆?- 淇濈暀鐜版湁椤甸潰瀵煎叆璺緞鍜岃矾鐢辫涓恒€?### 楠岃瘉缁撴灉
-- `npm run typecheck` 閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- 鍥捐氨 hook 浠嶆壙杞藉ぇ閲忎氦浜掍笌 UI 缁勫悎锛孋 闃舵缁х画鎶?autosave銆乻election銆丄I draft 鍜岄潰鏉挎覆鏌撲笅娌夊埌鏇寸粏妯″潡銆?## 2026-06-01 22:32:00 +08:00 | v0.0.75 | 鏀跺彛 Reader/Notes 鏁版嵁鏉ユ簮涓庡浘璋辨€ц兘鍥炲綊
-### 浠诲姟鍐呭
-- 鎸?C 闃舵瑕佹眰琛ラ綈鍘嗗彶绗旇鍒?Mongo 鍐呭鏂囨。鐨勫洖濉矾寰勩€?- 涓?PDF 鎵规敞澧炲姞鍏煎鐨勫綊涓€鍖栧潗鏍囧瓧娈碉紝骞跺湪闃呰鍣?UI 涓樉绀鸿祫鏂欍€丳DF 椤靛拰鍧愭爣鐗囨鏉ユ簮銆?- 澧炲姞鍥捐氨澶ф暟鎹噺鍥炲綊鐢ㄤ緥銆?### 瀹屾垚缁撴灉
-- 鏂板 `backend/cmd/backfill-note-documents`锛屾敮鎸佸箓绛?upsert 鍘嗗彶 `notes.content` 鍒?`note_documents`锛屽苟鏀寔 `-limit` 鍒嗘壒鎵ц銆?- `pdf_annotations` 鏂板 `rects` 瀛楁锛孌TO銆佹ā鍨嬨€佷粨鍌ㄧ紪鐮?瑙ｇ爜銆佹柊瑁呭簱杩佺Щ銆佸巻鍙插簱瀵归綈杩佺Щ鍜屽洖婊氳剼鏈悓姝ユ洿鏂般€?- Reader 鎵规敞鍒涘缓鏃跺啓鍏ュ熀纭€褰掍竴鍖栧潗鏍囷紝鎵规敞鍒楄〃灞曠ず璧勬枡鏍囬銆丳DF 椤靛拰鍧愭爣鐗囨鏁伴噺銆?- `@studymate/graph-core` 澧炲姞 200 鑺傜偣鎬ц兘澶瑰叿锛岃鐩?v1 鍥捐氨鏉ユ簮娉抽亾甯冨眬棰勭畻銆?### 楠岃瘉缁撴灉
-- `cd backend; go test ./internal/modules/reader/... ./internal/modules/note/... ./cmd/backfill-note-documents` 閫氳繃銆?- `npm run typecheck` 閫氳繃銆?- `npm --workspace @studymate/graph-core run test` 閫氳繃銆?- `npm run ci` 閫氳繃锛岃鐩栫被鍨嬫鏌ャ€佹枃妗ｅ悓姝ャ€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?### 鍚庣画褰卞搷
-- C 闃舵鍚庣画鍙户缁姞鍘氬浘璋辨不鐞嗛潰鏉夸笌 Undo/Redo/dirty 鐘舵€佺殑 UI 琛ㄨ揪銆?- D 闃舵鍙互澶嶇敤鎵规敞鏉ユ簮涓?AI draft 閾捐矾缁х画鎺ㄨ繘澶嶄範銆佹悳绱€佸悗鍙板拰鍒嗕韩銆?
-## 2026-06-01 21:36:28 +08:00 | v0.0.72 | 鎷嗗垎鐢ㄦ埛绔富搴旂敤銆佸浘璋卞叆鍙ｅ拰绠＄悊绔叆鍙?### 浠诲姟鍐呭
-- 鎸?v1.0 鍙戝竷鎺ㄨ繘椤哄簭锛屾墽琛岃秴澶ф枃浠舵媶鍒嗐€?- 鐩爣鏄厛瑙ｉ櫎 `frontend-user/src/app/App.tsx`銆乣frontend-user/src/modules/graph/GraphWorkspacePage.tsx`銆乣frontend-admin/src/App.vue` 涓変釜鍏ュ彛鏂囦欢鐨勫法鐭宠亴璐ｏ紝骞跺缓绔嬪悗缁户缁粏鎷嗙殑鐩綍杈圭晫銆?### 瀹屾垚缁撴灉
-- 灏嗙敤鎴风涓诲簲鐢ㄦ媶鎴愶細
+## 2026-07-02 16:41:18 +08:00 | v1.1.0-alpha.89 | 启动前端布局重构 FE-00 / FE-01
+### 任务内容
+- 基于 `master@7b1e8f3a1e77dded69538d075758dc9529b31564`，先处理实际运行中“图谱画布被通用三栏壳层挤压、前端内容承载落后后端能力”的问题。
+- 不触碰图谱 document、版本、快照、来源 relation、导入导出和 `409 graph_version_conflict` 契约，先建立可承接后续图谱重构的前端布局基础。
+### 完成结果
+- 新增 FE-00 前端能力矩阵、布局重构规格和验收清单，明确 Standard / Studio / Canvas / Focus 四类工作模式及图谱重构断点。
+- 新增 `frontend-user/src/app/layouts/AppShell.tsx` 与 `layoutPolicy.ts`；`ShellFrame` 已降为路由兼容层。
+- 图谱改用 Canvas 模式、阅读/笔记改用 Studio 模式、复习改用 Focus 模式；Canvas / Focus 不再渲染通用 `ContextPanel`，图谱先收回全局右侧栏空间。
+- 新增 `PrimaryNavigation`、`CompactNavigation`、`CommandBar`、`Drawer`、`Inspector`、`DataState` 及相应的布局 / 组件最小回归测试。
+- 新增 `styles/layouts.css`，将新的布局变体与基础构件样式从既有全局样式中隔离，为 FE-020 图谱 Drawer / Inspector 重构预留边界。
+### 验证结果
+- 已运行 `git diff --check`，未发现空白错误；并使用全局 TypeScript 编译器进行新增 TS / TSX 文件语法转译检查。
+- 当前沙箱中 `npm ci` 因 npm 镜像 DNS `EAI_AGAIN` 未完成，尚未能运行用户端 `typecheck`、Vitest、构建和 Playwright；需要在正常开发机或具备依赖缓存的 CI 环境复核。
+### 后续影响
+- 图谱页面不再受全局 336px ContextPanel 的固定挤压，但内部 SourceRail / Inspector 仍是下一步 FE-020 的改造目标。
+- 接下来优先将图谱左侧资源区拆为可切换 Drawer，再把节点详情、历史、冲突和 AI 草稿收口进可折叠 Inspector。
+
+> 记录规则：项目主要语言为汉语。每完成一个独立任务，就把完整结果追加到本文档开头。每条记录必须包含时间、项目版本编号、任务内容、完成结果、验证结果和后续影响。
+
+## 2026-07-02 15:10:20 +08:00 | v1.1.0-alpha.88 | 推进 WB-032 延后人工合并状态提示子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把当前冲突辅助从“材料已留存、可以安全重载”再推进一步。
+- 本轮目标是在用户决定这次先不重载时，提供显式的“先保留本地，稍后人工合并”入口和状态提示，让“继续保留本地草稿”也成为可见决策，而不是停留在隐含操作。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，冲突辅助卡片新增 `先保留本地，稍后人工合并` 动作，并支持 `manualMergeDeferred` 状态展示 `已标记为稍后人工合并，当前继续保留本地草稿`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `manualMergeDeferred` 状态和 `deferManualMergeUntilLater()` 交互；用户显式选择稍后人工合并后，会保留当前 dirty 草稿和冲突辅助卡片，同时给出匹配的状态提示。
+- 重写并补强 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`，顺手清理该文件的乱码文案，锁定冲突卡片在“稍后人工合并”路径下的按钮、提示和回调。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，锁定页面级“导出冲突处理包 -> 先保留本地，稍后人工合并 -> 仍可稍后再重载”的完整路径。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 当前边界推进到“安全重载提示 + 延后人工合并提示”并存。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱冲突辅助现在不只是在“放弃本地并重载”这条路径上更明确，也能显式表达“这次先保留本地、稍后人工合并”的决策状态，让冲突处理从单一出口推进到双路径状态化。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更完整的多端 conflict handling、冲突取舍材料组织，以及更强的人工合并辅助。
+
+## 2026-07-02 01:08:10 +08:00 | v1.1.0-alpha.87 | 推进 WB-032 冲突材料留存状态标记子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把冲突处置从“路径更明确”再推进到“状态更明确”。
+- 本轮目标是在用户成功复制或导出冲突材料后，显式提示“已留存冲突材料，可安全重载最新图谱”，让用户不用再凭记忆判断自己是否已经留好证据。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `conflictArtifactsCaptured` 状态；当复制/导出当前草稿 JSON、冲突摘要、最新图谱 JSON 或冲突处理包成功后，会统一点亮该状态；当冲突态消失时会自动清零。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，冲突辅助卡片现支持 `materialsCaptured`，并在材料已成功留存时显示 `已留存冲突材料，可安全重载最新图谱`。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `GraphWorkspacePage.test.tsx`，锁定材料已留存时的显式提示与页面级行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 当前边界推进到“材料留存 + 留存状态可见 + 处置引导”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱冲突辅助现在不仅告诉用户“怎么处理”，还会在材料已经留存后显式告诉用户“可以安全重载”，让冲突决策从静态说明变成带状态感的流程。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是“仅保留本地但暂不重载”的专门引导，或更完整的多端 conflict handling。
+
+## 2026-07-02 01:03:10 +08:00 | v1.1.0-alpha.86 | 推进 WB-032 冲突处置引导子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把当前冲突辅助从“材料准备充分”继续推进到“处置路径更明确”。
+- 本轮目标是在冲突卡片里直接告诉用户三类典型决策路径，并把“放弃本地并重载最新图谱”的动作下沉到卡片本身，减少来回寻找入口的成本。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在冲突辅助卡片中新增两条显式引导：
+  - `如果确认放弃本地修改：可直接重载最新图谱`
+  - `如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱`
+- 同文件新增卡片内动作 `放弃本地并重载最新图谱`，让用户在冲突现场就能完成最后一步，而不必再回到状态栏找入口。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把卡片内动作接到既有 `reloadLatestGraph()` 决策流，保持确认放弃、拉取最新 head、重置历史和状态提示的原有行为一致。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `GraphWorkspacePage.test.tsx`，锁定显式处置文案、卡片内重载按钮和页面级确认流程。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 当前边界推进到“材料留存 + 显式处置引导 + 卡片内重载入口”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱冲突辅助现在已经不只是在同一张卡片里堆动作按钮，而是开始显式表达“放弃本地”和“稍后人工合并”这两条最常见的处置路径，离完整冲突解决流更近一步。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是“保留本地后暂不重载”的处置说明、导出后状态标记，或更完整的多端 conflict handling。
+
+## 2026-07-02 00:57:10 +08:00 | v1.1.0-alpha.85 | 推进 WB-032 冲突处理包导出子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把“留存材料”从分散的多个按钮再推进成更接近人工合并的单一导出入口。
+- 本轮目标是在 dirty 冲突态下提供 `导出冲突处理包`，把本地草稿 JSON、服务端最新图谱 JSON 和可读冲突摘要一起打包，减少后续人工比对时重新拼材料的成本。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictBundleArtifact(...)`，把当前图谱元信息、本地草稿摘要、本地草稿 JSON、最新图谱 JSON 和冲突摘要报告收口为单个 JSON 包。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，当冲突辅助卡片已拿到服务端最新 head 时，额外展示 `导出冲突处理包`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `exportConflictBundle()`，直接基于当前工作区、最新 head 和冲突摘要 artifact 导出单一处理包，并保持冲突建议状态不被清掉。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`GraphWorkspaceStageChrome.test.tsx` 和 `GraphWorkspacePage.test.tsx`，锁定处理包格式、按钮出现条件和页面级状态反馈。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 当前边界推进到“本地草稿 JSON + 最新图谱 JSON + 可读摘要 + 单文件冲突处理包”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱冲突辅助现在不只是在冲突现场给出若干“复制/导出”按钮，而是已经能把后续人工比对最常需要的三类材料收口成一个处理包，明显缩短“先留证据、后做决策”的路径。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是明确的“保留本地 / 放弃本地 / 稍后人工合并”处置引导，以及更完整的多端 conflict handling。
+
+## 2026-07-02 00:51:30 +08:00 | v1.1.0-alpha.84 | 推进 WB-032 服务端最新图谱 JSON 留存子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把冲突辅助从“留存本地草稿”和“带走可读摘要”再往前推一步。
+- 本轮目标是在 dirty 冲突态下也能一键带走“服务端最新图谱 JSON”，让用户后续做人工比对、外部 diff 或半手工合并时，不必自己重新去抓最新 head。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，让冲突辅助卡片在拿到最新 head 后额外提供 `复制最新图谱 JSON` / `导出最新图谱 JSON`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `copyLatestConflictJson()` 与 `exportLatestConflictJson()`，直接基于已拉取的 `latestConflictDetail` 构建 StudyMate JSON，并保持冲突建议状态不被辅助动作清掉。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx` 与 `GraphWorkspacePage.test.tsx`，锁定最新图谱 JSON 留存按钮的出现条件、交互和状态反馈。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 当前边界推进到“本地草稿 JSON + 可读冲突摘要 + 最新图谱 JSON”三轨留存辅助。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱冲突辅助现在已经可以同时带走“本地草稿 JSON”“服务端最新图谱 JSON”和“人类可读摘要”，这为后续人工比对、外部 diff 和合并取舍提供了更完整的原始材料。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更明确的“保留本地 / 放弃本地 / 稍后人工合并”处置引导，以及更完整的多端 conflict handling。
+
+## 2026-07-02 00:45:30 +08:00 | v1.1.0-alpha.83 | 推进 WB-032 可带走的图谱冲突摘要子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“关键对象名级冲突摘要”基础上，再补一层真正可带走的冲突取舍信息。
+- 本轮目标是不让用户在冲突现场只能复制原始草稿 JSON，而是还能一键复制或导出一份人类可读的“图谱冲突摘要”，方便在重载前同步给自己、同事或后续人工合并流程。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，新增 `buildGraphConflictReportArtifact(...)`，把当前图谱标题、版本、当前未保存修改摘要和“与最新图谱相比”的差异摘要组装成可复制/导出的 Markdown 报告。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `copyConflictSummaryReport()` 与 `exportConflictSummaryReport()`，让 dirty 冲突态下可以直接复制或导出人类可读摘要，并保持“建议重载最新图谱”的冲突状态不被辅助动作清掉。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，在冲突辅助卡片里新增 `复制冲突摘要` / `导出冲突摘要` 按钮，把“留存可读取舍信息”和“留存完整 JSON 草稿”拆成两条显式路径。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`、`GraphWorkspaceStageChrome.test.tsx`、`GraphWorkspacePage.test.tsx`，锁定摘要报告格式、按钮交互和页面级状态反馈。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 的当前边界推进到“可读冲突摘要 + 原始草稿 JSON 双轨留存辅助”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱冲突辅助现在不再只提供“完整 JSON 草稿留存”这一条偏工程化的路径，也能直接带走一份摘要化、可沟通的冲突报告，降低用户在重载前做判断和同步上下文的门槛。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是围绕“保留本地 / 放弃本地 / 后续人工合并”的更强取舍辅助，以及更完整的多端 conflict handling。
+
+## 2026-07-02 00:38:10 +08:00 | v1.1.0-alpha.82 | 推进 WB-032 关键对象名级冲突摘要子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“面向最新 head 的冲突差异摘要”基础上，再把摘要粒度从“只有数量”推进到“数量 + 关键对象名”。
+- 本轮目标是让用户在冲突卡片里不只看到“新增 1 个节点”，而是能更快知道“新增的是新概念节点”“标题和最新图谱不一致”等更具体的提示。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts`，让摘要在保持高层概览的前提下，补充关键对象名：标题/说明差异会显示当前值与基线值，节点/连线/分组差异会展示前两个关键名称并在需要时追加“等”。
+- 更新 `frontend-user/src/modules/graph/lib/graphConflictSummary.test.ts`，补齐“关键对象名摘要”和“超过两个对象时的样本截断”回归，锁定摘要口径。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 和 `GraphWorkspaceStageChrome.test.tsx`，让页面与组件回归直接验证“新概念”“Graph on server”这类更具体的冲突提示，而不是只盯数量。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 的当前边界明确为“本地草稿留存辅助 + 本地摘要 + 最新 head 摘要 + 关键对象名级提示”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱冲突辅助卡片现在已经不只是“有差异、差异有几条”，而是能在保留摘要简洁度的前提下，把最关键的对象名直接带出来，显著降低用户理解冲突上下文的成本。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是保留/放弃/后续人工合并的取舍辅助，以及更完整的多端 conflict handling，让冲突卡片不只解释问题，还能更积极地帮助用户做决策。
+
+## 2026-07-02 00:33:20 +08:00 | v1.1.0-alpha.81 | 推进 WB-032 面向最新 head 的冲突差异摘要子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“当前未保存修改摘要”之后，再补一层真正面向服务端最新图谱的冲突差异提示。
+- 本轮目标是不让冲突辅助卡片只停留在“你本地改了什么”，而是进一步告诉用户“这些本地修改与服务端最新 head 相比主要差在哪里”。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`：当工作区进入 dirty 冲突态且建议重载最新图谱时，会静默拉取一次服务端最新 graph head，并把结果保存在冲突辅助状态里，而不打断用户当前决策流。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`：冲突辅助卡片现在除了“当前未保存修改”外，还会展示“与最新图谱相比”的第二组差异摘要；如果最新 head 尚在拉取中或暂时不可用，也会给出对应说明。
+- 继续复用 `graphConflictSummary` helper，让本地 vs 最新 head 的差异摘要保持和“当前未保存修改摘要”一致的口径，避免两套不同的差异规则在 UI 上互相打架。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 和 `GraphWorkspaceStageChrome.test.tsx`，锁定“冲突现场同时展示本地未保存修改摘要与面向最新 head 的差异摘要”的页面与组件行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 当前边界推进到“本地草稿留存辅助 + 当前未保存修改摘要 + 最新 head 差异摘要”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱工作区现在在 dirty 冲突态下不再只会说“你本地有未保存修改”，而是会并列展示“本地改了什么”和“与最新图谱相比差了什么”，让用户在决定留存、放弃或重载前有更完整的上下文。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是更细粒度的冲突差异、合并/保留取舍辅助，以及更完整的多端 conflict handling，让用户不只看到摘要，还能更主动地处理冲突。
+
+## 2026-07-02 00:27:40 +08:00 | v1.1.0-alpha.80 | 推进 WB-032 当前未保存修改摘要子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“冲突态本地草稿留存辅助”之后，再补一层更可理解的冲突摘要。
+- 本轮目标是让用户在 dirty 冲突态下不仅知道“可以复制/导出本地草稿”，还知道“当前这份本地草稿相对最后一次已同步成功的图谱到底改了什么”。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphConflictSummary.ts` 及对应测试，基于“当前工作区图谱”与“最后一次已同步成功的图谱基线”生成当前未保存修改摘要，覆盖标题/说明变化、节点/连线/分组的新增、修改、删除，以及仅视口变化时的兜底提示。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，显式维护 `lastSyncedDetailRef` 作为最后同步基线，并在 dirty 冲突态下把摘要传给冲突辅助卡片。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，让冲突辅助卡片显示“当前未保存修改摘要”，把“你将放弃什么”直接放到冲突现场，而不是只给动作按钮。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 与 `GraphWorkspaceStageChrome.test.tsx`，锁定“冲突现场显示修改摘要、同时保留复制/导出/重载动作”的页面与组件行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 的边界明确为“先看本地未保存修改摘要，再决定是否留存或放弃”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphConflictSummary.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱工作区现在在 dirty 冲突态下不再只是“能不能留存当前草稿”的问题，而是会先把当前未保存修改摘要展示出来，帮助用户更清楚地判断自己是不是要先留存、是否可以接受放弃。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是面向“服务端最新 head”的更完整冲突差异展示与更强的多端 conflict handling，让用户不只知道自己本地改了什么，还能知道这些改动与最新版本的关系。
+
+## 2026-07-01 20:21:30 +08:00 | v1.1.0-alpha.79 | 推进 WB-032 冲突态本地草稿留存辅助子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“显式重载最新图谱”之后，再补一层更稳妥的冲突取舍辅助。
+- 本轮目标是避免用户在版本冲突时只能二选一地“立刻放弃并重载”或“自己摸索怎么留存本地修改”，而是把留存本地草稿的动作显式放到冲突现场。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，新增图谱冲突辅助卡片；当当前工作区处于 dirty 冲突态时，会明确展示 `复制当前草稿 JSON` 和 `导出当前草稿 JSON`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `copyConflictDraftJson()` 与 `exportConflictDraftJson()`：直接基于当前工作区的实时图谱构建 StudyMate JSON，在放弃重载前为本地修改提供留存路径，并保持“重新加载最新图谱”的冲突决策状态不被辅助动作清掉。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 和 `GraphWorkspaceStageChrome.test.tsx`，补齐页面级与组件级回归，锁定“冲突现场显示留存辅助动作、点击辅助动作后仍保留重载决策流”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 的当前边界从“显式重载”推进到“先留存本地修改，再决定是否重载”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱工作区现在在 dirty 冲突态下不再只有“要不要放弃并重载”这一条单线决策，而是把“先复制/导出当前草稿，再决定是否放弃”变成显式、就地、可测试的辅助流程。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是冲突差异摘要和更完整的多端 conflict handling，让用户不仅能留存本地修改，还能更清楚地理解自己即将放弃的内容与服务端最新 head 的差异。
+
+## 2026-07-01 20:08:30 +08:00 | v1.1.0-alpha.78 | 推进 WB-032 显式重载最新图谱决策流子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，把此前“另一窗口正在编辑 / 已保存更高版本”的提醒，进一步升级为用户可执行的最小决策流。
+- 本轮目标是先收口安全的显式重载边界：当当前标签页已经落后时，允许用户主动拉取最新图谱；如果本地仍有未保存修改，必须明确确认放弃后才能继续。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，让图谱状态栏支持可选动作按钮，并在需要时展示 `重新加载最新图谱`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新增 `reloadLatestGraph()` 流程：dirty 状态下先弹确认，随后重新拉取最新 `getGraph(...)` head、重置 history/save-state、刷新 snapshot 列表，并在成功后明确提示“已重新加载最新图谱，未保存更改已放弃”。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`，让“另一窗口已保存更高版本”与 `batch-save` 命中 `graph_version_conflict` 时都能稳定保留“建议重载最新图谱”的页面状态，不再被后续失败文案意外清掉。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`、`GraphWorkspaceStageChrome.test.tsx` 和 `useGraphWorkspacePersistence.test.tsx`，补齐页面级、状态栏级与 hook 级回归，锁定“出现冲突后展示重载动作、dirty 时确认放弃、重载后清理失败状态”的行为。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 的冲突处理边界从“前置提醒”推进到“用户可控的显式重载动作”。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 先因版本冲突路径没有保留重载动作而 RED，修正状态流转顺序后通过。
+- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx` 先因测试支架未补 `onReloadLatestSuggestionChange` 而 RED，补齐 harness 与回归断言后通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱工作区现在不只会告诉用户“你已经落后于最新版本”，还会把“放弃当前未保存修改并重载最新图谱”变成一个明确、可预期、可测试的动作，减少用户停在失败态却不知道下一步该怎么做的情况。
+- `WB-032` 仍处于进行中；下一步更值得继续补的是冲突差异展示、本地修改导出/复制辅助，以及更完整的多端 conflict handling，而不是再停留在只有提醒或只有失败文案的状态。
+
+## 2026-07-01 19:57:20 +08:00 | v1.1.0-alpha.77 | 推进 WB-032 跨窗口冲突提示与 stale 草稿解释子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“同图谱本地草稿恢复”之后，再补上一层更主动的冲突提示：用户不应只在保存时报 `409` 时才第一次知道另一个窗口已经编辑或保存了同一图谱。
+- 本轮同时补 stale local draft 的可解释反馈，避免工作区静默丢弃旧草稿时，用户误以为系统把内容吞掉了。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphWorkspaceConcurrencySignal.ts` 与对应测试，按 `graphId + sessionId` 把当前窗口的 `dirty/currentVersion` 状态写入 `localStorage`，作为跨窗口轻量 signal。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`：工作区现在会监听同图谱的 `storage` 事件；检测到另一窗口仍在编辑时，提示“请保存前确认最新版本”；检测到另一窗口已保存更高版本时，提示“请刷新图谱后再继续编辑”。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`：当本地草稿因为服务端 head 已推进而被放弃时，页面会明确提示“本地草稿基于旧版本，已放弃恢复并加载最新图谱”，不再静默回退到最新画布。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`、`useGraphWorkspacePersistence.test.tsx` 和 `graphPersistenceState.test.ts`，把 stale 草稿解释文案与跨窗口冲突提示固定为页面级/Hook 级回归。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx` 先因缺少并发 signal helper 与 stale draft 解释文案而 RED，补实现后通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphWorkspaceConcurrencySignal.test.ts src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱工作区现在已经不只是在“保存失败后不丢本地编辑”，而是能更早告诉用户“另一个窗口也在动这张图”，从而降低静默冲突和误操作概率。
+- `WB-032` 仍处于进行中；下一步最值得继续补的是显式刷新/重载确认和更完整的冲突决策流，让“提醒”升级成“用户可控的恢复/取舍动作”。
+
+## 2026-07-01 19:49:30 +08:00 | v1.1.0-alpha.76 | 推进 WB-032 同图谱本地草稿恢复子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，在“保存冲突可见”和“dirty 时禁止恢复快照”之后，补上同一图谱重新打开时的本地未保存草稿恢复能力。
+- 本轮目标是先收口最小安全恢复边界：只有服务端 head 版本未变化时才恢复本地草稿；如果 head 已推进，则宁可放弃旧草稿，也不能静默覆盖当前图谱。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphWorkspaceDraftRecovery.ts` 与 `graphWorkspaceDraftRecovery.test.ts`，把图谱本地草稿恢复规则收口为独立 helper：按 `graphId` 落盘 `title` / `description` / `document` / `currentVersion`，支持读取、清理和基于版本一致性的恢复判定。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`：当前工作区一旦进入 `dirty` 状态，就把草稿写入 `sessionStorage`；保存成功或重新回到非 dirty 状态时，自动清理对应图谱草稿。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`：工作区首次加载或切换图谱时，会优先检查同图谱本地草稿；若 `currentVersion` 与服务端一致，则恢复本地草稿并维持 dirty 状态；若版本不一致，则清理 stale draft，继续以服务端 head 为准。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，新增页面级回归锁定“同图谱 + 同版本”重开后会看到恢复提示、继续处于 dirty 状态，且本地节点仍能在画布中找到。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphWorkspaceDraftRecovery.test.ts src/modules/graph/GraphWorkspacePage.test.tsx` 先因缺少恢复模块而 RED，补实现后通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱工作区现在已经具备“同图谱未保存编辑找回”的最小恢复能力，用户刷新或重新进入同一图谱时，不再只能依赖远端 autosave 或手动保存才能保住刚做的修改。
+- `WB-032` 仍处于进行中；下一步应继续补多窗口/多端冲突提示、stale draft 的可解释反馈，以及更完整的恢复决策流，避免用户在并发编辑场景下只看到“草稿消失”而不知道原因。
+
+## 2026-07-01 19:33:56 +08:00 | v1.1.0-alpha.75 | 推进 WB-032 图谱快照恢复前保护子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，补上保存冲突可见性之后的下一条恢复安全边界：当前画布仍有本地未保存修改时，不允许直接恢复历史快照。
+- 本轮目标不是完成完整的 autosave 恢复链路，而是先阻断“dirty 画布一键恢复快照导致本地编辑被静默覆盖”的高风险路径。
+### 完成结果
+- 更新 `frontend-user/src/modules/graph/lib/graphPersistenceState.ts`，新增快照恢复前保护状态，明确输出“当前图谱仍有未保存修改，请先保存后再恢复快照”提示，并保持保存态为 `dirty`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`：`restoreSnapshot(...)` 现在会先检查 `options.dirty`；存在未保存编辑时直接阻断恢复请求，不进入远端 restore API，也不重置历史状态。
+- 更新 `frontend-user/src/modules/graph/lib/graphPersistenceState.test.ts`，锁定恢复前保护状态对象。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，新增页面级回归：先制造 dirty 编辑，再点击恢复快照时，应继续显示“有未保存修改”状态并给出保护提示，同时不得发出 `restoreGraphSnapshot(...)` 请求。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/GraphWorkspacePage.test.tsx` 先因缺少恢复前保护 helper 和 dirty guard 而 RED，补实现后通过。
+- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱工作区现在已经不仅能防止旧版本保存静默覆盖，也能防止 dirty 状态下的快照恢复静默替换当前画布，`WB-032` 的“恢复安全”边界因此更完整了一层。
+- `WB-032` 仍处于进行中；下一步仍应优先补 autosave 草稿恢复与更完整的多窗口冲突提示，让保存、恢复与离页三条链路真正闭环。
+
+## 2026-07-01 14:55:51 +08:00 | v1.1.0-alpha.74 | 推进 WB-032 图谱保存版本冲突可见性子步骤
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-032`，先从风险最直接的一刀切入：避免旧标签页、旧草稿或落后版本的 batch-save 静默覆盖已经更新过的 graph head。
+- 本轮不把 `WB-032` 误报成整体完成，而是先收口“保存冲突必须可见、失败后本地脏编辑不能丢”的最小可靠性边界，为后续 autosave 恢复和 snapshot 安全恢复继续打底。
+### 完成结果
+- 更新 `backend/internal/modules/graph/service/service.go`：`BatchSave(...)` 现在会在任何持久化前校验 `request.document.version == graph.current_version`；如果客户端版本落后，则返回 `409 graph_version_conflict`，并直接阻断写入。
+- 更新 `backend/internal/modules/graph/service/service_test.go`：新增回归测试锁定旧版本保存必须失败，且不得写入 `graphs.current_version`、`graph_versions` 或 Mongo current document。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx`：新增冲突失败态回归，锁定保存失败后仍保持 `dirty:true` 和冲突文案，确保本地未保存编辑不会被失败流程吞掉。
+- 同步更新 `docs/architecture/GRAPH_API_LIFECYCLE.md`、`docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 和 `CHANGELOG.md`，把 `WB-032` 标记为进行中，并把 `batch-save` 的 `409 graph_version_conflict` 契约写入文档。
+### 验证结果
+- `go test ./internal/modules/graph/service` 先因新测试命中“旧版本保存被静默覆盖”而 RED，补上版本前置校验后转绿。
+- `go test ./internal/modules/graph/...` 通过。
+- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱保存链路现在至少已经具备“旧版本不能静默覆盖新 head”的最小安全边界，后续 autosave 与多窗口编辑可以在明确冲突信号上继续建设，而不需要先回头补底层版本保护。
+- `WB-032` 仍处于进行中；接下来最值得继续推进的是 autosave 草稿恢复、snapshot 恢复前保护，以及更明确的多端冲突提示与用户决策流。
+
+## 2026-07-01 15:05:00 +08:00 | v1.1.0-alpha.73 | 完成 WB-031 图谱导出、缩略图与布局契约收口
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-031`，把图谱现有的 JSON/SVG/PNG 导出、缩略图主记录字段和来源泳道布局能力整理成统一契约，避免这些能力长期分散在前端局部 helper、数据库字段和隐含实现里。
+- 本轮重点不是继续扩张新的图谱功能，而是先把“导出产物怎么定义”“graph head 如何挂缩略图”“布局能力如何进入统一 API 生命周期”这三件事收口清楚，为后续 autosave、冲突处理和工程图谱导入提供稳定边界。
+### 完成结果
+- 新增 `docs/architecture/GRAPH_EXPORT_LAYOUT_CONTRACT.md`，集中说明 JSON/SVG/PNG 导出边界、`thumbnailFileId` head 字段、以及 `POST /api/v1/graphs/:id/layouts/preview` 的请求/响应与不推进版本语义。
+- 更新后端 graph DTO、summary builder 和前端 API types，让 `thumbnailFileId` 从数据库字段提升为前后端共享的 graph 摘要契约。
+- 新增后端来源泳道布局预览入口：`POST /graphs/:id/layouts/preview`。该接口会用服务端权威 `graphId` / `version` 归一化客户端文档草稿，返回布局后的 document、laneCount 和 selectedNodeIds，但不会写入 current document、snapshot 或 graph version。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，图谱工作区生成来源泳道时优先调用后端 preview API；接口不可用时仍回退到本地 `buildGraphSourceSwimlaneDocument(...)`，保持本地容错与统一契约并存。
+### 验证结果
+- `go test ./internal/modules/graph/service ./internal/modules/graph/handler` 先因缺失 `PreviewLayout` DTO/handler/service 而 RED，补实现后转绿。
+- `go test ./internal/modules/graph/...` 通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts` 先因缺失 `previewGraphLayout(...)` 而 RED，补实现后通过。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/lib/graphSourceSwimlanes.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱布局现在已经不再只是工作区内部行为，而是进入了统一 graph API 契约；后续无论接更多布局算法、工程图模板还是后台治理入口，都有了稳定的 request/response 形状。
+- `thumbnailFileId` 现在成为 graph head 的显式一部分，后续 `WB-032` 和更远的分享/搜索卡片展示可以直接围绕这个字段建立异步缩略图链路，而不需要再次回头改 summary contract。
+
+## 2026-07-01 14:40:00 +08:00 | v1.1.0-alpha.72 | 完成 WB-030 图谱 API 生命周期契约收口
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-030`，把图谱后端已存在的 graph/document/snapshot/version/relation 读写路径整理成单一生命周期契约，并补上能锁定版本推进语义的后端与前端测试。
+- 本轮重点不是扩张新的图谱功能，而是先修掉“restore 后 current document 版本号可能回写旧值”和“graph summary mode 可能与恢复后文档语义漂移”这两个生命周期风险，为后续自动保存、冲突处理和导出能力打地基。
+### 完成结果
+- 新增 `docs/architecture/GRAPH_API_LIFECYCLE.md`，集中说明 graph head、Mongo current document、Mongo snapshot、MySQL version 索引和 source relation 的职责边界、endpoint 矩阵、版本推进规则，以及 restore 以旧内容生成新 head 的语义。
+- 重构 `backend/internal/modules/graph/service/service.go` 的依赖为最小接口，并新增 `backend/internal/modules/graph/service/service_test.go`，锁定 create graph 初始化 version 1、batch-save 推进 head 版本并落地 lifecycle artifact、restore snapshot 生成新 head 且重算 `graph.mode` 的行为。
+- 更新 `backend/internal/modules/graph/dto/document_contract.go` 与 `backend/internal/modules/graph/dto/document_contract_test.go`，让所有写入型 graph 路径都以服务端权威覆盖 `graphId` / `version`，不再信任客户端或旧 snapshot 自带的过期版本号。
+- 新增 `frontend-user/src/api/graphs.test.ts`，把 batch-save、snapshots、restore、Markdown/Mermaid import、validate 和 diagram templates 的 path / method / body 契约固定下来，避免前端调用点后续漂移。
+### 验证结果
+- `go test ./internal/modules/graph/service` 初始以 RED 方式暴露 service 依赖无法注入 fake、以及 restore 后 `document.version` 与 `currentVersion` 不一致的问题；完成重构和修复后转绿。
+- `go test ./internal/modules/graph/dto ./internal/modules/graph/service` 通过。
+- `go test ./internal/modules/graph/...` 通过，graph dto / handler / repository / service 回归全绿。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，32 条 graph-core 用例全绿。
+- `npm --workspace frontend-user run test -- src/api/graphs.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过，22 条图谱前端用例全绿。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+### 后续影响
+- 图谱生命周期现在已经明确由服务端掌控 head version，restore/import/batch-save 这类整份文档替换流程不再静默带回旧版本号；后续 `WB-032` 做 autosave / conflict handling 时可以直接建立在这条边界上。
+- `WB-030` 完成后，下一工作包应进入 `WB-031`，优先补图谱导出产物、缩略图和布局任务模型，让当前已经稳定的 lifecycle 契约真正承载更完整的图谱产品化能力。
+
+## 2026-07-01 14:12:29 +08:00 | v1.1.0-alpha.71 | 完成 WB-023 图谱内核测试与迁移回归
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-023`，把图谱内核的“序列化、导入错误、旧数据兼容、历史栈边界”回归测试补齐到 `@studymate/graph-core`。
+- 本轮重点不扩张新的图谱功能，而是锁定 `.smtg` 旧数据迁移兼容和 history 状态机边界，避免后续 `WB-030` 进入 API 生命周期整理时再次引入导入回归。
+### 完成结果
+- 扩展 `packages/graph-core/test/graphProductization.test.ts`，新增旧 root-level `.smtg` 缺失 `schemaVersion` 的兼容导入、非法 JSON / 数组 root / 非法 `document` 包装拒绝、history readable label / fallback label，以及 past/future 栈上限回归测试。
+- 更新 `packages/graph-core/src/file-format.ts`，将缺失 `schemaVersion` 的旧 StudyMate 图谱按 v1 兼容导入处理，同时继续拒绝数组 root 和非对象 `document` 包装，避免宽松兼容误放过坏 payload。
+- 复核 graph-core history 行为，确认 undo / redo / fallback label 与栈裁剪逻辑已由回归测试锁定，无需再在前端包装层重复维护额外兼容分支。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test -- --testNamePattern="legacy root documents|graph history respects|graph history stores readable|round trips and rejects invalid schema"` 先因缺失 `schemaVersion` 旧图谱被拒绝、以及数组 root 被误放行而失败，补实现后通过。
+- `npm --workspace @studymate/graph-core run test` 通过，32 条 graph-core 用例全绿。
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- graph-core 现在已经明确区分“旧版缺省 schema 的兼容导入”和“结构非法 payload 的拒绝导入”，后续图谱 API 契约整理可以直接复用这层边界，而不必再在 hook 或 handler 中补兜底。
+- `WB-023` 完成后，下一工作包应回到 `WB-030`，优先收口图谱 document/node/edge/group/snapshot 生命周期契约，并把前后端现在已经稳定下沉的 core 能力接回统一 API 边界。
+
+## 2026-07-01 14:03:06 +08:00 | v1.1.0-alpha.70 | 完成 WB-022 图谱 import / export / validation 统一接口
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-022`，把图谱工作区里分散在 `useGraphImportExport.ts`、controller 和 JSON helper 中的 import/export/validation 分支收口成统一接口。
+- 本轮重点不新增新的导入格式，而是把现有 Markdown / Mermaid / StudyMate JSON / SVG / validate 行为统一到单一 facade，并保留已有兼容性与回归覆盖。
+### 完成结果
+- 重写 `frontend-user/src/modules/graph/lib/graphFileImportExport.ts`，新增统一 facade：`buildGraphExportArtifact(...)` 统一 JSON/SVG 导出描述，`parseGraphJsonImport(...)` 统一 JSON 导入阻断计数与状态消息，`buildRemoteGraphImportOutcome(...)` 统一 Markdown/Mermaid 远端导入归一化，`buildGraphValidationOutcome(...)` 统一 validate 状态摘要。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphImportExport.ts`，让 hook 只保留下载、PNG 渲染、远端 API 调用和保存态副作用，不再重复维护导入模式分支文案和错误计数逻辑。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把远端 `validateGraph(...)` 的状态消息拼装也切到统一 facade，避免 controller 再次复制规则。
+- 扩展 `frontend-user/src/modules/graph/lib/graphFileImportExport.test.ts`，补齐统一 facade 的 JSON/SVG 导出、JSON 阻断导入、Markdown/Mermaid 归一化和 validate 状态摘要测试。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphFileImportExport.test.ts` 先因统一接口缺失失败，补实现后通过。
+- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphImportExport.test.tsx src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/hooks/useGraphViewportCamera.test.tsx src/modules/graph/hooks/useGraphSelectionState.test.tsx src/modules/graph/lib/graphHistory.test.ts` 通过。
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过。
+### 后续影响
+- 图谱导入/导出/校验现在已经具备单一的前端纯逻辑入口，后续 `WB-023` 可以更专注在 graph-core 序列化、导入错误、旧数据兼容和历史栈回归测试，而不是继续在 hook/controller 中追踪分支漂移。
+- 这次收口主要聚焦接口统一，没有继续扩张新的导入协议；PlantUML / OpenAPI / SQL DDL 之类工程图谱导入仍属于后续 `WB-051` 及其前置工作。
+
+## 2026-07-01 09:50:06 +08:00 | v1.1.0-alpha.69 | 完成 WB-021 图谱 viewport / selection / history 状态抽离
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-021`，把图谱工作区里剩余的 selection / viewport / history 状态转移从“前端 hook 各自维护”继续收口到 `@studymate/graph-core` 纯逻辑边界。
+- 本轮重点不扩张 import/export 或持久化能力，只让选择、多选、缩放/重置视野、撤销/重做转换具备稳定的共享状态模型与回归测试。
+### 完成结果
+- 更新 `packages/graph-core/src/selection.ts`、`viewport.ts` 与 `history.ts`，新增 `replaceGraphNodeSelection(...)`、`zoomGraphViewport(...)`、`resetGraphViewport(...)`，并把 core history label/undo/redo 转换清理为可复用实现。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphSelectionState.ts`，将显式多选替换、单选、toggle、框选统一委托给 `@studymate/graph-core` selection helper，不再分别维护散落的 `selectedNodeId` / `selectedNodeIds` 写法。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphViewportCamera.ts`，让工具栏缩放、滚轮缩放和重置视野全部复用 graph-core viewport transition helper。
+- 重写 `frontend-user/src/modules/graph/lib/graphHistory.ts`，让前端 undo/redo/history 捕获包装层委托给 graph-core history state，同时保留 StudyMate 自己的 `GraphDocumentPayload` 规范化与保存边界摘要。
+- 更新 graph-core 与前端图谱测试，补齐显式多选替换、viewport zoom/reset、history label 和 undo/redo 包装层回归。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 通过，30 条 graph-core 用例全绿。
+- `npm --workspace frontend-user run test -- src/modules/graph/hooks/useGraphSelectionState.test.tsx src/modules/graph/hooks/useGraphViewportCamera.test.tsx src/modules/graph/lib/graphHistory.test.ts` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱工作区的选择、视野和历史状态现在已经具备更明确的“core 状态机 + 前端包装层”边界，后续 `WB-022` 可以专注统一 import / export / validation，而不是继续在 controller 里复制状态转移逻辑。
+- 本轮顺手清理了 `graphHistory.ts` 的历史乱码标签，但没有扩散到更大范围 UI 文案；其他图谱旧文案编码问题仍应在独立工作包里有计划收口。
+
+## 2026-07-01 09:27:42 +08:00 | v1.1.0-alpha.68 | 完成 WB-020 图谱文档模型与版本策略收口
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-020`，把图谱 `GraphDocument` / `schemaVersion` / 兼容读写默认化从“分散在前后端多处硬编码”收口成显式契约。
+- 本轮重点不扩张 viewport/history/import-export 新能力，只稳定旧图谱 payload、空文档、Mongo current document 与 snapshot 的兼容读取路径。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphDocumentPayload.ts` 与 `graphDocumentPayload.test.ts`，把用户端图谱 payload 兼容适配集中起来，并复用 `@studymate/graph-core` 的 `normalizeGraphDocument(...)` 与 `supportedGraphSchemaVersion`。
+- 更新 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`，让工作区 `normalizeDocument(...)` / `createEmptyDocument(...)` 统一委托给新的 payload 适配层，而不是继续在页面侧散落 `schemaVersion: 1` 和空对象/空数组默认值。
+- 新增 `backend/internal/modules/graph/dto/document_contract.go` 与 `document_contract_test.go`，提供 `SupportedGraphSchemaVersion`、`NormalizeDocumentPayload(...)` 与 `NewEmptyDocumentPayload(...)` 三个共享契约入口。
+- 更新后端 graph repository/service/helpers：Mongo current document 与 snapshot 读出后会再次经过共享默认化；批量保存、导入、快照恢复和空文档创建也都复用同一层 helper，不再各自补 `SchemaVersion = 1`。
+- 新增 `docs/architecture/GRAPH_DOCUMENT_CONTRACT.md`，并同步更新 `README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把 `WB-020` 标记为完成并切换下一优先级到 `WB-021`。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/graph/lib/graphDocumentPayload.test.ts src/modules/graph/lib/graphWorkspaceLoadState.test.ts` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 条用例全绿。
+- `cd backend && go test ./internal/modules/graph/dto ./internal/modules/graph/repository ./internal/modules/graph/service` 通过。
+### 后续影响
+- 图谱文档契约现在已经具备清晰的单一来源和显式兼容层，后续 `WB-021` 可以更专注在 viewport / selection / history 状态抽离，而不是继续在读写默认值上来回修补。
+- 当前仍保留前端工作区默认 viewport `{ x: 140, y: 120, zoom: 1 }` 与后端空文档 `{ x: 0, y: 0, zoom: 1 }` 的语义差异，这是有意保留的 UI/持久化边界，不属于本轮要合并的范围。
+
+## 2026-07-01 09:11:18 +08:00 | v1.1.0-alpha.67 | 完成 WB-014 搜索文档与回归记录收口
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-014`，把 `/api/v1/search` 的当前契约、权限矩阵、页面边界和自动化验证入口集中沉淀下来。
+- 本轮重点不是继续加搜索功能，而是把已经收口的搜索能力变成后续可复用、可追踪、可执行的工程资产。
+### 完成结果
+- 新增 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`，集中记录搜索 endpoint、查询参数、grouped payload、权限/可见性、排序/摘要规则，以及用户端 URL 筛选和当前批次分页边界。
+- 更新 `package.json`，新增 `test:search:frontend`、`test:search:backend`、`test:search:e2e` 和 `verify:search`，把搜索专项回归从零散命令收口成固定入口。
+- 更新 `README.md`、`docs/DEVELOPMENT.md`、路线/版本文档和变更记录，让主文档明确知道搜索契约总表和 `npm run verify:search` 的存在。
+- 更新 `docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，将 `WB-014` 标记为完成，并把下一优先级切回 `WB-020` 图谱文档模型与版本策略。
+### 验证结果
+- `npm run verify:search` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过（仅存在既有 CRLF 提示，无 diff 错误）。
+- `npm run ci` 通过。
+### 后续影响
+- 搜索链路现在已经不只是“代码和测试存在”，而是具备了单点文档和固定验证命令；后续改 `SearchIndexer`、搜索页或知识链接时，更容易判断有没有发生契约漂移。
+- 下一优先级应切换到 `WB-020`，开始收口图谱 `GraphDocument` / schema version / 版本策略这条主线，而不是继续在搜索层做重复整理。
+
+## 2026-07-01 09:05:12 +08:00 | v1.1.0-alpha.66 | 完成 WB-013 搜索页体验与页面级回归补强
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-013`，在不修改 `/api/v1/search` grouped payload 契约的前提下，补用户端搜索页的空态、错误态、类型筛选、来源跳转和分页回归。
+- 本轮重点收口“真实可验证的页面交互”，不假装后端已经支持 offset/page 分页。
+### 完成结果
+- 更新 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`，新增 URL 驱动的 `types` 类型筛选，让页面状态、地址栏和 `searchAll(...)` 请求保持同步。
+- 新增 `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx`，按页面级 TDD 回归覆盖无关键词空态、后端错误态、筛选请求形状，以及来源链接与分页切换。
+- 更新搜索页结果展示：每组当前批次最多请求 `12` 条结果，并按每页 `4` 条切换；界面会明确说明这只是当前批次内分页，不代表后端已有 offset/page 契约。
+- 更新 `frontend-user/src/styles/search-review.css`、`README.md`、`docs/DEVELOPMENT.md`、路线/版本文档和变更记录，把搜索页最新交互边界写回文档。
+### 验证结果
+- `npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test` 通过，42 个测试文件、147 条用例全绿。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过（仅存在既有 CRLF 提示，无 diff 错误）。
+- `npm run ci` 通过。
+### 后续影响
+- 搜索页现在已经具备最小可用的页面交互护栏，后续代理不需要再靠手工点点点判断筛选、空态和来源跳转是否退化。
+- 下一优先级应切换到 `WB-014`，把搜索 API / 页面交互的当前契约与验证记录继续沉淀到文档与回归清单里。
+
+## 2026-07-01 02:09:34 +08:00 | v1.1.0-alpha.65 | 完成 WB-012 搜索权限与可见性过滤补强
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-012`，把 fallback 搜索的权限/可见性约束从“读代码推断”收口成可回归测试。
+- 本轮重点覆盖匿名短路、owner 归属和未发布内容过滤，不改变搜索路由与 grouped payload 结构。
+### 完成结果
+- 更新 `backend/internal/modules/search/service/indexer.go`，把查询拼装抽成纯 `searchQuerySpec`，便于在不连接真实数据库的前提下回归各类型结果的可见性条件。
+- 更新 `backend/internal/modules/search/service/indexer_test.go`，新增权限矩阵测试：匿名请求会直接短路 `note/graph/card`；`material/post` 继续显式限定公开内容；`card` 仅返回 owner 自己的 `active` 卡片；`graph` 仅返回 `active` 且“owner 或 public”的图谱。
+- 顺手补上 graph 搜索缺失的 `status = active` 过滤，避免把非活跃图谱带进搜索候选集。
+- 更新 `README.md`、`docs/DEVELOPMENT.md`、路线/版本文档和执行记录，把搜索权限矩阵写回文档，减少后续代理误判。
+### 验证结果
+- `go test ./internal/modules/search/service` 通过。
+- `go test ./internal/modules/search/...` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过。
+- `npm run ci` 通过。
+### 后续影响
+- 搜索现在不仅契约稳定、结果质量可回归，连核心权限矩阵也已经被显式锁住；后续可以更放心地继续做用户端搜索体验和交互回归。
+- 下一优先级应切换到 `WB-013`，补搜索页的空态、错误态、筛选与来源跳转回归。
+
+## 2026-07-01 02:00:32 +08:00 | v1.1.0-alpha.64 | 完成 WB-011 聚合搜索结果质量补强
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-011`，在不改搜索路由与 grouped payload 结构的前提下，补强 fallback 搜索的组内排序和摘要展示质量。
+- 本轮重点只收口“标题命中优先”和“摘要可读预览”两条最小规则，不引入新索引引擎，也不扩展到权限矩阵。
+### 完成结果
+- 更新 `backend/internal/modules/search/service/indexer.go`，让 MySQL fallback 先抓取一小批候选，再按“标题命中优先、摘要命中次之”的规则稳定排序，同级继续保留数据库返回的最新顺序。
+- 新增 `backend/internal/modules/search/service/indexer_test.go`，通过纯逻辑测试锁定标题命中优先规则，以及长摘要折叠空白并裁剪到 160 个字符以内的行为。
+- 搜索结果摘要现在会统一压成单行预览，避免把整段帖子正文或长文本原样灌进搜索结果卡片。
+- 更新 `docs/DEVELOPMENT.md`、`README.md`、路线/版本文档和执行记录，把搜索结果质量规则写回文档，避免后续继续依赖“更新倒序但相关性不清楚”的隐含行为。
+### 验证结果
+- `go test ./internal/modules/search/service` 通过。
+- `go test ./internal/modules/search/...` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过。
+- `npm run ci` 通过。
+### 后续影响
+- 搜索 fallback 现在已经具备更稳定的组内排序和更可读的摘要预览，后续继续补强时可以把重点放在权限/可见性矩阵和更强的索引抽象，而不是继续修基础展示质量。
+- 下一优先级应切换到 `WB-012`，系统补齐私有笔记、私有图谱和未发布内容的权限过滤测试。
+
+## 2026-07-01 01:55:11 +08:00 | v1.1.0-alpha.63 | 完成 WB-010 统一搜索契约收口
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-010`，在现有 search module 基础上固定搜索契约，而不是重做搜索模块。
+- 本轮重点收口默认分组、非法 `types` 校验、`limit` 边界，以及前端 DTO / 开发文档中的返回字段语义。
+### 完成结果
+- 更新 `backend/internal/modules/search/service/service.go` 与 `handler.go`，让省略 `types` 或传空值时稳定回退到 `material/post/note/graph/card` 五组默认搜索；未知类型会在 service 层直接返回 `400 invalid_search_type`，不再继续落到 indexer。
+- 调整 `limit` 规则：缺省或非法时回退到 `20`，超上限时钳制为 `50`，避免大页参数又被静默收回到默认值。
+- 补充后端 `search/service`、`search/handler` 测试，覆盖空 `types` 默认行为、非法类型短路失败和分页上限边界。
+- 更新 `frontend-user/src/api/types.ts`，显式固定 `SearchResult.type` 与 `source` 的联合类型；补充 `searchShare.test.ts`，锁定用户端在无类型筛选时不会发送空 `types=` 参数。
+- 更新 `docs/DEVELOPMENT.md`、`README.md`、路线/版本文档和执行记录，明确 `source` 表示来源域而不是底层存储引擎。
+### 验证结果
+- `go test ./internal/modules/search/service` 通过。
+- `go test ./internal/modules/search/handler` 通过。
+- `go test ./internal/modules/search/...` 通过。
+- `npm --workspace frontend-user run test -- src/api/searchShare.test.ts` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过。
+- `npm run ci` 通过。
+### 后续影响
+- 统一搜索现在已经从“有接口”进入“契约稳定”阶段，后续工作可以更聚焦在结果质量、排序规则、权限过滤和用户端交互回归，而不是继续修请求边界漂移。
+- 下一优先级应切换到 `WB-011`，继续补资料、笔记、图谱、帖子四类结果的聚合质量与摘要/排序规则。
+
+## 2026-07-01 01:45:11 +08:00 | v1.1.0-alpha.62 | 完成 WB-004 版本与里程碑文档对齐
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-004`，把外层版本文档、发布清单和执行文档与已经完成的 `WB-002`、`WB-003` 工程基线重新对齐。
+- 不扩散到新功能开发，只收口 README、ROADMAP、VERSION_PLAN、CHANGELOG、release checklist 与执行记录。
+### 完成结果
+- 更新 `README.md`，补记 `WB-002` 的配置安全收口、`WB-003` 的最小 CI 质量门禁、显式 `MYSQL_DSN` / `JWT_SECRET` 要求，以及 Playwright 默认 preview 端口 `44173` / `44174`。
+- 更新 `docs/planning/ROADMAP.md` 与 `docs/planning/VERSION_PLAN.md`，把配置安全、Go 格式门禁、配置安全回归检查和当前完整验证基线写回里程碑文档。
+- 更新 `CHANGELOG.md` 与 `docs/planning/versions/v1.0.0-release.md`，同步 release gate、环境变量要求和 Playwright 端口约定，避免发布文档继续滞后于代码。
+- 更新 `docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，将 `WB-004` 标记为完成，并把下一优先级重新收口到 `WB-010` 统一搜索契约。
+### 验证结果
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过。
+- `npm run ci` 通过，确认文档收口后当前默认验证链路仍保持全绿。
+### 后续影响
+- 现在外层说明、发布清单和执行面都已经与真实工程基线同步，后续推进不会再被“配置安全未收口”“CI 门禁未补齐”这类过期文档误导。
+- 下一优先级应切换到 `WB-010`，先固定统一搜索契约，再继续做权限与用户端回归补强。
+
+## 2026-07-01 01:37:48 +08:00 | v1.1.0-alpha.61 | 完成 WB-003 最小 CI 质量门禁补强
+### 任务内容
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `WB-003`，在已有 GitHub Actions 的基础上补最小质量门禁，而不是重写整条流水线。
+- 优先锁住最容易回退的两类问题：Go 未格式化文件和已禁用的危险配置默认值。
+### 完成结果
+- 新增 `scripts/check-go-format.mjs`，显式检查 `backend/` 下全部 Go 文件是否通过 `gofmt`。
+- 新增 `scripts/check-config-safety.mjs`，检查 `backend/internal/config/config.go`、`.env.example` 和 `docs/DEVELOPMENT.md` 中是否回退到已禁用的危险默认值。
+- 更新根 `package.json`，新增 `verify:backend:format`、`verify:config-safety`，并把它们纳入 `npm run lint`。
+- 更新 `.github/workflows/ci.yml`，在 typecheck 前显式增加 Go 格式和配置安全检查步骤。
+- 对 `backend/` 全量 Go 文件执行 `gofmt -w`，修复仓库中原本就存在的大批未格式化文件，使新门禁可实际通过。
+- 更新 `playwright.config.ts` 与 `e2e/v1-admin-governance.spec.ts`，把 E2E preview 默认端口从 4173/4174 收口为更稳的 44173/44174，并支持环境变量覆盖，解决当前 Windows 环境下的 preview 绑定失败。
+- 更新 `docs/DEVELOPMENT.md`，同步新的门禁脚本和 Playwright 默认端口。
+### 验证结果
+- `npm run verify:backend:format` 通过，确认 138 个 Go 文件均已满足 `gofmt`。
+- `npm run verify:config-safety` 通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例通过。
+- `npm run ci` 通过，完整覆盖 lint、build、Vitest、graph-core、Playwright、后端测试与文档校验。
+### 后续影响
+- 现在 `gofmt` 与配置安全已经从“约定”变成了会阻断 CI 的显式门禁。
+- 下一优先级应转到 `WB-004`，把 README 和里程碑文档与本轮已经落地的工程基线继续对齐。
+
+## 2026-07-01 01:30:47 +08:00 | v1.1.0-alpha.60 | 完成 WB-002 环境变量与安全默认值收口
+### 任务内容
+- 沿着 `CODEX_MASTER_PROMPT.md` 继续执行 `WB-002`，收口环境变量和危险默认值，不扩散到业务功能开发。
+- 目标是移除可直接运行的敏感 fallback，明确开发/测试/生产的最小配置边界，并让启动失败信息可读。
+### 完成结果
+- 更新 `backend/internal/config/config.go`，移除 `JWT_SECRET` 与 `MYSQL_DSN` 的危险 fallback，并新增 `ValidateMySQLConfig` 与 `ValidateServerConfig`。
+- 新增 `backend/internal/config/config_test.go`，覆盖安全空 fallback、MySQL 必填校验、占位 JWT secret 拒绝、管理员引导配置完整性等场景。
+- 更新 `backend/internal/app/server.go`，在服务启动前显式校验 `MYSQL_DSN`、`JWT_SECRET` 和管理员引导配置。
+- 更新 `backend/cmd/migrate/main.go` 与 `backend/cmd/backfill-note-documents/main.go`，让数据库相关命令在缺失关键环境变量时直接失败，并输出明确错误。
+- 更新 `.env.example`，保留占位型 `JWT_SECRET` 提示，移除 root 弱口令 DSN 和默认启用的管理员引导账号。
+- 更新 `docs/DEVELOPMENT.md`，把后端启动示例改为专用数据库账号与显式环境变量方式，并补充开发、测试、生产环境分层建议。
+### 验证结果
+- `gofmt -w backend/internal/config/config.go backend/internal/config/config_test.go backend/internal/app/server.go backend/cmd/migrate/main.go backend/cmd/backfill-note-documents/main.go` 通过。
+- `cd backend && go test ./internal/config` 通过。
+- `cd backend && go test ./...` 通过。
+- `npm run verify:docs` 通过。
+- `npm run typecheck` 通过。
+- `cd backend && $env:JWT_SECRET=''; $env:MYSQL_DSN=''; go run ./cmd/server` 按预期失败，报错 `MYSQL_DSN is required; JWT_SECRET is required`。
+- `cd backend && $env:MYSQL_DSN=''; go run ./cmd/migrate` 按预期失败，报错 `MYSQL_DSN is required`。
+### 后续影响
+- 本地环境如果此前依赖 `config.Load()` 的隐式 fallback，将需要显式设置 `MYSQL_DSN` 和 `JWT_SECRET` 后再启动。
+- 当前下一优先级应转向 `WB-003`，在现有 CI 基础上显式补 `gofmt`、secret scan 和更清晰的质量门禁。
+
+## 2026-07-01 01:24:51 +08:00 | v1.1.0-alpha.59 | 完成 WB-001 基线核验与执行文档收口
+### 任务内容
+- 按 `CODEX_MASTER_PROMPT.md` 执行 `WB-001`，先核验当前分支真实基线，再决定后续工作包，不直接进入大范围功能开发。
+- 只允许修改执行文档和 `.env.example` 草案，不改变运行时业务逻辑。
+### 完成结果
+- 核验出当前仓库已经真实具备 `search`、`share`、后台治理 API、GitHub Actions CI、`@studymate/graph-core` 测试包，以及已拆薄的 `frontend-user/src/app/App.tsx` 和 `frontend-admin/src/App.vue`。
+- 更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，纠正“搜索后端缺失”“CI 缺失”“前端根文件过大”等过期判断。
+- 新增 `docs/engineering/WB-001_BASELINE_AUDIT.md`，固定 2026-07-01 的真实构建/测试矩阵、配置风险、文档漂移和后续文件级计划。
+- 更新 `docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，将后续重点调整为“补强现有能力”而不是“从零创建能力”，并把 `WB-001` 标记为已核验完成。
+- 更新 `.env.example`，移除可直接使用的 root 弱口令示例，补全 `MONGO_TIMEOUT`、`REDIS_TIMEOUT`、`NOTE_READ_MODEL` 等当前代码已读取的环境变量。
+### 验证结果
+- `npm run verify:docs` 通过。
+- `npm run typecheck` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个用例通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:user` 通过，41 个文件、142 个用例通过。
+- `npm run test:admin` 通过，3 个文件、3 个用例通过。
+- `npm run build:user` 通过。
+- `npm run build:admin` 通过。
+### 后续影响
+- 后续 Codex 进入仓库时，将不再被“搜索未实现”“CI 未建立”“App 根文件过大”等过期判断误导。
+- 当前最应优先推进的是 `WB-002` 环境变量与安全默认值收口，以及 `WB-003` 在现有 CI 基础上的质量门禁补强。
+- `backend/internal/config/config.go` 中的危险 fallback 仍未移除，下一工作包需要优先处理。
+
+## 2026-07-01 01:12:37 +08:00 | v1.1.0-alpha.58 | 工程图节点支持结构化模式选择
+### 任务内容
+- 继续推进自由/UML/ERD/C4/流程图模式能力，把工程图节点的 `diagramKind` 从自由文本输入升级为结构化选择。
+- 保持 `metadata.content.diagramKind` 仍为字符串，不改 Graph API、`.smtg` 合约或后端模型。
+### 完成结果
+- 新增 `GraphNodeMetadataEditorField` descriptor 类型和 `graphDiagramModeOptions`，固定支持 `free/uml/erd/c4/flowchart` 五种模式。
+- 更新 `getGraphNodeMetadataEditorFields`，为 `diagramKind` 返回可选项，其他 URL、图片、PDF、学习节点字段保持原输入框行为。
+- 更新 `GraphWorkspaceSelectionPanel`，带 `options` 的 metadata 字段渲染为键盘可达的 `<select>`，并继续通过现有回调写回不可变文档。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphNodeMetadata` 先红，失败原因为 `diagramKind` descriptor 缺少五种模式选项。
+- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel` 先红，失败原因为工程图类型仍渲染为普通 input。
+- `npm --workspace frontend-user run test -- graphNodeMetadata` 通过，1 个文件、6 个用例通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel` 通过，1 个文件、6 个用例通过。
+- `npm --workspace frontend-user run test -- graphNodeMetadata GraphWorkspaceSelectionPanel GraphWorkspacePage graphTemplateApplication graphNodeTypes` 通过，5 个文件、26 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 工程图节点的模式 metadata 现在可稳定用于模板、导入草稿和后续模式专属校验，避免大小写或任意文本导致规则漂移。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
+## 2026-07-01 01:06:53 +08:00 | v1.1.0-alpha.57 | 工程图模板转换为 Mermaid 导入草稿
+### 任务内容
+- 继续推进 v0.8 模板中心与导入草稿能力，让 `diagram` 模式模板套用后进入 Mermaid 草稿，而不是和学习模板一样固定生成 Markdown 大纲。
+- 不改变 `DiagramTemplatePayload`、导入 API 或 `.smtg` 合约，只拆出前端纯函数并调整 controller 编排。
+### 完成结果
+- 新增 `buildGraphTemplateImportDraft`，学习模板继续输出 Markdown 标题大纲，工程图模板按 `sampleLines` 稳定生成 `flowchart TD` Mermaid 连线草稿。
+- 更新 `useGraphWorkspaceController.tsx` 的 `applyTemplate`，只消费纯函数返回的 `importMode/importSource/status`，减少 controller 内联格式组装。
+- 补充纯函数和 `GraphWorkspacePage` 测试，覆盖学习模板 Markdown 回归、UML 模板 Mermaid 草稿、导入模式切换和可读状态提示。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphTemplateApplication` 先红，失败原因为纯函数模块尚不存在。
+- `npm --workspace frontend-user run test -- GraphWorkspacePage` 先红，失败原因为工程图模板仍走 Markdown 并显示旧状态。
+- `npm --workspace frontend-user run test -- graphTemplateApplication` 通过，1 个文件、2 个用例通过。
+- `npm --workspace frontend-user run test -- GraphWorkspacePage` 通过，1 个文件、8 个用例通过。
+- `npm --workspace frontend-user run test -- graphTemplateApplication GraphWorkspacePage GraphWorkspaceShell GraphWorkspaceImportPanel useGraphImportExport` 通过，5 个文件、21 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 工程图模板现在已从“展示卡”进入现有 Mermaid 导入草稿链路，后续可继续补 SQL/OpenAPI 草稿解析和模式专属校验。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
+## 2026-06-30 20:33:01 +08:00 | v1.1.0-alpha.56 | 增强工程图模板中心信息
+### 任务内容
+- 继续推进 v0.8 工程图能力，在不新增端点、不引入新库、不实现 SQL/OpenAPI 导入的前提下，让已有模板中心具备专业工程图模板和更可读的预览信息。
+- 保持 `DiagramTemplatePayload` 合约不变，继续通过 `/diagram/templates` 返回模板列表。
+### 完成结果
+- 在 `ListDiagramTemplates` 中新增 UML 类图、ERD 数据模型、C4 上下文图和流程图 4 个工程图模板，`mode` 使用 `diagram`，`category` 分别为 `uml/erd/c4/flowchart`。
+- 更新 `GraphWorkspaceSourceRail` 模板卡片，展示“学习闭环/工程图 + category”的模式标签，并显示前三条 `sampleLines` 骨架预览。
+- 补充后端 service 测试和前端 SourceRail 测试，覆盖专业模板存在、分类正确、样例线不少于 4 条，以及前端模式/预览展示和点击套用回调。
+### 验证结果
+- `go test ./internal/modules/graph/service` 先红，失败原因为工程图模板列表为空。
+- `npm --workspace frontend-user run test -- GraphWorkspaceShell` 先红，失败原因为模板卡未显示“工程图 / uml”和样例骨架预览。
+- `go test ./internal/modules/graph/service` 通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceShell` 通过，1 个文件、3 个用例通过。
+- `go test ./internal/modules/graph/...` 通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceShell GraphWorkspacePage graphNodeTypes graphNodeMetadata` 通过，4 个文件、20 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 模板中心现在能同时服务学习闭环和工程图草稿，为后续模板应用生成工程图节点、图形库面板和 SQL/OpenAPI 导入草稿打基础。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
+## 2026-06-30 20:28:31 +08:00 | v1.1.0-alpha.55 | 支持工程图节点基础创建类型
+### 任务内容
+- 继续推进 P1/P2 交界的对象模型成熟度，让工程图节点不只存在于导入态 metadata 编辑中，也能通过现有图谱工具栏创建。
+- 不引入模板中心、图形库面板、SQL/OpenAPI 导入或新后端端点，只扩展当前前端节点创建类型和 draft 配置。
+### 完成结果
+- 扩展 `GraphNodeCreationType`，新增 `diagram`。
+- 更新 `graphNodeTypeOptions`，在新建节点下拉框中加入“工程图”，默认标题为“工程图节点”，尺寸为 280 × 160。
+- 补充 `graphNodeTypes.test.ts` 和 `GraphWorkspaceShell.test.tsx`，覆盖工程图类型暴露、draft 构建和工具栏下拉回调。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphNodeTypes GraphWorkspaceShell` 先红，失败原因为工程图选项缺失，`diagram` draft 回退为概念节点。
+- `npm --workspace frontend-user run test -- graphNodeTypes GraphWorkspaceShell` 通过，2 个文件、6 个用例通过。
+- `npm --workspace frontend-user run test -- graphNodeTypes graphNodeMetadata GraphWorkspaceShell GraphWorkspaceSelectionPanel GraphWorkspacePage graphWorkspaceMutations` 通过，6 个文件、31 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 工程图节点已进入现有画布创建入口，并可复用前一阶段的 `diagramKind/diagramShape/diagramSourceId` metadata 编辑；后续可以继续推进模板中心、图形库面板和导入草稿校验。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
+## 2026-06-30 20:25:23 +08:00 | v1.1.0-alpha.54 | 保留图谱卡片写入的结构化来源
+### 任务内容
+- 继续完善图谱节点生成卡片并参与复习的学习闭环，让确认写入复习卡片时，即使图谱节点没有显式 `source`，也能从结构化 metadata 保留来源。
+- 不改变 `CommitGraphCardDraftsRequest`、card API 或 `.smtg` 合约，只增强后端 create card request 的来源推断。
+### 完成结果
+- 新增 `inferCardSourceFromMetadata`，在 `BuildCardCreateRequests` 中保留显式 `node.Source` 优先级；当显式来源缺失时，按 `noteId`、`cardId`、`materialId`、`aiDraftId`、`aiTaskId`、`diagramSourceId` 推断 `SourceType/SourceID`。
+- 补充 service helper 测试，覆盖自由整理的 `rich-note` 节点只有 `metadata.content.noteId` 时，确认写入卡片仍生成 `note/note-1` 来源。
+- 保持已有缺失节点、空白草稿和显式来源保留行为不变。
+### 验证结果
+- `go test ./internal/modules/graph/service` 先红，失败原因为 metadata fallback 未实现，create request 的 `SourceType/SourceID` 为空。
+- `go test ./internal/modules/graph/service` 通过。
+- `go test ./internal/modules/graph/...` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 图谱节点现在从“生成卡片草稿”到“确认写入复习卡片”都能携带来源线索，后续可以继续做 UI 层复习写入成功后的图谱反链提示或导入草稿校验展示。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
+## 2026-06-30 20:22:18 +08:00 | v1.1.0-alpha.53 | 让图谱卡片草稿携带结构化来源线索
+### 任务内容
+- 继续打通来源反链、结构化 metadata 与卡片生成/复习确认流，让图谱节点生成卡片草稿时能带出资料、笔记、卡片、AI 草稿和工程图导入等上下文。
+- 不改变 `/graphs/:id/ai/generate-cards` 请求合约、Graph API 或 `.smtg` 文件格式，只增强后端草稿解释文案。
+### 完成结果
+- 新增 `BuildCardDraftExplanation`，在保留原有固定说明的基础上，从 `metadata.content` 按稳定顺序提取 `materialId`、`materialUrl`、`noteId`、`cardId`、`deckId`、`aiDraftId`、`aiTaskId`、`diagramKind`、`diagramShape` 和 `diagramSourceId`。
+- 更新 `BuildCardDrafts`，生成 `GraphCardDraftPayload.explanation` 时追加“来源线索”，帮助用户在确认写入卡组前理解卡片草稿来自哪段学习闭环上下文。
+- 补充后端 service helper 测试，锁定卡片节点的 `cardId/deckId/aiDraftId` 会进入草稿解释，避免结构化 metadata 只停留在前端编辑面板。
+### 验证结果
+- `go test ./internal/modules/graph/service` 先红，失败原因为草稿 explanation 仍是固定文案，未包含“卡片 ID card-1”等结构化线索。
+- `go test ./internal/modules/graph/service` 通过。
+- `go test ./internal/modules/graph/...` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 图谱节点的结构化 metadata 已进入卡片草稿确认流，后续可以继续把复习写入结果反链回图谱，或为导入草稿校验面板展示这些来源线索。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
+## 2026-06-30 20:16:44 +08:00 | v1.1.0-alpha.52 | 扩展图谱学习节点结构化 metadata 编辑
+### 任务内容
+- 继续推进节点对象模型和编辑面板成熟度，在不改变 Graph API 和 `.smtg` 合约的前提下，让资料、笔记、卡片、AI 草稿/任务和导入态工程图节点具备结构化 metadata 编辑入口。
+- 保持现有 URL、图片、公式、PDF 锚点字段行为不变，并继续通过不可变更新写入 `metadata.content`。
+### 完成结果
+- 扩展 `GraphNodeMetadataField`，新增 `materialId`、`materialUrl`、`noteId`、`cardId`、`deckId`、`aiDraftId`、`aiTaskId`、`diagramKind`、`diagramShape` 和 `diagramSourceId`。
+- 更新 `getGraphNodeMetadataEditorFields`，为 `material`、`rich-note`、`card`、`ai` 和导入态 `diagram` 节点返回类型化编辑字段；工程图字段只支持草稿/导入态编辑，不新增创建流程或后端端点。
+- 补强 `GraphWorkspaceSelectionPanel` 组件测试，确认卡片节点会展示“卡片 ID / 卡组 ID”编辑框，并把变更委托给现有 `onNodeMetadataFieldChange`。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphNodeMetadata` 先红，失败原因为学习节点和 `diagram` 节点仍返回空编辑字段。
+- `npm --workspace frontend-user run test -- graphNodeMetadata` 通过，1 个文件、6 个用例通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel` 通过，1 个文件、5 个用例通过。
+- `npm --workspace frontend-user run test -- graphNodeMetadata GraphWorkspaceSelectionPanel GraphWorkspacePage graphSourceBacklinks` 通过，4 个文件、22 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 学习闭环节点现在可以在选中面板中维护来源/卡组/AI 草稿等结构化字段，后续可继续把这些 metadata 与卡片生成、复习确认和导入草稿校验面板打通。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
+## 2026-06-30 20:12:21 +08:00 | v1.1.0-alpha.51 | 强化图谱来源反链学习闭环提示
+### 任务内容
+- 继续推进 P0 稳定治理，完善来源反链和学习闭环，让资料、PDF 批注、笔记、卡片、AI 草稿/任务节点不仅能跳回来源，也能解释当前处于学习闭环的哪一步。
+- 不改变 Graph API、`.smtg` 合约或卡片生成接口，只增强前端来源反链模型和选中节点面板展示。
+### 完成结果
+- 扩展 `buildGraphSourceBacklink`，为资料、笔记、卡片、批注、PDF 锚点、AI 草稿和 AI 任务返回 `learningStepLabel` 与 `description`，补充“资料阅读 / 笔记沉淀 / 卡片复习 / 资料批注 / PDF 锚点 / AI 草稿确认 / AI 任务追踪”等学习阶段。
+- 兼容 `ai-draft`、`ai_draft`、`ai-task`、`ai_task` 等来源类型别名，避免导入或 AI payload 使用不同命名时丢失反链。
+- 更新 `GraphWorkspaceSelectionPanel` 的单节点来源卡片，展示来源类型、来源 ID、学习阶段和下一步说明，并保留原有跳转按钮；现有“生成卡片草稿 / 确认写入卡组”仍由快照与草稿面板承接。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphSourceBacklinks GraphWorkspaceSelectionPanel` 先红，失败原因为缺少学习阶段/说明字段，且 `ai-draft` 别名未识别。
+- `npm --workspace frontend-user run test -- graphSourceBacklinks GraphWorkspaceSelectionPanel` 通过，2 个文件、8 个用例通过。
+- `npm --workspace frontend-user run test -- GraphWorkspacePage GraphWorkspaceSourceSummary GraphWorkspaceRecoveryPanel graphSourceBacklinks GraphWorkspaceSelectionPanel` 通过，5 个文件、20 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 选中节点面板现在能把来源跳转和学习闭环串起来，后续可以继续扩展节点对象模型和编辑面板，让 URL、图片、公式、PDF 锚点、卡片、资料、笔记、AI 草稿和工程图节点保持更统一的结构化 metadata。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
+## 2026-06-12 01:22:43 +08:00 | v1.1.0-alpha.50 | 增强图谱历史与保存边界摘要
+### 任务内容
+- 继续推进 P0 稳定治理，强化 autosave/dirty/pending/saved/failed 与 Undo/Redo 边界的可解释性。
+- 不改变 Graph API、`.smtg` 合约或后端保存逻辑，只为前端工作区提供稳定的历史边界摘要，让保存、导入、恢复、模板应用等历史点能在治理面板中被解释。
+### 完成结果
+- 新增 `buildGraphHistoryBoundarySummary`，将 `history.lastLabel`、undo/redo 数量和当前 saveState 转换为可读的最近历史点、保存边界和风险提示。
+- 扩展 `buildGraphSettingsSections` 的 autosave 区域，展示最近历史点、历史边界和 Undo/Redo 状态。
+- 更新 `useGraphWorkspaceController.tsx`，把当前 `historyState` 和 `saveState` 传入设置面板，保持现有保存、导入、恢复和撤销/重做行为不变。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphHistory graphSettingsPanel` 先红，失败原因为缺少 `buildGraphHistoryBoundarySummary`，且 autosave 设置区未展示最近历史点。
+- `npm --workspace frontend-user run test -- graphHistory graphSettingsPanel` 通过，2 个文件、9 个用例通过。
+- `npm --workspace frontend-user run test -- graphHistory graphSettingsPanel GraphWorkspacePanels GraphWorkspacePage useGraphWorkspacePersistence` 通过，5 个文件、23 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 设置面板现在能同时解释保存状态和历史边界，后续可以继续完善来源反链与学习闭环，把图谱节点到卡片生成/复习确认流做成更强的端到端体验。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
+## 2026-06-12 01:16:12 +08:00 | v1.1.0-alpha.49 | 强化图谱校验面板解释信息
+### 任务内容
+- 继续推进 P0 稳定治理，强化 GraphWorkspace validation panel，让孤立节点、缺来源、重复标题、悬挂边、跨折叠分组边、空分组、非法尺寸、无效来源 target 和多目标边异常等问题具备可读解释。
+- 不改变后端校验、Graph API 或 `.smtg` 合约，只增强用户端规则解释、严重级说明、定位提示和修复建议。
+### 完成结果
+- 扩展 `frontend-user/src/modules/graph/lib/graphValidationPanel.ts`，为现有校验 ruleType 增加中文规则名、severity 文案、影响说明、target 摘要和修复建议，并保留未知规则 fallback。
+- 更新 `GraphValidationIssueList`，规则汇总显示中文名称，单条问题显示“定位 / 影响 / 修复建议”，让导入失败和校验失败更可解释。
+- 更新 `GraphWorkspacePanels.test.tsx`、`GraphWorkspaceImportPanel.test.tsx` 和 `graphValidationPanel.test.ts`，覆盖规则解释、产品化规则清单、导入面板校验展示和空态回归。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphValidationPanel GraphWorkspacePanels` 先红，失败原因为面板仍显示原始 `ruleType`，缺少中文规则名、影响和修复建议。
+- `npm --workspace frontend-user run test -- graphValidationPanel GraphWorkspacePanels` 通过，2 个文件、7 个用例通过。
+- `npm --workspace frontend-user run test -- graphValidationPanel GraphWorkspacePanels GraphWorkspacePage graphFileImportExport GraphWorkspaceImportPanel` 通过，5 个文件、23 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 校验面板已从原始规则列表升级为可解释治理面板，后续可以继续推进 autosave/dirty/pending/saved/failed 与 Undo/Redo 边界硬化。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
+## 2026-06-12 01:08:52 +08:00 | v1.1.0-alpha.48 | 强化图谱设置面板治理信息
+### 任务内容
+- 继续推进 P0 稳定治理，在不改变 Graph API 和 `.smtg` 合约的前提下，把 GraphWorkspace 设置面板从说明清单增强为更清晰的工作区治理区域。
+- 聚焦显示偏好、导入导出、autosave 状态和大图性能提示，让失败导入/导出、pending/failed 保存和 200/300/20 基准规模具备可解释文案。
+### 完成结果
+- 扩展 `frontend-user/src/modules/graph/lib/graphSettingsPanel.ts`，为每个设置分区增加 `summary` 和 `actions`，覆盖小地图、来源泳道、快捷键、JSON 校验、导入失败保留当前画布、导出失败状态回写、dirty/pending/failed 保存治理和大图整理建议。
+- 更新 `GraphSettingsPanel` 渲染摘要和状态标签，让设置面板更清楚地区分显示、导入导出、自动保存、性能和快捷键区域。
+- 补强 `graphSettingsPanel.test.ts` 和 `GraphWorkspacePanels.test.tsx`，锁定 failed/pending 保存状态、大图性能建议、导入导出失败解释和设置标签渲染。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphSettingsPanel` 先红，失败原因为设置分区缺少 `summary/actions` 和 failed/pending 保存治理语义。
+- `npm --workspace frontend-user run test -- graphSettingsPanel GraphWorkspacePanels` 通过，2 个文件、7 个用例通过。
+- `npm --workspace frontend-user run test -- graphSettingsPanel GraphWorkspacePanels GraphWorkspacePage GraphWorkspaceShell` 通过，4 个文件、16 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run verify:docs` 通过。
+- `git diff --check` 通过，仅有既有 CRLF 提示。
+### 后续影响
+- 设置面板已更接近 Project Graph 级工作区治理入口，后续可以继续强化 validation panel 的规则中文名、严重级说明、定位动作和修复建议。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
+## 2026-06-12 01:02:24 +08:00 | v1.1.0-alpha.47 | 拆出图谱节点连线分组 mutation
+### 任务内容
+- 从 P0 稳定治理开始，继续拆 `useGraphWorkspaceController.tsx` 中的 node/edge/group 新增、删除、复制、连线、分组和折叠 mutation。
+- 保持现有 React + Vite + TypeScript、`@studymate/graph-core`、Graph API 和 `.smtg` 合约不变，只把工作区选择态、history label、status 文案和不可变更新封装到前端纯函数。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphWorkspaceMutations.ts`，提供创建节点、创建连线、删除选中节点/连线、删除右键节点、复制节点、创建分组和切换分组折叠的工作区 mutation 结果。
+- 新增 `graphWorkspaceMutations.test.ts`，覆盖新增节点、连线去重失败解释、删除节点清理边和分组、删除连线、复制节点 metadata 深拷贝、单/多节点分组和折叠 no-op。
+- 更新 `useGraphWorkspaceController.tsx`，相关动作改为调用纯函数，并通过统一 `applyWorkspaceMutation` 同步文档、选择态、连线模式、选中边和状态文案；本轮统计从约 1603 行下降到 1596 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphWorkspaceMutations` 先红，失败原因为 `graphWorkspaceMutations` 模块尚不存在。
+- `npm --workspace frontend-user run test -- graphWorkspaceMutations` 绿，1 个文件、7 个用例通过。
+- `npm --workspace frontend-user run test -- graphWorkspaceMutations GraphWorkspacePage useGraphKeyboardActions useGraphContextMenu` 通过，4 个文件、19 个用例通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run build:user` 通过。
+### 后续影响
+- 图谱节点/连线/分组的核心工作区变更已有独立纯函数和 immutability 回归，后续可以继续把 settings panel、validation panel、autosave/history 边界按同样 TDD 小切片推进。
+- 当前仍不进入多人协作、CRDT、WebGL/Pixi、Tauri 桌面端、Project Graph `.prg` 兼容或插件市场。
+
+## 2026-06-06 18:32:23 +08:00 | v1.1.0-alpha.46 | 拆出图谱批量样式变更逻辑
+### 任务内容
+- 继续推进图谱工作区 Phase 1 和 Project Graph 级批量编辑体验，把选中节点颜色、强调和尺寸 preset 的批量 mutation 从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有 tone、emphasis、size preset 语义、未选中节点引用不变和不可变更新行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphBatchAppearance.ts`，提供 `applyGraphBatchTone`、`applyGraphBatchEmphasis` 和 `applyGraphBatchSizePreset` 纯函数。
+- 新增 `graphBatchAppearance.test.ts`，覆盖批量 tone、批量 emphasis 保留已有 tone、批量尺寸 preset，以及未选中节点引用不变。
+- 更新 `useGraphWorkspaceController.tsx`，移除内联批量样式 map 逻辑；controller 从 1488 行继续下降到 1486 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphBatchAppearance` 先红后绿，最终 1 个文件、3 个用例通过。
+- `npm --workspace frontend-user run test -- graphBatchAppearance GraphWorkspaceSelectionPanel GraphWorkspacePage` 通过，3 个文件、14 个用例全部通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，39 个用户端测试文件、121 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 批量外观编辑已成为可测试纯逻辑，后续可以继续拆 node/edge/group mutations，包括新增、删除、复制、分组、折叠和连线。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 13:30:59 +08:00 | v1.1.0-alpha.45 | 拆出图谱来源泳道文档变更逻辑
+### 任务内容
+- 继续推进图谱工作区 Phase 1 和学习闭环来源组织能力，把来源泳道生成后的节点位置、生成分组替换和选择态回写从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有来源泳道布局、旧生成泳道替换、手动分组保留、生成分组 metadata、节点引用保留和不可变更新行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphSourceSwimlanes.ts`，提供 `buildGraphSourceSwimlaneDocument` 纯函数，封装 graph-core 泳道布局到前端文档变更的映射。
+- 新增 `graphSourceSwimlanes.test.ts`，覆盖生成来源泳道、替换重叠旧生成泳道、保留手动分组、保留未选中节点引用，以及选中节点不足时返回原文档。
+- 更新 `useGraphWorkspaceController.tsx`，移除内联来源泳道 layoutNodes、旧泳道过滤和 group payload 复制逻辑；controller 从 1505 行继续下降到 1488 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphSourceSwimlanes` 先红后绿，最终 1 个文件、2 个用例通过。
+- `npm --workspace frontend-user run test -- graphSourceSwimlanes graphSourceLayout GraphWorkspaceSelectionPanel GraphWorkspacePage` 通过，4 个文件、16 个用例全部通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，38 个用户端测试文件、118 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 来源整理、来源分组和来源泳道已形成连续的可测试来源组织逻辑，后续可以继续拆批量样式和 node/edge/group mutations。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 13:21:03 +08:00 | v1.1.0-alpha.44 | 拆出图谱来源布局与分组逻辑
+### 任务内容
+- 继续推进图谱工作区 Phase 1 和学习闭环整理能力，把按来源类型分列/分行整理、来源分组生成的坐标和分组计算从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有来源 bucket 顺序、来源标签排序、未选中节点不变、来源分组标题、画布边界 clamp 和不可变更新行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphSourceLayout.ts`，提供 `organizeGraphNodesBySource` 和 `buildGraphSourceGroups` 纯函数。
+- 新增 `graphSourceLayout.test.ts`，覆盖按来源类型分列、按来源类型分行、未选中节点引用不变、原节点不变，以及来源分组边界和 `makeGroupId`。
+- 更新 `useGraphWorkspaceController.tsx`，移除内联来源整理 placement、来源分组 bounds 和 group payload 生成逻辑；controller 从 1576 行继续下降到 1505 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphSourceLayout` 先红后绿，最终 1 个文件、3 个用例通过。
+- `npm --workspace frontend-user run test -- graphSourceLayout GraphWorkspaceSelectionPanel GraphWorkspacePage` 通过，3 个文件、14 个用例全部通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，37 个用户端测试文件、116 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 来源整理与来源分组已成为可测试纯逻辑，后续可以继续拆来源泳道生成、批量样式和 node/edge/group mutations。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 13:11:46 +08:00 | v1.1.0-alpha.43 | 拆出图谱选中节点布局逻辑
+### 任务内容
+- 继续推进图谱工作区 Phase 1 和 Project Graph 级批量编辑体验，把选中节点对齐与均分的坐标计算从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有左对齐、顶部对齐、水平居中、垂直居中、水平/垂直均分、画布边界 clamp 和不可变更新行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphSelectionLayout.ts`，提供 `alignSelectedGraphNodes` 和 `distributeSelectedGraphNodes` 纯函数。
+- 新增 `graphSelectionLayout.test.ts`，覆盖对齐不修改未选中节点、居中对齐边界 clamp、水平均分稳定顺序，以及选中数量不足时返回原节点数组。
+- 更新 `useGraphWorkspaceController.tsx`，移除内联对齐/均分坐标计算和节点 map 变更逻辑；controller 从 1643 行继续下降到 1576 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphSelectionLayout` 先红后绿，最终 1 个文件、4 个用例通过。
+- `npm --workspace frontend-user run test -- graphSelectionLayout GraphWorkspaceSelectionPanel GraphWorkspacePage` 通过，3 个文件、15 个用例全部通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，36 个用户端测试文件、113 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 选中节点布局编辑已成为可测试纯逻辑，后续可以继续拆按来源整理、来源分组、批量样式和 node/edge/group mutations。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 13:03:53 +08:00 | v1.1.0-alpha.42 | 拆出图谱拖动文档变更逻辑
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把单节点/多节点拖动时的坐标计算、吸附辅助线、边界 clamp 和下一版节点列表生成从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有拖动时不记录 history、状态提示、viewport zoom delta、对齐吸附、隐藏节点过滤和不可变更新行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphDragMove.ts`，提供 `buildGraphDragMove` 纯函数，统一返回 `nodes`、`alignmentGuides` 和拖动状态文案。
+- 新增 `graphDragMove.test.ts`，覆盖单节点按 viewport zoom 移动且不修改原文档、多节点按 origins 移动并 clamp 到画布边界。
+- 更新 `useGraphWorkspaceController.tsx`，移除内联单节点/多节点拖动坐标计算、吸附计算和节点 map 变更逻辑；controller 从 1689 行继续下降到 1643 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- graphDragMove` 先红后绿，最终 1 个文件、2 个用例通过。
+- `npm --workspace frontend-user run test -- graphDragMove useGraphDragState GraphWorkspacePage GraphWorkspaceStageChrome graphKeyboardShortcuts` 通过，5 个文件、19 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，35 个用户端测试文件、109 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 节点拖动的文档变更已经成为可测试纯逻辑，后续可以继续拆 pan/marquee pointer effect、节点/边/分组 mutations 和拖动性能节流。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 12:55:35 +08:00 | v1.1.0-alpha.41 | 拆出图谱拖拽状态 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把画布拖拽状态、框选框和对齐辅助线状态从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有画布平移、Shift 框选、单节点拖动、多节点拖动、对齐辅助线、Escape 清理和拖拽取消行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphDragState.ts`，统一管理 `dragState`、`selectionBox`、`alignmentGuides`、`beginMarquee`、`updateMarquee`、`beginPan`、`beginNodeDrag`、`beginMultiNodeDrag` 和 `clearActiveDrag`。
+- 新增 `useGraphDragState.test.tsx`，覆盖框选开始/更新、画布平移、单节点拖拽、多节点拖拽、辅助线设置和清理。
+- 更新 `useGraphWorkspaceController.tsx`，移除本地 drag/selectionBox/alignmentGuides state 和直接构造 DragState 的代码；controller 从 1719 行继续下降到 1689 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphDragState` 先红后绿，最终 1 个文件、2 个用例通过。
+- `npm --workspace frontend-user run test -- useGraphDragState GraphWorkspacePage GraphWorkspaceStageChrome graphKeyboardShortcuts` 通过，4 个文件、17 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，34 个用户端测试文件、107 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- pointer drag 的状态边界已经独立，后续可以继续拆移动时的文档变更、对齐吸附计算和 node/edge/group mutations，把大型 controller 继续压缩到编排层。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 12:45:34 +08:00 | v1.1.0-alpha.40 | 拆出图谱节点选择状态 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把节点单选、多选 toggle、显式多选、框选命中和节点选择时清理边选择的行为从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有键盘全选、来源泳道整理后选择、框选、多选拖动、复制节点、右键删除节点和边选择清理行为，不改 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphSelectionState.ts`，统一管理 `selectedNodeId`、`selectedNodeIds`、`selectSingleNode`、`toggleNodeSelection`、`selectNodeIds`、`selectNodesInWorldRect`、`clearNodeSelection` 和 `resetNodeSelection`。
+- 新增 `useGraphSelectionState.test.tsx`，覆盖单选、toggle 多选、清空、重置、显式多选、隐藏节点过滤和框选矩形命中。
+- 更新 `useGraphWorkspaceController.tsx`，移除本地节点选择 state 和直接调用 graph-core selection helper 的代码；键盘全选、来源泳道、框选、节点拖动、复制节点和右键删除节点改为通过 `useGraphSelectionState` 分发；controller 从 1736 行继续下降到 1719 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphSelectionState` 先红后绿，最终 1 个文件、2 个用例通过。
+- `npm --workspace frontend-user run test -- useGraphSelectionState GraphWorkspacePage GraphWorkspaceSelectionPanel GraphWorkspaceStageChrome graphKeyboardShortcuts` 通过，5 个文件、21 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，33 个用户端测试文件、105 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- selection/marquee/multi-select 已有独立状态 hook，后续可以继续拆画布 pointer drag 状态机和 node/edge/group mutations，把大型 controller 继续压缩到编排层。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 08:25:31 +08:00 | v1.1.0-alpha.39 | 拆出图谱 Camera 与视口 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把小地图 viewport、节点聚焦、滚轮缩放、工具栏缩放、重置视野和导航 focus preview 从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有聚焦节点、搜索定位、键盘重置视野、工具栏缩放、小地图显示和来源跳转落点预览行为。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphViewportCamera.ts`，统一管理 `minimapViewport`、`focusPreview`、`focusNode`、`zoomGraph`、`resetViewport` 和 `handleWheel`。
+- 新增 `useGraphViewportCamera.test.tsx`，覆盖小地图 ready 状态、节点聚焦选择与视口变更、按钮/滚轮缩放、重置视野、导航 focus preview 消费和 2600ms 后过期。
+- 更新 `useGraphWorkspaceController.tsx`，移除本地 minimap 计算、focus preview effect、`focusNode`、`zoomGraph` 和 `handleWheel`，改用 `useGraphViewportCamera`；controller 从 1804 行继续下降到 1736 行。
+- 修正 focus preview 计时器边界：预览触发导致 `graphDetail` 更新时不再清掉过期定时器，预览状态会按预期自动消失。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphViewportCamera` 先红后绿，最终 3 个 hook 用例通过。
+- `npm --workspace frontend-user run test -- useGraphViewportCamera GraphWorkspacePage GraphWorkspaceStageChrome graphKeyboardShortcuts` 通过，4 个文件、18 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，32 个用户端测试文件、103 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- camera/viewport 已成为独立 hook，后续可以继续拆 selection/marquee/multi-select 和 node/edge/group mutations 状态机，把大型 controller 进一步压到更接近编排层。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 08:06:34 +08:00 | v1.1.0-alpha.38 | 拆出图谱右键菜单状态 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把右键菜单打开、定位、节点/边选择联动、显式关闭和外部点击/滚动关闭从 `useGraphWorkspaceController.tsx` 中下沉。
+- 保留现有右键菜单 UI、节点/边/画布右键入口和菜单动作回调，不改变 Graph API 或图谱文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphContextMenu.ts`，统一管理 context menu 状态、`openContextMenu`、`closeContextMenu` 和 dismiss 生命周期。
+- 新增 `useGraphContextMenu.test.tsx`，覆盖节点/边/画布右键菜单坐标、节点/边选择回调、显式关闭、外部点击关闭和滚动关闭。
+- 更新 `useGraphWorkspaceController.tsx`，移除本地 `contextMenu` state、旧 `openContextMenu` 函数和内联 dismiss effect，改用 `useGraphContextMenu`；controller 从 1822 行继续下降到 1804 行。
+- 清理 `useGraphWorkspaceEffects.ts` 中不再使用的 `useGraphContextMenuDismiss`。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphContextMenu` 先红后绿，最终 2 个 hook 用例通过。
+- `npm --workspace frontend-user run test -- useGraphContextMenu GraphWorkspacePage GraphWorkspacePanels GraphWorkspaceStageChrome` 通过，4 个文件、17 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，31 个用户端测试文件、100 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- 右键菜单输入生命周期已成为独立 hook，后续可以继续把菜单动作分发、selection/marquee/multi-select 和 camera/viewport 状态机从大型 controller 中移出。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 07:56:20 +08:00 | v1.1.0-alpha.37 | 拆出图谱键盘快捷键 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把全局 `keydown` 监听、快捷键上下文判断和 action 分发从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有保存、Undo/Redo、全选、删除、聚焦、分组、链路模式、重置视野、键盘帮助和 Escape 清理行为。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphKeyboardActions.ts`，统一承接 `resolveGraphKeyboardShortcut` 的 action 分发和 keydown 生命周期。
+- 新增 `useGraphKeyboardActions.test.tsx`，覆盖输入框内仍可保存/撤销/重做、输入框内忽略画布编辑快捷键、选择/聚焦/分组/链路/重置/Escape 等常用操作。
+- 更新 `useGraphWorkspaceController.tsx`，移除内联 keydown effect，改为向 `useGraphKeyboardActions` 传递当前选择态、可见节点和动作回调；controller 从 1857 行继续下降到 1822 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphKeyboardActions` 先红后绿，最终 3 个 hook 用例通过。
+- `npm --workspace frontend-user run test -- useGraphKeyboardActions graphKeyboardShortcuts GraphWorkspacePage GraphWorkspaceShell GraphWorkspacePanels` 通过，5 个文件、20 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，30 个用户端测试文件、98 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- 快捷键行为已经成为独立 hook，后续可以继续拆 context menu 和 selection/marquee 状态机，逐步把成熟编辑器的输入与选择操作从 controller 中移出。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 07:41:41 +08:00 | v1.1.0-alpha.36 | 拆出图谱导入导出执行 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 和 Phase 5 拆分，把 Markdown/Mermaid 远端导入、StudyMate JSON 本地导入、PNG/SVG/JSON 导出和导出失败状态从 `useGraphWorkspaceController.tsx` 下沉。
+- 保留现有 Graph API、`.smtg` / `application/vnd.studymate.graph+json` 文件合约、JSON 导入校验和 Markdown/Mermaid 导入后快照刷新行为。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphImportExport.ts`，统一管理 JSON/Markdown/Mermaid 导入、PNG/SVG/JSON 导出、安全文件名和导入导出状态提示。
+- 新增 `useGraphImportExport.test.tsx`，覆盖 JSON 导入成功、JSON 阻断错误、Markdown 远端导入并刷新快照、PNG/SVG/JSON 安全文件名导出，以及空内容/下载/PNG 渲染失败状态。
+- 更新 `useGraphWorkspaceController.tsx`，移除本地导入导出函数体，改为转发 `useGraphImportExport` 操作；controller 从 1938 行继续下降到 1857 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphImportExport` 先红后绿，最终 5 个 hook 用例通过。
+- `npm --workspace frontend-user run test -- useGraphImportExport GraphWorkspacePage GraphWorkspaceImportPanel graphFileImportExport graphCanvasExport` 通过，5 个文件、23 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，29 个用户端测试文件、95 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- 导入导出执行逻辑已经形成独立边界，后续可以继续拆 keyboard/context menu/selection 状态机，并把文件成熟度测试扩展到更大图导出耗时与失败场景。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 07:25:40 +08:00 | v1.1.0-alpha.35 | 拆出图谱保存与快照持久化 Hook
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把保存、保存状态、自动保存生命周期、离页保护、快照列表加载和快照恢复从 `useGraphWorkspaceController.tsx` 中拆到独立 hook。
+- 保留现有 Graph API、`.smtg` 文件格式、保存/恢复 UI 和状态提示行为，不改变导入、切图、创建图谱等调用方契约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.ts`，统一管理 `idle/dirty/pending/saved/failed` 保存态中的 `pending/saved/failed` 转换、`saving`、快照列表、手动/自动保存和快照恢复。
+- 新增 `useGraphWorkspacePersistence.test.tsx`，覆盖保存后标记 history saved 并刷新快照、快照恢复走统一 reset history 路径、快照列表/恢复 API 失败时保留可编辑状态并显示失败。
+- 更新 `useGraphWorkspaceController.tsx`，移除本地保存/快照状态和 `saveCurrentGraph` / `handleRestoreSnapshot` 实现，改用 `useGraphWorkspacePersistence` 返回的操作；controller 从 2012 行继续下降到 1938 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- useGraphWorkspacePersistence` 先红后绿，最终 3 个 hook 用例通过。
+- `npm --workspace frontend-user run test -- useGraphWorkspacePersistence GraphWorkspacePage GraphWorkspaceRecoveryPanel GraphWorkspaceShell` 通过，4 个文件、14 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，28 个用户端测试文件、90 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- 保存、自动保存、离页保护和快照恢复已经从大型 controller 中形成独立边界，后续可以继续把导入执行分支下沉为 `useGraphImportExport`，并进一步拆分 keyboard/context menu/selection 状态机。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 00:42:51 +08:00 | v1.1.0-alpha.34 | 拆出图谱导入与校验面板
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，把右侧 rail 中的 Markdown/Mermaid/JSON 导入、导入文本区、导入按钮、校验按钮和验证结果列表从 `useGraphWorkspaceController.tsx` 中拆出。
+- 保留现有导入模式、导入源文本、保存中禁用、校验图谱和验证面板展示行为，不改变 Graph API 或 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/components/GraphWorkspaceImportPanel.tsx`，承接导入格式 segmented control、可访问 textarea、导入/校验操作和 `GraphValidationIssueList`。
+- 新增 `GraphWorkspaceImportPanel.test.tsx`，覆盖导入模式切换、导入内容变更、导入/校验回调、保存中禁用和验证问题展示。
+- 更新 `useGraphWorkspaceController.tsx`，把导入与校验 JSX 替换为 `GraphWorkspaceImportPanel` 调用，controller 继续下降到 2012 行。
+### 验证结果
+- `npm --workspace frontend-user run test -- GraphWorkspaceImportPanel` 先红后绿，最终 3 个组件用例通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceImportPanel GraphWorkspacePage GraphWorkspacePanels` 通过，3 个文件、14 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，workspace typecheck 和文档校验均通过。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，27 个用户端测试文件、87 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- 导入与校验 UI 已成为独立组件，后续可以继续把 `handleImport` / JSON-Mermaid-Markdown 分支下沉到 `useGraphImportExport`，进一步减少 controller 中的副作用逻辑。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证拆分。
+
+## 2026-06-06 00:34:54 +08:00 | v1.1.0-alpha.33 | 拆出图谱节点与连线详情面板
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，优先把右侧 rail 中的“选中内容 / 节点与连线”详情编辑区从 `useGraphWorkspaceController.tsx` 中下沉为纯视图组件。
+- 保留现有节点标题、笔记、URL/图片/公式/PDF metadata、颜色、强调、尺寸、边标签、边形态、分组标题、分组折叠、多选整理和来源反链行为。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/components/GraphWorkspaceSelectionPanel.tsx`，承接单节点详情、多选批量操作、边详情编辑、分组列表和空态操作提示。
+- 新增 `GraphWorkspaceSelectionPanel.test.tsx`，覆盖节点标题/URL metadata 编辑、来源反链回调、边标签/直线曲线回调、多选来源整理、分组标题编辑和空态提示。
+- 更新 `useGraphWorkspaceController.tsx`，把详情 rail JSX 替换为 `GraphWorkspaceSelectionPanel` 调用，controller 只保留不可变 document mutation、history 和保存状态回调。
+- 清理 controller 中随详情面板拆出后不再需要的图标、节点样式和 metadata 展示 imports。
+- 文件规模继续下降：`useGraphWorkspaceController.tsx` 从 2321 行降到 2049 行，新增详情组件 497 行，符合普通业务组件 500 行内的阶段目标。
+### 验证结果
+- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel` 先红后绿，最终 4 个组件用例通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceSelectionPanel GraphWorkspacePage GraphWorkspaceRecoveryPanel GraphWorkspaceSourceSummary` 通过，4 个文件、16 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run lint` 通过，包含全工作区 typecheck 和文档同步验证。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，26 个用户端测试文件、84 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- 节点/连线详情编辑已经有独立组件和测试保护，后续可以继续把 controller 内的画布 pointer drag、marquee、多选状态机和导入导出 hook 拆出。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证的局部演进。
+
+## 2026-06-06 00:17:47 +08:00 | v1.1.0-alpha.32 | 拆分图谱核心模块并补编辑器成熟度回归
+### 任务内容
+- 继续执行 StudyMate 图谱工作区 Project Graph 对标计划，优先处理 `@studymate/graph-core` 单文件过大的结构风险，并补前端节点/连线编辑、后端请求边界和 E2E 失败状态覆盖。
+- 保持现有 Graph API、`.smtg` schemaVersion 1 和前端 `GraphWorkspacePage` 入口兼容，不引入 WebGL/Pixi、CRDT、Tauri 或 `.prg` 兼容。
+### 完成结果
+- 新增 `packages/graph-core/src/model.ts`、`source.ts`、`mutations.ts`、`validation.ts`、`file-format.ts`、`history.ts`、`templates.ts`、`fixtures.ts`、`selection.ts`、`viewport.ts` 和 `utils.ts`，把原 `index.ts` 拆成聚焦模块并保留 barrel 导出。
+- 新增 `packages/graph-core/test/graphCoreModules.test.ts`，锁定模块化入口仍能暴露文档规范化、验证、`.smtg` 导入导出、history、模板、fixture、selection 和 viewport 能力。
+- 更新用户端图谱页面测试，覆盖选中 URL 节点后编辑标题和类型 metadata、选中边后编辑关系标签和直线/曲线形态，并验证保存 payload。
+- 扩展 `e2e/v1-graph-workspace.spec.ts`，在 200 节点、300 边、20 分组 smoke 中补快捷键面板、JSON 导入失败、快照恢复失败和来源反链跳转。
+- 更新后端 graph handler，无效 JSON/binding 请求统一返回 400 `invalid_graph_request`，避免图谱保存、恢复、导入和 AI 草稿入口把客户端错误误报为 500。
+- 更新后端图谱校验 helper，`metadata.targetNodeIds` 同时兼容 JSON 解码得到的 `[]any` 和服务内部构造的 `[]string`，避免多目标边漏检悬挂目标。
+- 更新 `frontend-user/tsconfig.json`，允许前端 noEmit typecheck 消费 graph-core 内部 `.ts` 模块 import。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 通过，27 个 graph-core 用例全部通过。
+- `npm --workspace frontend-user run test -- GraphWorkspacePage` 通过，7 个页面级图谱用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `cd backend && go test ./internal/modules/graph/...` 通过。
+- `npm run lint` 通过，包含全工作区 typecheck 和文档同步验证。
+- `npm run build:user` 通过。
+- `npm run test:user` 通过，25 个用户端测试文件、80 个用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含扩展后的 200 节点图谱 smoke。
+### 后续影响
+- `graph-core` 最大实现文件已降到约 220 行，后续可以按模块继续补文件格式、验证和性能 fixture 测试，而不再把逻辑压回单一入口。
+- 图谱前端的节点/连线详情编辑已有页面级回归保护，下一步适合继续把详情 rail 从 controller 中拆成容器和纯视图组件。
+- 后端图谱请求边界更稳定，后续补 service 级持久化测试时仍建议先抽 repository/document interface，避免单元测试依赖真实 MySQL/Mongo。
+
+## 2026-06-05 20:37:23 +08:00 | v1.1.0-alpha.31 | 拆出图谱右侧来源与恢复面板
+### 任务内容
+- 继续推进图谱工作区 Phase 1 拆分，优先把右侧 rail 中和学习闭环/恢复链路相关的纯展示区从 `useGraphWorkspaceController.tsx` 中拿出来。
+- 保留当前来源反链、来源摘要、卡片草稿编辑、写入卡组和快照恢复行为，不改变现有 Graph API 与 `.smtg` 文件合约。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/components/GraphWorkspaceSourceSummary.tsx`，承接来源类型统计、孤立/无来源节点提示、前 5 个来源列表、来源反链按钮和空态。
+- 新增 `frontend-user/src/modules/graph/components/GraphWorkspaceRecoveryPanel.tsx`，承接生成卡片草稿按钮、deck 选择、草稿问题/答案编辑、确认写入卡组和快照恢复列表。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把来源摘要与快照/卡片草稿 UI 替换为组件调用，controller 从 2609 行继续降到 2487 行。
+- 新增 `GraphWorkspaceSourceSummary.test.tsx` 与 `GraphWorkspaceRecoveryPanel.test.tsx`，覆盖来源统计、反链跳转回调、空态、来源折叠提示、卡片草稿编辑、确认写入和快照恢复回调。
+- 更新 `docs/planning/VERSION_PLAN.md` 与 `docs/planning/versions/v0.6.0-graph-product.md`，同步记录右侧 rail 的来源摘要、快照恢复和卡片草稿面板已拆出。
+### 验证结果
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceRecoveryPanel GraphWorkspaceSourceSummary GraphWorkspaceStageChrome GraphWorkspaceShell` 通过，4 个文件、11 个用例全部通过。
+- `npm run lint` 通过，包含全工作区 typecheck 和文档同步验证。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，26 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，25 个文件、78 个用户端用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 图谱来源摘要和恢复/卡片草稿链路现在有独立组件测试保护，后续可以继续拆节点/连线详情编辑区，而不需要同时触碰来源与恢复 UI。
+- 当前仍不进入多人协作、WebGL/Pixi、Tauri 或 `.prg` 兼容，继续沿现有 Web 图谱架构做可验证的局部产品化。
+
+## 2026-06-05 20:24:42 +08:00 | v1.1.0-alpha.30 | 拆出图谱画布 Stage 纯视图组件
+### 任务内容
+- 继续推进 StudyMate 图谱工作区 Project Graph 对标计划，优先拆分 `useGraphWorkspaceController.tsx` 的画布 JSX，避免继续把 stage status、world、minimap 和空态渲染堆在大型 controller 中。
+- 保留现有节点、边、分组、框选、小地图、右键菜单、键盘指南和选择态行为，只把视图表面下沉到可测试组件。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.tsx`，拆出 `GraphStageStatus`、`GraphStageCanvas`、`GraphStageMinimap` 和 `GraphStageEmptyState`。
+- `GraphStageCanvas` 只接收文档、选中态、画布测量引用和事件回调；节点/边/分组 mutation、历史、保存和导入导出仍留在 controller，避免拆分时改变业务状态机。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把 stage status/world/minimap/empty state 渲染替换为纯视图组件调用，controller 从 2785 行降到 2609 行。
+- 新增 `frontend-user/src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`，覆盖状态条 aria-live、对齐提示、小地图选中态、空态提示，以及节点点击、边选择和分组折叠回调委托。
+- 更新 `docs/planning/VERSION_PLAN.md` 与 `docs/planning/versions/v0.6.0-graph-product.md`，同步记录 stage 纯视图组件已拆出，右侧详情 rail 和画布交互状态机仍是后续拆分重点。
+### 验证结果
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceStageChrome GraphWorkspaceShell` 通过，2 个文件、6 个用例全部通过。
+- `npm run lint` 通过，包含全工作区 typecheck 和文档同步验证。
+- `npm run build:user` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过，26 个 graph-core 用例全部通过。
+- `npm run test:user` 通过，23 个文件、73 个用户端用例全部通过。
+- `cd backend && go test ./...` 通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱 smoke。
+### 后续影响
+- 画布渲染表面现在具备独立组件测试保护，后续可以继续把 pointer drag、marquee、多选、context menu 和 detail rail 分别拆成更小 hook/component。
+- 当前没有引入 WebGL/Pixi、CRDT、Tauri 或 `.prg` 兼容，仍沿现有 Web 图谱架构做局部演进。
+
+## 2026-06-05 10:28:51 +08:00 | v1.1.0-alpha.29 | 补齐图谱工具栏扩展节点类型入口
+### 任务内容
+- 对齐 Project Graph 级节点编辑体验要求，把概念、笔记、资料、卡片、AI、图片、URL、公式、PDF 锚点九类 StudyMate 节点从散落在 controller 里的默认值收敛为统一配置。
+- 避免继续增加主界面按钮堆，改用“节点类型下拉 + 新建按钮”的紧凑入口暴露扩展节点类型。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphNodeTypes.test.ts`，先以缺失 helper 形成 RED，再覆盖九类节点选项、默认标题/尺寸和来源 label 继承。
+- 新增 `frontend-user/src/modules/graph/lib/graphNodeTypes.ts`，导出节点类型 union、配置列表、类型查询和 `buildGraphNodeDraft`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，新建节点流程复用节点类型配置，工具栏新增可访问的“选择新建节点类型”下拉和动态“新建X节点”按钮。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，覆盖从工具栏选择 URL 类型并创建 URL 节点后进入 dirty 保存状态。
+- 更新 `frontend-user/src/styles/graph.css`，为节点类型下拉补充紧凑样式。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphNodeTypes.test.ts` 先红后绿，最终 3 个用例通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/lib/graphKeyboardShortcuts.test.ts` 通过，2 个文件、9 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm run build:user` 通过。
+### 后续影响
+- 用户现在可以从主工具栏创建全部 StudyMate 产品化节点类型；后续可继续补节点详情面板中 URL/公式/PDF 锚点的专属字段编辑和键盘菜单入口。
+- 节点类型配置已脱离大型 controller，后续导入、AI 草稿和模板也可复用同一套默认值。
+
+## 2026-06-05 10:23:12 +08:00 | v1.1.0-alpha.28 | 下沉图谱 PNG 导出渲染边界
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把 PNG 导出中的 SVG Blob、Image 加载、canvas 绘制和 object URL 生命周期从 controller 中下沉为可测试 helper。
+- 保留现有 PNG/SVG/JSON 导出入口和用户可见文案，重点降低导出失败时资源释放与浏览器 API 细节的回归风险。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphCanvasExport.test.ts`，先以缺失 helper 形成 RED，再覆盖 SVG 渲染成 PNG blob、canvas 尺寸、背景填充、图片绘制和失败时回收 object URL。
+- 新增 `frontend-user/src/modules/graph/lib/graphCanvasExport.ts`，导出 `renderGraphPngBlobFromSvg`，并在 `finally` 中统一回收 object URL。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，PNG 导出按钮复用新 helper，controller 不再直接管理 Image/canvas/toBlob 细节。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphCanvasExport.test.ts` 先红后绿，最终 2 个用例通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/GraphWorkspacePage.test.tsx` 通过，2 个文件、8 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- PNG 导出能力具备浏览器资源生命周期单元测试保护；下一步适合继续把 SVG/JSON 下载包装、Markdown/Mermaid/JSON 导入状态和保存恢复流程拆成更小 hook。
+- 大规模 Pixi/WebGL 迁移仍不进入当前阶段，继续按 DOM/SVG 局部优化路线推进。
+
+## 2026-06-05 10:19:20 +08:00 | v1.1.0-alpha.27 | 抽出图谱工作区加载状态边界并完成全链验证
+### 任务内容
+- 延续图谱工作区 controller 拆分，把数据加载、初始图谱选择、详情规范化和快照失败 ready 文案从大型 hook 中下沉为可测试 helper。
+- 在继续拆分前补跑图谱产品化最终验证链，确认上一阶段累计能力在当前仓库真实状态下仍可构建、测试和 E2E 打开。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphWorkspaceLoadState.test.ts`，先以缺失 helper 形成 RED，再覆盖请求图谱优先级、草稿牌组默认值、缺失 document 规范化和快照失败文案保留。
+- 新增 `frontend-user/src/modules/graph/lib/graphWorkspaceLoadState.ts`，导出 `buildGraphWorkspaceResourceState`、`normalizeGraphWorkspaceDetail` 和 `buildGraphWorkspaceLoadedStatus`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，加载、创建首张图谱和切换图谱路径复用新 helper；保留保存、导入、恢复等既有逻辑不扩散本次改动范围。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 通过，26 个 graph-core 用例全部通过。
+- `cd backend; go test ./...` 通过。
+- `npm run lint` 通过，包含全工作区 typecheck 和文档同步验证。
+- `npm run build:user` 通过。
+- `npm run test:user` 通过，17 个文件、51 个用户端用例全部通过。
+- `npm run test:e2e` 通过，6 个 Playwright 用例全部通过，包含 200 节点图谱打开与 JSON 导出 smoke。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphWorkspaceLoadState.test.ts` 先红后绿，最终 4 个用例通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts` 通过，2 个文件、8 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱加载状态边界已经从 controller 中继续下沉；`useGraphWorkspaceController.tsx` 仍约 114KB / 2971 行，下一步适合继续拆数据保存/导入导出 hook 或画布 pointer drag 状态。
+- `.prg` 兼容、多目标边 UI、复杂自动布局、多人协作、Tauri 和 WebGL/Pixi 重写仍按计划延后。
+
+## 2026-06-05 10:09:20 +08:00 | v1.1.0-alpha.26 | 补图谱工作区保存、快照与 JSON 导入失败页面回归
+### 任务内容
+- 延续 autosave/dirty/snapshot 产品化切片，把上一轮纯逻辑状态 helper 推进到真实工作区 UI 回归测试。
+- 覆盖保存失败、快照恢复失败、快照列表失败和 StudyMate JSON 导入校验失败，确保用户可见状态明确且不误触远程保存。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，通过 mock graph API 渲染真实 `GraphWorkspacePage`。
+- 覆盖批量保存失败时展示错误消息和 `保存失败` 状态。
+- 覆盖快照恢复失败时展示错误消息和 `保存失败` 状态。
+- 覆盖快照列表加载失败时仍可继续编辑，并保留“暂时无法恢复历史版本”的提示。
+- 覆盖 JSON 导入结构错误时展示失败状态，不调用 `batchSaveGraph` 远程保存。
+- 修复 `loadGraphWorkspace` / `openGraph` 在快照列表加载失败后又用“工作台已就绪/已切换”覆盖失败提示的问题。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/GraphWorkspacePage.test.tsx` 先暴露快照列表失败提示被覆盖的问题，修复后通过，4 个页面级用例全部通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/GraphWorkspacePage.test.tsx src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 通过，4 个文件、16 个用例全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+### 后续影响
+- 图谱工作区保存/快照/导入失败路径现在具备真实 UI 回归保护；下一步适合补键盘/来源反链/卡片草稿流程的页面级用例，或继续拆 controller 的加载/store 边界。
+
+## 2026-06-05 10:01:08 +08:00 | v1.1.0-alpha.25 | 抽出图谱保存、离页保护与快照恢复状态边界
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把 autosave/dirty/snapshot 相关状态文案从大型 controller 中下沉为可测试 helper。
+- 强化保存状态的可读性，确保保存成功/失败、快照恢复成功/失败、快照列表加载失败和离页保护都有明确状态表达。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphPersistenceState.ts` 与测试，覆盖离页保护文案、保存成功/失败状态、快照恢复成功/失败状态、快照列表失败提示和保存状态中文标签。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，保存和快照恢复路径复用 persistence helper；快照恢复成功进入 `saved`，失败进入 `failed`。
+- `loadSnapshots` 现在返回加载是否成功；保存或恢复后如果快照列表加载失败，会保留“可继续编辑但暂时无法恢复历史版本”的清晰提示。
+- 顶部保存状态从英文枚举 `idle/dirty/pending/saved/failed` 改为中文可读标签，并同步更新 `aria-label`。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphPersistenceState.test.ts` 先因 helper 缺失失败，补实现后通过；新增保存状态 label 测试也先失败后转绿。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphPersistenceState.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/lib/graphSettingsPanel.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 通过，4 个文件、14 个用例全部通过。
+### 后续影响
+- autosave/dirty/snapshot 状态边界已经具备纯逻辑测试保护；下一步适合继续补图谱工作区页面级测试，覆盖保存失败、快照恢复失败和离页保护的真实 UI 行为。
+
+## 2026-06-05 09:55:04 +08:00 | v1.1.0-alpha.24 | 加强图谱验证面板与来源孤立节点摘要
+### 任务内容
+- 继续完善知识图谱工作区的 validation panel 与 source summary，让验证结果不再只是平铺 issue，来源摘要也能显示孤立/无来源节点情况。
+- 按 TDD 先补 graph-core 来源摘要测试和前端 validation panel helper 测试，再实现并回接工作区面板。
+### 完成结果
+- 扩展 `packages/graph-core/src/index.ts` 的 `summarizeGraphSourceReferences`，新增 `isolatedNodeCount`、`isolatedNodeIds`、`missingSourceNodeCount` 和 `missingSourceNodeIds`，并在 `sourceSwimlaneLayout.test.ts` 覆盖自由节点统计。
+- 新增 `frontend-user/src/modules/graph/lib/graphValidationPanel.ts` 与测试，按 severity 和 ruleType 汇总验证结果，生成错误/警告/提示计数和规则分组。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspacePanels.tsx`，`GraphValidationIssueList` 先显示验证摘要与规则分组，再保留原有 issue 明细和空状态。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，来源摘要面板显示“孤立/无来源”节点数量，即使当前图谱没有任何来源引用也能展示这一状态。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 先因来源摘要缺少孤立节点字段失败，补实现后通过，26 个 graph-core 测试全部通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphValidationPanel.test.ts` 先因 helper 缺失失败，补实现后通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/components/GraphWorkspacePanels.test.tsx src/modules/graph/lib/graphValidationPanel.test.ts` 先因验证面板未显示摘要失败，补实现后通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphValidationPanel.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx src/modules/graph/lib/graphSettingsPanel.test.ts src/modules/graph/lib/graphSourceBacklinks.test.ts` 通过，4 个文件、11 个用例全部通过。
+### 后续影响
+- 验证面板与来源摘要现在都具备更明确的产品状态表达；下一步适合继续拆 autosave/dirty/snapshot 流程，补保存失败和快照恢复失败的前端测试。
+
+## 2026-06-05 09:48:40 +08:00 | v1.1.0-alpha.23 | 收敛图谱设置面板配置与渲染边界
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把设置面板中的显示偏好、导入导出、自动保存、性能提示和快捷键说明收敛为结构化配置与可复用组件。
+- 按 TDD 先补设置配置和面板组件测试，再实现并接入工作区右侧栏。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphSettingsPanel.ts` 与测试，固定设置面板五类 product section，并根据节点/边/分组数量和保存状态生成自动保存与性能提示。
+- 扩展 `frontend-user/src/modules/graph/components/GraphWorkspacePanels.tsx`，新增 `GraphSettingsPanel` 组件，避免继续在大型 controller 中硬编码设置说明 JSX。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，根据当前图谱规模、保存状态和 autosave delay 生成 settings sections，并在右侧栏展示“设置 / 偏好与说明”区块。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphSettingsPanel.test.ts` 先因 helper 缺失失败，补实现后通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/components/GraphWorkspacePanels.test.tsx` 先因 `GraphSettingsPanel` 未导出失败，补实现后通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphSettingsPanel.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx src/modules/graph/lib/graphSourceBacklinks.test.ts src/modules/graph/lib/graphKeyboardShortcuts.test.ts` 通过，4 个文件、13 个用例全部通过。
+### 后续影响
+- 设置说明已经从 controller 中下沉为可测试边界；下一步适合继续把 validation panel 和 autosave/snapshot 流程拆为独立模块，并补更完整的工作区交互测试。
+
+## 2026-06-05 09:42:46 +08:00 | v1.1.0-alpha.22 | 补齐图谱来源反链到批注、PDF 页和 AI 草稿
+### 任务内容
+- 继续完善知识图谱学习闭环，让图谱节点和来源摘要面板可以更稳定地回到资料、笔记、PDF 批注、卡片和 AI 上下文。
+- 按 TDD 先补前端来源反链 helper 测试和后端 reader graph draft metadata 测试，再实现并回接图谱工作区与 ReaderPage。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphSourceBacklinks.ts` 与测试，统一解析 material、note、card、annotation、pdf-anchor、ai_draft、ai_task 等来源类型的跳转目标与按钮文案。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，右键菜单、节点详情和来源摘要列表都复用同一来源反链 helper；可解析来源会直接显示“回到阅读器/回到批注/查看 AI 草稿”等入口。
+- 更新 `backend/internal/modules/reader/service/graph_drafts.go` 与测试，让从 PDF 批注生成的图谱草稿节点带上 `materialId`、`annotationId` 和 `page` metadata，避免批注节点只有 annotation id 而无法回到原资料页。
+- 更新 `frontend-user/src/pages/ReaderPage.tsx` 与测试，支持 `/reader/:materialId?page=...&annotation=...` 这类从图谱反链进入的初始 PDF 页落点。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphSourceBacklinks.test.ts` 先因 helper 缺失失败，补实现后通过。
+- `cd backend; go test ./internal/modules/reader/service` 先因批注节点 metadata 缺少 `materialId/page/annotationId` 失败，补实现后通过。
+- `npm --workspace frontend-user run test -- --run src/pages/ReaderPage.test.tsx` 先因 page query 未生效失败，补实现后通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphSourceBacklinks.test.ts src/modules/graph/lib/graphKeyboardShortcuts.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx src/pages/ReaderPage.test.tsx` 通过，5 个文件、17 个用例全部通过。
+### 后续影响
+- 图谱来源反链已经覆盖学习闭环里的关键对象；后续可继续把 settings panel、validation panel 和 autosave/snapshot 边界从 controller 中拆出，并补 UI smoke 覆盖来源按钮实际点击。
+
+## 2026-06-05 01:00:00 +08:00 | v1.1.0-alpha.21 | 抽出图谱工作区键盘快捷键意图解析
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把 keydown 事件中的快捷键规则抽成可测试的意图解析 helper。
+- 保留原有保存、撤销/重做、全选、删除、聚焦、分组、连线、重置视野和 Escape 行为，只把按键判断从 React effect 中移出。
+### 完成结果
+- 新增 `frontend-user/src/modules/graph/lib/graphKeyboardShortcuts.test.ts`，覆盖输入框内外的保存/history/全选/删除/焦点/分组/连线/视野重置/Escape 规则。
+- 新增 `frontend-user/src/modules/graph/lib/graphKeyboardShortcuts.ts`，导出 `resolveGraphKeyboardShortcut` 和明确的 shortcut action union。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让 keydown effect 先解析 action 再执行 UI 副作用，减少大型 hook 内部条件分支。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphKeyboardShortcuts.test.ts` 先因 helper 文件缺失失败，补实现后通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphKeyboardShortcuts.test.ts src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 通过，4 个文件、15 个用例全部通过。
+### 后续影响
+- 快捷键规则已具备单元测试保护；后续可继续把 source backlinks、settings panel、导入/保存边界从 controller 中拆成更小模块。
+
+## 2026-06-05 00:56:07 +08:00 | v1.1.0-alpha.20 | 下沉图谱节点、边与分组 mutation 纯逻辑
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把删除节点、创建连线、复制节点、创建分组和折叠分组的文档 mutation 下沉到 `@studymate/graph-core`。
+- 按 TDD 先补 graph-core mutation 测试，再实现不可变 helper 并回接用户端 controller。
+### 完成结果
+- 新增 `packages/graph-core/test/graphMutations.test.ts`，覆盖删除节点时清理边和分组、连线去重、复制节点 metadata/source 拷贝与舞台边界钳制、按选中节点 bounds 创建分组、分组折叠切换。
+- 扩展 `packages/graph-core/src/index.ts`，新增 `removeGraphNodesFromDocument`、`appendGraphNodeToDocument`、`appendGraphEdgeToDocument`、`duplicateGraphNodeInDocument`、`createGraphGroupForNodes` 和 `toggleGraphGroupCollapse`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让删除、连线、复制、分组和折叠操作复用 graph-core mutation helper，继续减少 controller 内部手写文档改写分支。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 先因 mutation helper 未导出失败，补实现后通过，26 个 graph-core 测试全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 通过。
+### 后续影响
+- 节点/边/分组的核心文档 mutation 已具备 UI 无关测试保护；下一步适合继续拆 keyboard shortcut 规则、settings/source panel 逻辑和剩余导入/保存边界。
+
+## 2026-06-05 00:47:28 +08:00 | v1.1.0-alpha.19 | 下沉图谱 viewport 与 minimap 相机逻辑
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把 viewport/camera/minimap 的坐标投影与视野计算下沉到 `@studymate/graph-core`。
+- 按 TDD 先补 graph-core viewport 测试，再实现纯逻辑 helper 并回接用户端 controller 与 workspace helper。
+### 完成结果
+- 新增 `packages/graph-core/test/graphViewport.test.ts`，覆盖 zoom clamp、矩形居中、client point 到图谱坐标投影、minimap viewport 映射和不可测舞台尺寸兜底。
+- 扩展 `packages/graph-core/src/index.ts`，新增 `GraphViewport`、`GraphRect`、`GraphStageSize`、`clampGraphZoom`、`centerGraphViewportOnRect`、`projectClientPointToGraph` 和 `buildGraphMinimapViewport`。
+- 更新 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts` 与 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让缩放限制、聚焦节点、拖拽投影和 minimap 视口复用 graph-core helper。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 通过，21 个 graph-core 测试全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 通过。
+### 后续影响
+- viewport/camera 已成为可复用纯逻辑边界；下一步适合继续拆 node/edge/group mutations、keyboard shortcut 规则和 settings/source panel 逻辑。
+
+## 2026-06-05 00:40:55 +08:00 | v1.1.0-alpha.18 | 下沉图谱 selection 与 marquee 纯逻辑
+### 任务内容
+- 继续拆分 `useGraphWorkspaceController.tsx`，把 selection / marquee 命中逻辑从大型 hook 中下沉到 `@studymate/graph-core`。
+- 按 TDD 先补 graph-core 选择态测试，再实现并回接用户端 controller。
+### 完成结果
+- 新增 `packages/graph-core/test/graphSelection.test.ts`，覆盖单选、清空、多选 toggle、空 ID 忽略、框选矩形反向归一和隐藏节点过滤。
+- 扩展 `packages/graph-core/src/index.ts`，新增 `GraphSelectionState`、`createGraphSelectionState`、`setGraphNodeSelection`、`clearGraphNodeSelection`、`toggleGraphNodeSelection` 和 `selectGraphNodesInRect`。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让单选、清空、增减选择和框选命中复用 graph-core helper，减少 hook 内部手写状态分支。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 先因 selection helper 未导出失败，补实现后通过，16 个 graph-core 测试全部通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts src/modules/graph/lib/graphHistory.test.ts src/modules/graph/components/GraphWorkspacePanels.test.tsx` 通过。
+### 后续影响
+- selection / marquee 已成为可复用纯逻辑边界；下一步可继续按同样方式拆 camera/viewport、node/edge/group mutations 和 keyboard shortcut 规则。
+
+## 2026-06-05 00:29:33 +08:00 | v1.1.0-alpha.17 | 图谱工作区 JSON 文件、验证规则与 200 节点 smoke
+### 任务内容
+- 延续图谱产品化收口，按 TDD 先补 `@studymate/graph-core` 纯逻辑测试，再实现文档规范化、验证规则、`.smtg` 导入导出、学习模板、history label 和基准夹具。
+- 在不破坏现有 Graph API 合约的前提下，扩展后端 `ValidateGraph` 规则和学习模板内容。
+- 用户端接入 StudyMate JSON 导入导出、明确 `idle/dirty/pending/saved/failed` 保存状态、离页保护和图谱 200 节点 E2E smoke。
+### 完成结果
+- 新增 `packages/graph-core/test/graphProductization.test.ts`，覆盖 normalize、validate、SMTG JSON 往返、history label、四类学习模板和 200/300/20 基准夹具。
+- 扩展 `packages/graph-core/src/index.ts`，新增 graph document clone/normalize、`validateGraphDocument`、`serializeStudymateGraphJson`、`parseStudymateGraphJson`、history state、学习模板、基准数据和安全文件名能力。
+- 扩展 `backend/internal/modules/graph/service/helpers.go` 与测试，验证孤立节点、缺来源、重复标题、悬挂边、跨折叠分组边、空分组、非法尺寸和无效来源 target；模板从 UML/ERD/C4 替换为学习资料梳理、读书笔记、概念网络、复习卡片准备。
+- 新增 `frontend-user/src/modules/graph/lib/graphFileImportExport.ts` 与测试，接入 `.smtg` / `application/vnd.studymate.graph+json` 导入导出；工作区新增 JSON 导入模式、JSON 导出按钮、保存状态、离页前保护和更清晰的学习模板文案。
+- 新增 `e2e/v1-graph-workspace.spec.ts`，通过拦截 API 加载 200 节点、300 边、20 分组图谱，验证图谱工作区可打开并展示 JSON 导出入口。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test` 先因新增 API 未导出失败，补实现后通过，12 个测试全部通过。
+- `go test ./internal/modules/graph/service` 先因验证规则和模板仍为旧实现失败，补实现后通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphFileImportExport.test.ts` 先因 helper 缺失失败，补实现后通过。
+- `npm run test:user` 通过，用户端 11 个测试文件、30 个用例全部通过。
+- `npm run build:user` 与 `npm run build:admin` 通过。
+- `npx playwright test e2e/v1-graph-workspace.spec.ts` 通过，确认 200 节点图谱 smoke 可用。
+- `npm run test:e2e` 通过，6 条 Playwright smoke 全部通过。
+### 后续影响
+- 图谱核心能力已经从大 hook 中继续外移到可测试纯逻辑边界；后续适合继续拆 `useGraphWorkspaceController.tsx` 的数据加载、画布交互、validation/draft 和 settings 面板。
+- `.prg` 兼容、多目标边 UI、复杂自动布局、插件市场、CRDT、Tauri 和 WebGL/Pixi 重写仍按计划延后；如需要 Project Graph 文件兼容，应以后续转换器版本实现。
+
+## 2026-06-02 23:08:40 +08:00 | v1.1.0-alpha.16 | 补 Reader API、页面、handler 与 service 测试硬化
+### 任务内容
+- 延续 v1.1 产品质量与测试硬化，围绕阅读器链路补齐用户端 API 合约测试、页面回归测试和后端 handler / service 边界测试。
+- 继续遵循 TDD：先让后端 `reader/handler`、`reader/service` 的 fake 依赖测试因注入边界不足而编译失败，再收窄依赖接口并重跑目标测试。
+- 同步更新 README、路线图、版本计划、变更记录和项目日志，并在切片完成后补跑完整 CI 与覆盖率汇总。
+### 完成结果
+- 新增 `frontend-user/src/api/reader.test.ts`，覆盖 `getReaderState`、`updateReaderProgress`、`createReaderAnnotation`、`deleteReaderAnnotation`、`generateAnnotationCardDrafts` 和 `generateAnnotationGraphDrafts` 的鉴权头、路径与请求体。
+- 新增 `frontend-user/src/pages/ReaderPage.test.tsx`，覆盖阅读进度回写、添加书签、保存批注后刷新状态，以及资料标题、PDF 页码和 `rects` 坐标片段来源展示。
+- 新增 `backend/internal/modules/reader/handler/handler_test.go`，覆盖 `UpdateProgress`、`CreateAnnotation` 和 `GenerateGraphDrafts` 的鉴权用户、material id、请求体与 success envelope。
+- 新增 `backend/internal/modules/reader/service/service_test.go`，覆盖空批注拒绝、默认颜色与审计记录、批注选择缺口和资料可见性边界。
+- 更新 `backend/internal/modules/reader/handler/handler.go` 与 `backend/internal/modules/reader/service/service.go`，将对具体 `Service` / repository / material / audit / AI service 的依赖收窄为最小接口，并保留编译期断言，便于后续继续补 fake 或 fixture 测试。
+### 验证结果
+- `cd backend; go test ./internal/modules/reader/handler` 先因 `NewHandler` 只接收具体 service 而无法注入 fake service，形成编译期 RED；收窄为 `readerService` interface 后通过。
+- `cd backend; go test ./internal/modules/reader/service` 先因 `NewService` 只接收具体 repository / material / audit 依赖而无法注入 fake，形成编译期 RED；收窄为最小接口后通过。
+- `npm --workspace frontend-user run test -- --run src/api/reader.test.ts src/pages/ReaderPage.test.tsx` 通过，覆盖 Reader API 合约与页面回归 5 个用例。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、5 条 Playwright E2E、后端 `go test ./...` 和最终文档同步。
+- `npm run test:coverage` 通过；当前覆盖率缺口更新为：`frontend-user` 汇总 `46.18%`、`frontend-admin` 汇总 `60.27%`，后端 `reader/service` 提升到 `40.6%`，但仍与 `note/service`、`card/service`、`graph/service`、`share/service` 等 service/repository 包一起构成主要缺口。
+### 后续影响
+- Reader 链路现在具备 API client、页面层、handler 层和 service 层的自动化保护，后续可继续向 `note/service` 及来源追踪闭环补 fake / repository fixture 测试。
+- 前端与后端整体覆盖率仍明显低于 80%，后续优先继续补 `ReaderPage.tsx`、`appShared.tsx`、`workspaceControllerHelpers.ts` 以及 reader/note/card/graph service 层的细粒度回归。
+
+## 2026-06-02 22:42:39 +08:00 | v1.1.0-alpha.15 | 抽出 SearchIndexer 与图谱 history 状态机
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，在不改变现有公开 API 契约的前提下，为后端搜索链路补可替换索引边界。
+- 继续拆分 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，优先把 history/autosave/undo-redo 状态转移抽成可测试纯逻辑。
+- 同步更新 README、路线图、版本计划、变更记录和项目日志，并重新跑 CI 与覆盖率汇总。
+### 完成结果
+- 新增 `backend/internal/modules/search/service/indexer.go`，引入内部 `SearchIndexer` 抽象，默认实现仍为 MySQL fallback，不改变 `GET /api/v1/search` 路由契约。
+- 扩展 `backend/internal/modules/search/service/service_test.go`，补 grouped search 通过 fake indexer 聚合结果、limit 默认值与错误透传测试。
+- 新增 `frontend-user/src/modules/graph/lib/graphHistory.ts` 与 `frontend-user/src/modules/graph/lib/graphHistory.test.ts`，锁定 history 捕获、reset、undo/redo 与 saved 状态转移。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把 history/autosave/undo-redo 状态切到 `graphHistory.ts` 与 `shouldAutosaveGraph` 边界上，继续缩小大控制器内部职责。
+### 验证结果
+- `go test ./internal/modules/search/service` 先因缺少 `NewServiceWithIndexer` 编译失败，完成 RED；补实现后通过。
+- `npm --workspace frontend-user run test -- --run src/modules/graph/lib/graphHistory.test.ts` 先因缺少 `graphHistory.ts` 失败，补实现后通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、5 条 Playwright E2E、后端 `go test ./...` 和最终文档同步。
+- `npm run test:coverage` 通过；当时覆盖率缺口记录为：`frontend-user` 汇总 `44.49%`、`frontend-admin` 汇总 `60.27%`，后端 `search/service` 提升到 `56.4%`，但 `share/service`、`reader/service`、`note/service`、`card/service`、`graph/service` 等 service/repository 仍需继续补 fixture 测试。
+### 后续影响
+- 搜索链路现在已经具备保持 MySQL fallback 不变的同时切换后续 adapter 的边界，下一步适合继续补 `search/share` service 层 fake 或 repository fixture。
+- 图谱工作区已经先把 history/autosave/undo-redo 这一组状态从大控制器中拎出来，后续可沿同一方式继续下沉数据加载、画布交互、validation/draft 与设置面板逻辑。
+## 2026-06-02 14:01:58 +08:00 | v1.1.0-alpha.14 | 补后台治理 Playwright smoke
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为管理端后台治理补 Playwright smoke。
+- 让 E2E 同时启动用户端和管理端 preview，覆盖管理端已有 admin session 下的 users 治理模块加载。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `e2e/v1-admin-governance.spec.ts`。
+- 更新 `package.json` 的 `test:e2e`，同时构建用户端和管理端。
+- 新增 `frontend-admin` 的 `preview` 脚本，并把 `playwright.config.ts` 改为同时启动 4173 用户端和 4174 管理端 preview。
+- 后台 smoke 通过 `localStorage` 写入 `studymate.admin.session`，拦截 `/api/v1/admin/me`、`/overview`、`/moderation` 和 `/users?limit=20`，验证 users 模块加载 `alice` 且请求携带 `Bearer admin-token`。
+### 验证结果
+- `npm run test:e2e` 通过，Playwright smoke 从 4 条扩展为 5 条。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、5 条 Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- v1.1 已覆盖公共页、复习队列和后台治理的关键 smoke，后续可继续补 AI 任务治理、资料文件治理或图谱受保护工作流。
+
+## 2026-06-02 13:55:57 +08:00 | v1.1.0-alpha.13 | 补复习队列 Playwright smoke
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为受保护的用户端 `/review` 复习队列补 Playwright smoke。
+- 用测试内 session 和 API 拦截覆盖到期卡片展示、翻面、Good 评分和复习回写请求。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `e2e/v1-review-flow.spec.ts`。
+- 通过 `localStorage` 写入 `studymate.session`，验证受保护路由不依赖真实登录即可进入复习页。
+- 拦截 `/api/v1/decks`、`/api/v1/decks/:id/cards`、`/api/v1/review/today` 和 `/api/v1/cards/:id/review`。
+- 验证回写请求携带 `Bearer access-token`，并提交 `{ rating: "good" }`。
+### 验证结果
+- `npm run test:e2e` 通过，Playwright smoke 从 3 条扩展为 4 条。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、4 条 Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 复习闭环现在同时具备用户端 API 合约、页面级 Vitest、后端 handler 测试和 Playwright smoke；后续可继续补后台治理 smoke。
+
+## 2026-06-02 13:47:00 +08:00 | v1.1.0-alpha.12 | 补后端 AI handler 边界测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为后端 AI handler 补 tasks、usage 和 drafts 读取入口测试。
+- 先添加 fake service handler 测试形成编译期 RED，再把 AI handler 从具体 service 依赖收窄为最小接口。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `backend/internal/modules/ai/handler/handler_test.go`。
+- 测试 `/ai/tasks`、`/ai/usage`、`/ai/drafts` 均使用认证用户调用 service，并返回 success envelope。
+- 更新 `backend/internal/modules/ai/handler/handler.go`，允许通过最小 `aiService` interface 注入 fake，同时保留真实 AI service 的路由兼容。
+### 验证结果
+- `cd backend; go test ./internal/modules/ai/handler` 先因 `NewHandler` 只接受具体 service 编译失败，完成 RED。
+- `cd backend; go test ./internal/modules/ai/handler` 在接口收窄后通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- AI tasks/usage/drafts 读取入口具备后端 handler 层保护，后续可继续补 AI service repository fixture 或后台 AI 任务治理 smoke。
+
+## 2026-06-02 13:42:00 +08:00 | v1.1.0-alpha.11 | 补后端 graph commit handler 边界测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为后端 graph handler 补图谱变更草稿确认入口测试。
+- 先添加 fake service handler 测试形成编译期 RED，再把 graph handler 从具体 service 依赖收窄为最小接口。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `backend/internal/modules/graph/handler/handler_test.go`。
+- 测试 `POST /graphs/:id/ai/commit-changes` 会传递认证用户、目标 graph id、`draftIds` 和逐草稿 `nodeSelections`。
+- 更新 `backend/internal/modules/graph/handler/handler.go`，允许通过最小 `graphService` interface 注入 fake，同时保留真实 `graphservice.Service` 的路由兼容。
+### 验证结果
+- `cd backend; go test ./internal/modules/graph/handler` 先因 `NewHandler` 只接受具体 service 编译失败，完成 RED。
+- `cd backend; go test ./internal/modules/graph/handler` 在接口收窄后通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 图谱变更草稿确认的前端页面、前端 API 合约和后端 handler 边界均有自动化保护，后续可继续补 graph service/repository fixture。
+
+## 2026-06-02 13:37:49 +08:00 | v1.1.0-alpha.10 | 补图谱变更草稿确认 API 合约测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为用户端 AI/graph 草稿确认链路补 API client 合约测试。
+- 锁定 `commitGraphChangeDraftSelection` 的 endpoint、HTTP method、鉴权头和请求体。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 扩展 `frontend-user/src/api/reviewAi.test.ts`。
+- 新增图谱变更草稿确认用例，调用 `/api/v1/graphs/graph-1/ai/commit-changes`。
+- 验证请求体保留 `draftIds` 和逐草稿 `nodeSelections`，确保页面选择的候选节点不会在 API 层被丢失。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/api/reviewAi.test.ts` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- AI 图谱草稿确认流现在同时具备 API 合约测试和页面级测试保护，后续可继续补后端 graph commit handler/service 的细粒度 fixture。
+
+## 2026-06-02 13:33:00 +08:00 | v1.1.0-alpha.9 | 补 AiPage 图谱变更草稿确认测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为用户端 AiPage 补图谱变更草稿确认页面测试。
+- 覆盖待确认 `graph_change` 草稿写入所选目标图谱的 UI 流。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 扩展 `frontend-user/src/pages/AiPage.test.tsx`。
+- 通过 mock API 初始化图谱变更草稿、目标图谱列表和目标图谱详情。
+- 测试候选节点在页面中展示，并点击“把 1 条图谱变更写入所选图谱”。
+- 验证 `commitGraphChangeDraftSelection` 收到 `draftIds` 和 `nodeSelections`，保留 `node-a` 与 `node-b` 的节点选择。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/pages/AiPage.test.tsx` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- AI 草稿到复习系统、到目标图谱的两个确认流都有页面级测试保护，后续可继续补后端 AI/graph commit handler/service 测试。
+
+## 2026-06-02 12:47:00 +08:00 | v1.1.0-alpha.8 | 补 AiPage 草稿确认页面测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为用户端 AiPage 补页面级 AI 卡片草稿确认测试。
+- 覆盖待确认 `card_draft` 写入所选复习 deck 的 UI 流。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `frontend-user/src/pages/AiPage.test.tsx`。
+- 通过 mock API 初始化 AI 草稿、用量摘要、deck 列表和空图谱列表。
+- 测试用户点击“把 1 张待确认卡片草稿写入复习系统”后，`bulkCreateDeckCards` 收到 draftId、front、back、sourceType 和 sourceId。
+- 验证确认完成后显示“已把 1 张 AI 草稿写入复习系统。”。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/pages/AiPage.test.tsx` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- AI 草稿到复习系统的确认流已有 API 合约和页面级测试保护，后续可继续补图谱变更草稿确认流。
+
+## 2026-06-02 12:43:00 +08:00 | v1.1.0-alpha.7 | 补 ReviewWorkspace 页面级复习回写测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为用户端 ReviewWorkspace 补页面级回归测试。
+- 覆盖今日队列展示、显示答案、评分按钮和复习回写调用。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`。
+- 通过 mock API 初始化卡组、卡片列表和今日队列。
+- 测试用户点击“显示答案”后可以看到答案，并点击 `Good` 触发 `reviewCard`。
+- 验证评分后显示“已记录复习”消息并清空今日队列。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/modules/review/ReviewWorkspacePage.test.tsx` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 复习闭环已有 API 合约、后端 handler 和页面级测试保护，后续可以继续补 AI 草稿确认 UI 或后端 service fixture。
+
+## 2026-06-02 12:39:00 +08:00 | v1.1.0-alpha.6 | 补后端 card handler 边界测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为复习 Card/Deck handler 补边界测试。
+- 让 card handler 可以通过 fake service 做单元测试，不直接依赖真实数据库。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `backend/internal/modules/card/handler/handler_test.go`。
+- 覆盖创建卡组时的认证用户、请求体绑定和 201 响应。
+- 覆盖今日复习队列的 success envelope 与 due item。
+- 覆盖复习回写的 card id、rating 和 elapsedMs 传递。
+- `card/handler` 的 service 依赖改为最小接口，并保留具体 service 的编译期接口断言。
+### 验证结果
+- `cd backend; go test ./internal/modules/card/handler` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 复习闭环已有用户端 API 合约测试和后端 handler 边界测试，后续可继续补 ReviewWorkspace UI smoke 或 service 层数据库 fixture。
+
+## 2026-06-02 12:36:00 +08:00 | v1.1.0-alpha.5 | 补 review/AI 用户端 API 合约测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，为复习与 AI 草稿闭环补用户端 API client 合约测试。
+- 覆盖 Deck/Card、今日复习队列、复习回写和 AI tasks/usage/drafts 请求边界。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `frontend-user/src/api/reviewAi.test.ts`。
+- 覆盖 `createDeck` 的认证头、可见性与请求载荷。
+- 覆盖 `bulkCreateDeckCards` 从 AI draft 批量确认成卡片的请求载荷。
+- 覆盖 `getTodayReviewQueue`、`reviewCard`、`listAiTasks`、`getAiUsageSummary`、`listAiDrafts` 的路径与鉴权头。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/api/reviewAi.test.ts` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 后续可继续补 review workspace UI smoke 和后端 card handler/service 测试，逐步把复习闭环从 API 合约推进到端到端用户流。
+
+## 2026-06-02 12:32:00 +08:00 | v1.1.0-alpha.4 | 收敛公共首页 E2E 代理噪声
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，减少公共首页 Playwright smoke 对本地后端的隐式依赖。
+- 保持当前公共壳层、搜索页和分享页 smoke 仍在同一前端预览服务下运行。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 更新 `e2e/user-shell.spec.ts`，对 `/api/v1/materials` 和 `/api/v1/posts` 增加空成功响应拦截。
+- Playwright 运行时不再输出无本地后端导致的 Vite proxy `ECONNREFUSED` 噪声。
+### 验证结果
+- `npm run test:e2e` 通过，3 条 Playwright smoke 均通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 后续新增公共页 smoke 时应优先显式 mock API 边界，让 E2E 输出只暴露真实失败。
+
+## 2026-06-02 12:29:00 +08:00 | v1.1.0-alpha.3 | 增加搜索与分享只读页 Playwright smoke
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，补用户端公共搜索和分享只读页的端到端 smoke。
+- 避免依赖本地后端，使用 Playwright route 拦截固定 API 响应。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `e2e/v1-public-flows.spec.ts`。
+- 搜索页 smoke 覆盖 `/search?q=图谱` 调用 grouped backend result 并显示结果卡片。
+- 分享页 smoke 覆盖 `/share/token-1` 调用 public resolve 并显示只读目标、摘要和原始页面链接。
+### 验证结果
+- `npm run test:e2e` 通过，Playwright 从 1 条公共壳层 smoke 扩展为 3 条。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 后续可继续补后台治理和复习队列 Playwright smoke，并把后端代理拒绝日志从公共壳层测试里收敛掉。
+
+## 2026-06-02 12:26:00 +08:00 | v1.1.0-alpha.2 | 补后端 search/share/admin handler 边界测试
+### 任务内容
+- 继续 v1.1 产品质量与测试硬化，补后端 search/share/admin 的 handler 层回归测试。
+- 让 search/share handler 可以通过 fake service 做单元测试，不直接依赖真实数据库。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `backend/internal/modules/search/handler/handler_test.go`，覆盖查询参数、类型过滤、limit 传递和错误 envelope。
+- 新增 `backend/internal/modules/share/handler/handler_test.go`，覆盖创建分享链接时的认证用户、请求体绑定和成功响应 envelope。
+- 新增 `backend/internal/modules/admin/handler/handler_test.go`，覆盖后台 limit 查询参数解析。
+- `search/handler` 与 `share/handler` 的 service 依赖改为最小接口，并保留具体 service 的编译期接口断言。
+### 验证结果
+- `cd backend; go test ./internal/modules/search/handler ./internal/modules/share/handler ./internal/modules/admin/handler` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 后续可继续按同一方式补 review/AI/admin service 细粒度测试，并在需要数据库行为时再引入轻量 fixture 或 repository interface。
+
+## 2026-06-02 12:20:00 +08:00 | v1.1.0-alpha.1 | 加厚 search/share/admin 测试基线
+### 任务内容
+- 在 `v1.0.0` 本地发布标签之后，按后续里程碑设计进入 v1.1 产品质量与测试硬化。
+- 优先为 v1 新增的搜索、分享和后台治理入口补自动化回归测试。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 完成结果
+- 新增 `frontend-user/src/api/searchShare.test.ts`，覆盖 grouped search 查询参数、鉴权头、owner share link 创建载荷和 public token resolve 编码路径。
+- 新增 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，覆盖已有 admin session 下治理页加载 `/api/v1/admin/users?limit=20` 并携带 Bearer token。
+- README 当前阶段从 v1.0.0 发布推进更新为 v1.1 质量硬化；版本计划和路线图新增 v1.1 测试硬化退出标准。
+### 验证结果
+- `npm --workspace frontend-user run test -- --run src/api/searchShare.test.ts` 通过。
+- `npm --workspace frontend-admin run test -- --run src/views/AdminWorkspaceView.test.ts` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 后续可继续补后端 search/share/admin/review handler/service 测试，并追加 Playwright 搜索、分享只读页、后台治理和复习队列 smoke flow。
+
+## 2026-06-01 22:03:47 +08:00 | v0.0.73 | 收口 NOTE_READ_MODEL、覆盖率门禁与本地化框架
+### 任务内容
+- 按 v1.0.0 A 阶段要求，完成当前未提交的 `NOTE_READ_MODEL` 读取开关收口。
+- 补齐发布前覆盖率命令，明确每个里程碑仍以完整 CI 为硬门禁。
+- 先建立 `zh-CN` 源语言与 `en-US` 占位字典框架，不把完整英文翻译作为 v1.0.0 阻塞项。
+### 完成结果
+- 后端笔记服务支持 `NOTE_READ_MODEL=mysql_primary|mongo_primary`，`mongo_primary` 优先读取 MongoDB `note_documents.html` 并在缺失或失败时回退 MySQL。
+- 新增根脚本 `test:coverage` 及用户端、管理端、图谱核心、后端覆盖率子命令。
+- 新增 `frontend-user/src/i18n/dictionary.ts` 和 `frontend-admin/src/i18n/dictionary.ts`，并添加字典键一致性测试。
+- 同步更新 README、开发说明、版本计划、路线图、变更记录和项目日志。
+### 验证结果
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- B 阶段可以在已有覆盖率和字典框架保护下继续拆分超大文件。
+- 发布前需要额外运行 `npm run test:coverage` 并记录覆盖率缺口。
+## 2026-06-01 22:18:00 +08:00 | v0.0.74 | 拆分 API client、全局样式和图谱工作区 helper
+### 任务内容
+- 按 B 阶段要求继续降低超大文件维护风险。
+- 优先处理用户端 API client、全局样式和图谱控制器中可安全抽离的纯 helper。
+### 完成结果
+- `frontend-user/src/api/client.ts` 改为稳定 barrel，接口实现按 auth、files、community、materials、notes、reader、graphs、review、ai 域拆分。
+- `frontend-user/src/styles.css` 改为导入入口，样式按 app、workspace、graph、reader-notes、search-review、responsive 分层。
+- `useGraphWorkspaceController.tsx` 抽出图谱文档、几何、来源分组、导出和焦点导航 helper 到 `frontend-user/src/modules/graph/lib/workspaceControllerHelpers.ts`。
+- 保留现有页面导入路径和路由行为。
+### 验证结果
+- `npm run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- 图谱 hook 仍承载大量交互与 UI 组合，C 阶段继续把 autosave、selection、AI draft 和面板渲染下沉到更细模块。
+## 2026-06-01 22:32:00 +08:00 | v0.0.75 | 收口 Reader/Notes 数据来源与图谱性能回归
+### 任务内容
+- 按 C 阶段要求补齐历史笔记到 Mongo 内容文档的回填路径。
+- 为 PDF 批注增加兼容的归一化坐标字段，并在阅读器 UI 中显示资料、PDF 页和坐标片段来源。
+- 增加图谱大数据量回归用例。
+### 完成结果
+- 新增 `backend/cmd/backfill-note-documents`，支持幂等 upsert 历史 `notes.content` 到 `note_documents`，并支持 `-limit` 分批执行。
+- `pdf_annotations` 新增 `rects` 字段，DTO、模型、仓储编码/解码、新装库迁移、历史库对齐迁移和回滚脚本同步更新。
+- Reader 批注创建时写入基础归一化坐标，批注列表展示资料标题、PDF 页和坐标片段数量。
+- `@studymate/graph-core` 增加 200 节点性能夹具，覆盖 v1 图谱来源泳道布局预算。
+### 验证结果
+- `cd backend; go test ./internal/modules/reader/... ./internal/modules/note/... ./cmd/backfill-note-documents` 通过。
+- `npm run typecheck` 通过。
+- `npm --workspace @studymate/graph-core run test` 通过。
+- `npm run ci` 通过，覆盖类型检查、文档同步、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
+### 后续影响
+- C 阶段后续可继续加厚图谱治理面板与 Undo/Redo/dirty 状态的 UI 表达。
+- D 阶段可以复用批注来源与 AI draft 链路继续推进复习、搜索、后台和分享。
+
+## 2026-06-01 21:36:28 +08:00 | v0.0.72 | 拆分用户端主应用、图谱入口和管理端入口
+### 任务内容
+- 按 v1.0 发布推进顺序，执行超大文件拆分。
+- 目标是先解除 `frontend-user/src/app/App.tsx`、`frontend-user/src/modules/graph/GraphWorkspacePage.tsx`、`frontend-admin/src/App.vue` 三个入口文件的巨石职责，并建立后续继续细拆的目录边界。
+### 完成结果
+- 将用户端主应用拆成：
   - [frontend-user/src/app/routes.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/routes.tsx)
   - [frontend-user/src/app/shell/ShellFrame.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/shell/ShellFrame.tsx)
   - [frontend-user/src/pages/](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/pages/)
   - [frontend-user/src/features/ai/aiDrafts.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/features/ai/aiDrafts.ts)
-- `frontend-user/src/app/App.tsx` 鏀逛负 1 琛屽吋瀹瑰鍑猴紝鍘熸湁璺敱鍜岄〉闈㈣涓轰繚鎸佷笉鍙樸€?- `frontend-user/src/modules/graph/GraphWorkspacePage.tsx` 鏀逛负钖勫３瀵煎嚭锛屽浘璋卞疄鐜扮Щ鍏?`components/GraphWorkspaceView.tsx` 鍜?`hooks/useGraphWorkspaceController.tsx`锛屽苟寤虹珛 `state/`銆乣lib/`銆乣exporters/`銆乣importers/` 杈圭晫銆?- `frontend-admin/src/App.vue` 鏀逛负钖勫３鎸傝浇 `views/AdminWorkspaceView.vue`锛屾柊澧?`router/index.ts`銆乣components/admin/AdminModuleBadge.vue` 鍜?`components/admin/admin.css`銆?- 绠＄悊绔牱寮忎粠鍗曟枃浠?Vue 鍐呰仈鏍峰紡杩佸嚭锛宍AdminWorkspaceView.vue` 闄嶅埌 500 琛屼互鍐呫€?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佽矾绾垮浘銆佺増鏈鍒掋€佸彉鏇磋褰曞拰椤圭洰鏃ュ織銆?### 楠岃瘉缁撴灉
+- `frontend-user/src/app/App.tsx` 改为 1 行兼容导出，原有路由和页面行为保持不变。
+- `frontend-user/src/modules/graph/GraphWorkspacePage.tsx` 改为薄壳导出，图谱实现移入 `components/GraphWorkspaceView.tsx` 和 `hooks/useGraphWorkspaceController.tsx`，并建立 `state/`、`lib/`、`exporters/`、`importers/` 边界。
+- `frontend-admin/src/App.vue` 改为薄壳挂载 `views/AdminWorkspaceView.vue`，新增 `router/index.ts`、`components/admin/AdminModuleBadge.vue` 和 `components/admin/admin.css`。
+- 管理端样式从单文件 Vue 内联样式迁出，`AdminWorkspaceView.vue` 降到 500 行以内。
+- 同步更新 README、开发说明、路线图、版本计划、变更记录和项目日志。
+### 验证结果
 - `npm run ci`
-- CI 鑴氭湰鍐呴儴宸茶鐩栫被鍨嬫鏌ャ€佹枃妗ｆ牎楠屻€佸墠鍚庡彴鏋勫缓銆佺敤鎴风 Vitest銆佺鐞嗙 Vitest銆佸浘璋辨牳蹇冩祴璇曘€丳laywright E2E銆佸悗绔?`go test ./...`銆?### 鍚庣画褰卞搷
-- 鍚庣画 reader/notes 涓?graph 鏀跺彛鏃讹紝搴旂户缁妸 `useGraphWorkspaceController` 鍐呴儴鐨勫ぇ鍨嬬姸鎬佷笌鎿嶄綔鎷嗗埌鏇寸粏 hooks/lib锛岃€屼笉鏄啀鎶婇€昏緫濉炲洖鍏ュ彛鏂囦欢銆?
-## 2026-06-01 21:09:44 +08:00 | v0.0.71 | 寤虹珛 CI 涓庡墠绔祴璇曞熀绾?### 浠诲姟鍐呭
-- 鎸?v1.0 鍙戝竷鎺ㄨ繘椤哄簭锛屽畬鎴愬伐绋嬪熀绾跨浜屾锛氭牴鑴氭湰銆佸墠鍚庡彴鍗曞厓娴嬭瘯銆丒2E 娴嬭瘯鍜?GitHub CI 瑕嗙洊銆?- 瑕佹眰淇濈暀鐜版湁 `go test ./...` 涓?`@studymate/graph-core` 娴嬭瘯锛屽苟鏂板鐢ㄦ埛绔?Vitest + React Testing Library銆佺鐞嗙 Vitest + Vue Test Utils銆丳laywright 绔埌绔祴璇曘€?### 瀹屾垚缁撴灉
-- 鏇存柊 [package.json](/E:/Code/1108026_rust_go/StudyMate/package.json)锛屾柊澧?`lint`銆乣test:user`銆乣test:admin`銆乣test:e2e`銆乣verify:docs`銆乣ci`銆?- 鏇存柊鍓嶅悗鍙?package 鑴氭湰锛屽垎鍒帴鍏?Vitest 娴嬭瘯鍏ュ彛锛涚敤鎴风鏂板 `preview` 渚?Playwright 浣跨敤銆?- 鏂板 [frontend-user/vitest.config.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/vitest.config.ts)銆乕frontend-user/src/test/setup.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/test/setup.ts) 鍜屽浘璋辫妭鐐瑰瑙傛祴璇曘€?- 鏂板 [frontend-admin/vitest.config.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-admin/vitest.config.ts)銆乕frontend-admin/src/test/setup.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-admin/src/test/setup.ts) 鍜岀鐞嗙鐧诲綍椤?smoke 娴嬭瘯銆?- 鏂板 [playwright.config.ts](/E:/Code/1108026_rust_go/StudyMate/playwright.config.ts) 涓?[e2e/user-shell.spec.ts](/E:/Code/1108026_rust_go/StudyMate/e2e/user-shell.spec.ts)锛岃鐩栫敤鎴风鍏叡宸ヤ綔鍖哄姞杞姐€?- 鏇存柊 [.github/workflows/ci.yml](/E:/Code/1108026_rust_go/StudyMate/.github/workflows/ci.yml)锛孋I 瑕嗙洊 Node 24銆丟o 1.26銆乣npm ci`銆佺被鍨嬫鏌ャ€佸墠鍚庡彴鏋勫缓銆佸墠鍚庡彴娴嬭瘯銆丳laywright銆佸浘璋辨牳蹇冩祴璇曘€佸悗绔祴璇曞拰鏂囨。鍚屾銆?- 鍚屾鏇存柊 README銆佸紑鍙戣鏄庛€佽矾绾垮浘銆佺増鏈鍒掋€佸彉鏇磋褰曞拰鏂囨。鍚屾鑴氭湰銆?### 楠岃瘉缁撴灉
+- CI 脚本内部已覆盖类型检查、文档校验、前后台构建、用户端 Vitest、管理端 Vitest、图谱核心测试、Playwright E2E、后端 `go test ./...`。
+### 后续影响
+- 后续 reader/notes 与 graph 收口时，应继续把 `useGraphWorkspaceController` 内部的大型状态与操作拆到更细 hooks/lib，而不是再把逻辑塞回入口文件。
+
+## 2026-06-01 21:09:44 +08:00 | v0.0.71 | 建立 CI 与前端测试基线
+### 任务内容
+- 按 v1.0 发布推进顺序，完成工程基线第二步：根脚本、前后台单元测试、E2E 测试和 GitHub CI 覆盖。
+- 要求保留现有 `go test ./...` 与 `@studymate/graph-core` 测试，并新增用户端 Vitest + React Testing Library、管理端 Vitest + Vue Test Utils、Playwright 端到端测试。
+### 完成结果
+- 更新 [package.json](/E:/Code/1108026_rust_go/StudyMate/package.json)，新增 `lint`、`test:user`、`test:admin`、`test:e2e`、`verify:docs`、`ci`。
+- 更新前后台 package 脚本，分别接入 Vitest 测试入口；用户端新增 `preview` 供 Playwright 使用。
+- 新增 [frontend-user/vitest.config.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/vitest.config.ts)、[frontend-user/src/test/setup.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/test/setup.ts) 和图谱节点外观测试。
+- 新增 [frontend-admin/vitest.config.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-admin/vitest.config.ts)、[frontend-admin/src/test/setup.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-admin/src/test/setup.ts) 和管理端登录页 smoke 测试。
+- 新增 [playwright.config.ts](/E:/Code/1108026_rust_go/StudyMate/playwright.config.ts) 与 [e2e/user-shell.spec.ts](/E:/Code/1108026_rust_go/StudyMate/e2e/user-shell.spec.ts)，覆盖用户端公共工作区加载。
+- 更新 [.github/workflows/ci.yml](/E:/Code/1108026_rust_go/StudyMate/.github/workflows/ci.yml)，CI 覆盖 Node 24、Go 1.26、`npm ci`、类型检查、前后台构建、前后台测试、Playwright、图谱核心测试、后端测试和文档同步。
+- 同步更新 README、开发说明、路线图、版本计划、变更记录和文档同步脚本。
+### 验证结果
 - `npm run ci`
-- CI 鑴氭湰鍐呴儴宸茶鐩栵細
+- CI 脚本内部已覆盖：
   - `npm run lint`
   - `npm run build:user`
   - `npm run build:admin`
@@ -2295,455 +4461,825 @@
   - `npm run test:e2e`
   - `cd backend && go test ./...`
   - `npm run verify:docs`
-### 鍚庣画褰卞搷
-- 鍚庣画鎷嗗垎瓒呭ぇ鏂囦欢鍜屽浘璋卞姛鑳芥敹鍙ｆ椂锛屾湁鍓嶅悗鍙版渶灏忓洖褰掓祴璇曚笌 E2E 澹冲眰淇濇姢銆?- CI 宸插叿澶囧彂甯冨墠璐ㄩ噺闂ㄧ闆忓舰銆?
-## 2026-06-01 21:00:51 +08:00 | v0.0.70 | 瀵归綈鏂囨。鏍戜笌 v1.0 鍙戝竷娌荤悊鍩虹嚎
-### 浠诲姟鍐呭
-- 鎸夌敤鎴疯姹傚厛淇伐绋嬪熀绾夸笌鏂囨。婕傜Щ锛屾妸褰撳墠 `master` 鎺ㄨ繘鍒板彲鍙戝竷 `v1.0.0` 鐨勬不鐞嗚建閬撱€?- 鍒涘缓鎴栫撼鍏?`docs/planning/ROADMAP.md`銆乣docs/planning/VERSION_PLAN.md`銆乣docs/planning/versions/v0.6.0-graph-product.md`銆乣docs/design/UPGRADE_DESIGN.md`銆乣CHANGELOG.md`銆乣.github/PULL_REQUEST_TEMPLATE.md`銆乣.github/workflows/ci.yml`銆乣scripts/verify-doc-sync.mjs`銆?- README 褰撳墠闃舵蹇呴』鍙嶆槧鐪熷疄鐘舵€侊細闃呰/绗旇宸查棴鐜紝鍥捐氨涓哄己 MVP锛屽涔犲拰 AI 閮ㄥ垎瀹炵幇锛屽悗鍙板鏍镐富閾惧瓨鍦ㄤ絾娌荤悊鑳藉姏涓嶅畬鏁淬€?### 瀹屾垚缁撴灉
-- 鏇存柊 [.gitignore](/E:/Code/1108026_rust_go/StudyMate/.gitignore)锛岄噸鏂板厑璁?`PROJECT_LOG.md`銆乣docs/planning/` 鍜?`docs/design/` 杩涘叆鐗堟湰娌荤悊銆?- 閲嶅缓 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md)锛屾妸涓诲鑸寚鍚?`docs/design/UPGRADE_DESIGN.md`锛屽苟淇濈暀鏍圭洰褰曡璁¤鏄庡吋瀹归摼鎺ャ€?- 閲嶅缓 [docs/planning/ROADMAP.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/ROADMAP.md) 鍜?[docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md)锛屾槑纭?A-E 鎵ц椤哄簭銆?.0 鑼冨洿鍙栬垗銆亃h-CN 婧愯瑷€/en-US 鍗犱綅绛栫暐鍜屽缓璁€ц兘棰勭畻銆?- 鏇存柊 [docs/planning/versions/v0.6.0-graph-product.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/versions/v0.6.0-graph-product.md)锛屾妸鍥捐氨瀹氫綅浠庤鍒掓敼涓哄己 MVP 鍚庣殑浜у搧鍖栨敹鍙ｃ€?- 澶嶅埗鏍圭洰褰?[瀛︿即椤圭洰-璁捐璇存槑涔?md](/E:/Code/1108026_rust_go/StudyMate/瀛︿即椤圭洰-璁捐璇存槑涔?md) 鍒?[docs/design/UPGRADE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/design/UPGRADE_DESIGN.md)銆?- 鏂板 [CHANGELOG.md](/E:/Code/1108026_rust_go/StudyMate/CHANGELOG.md)銆丳R 妯℃澘銆丆I 楠ㄦ灦鍜屾枃妗ｅ悓姝ユ牎楠岃剼鏈€?- 鏇存柊 [docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)锛岃ˉ鍏呮枃妗ｄ笌鐗堟湰娌荤悊娴佺▼銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 后续拆分超大文件和图谱功能收口时，有前后台最小回归测试与 E2E 壳层保护。
+- CI 已具备发布前质量门禁雏形。
+
+## 2026-06-01 21:00:51 +08:00 | v0.0.70 | 对齐文档树与 v1.0 发布治理基线
+### 任务内容
+- 按用户要求先修工程基线与文档漂移，把当前 `master` 推进到可发布 `v1.0.0` 的治理轨道。
+- 创建或纳入 `docs/planning/ROADMAP.md`、`docs/planning/VERSION_PLAN.md`、`docs/planning/versions/v0.6.0-graph-product.md`、`docs/design/UPGRADE_DESIGN.md`、`CHANGELOG.md`、`.github/PULL_REQUEST_TEMPLATE.md`、`.github/workflows/ci.yml`、`scripts/verify-doc-sync.mjs`。
+- README 当前阶段必须反映真实状态：阅读/笔记已闭环，图谱为强 MVP，复习和 AI 部分实现，后台审核主链存在但治理能力不完整。
+### 完成结果
+- 更新 [.gitignore](/E:/Code/1108026_rust_go/StudyMate/.gitignore)，重新允许 `PROJECT_LOG.md`、`docs/planning/` 和 `docs/design/` 进入版本治理。
+- 重建 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md)，把主导航指向 `docs/design/UPGRADE_DESIGN.md`，并保留根目录设计说明兼容链接。
+- 重建 [docs/planning/ROADMAP.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/ROADMAP.md) 和 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md)，明确 A-E 执行顺序、1.0 范围取舍、zh-CN 源语言/en-US 占位策略和建议性能预算。
+- 更新 [docs/planning/versions/v0.6.0-graph-product.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/versions/v0.6.0-graph-product.md)，把图谱定位从规划改为强 MVP 后的产品化收口。
+- 复制根目录 [学伴项目-设计说明书.md](/E:/Code/1108026_rust_go/StudyMate/学伴项目-设计说明书.md) 到 [docs/design/UPGRADE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/design/UPGRADE_DESIGN.md)。
+- 新增 [CHANGELOG.md](/E:/Code/1108026_rust_go/StudyMate/CHANGELOG.md)、PR 模板、CI 骨架和文档同步校验脚本。
+- 更新 [docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)，补充文档与版本治理流程。
+### 验证结果
 - `node scripts/verify-doc-sync.mjs`
 - `npm --workspace @studymate/graph-core run test`
 - `npm run typecheck`
 - `npm run build:user`
 - `npm run build:admin`
 - `cd backend; go test ./...`
-### 鍚庣画褰卞搷
-- 鍚庣画姣忎釜閲岀▼纰戦兘鏈夌粺涓€鏂囨。鍚屾娓呭崟銆丆I 鍏ュ彛鍜岄」鐩棩蹇楄褰曘€?- 涓嬩竴姝ヨ繘鍏?CI 涓庡墠绔祴璇曞熀绾垮缓璁俱€?
-## 2026-06-01 20:05:00 +08:00 | v0.0.69 | 绉婚櫎鍥捐氨绂婚〉鏁撮〉鍒锋柊鍏滃簳浠ユ仮澶嶄晶杈规爮娴佺晠鍒囨崲
-### 浠诲姟鍐呭
-- 鐢ㄦ埛鍙嶉鍏朵粬椤甸潰涔嬮棿鍒囨崲娴佺晠锛屼絾浠庡浘璋卞垏鍒板埆鐨勯〉闈㈠儚鍒锋柊浜嗕竴娆°€?- 鍦?`v0.0.67` 宸茬粡淇绌烘煡璇㈠弬鏁拌Е鍙戝亣 AI 钀界偣寰幆鍚庯紝鏀跺洖姝ゅ墠涓哄厹搴曞姞鍦ㄥ浘璋辩椤典笂鐨?`reloadDocument`銆?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛?  - 绉婚櫎 `shouldHardLeaveGraph`
-  - 绉婚櫎渚ц竟鏍忎富瀵艰埅鍜屽揩閫熷姩浣滀笂浠呴拡瀵?`/graph` 绂婚〉鐨?`reloadDocument`
-  - 鍥捐氨绂诲紑鏃堕噸鏂拌蛋 React Router SPA 鍒囨崲锛屼笉鍐嶈〃鐜颁负娴忚鍣ㄧ骇鍒锋柊
-- 淇濈暀鍥捐氨椤靛唴宸茬粡琛ュソ鐨勬牴鍥犱慨澶嶏細
-  - 绌烘煡璇㈠弬鏁颁笉浼氳瑙ｆ瀽鎴愬亣 AI 棰勮钀界偣
-  - AI 棰勮钀界偣娑堣垂鍚庝細娓呯悊 React Router state
-  - 鍥捐氨鎷栨嫿寮傚父涓柇鏃朵細閲婃斁鍏ㄥ眬 pointer 鐘舵€?### 楠岃瘉缁撴灉
+### 后续影响
+- 后续每个里程碑都有统一文档同步清单、CI 入口和项目日志记录。
+- 下一步进入 CI 与前端测试基线建设。
+
+## 2026-06-01 20:05:00 +08:00 | v0.0.69 | 移除图谱离页整页刷新兜底以恢复侧边栏流畅切换
+### 任务内容
+- 用户反馈其他页面之间切换流畅，但从图谱切到别的页面像刷新了一次。
+- 在 `v0.0.67` 已经修复空查询参数触发假 AI 落点循环后，收回此前为兜底加在图谱离页上的 `reloadDocument`。
+### 完成结果
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 移除 `shouldHardLeaveGraph`
+  - 移除侧边栏主导航和快速动作上仅针对 `/graph` 离页的 `reloadDocument`
+  - 图谱离开时重新走 React Router SPA 切换，不再表现为浏览器级刷新
+- 保留图谱页内已经补好的根因修复：
+  - 空查询参数不会被解析成假 AI 预计落点
+  - AI 预计落点消费后会清理 React Router state
+  - 图谱拖拽异常中断时会释放全局 pointer 状态
+### 验证结果
 - `npm run typecheck`
 - `npm run build:user`
 - `npm --workspace @studymate/graph-core run test`
-### 鍚庣画褰卞搷
-- 鍥捐氨椤电寮€浣撻獙鍥炲埌鍜屽叾浠栨ā鍧椾竴鑷寸殑鍗曢〉搴旂敤鍒囨崲銆?- 濡傛灉鍚庣画浠嶅嚭鐜板浘璋卞垏椤甸棶棰橈紝搴旂户缁慨鍏蜂綋杩愯鎬佹硠婕忥紝鑰屼笉鏄仮澶嶆暣椤靛埛鏂板厹搴曘€?
-## 2026-06-01 18:06:00 +08:00 | v0.0.68 | 澧炲姞鍥捐氨鏉ユ簮鍏崇郴鎽樿浠ヨˉ榻愬唴瀹瑰埌鍥捐氨鐨勫彲瑙侀摼璺?### 浠诲姟鍐呭
-- 缁х画鎸夌収 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 鎺ㄨ繘涓嬩竴姝ュ姛鑳藉疄鐜般€?- 褰撳墠闃舵閲嶇偣浠嶆槸鏀舵潫 `v0.4.0` 鍒?`v0.5.0` 鐨勪氦鐣岋細璁╄祫鏂欍€佹壒娉ㄣ€佺瑪璁板埌鍥捐氨鑺傜偣鐨勬潵婧愬叧绯绘竻鏅板彲瑙併€?### 瀹屾垚缁撴灉
-- 鏇存柊 [packages/graph-core/src/index.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/src/index.ts)锛?  - 鏂板 `summarizeGraphSourceReferences`
-  - 瀵瑰浘璋辫妭鐐逛腑鐨?`source` 鍋氬幓閲嶆眹鎬伙紝杈撳嚭鎬绘潵婧愭暟銆佸甫鏉ユ簮鑺傜偣鏁般€佹寜鏉ユ簮绫诲瀷鑱氬悎鍜屾潵婧愭槑缁?  - 鏉ユ簮绫诲瀷鎸夎祫鏂欍€佹壒娉ㄣ€佺瑪璁般€佸崱鐗囥€丄I 鑽夌绛夌ǔ瀹氶『搴忚緭鍑?- 鏇存柊 [packages/graph-core/test/sourceSwimlaneLayout.test.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/test/sourceSwimlaneLayout.test.ts)锛?  - 鏂板鏉ユ簮鍏崇郴鎽樿娴嬭瘯锛岃鐩栧悓涓€鏉ユ簮琚涓妭鐐瑰紩鐢ㄦ椂鐨勫幓閲嶅拰鑺傜偣璁℃暟
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 鍥捐氨鍙充晶鏍忔柊澧炩€滄潵婧愬叧绯?/ 鍥捐氨寮曠敤鈥濆尯鍧?  - 灞曠ず鏉ユ簮瀵硅薄鏁般€佸甫鏉ユ簮鑺傜偣鏁般€佹潵婧愮被鍨嬫憳瑕佸拰鍓?5 涓潵婧愭槑缁?  - 娌℃湁鏉ユ簮鏃舵樉绀虹┖鎬侊紝鎻愮ず鐢ㄦ埛浠庤祫鏂欍€佺瑪璁版垨鎵规敞鐢熸垚鑺傜偣鍚庝細鐪嬪埌鍏崇郴
-- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css) 鍜?[docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)锛岃ˉ榻愭潵婧愬叧绯诲垪琛ㄦ牱寮忓拰褰撳墠鑳藉姏璇存槑銆?### 楠岃瘉缁撴灉
-- `npm --workspace @studymate/graph-core run test`
-- `npm run typecheck`
-- `npm run build:user`
-- `cd backend; go test ./...`
-### 鍚庣画褰卞搷
-- 鍥捐氨涓嶅啀鍙槸鈥滆妭鐐圭敾甯冣€濓紝鐢ㄦ埛鍙互鐩存帴鐪嬭杩欏紶鍥捐氨鍜岃祫鏂欍€佹壒娉ㄣ€佺瑪璁般€佸崱鐗囦箣闂寸殑鏉ユ簮鍏崇郴銆?- 鍚庣画濡傛灉瑕佹妸 `graph_relations` 鏆撮湶涓哄悗绔?API 鎴栨帴鍏ユ悳绱?杩愯惀鍚庡彴锛屽彲浠ュ鐢ㄥ綋鍓嶆憳瑕佺粨鏋勪綔涓哄墠绔睍绀烘ā鍨嬨€?
-## 2026-06-01 18:00:00 +08:00 | v0.0.67 | 淇绌烘煡璇㈠弬鏁拌Е鍙戝亣 AI 钀界偣寰幆骞朵负鍥捐氨绂婚〉鍔犳祻瑙堝櫒绾у厹搴?### 浠诲姟鍐呭
-- 鐢ㄦ埛鍙嶉鍓嶄袱杞竻鐞嗗悗渚濈劧鏃犳硶鐐瑰嚮渚ц竟鏍忓垏鎹紝瑕佹眰鑷鏌ユ壘銆佹祴璇曞苟瑙ｅ喅锛屽繀瑕佹椂鍥為€€鎴栭噸鍋氬浘璋卞姛鑳斤紝鏈€缁堝繀椤诲緱鍒板彲姝ｅ父鍒囨崲鐨勭増鏈€?- 缁х画杩芥煡 AI 棰勮钀界偣閫昏緫鏈韩鏄惁鍦ㄦ病鏈変换浣?focus 鏌ヨ鍙傛暟鏃朵粛琚Е鍙戙€?### 瀹屾垚缁撴灉
-- 鎵惧埌鍏抽敭鏍瑰洜锛氭棫閫昏緫鐩存帴鎵ц `Number(focusSearch.get("focusX"))` 绛夎В鏋愩€傜敱浜?`Number(null) === 0`锛屾病鏈変换浣?`focusX / focusY / focusWidth / focusHeight` 鍙傛暟鏃朵篃浼氱敓鎴愪竴涓?`{ x: 0, y: 0, width: 0, height: 0 }` 鐨勫亣 AI 棰勮钀界偣锛屽鑷村浘璋遍〉鍦ㄦ櫘閫?`/graph` 璺敱涓婁篃鍙嶅杩涘叆棰勮钀界偣鐘舵€佹洿鏂伴摼銆?- 鏇存柊 [packages/graph-core/src/index.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/src/index.ts)锛?  - 鏂板 `parseGraphFocusPreviewSearch`
-  - 鍙湁瀹屾暣瀛樺湪 `focusX / focusY / focusWidth / focusHeight`锛屼笖瀹介珮澶т簬 0 鏃舵墠杩斿洖鏈夋晥棰勮钀界偣
-  - 绌哄弬鏁般€佺己鍙傛暟銆侀浂灏哄鍙傛暟鍏ㄩ儴杩斿洖 `null`
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛屾敼涓轰娇鐢ㄥ畨鍏ㄨВ鏋愬嚱鏁帮紝涓嶅啀璁╂櫘閫氬浘璋遍〉璇Е鍙戦璁¤惤鐐广€?- 鏇存柊 [packages/graph-core/test/sourceSwimlaneLayout.test.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/test/sourceSwimlaneLayout.test.ts)锛屾柊澧炵┖鏌ヨ銆佺己瀛楁銆侀浂灏哄鍜屾湁鏁堟煡璇㈢殑鍥炲綊娴嬭瘯銆?- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛屽鍔犲浘璋辩椤靛厹搴曪細
-  - 褰撳墠璺緞鍦?`/graph` 鏃讹紝渚ц竟鏍忎富瀵艰埅鍜屽揩閫熷姩浣滅寮€鍥捐氨浼氫娇鐢?`reloadDocument`
-  - 杩欑浉褰撲簬鍙湪绂诲紑澶嶆潅鐢诲竷椤垫椂鍚敤娴忚鍣ㄧ骇鍒囨崲淇濋櫓锛岀‘淇濇渶缁堜竴瀹氳兘浠庡浘璋卞垏鍒板叾浠栨ā鍧?### 楠岃瘉缁撴灉
-- `npm --workspace @studymate/graph-core run test`
-- `npm run typecheck`
-- `npm run build:user`
-- `cd backend; go test ./...`
-### 鍚庣画褰卞搷
-- 棰勮钀界偣涓嶅啀鍥犱负绌烘煡璇㈠弬鏁板舰鎴愬亣鐘舵€佸惊鐜紝杩欐槸杩欐鏃犳硶鍒囨崲闂鐨勫疄璐ㄤ慨澶嶃€?- 鍗充娇鍚庣画鍥捐氨椤靛張寮曞叆鏂扮殑澶嶆潅杩愯鎬侊紝绂诲紑鍥捐氨涔熸湁娴忚鍣ㄧ骇鍏滃簳锛屼笉鍐嶆妸鐢ㄦ埛閿佸湪鍥捐氨椤甸噷銆?
-## 2026-06-01 17:52:00 +08:00 | v0.0.66 | 褰诲簳娓呯悊 React Router 涓殑 AI 棰勮钀界偣鐘舵€佸苟鍔犲浐鍥捐氨鎷栨嫿閲婃斁
-### 浠诲姟鍐呭
-- 鐢ㄦ埛鍙嶉娓呯悊娴忚鍣?history 鍚庝粛鏃犳硶鐐瑰嚮渚ц竟鏍忓垏鎹紝璇存槑鍙敼 `window.history.replaceState` 娌℃湁鍚屾娓呮帀 React Router 鍐呭瓨涓殑 `location.state`銆?- 缁х画鎺掓煡鍥捐氨杩愯鎬佹槸鍚﹁繕鏈夊叏灞€ pointer 鎷栨嫿鐘舵€佹畫鐣欙紝瀵艰嚧渚ц竟鏍忕偣鍑昏椤甸潰杩愯鎬佹寔缁共鎵般€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 灏?AI 棰勮钀界偣娑堣垂鍚庣殑娓呯悊鏂瑰紡浠庣洿鎺ュ啓 `window.history.replaceState` 鏀逛负 React Router `navigate(..., { replace: true, state: null })`
-  - 杩欐牱娴忚鍣ㄥ湴鍧€鍜?React Router 鍐呭瓨閲岀殑 `location.state` 浼氫竴璧锋竻鎺夛紝涓嶅啀鍙竻涓€鍗?  - 淇濈暀瀵规棫鐗?`focus*` 鏌ヨ鍙傛暟鐨勫悓姝ュ垹闄?  - 涓哄浘璋辨嫋鎷藉叏灞€鐩戝惉琛ュ厖 `pointercancel`銆乣blur` 鍜?`event.buttons` 闃叉紡淇濇姢锛岄伩鍏嶇獥鍙ｅ鏉炬墜鍚庢嫋鎷芥€佷竴鐩存寕鐫€
-- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛屾彁楂樹晶杈规爮灞傜骇锛岄伩鍏嶅浘璋卞伐浣滃尯浠讳綍婧㈠嚭灞傛姠渚ц竟鏍忕偣鍑汇€?### 楠岃瘉缁撴灉
-- `npm run typecheck`
-- `npm run build:user`
-- `npm --workspace @studymate/graph-core run test`
-### 鍚庣画褰卞搷
-- AI 棰勮钀界偣鐜板湪浼氳 React Router 鐪熸娑堣垂骞剁Щ闄わ紝涓嶄細缁х画鐣欏湪褰撳墠璺敱瀵硅薄閲屻€?- 鍗充娇鍥捐氨鎷栨嫿杩囩▼寮傚父涓柇锛岄〉闈篃浼氳嚜鍔ㄩ噴鏀惧叏灞€鎷栨嫿鐩戝惉锛屼晶杈规爮鍒囨崲涓嶅簲鍐嶈鍥捐氨杩愯鎬佹嫋浣忋€?
-## 2026-06-01 17:41:00 +08:00 | v0.0.65 | 娓呯悊 AI 棰勮钀界偣鐨勬祻瑙堝櫒鍘嗗彶鐘舵€佷互瑙ｉ櫎渚ц竟鏍忓垏鎹㈠崰鐢?### 浠诲姟鍐呭
-- 鏍规嵁鐢ㄦ埛鍙嶉缁х画杩芥煡鈥淎I 棰勮钀界偣涓€鐩村崰鐢ㄦ祻瑙堝櫒杩愯鐘舵€侊紝瀵艰嚧鏃犳硶鍒囨崲渚ц竟鏍忊€濈殑闂銆?- 閲嶇偣妫€鏌ュ浘璋遍〉娑堣垂 `location.state` 鍜屾棫鏌ヨ鍙傛暟鍚庯紝鏄惁浠嶆妸棰勮钀界偣涓婁笅鏂囩暀鍦ㄥ綋鍓嶆祻瑙堝櫒鍘嗗彶璁板綍閲屻€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 鏂板 `clearFocusNavigationFromBrowserHistory`
-  - 鍥捐氨椤靛湪娑堣垂 AI 棰勮钀界偣鍚庯紝浼氱珛鍗虫竻鐞嗗綋鍓?history entry 涓?React Router 淇濆瓨鐨?`usr` state
-  - 鍚屾椂娓呯悊鏃х増 URL 娣遍摼閲岀殑 `graphId / focusX / focusY / focusWidth / focusHeight / focusLabel` 鏌ヨ鍙傛暟
-  - 娓呯悊杩囩▼浣跨敤 `window.history.replaceState`锛屼笉鍐嶈Е鍙戜竴娆￠澶栫殑 React Router 瀵艰埅锛岄伩鍏嶉噸鏂板紩鍏ュ垏椤电珵浜?### 楠岃瘉缁撴灉
-- `npm run typecheck`
-- `npm run build:user`
-- `npm --workspace @studymate/graph-core run test`
-### 鍚庣画褰卞搷
-- AI 棰勮钀界偣鐜板湪鐪熸鍙樻垚涓€娆℃€ц緭鍏ワ細杩涘叆鍥捐氨鍚庡彧璐熻矗涓存椂瀹氫綅鍜岄珮浜紝涓嶅啀闀挎湡鎸傚湪娴忚鍣ㄥ巻鍙茬姸鎬佷笂銆?- 渚ц竟鏍忓垏鎹笉鍐嶈涓婁竴鏉￠璁¤惤鐐?state 鐗典綇锛涘鏋滃悗缁繕鏈夋畫鐣欙紝搴旂户缁煡椤甸潰鍗歌浇杈圭晫鎴栧叏灞€ pointer/keydown 鐩戝惉锛岃€屼笉鏄璁¤惤鐐硅矾鐢辩姸鎬併€?
-## 2026-06-01 17:25:00 +08:00 | v0.0.64 | 琛ラ綈鍥捐氨澶氶€夋潵婧愭吵閬撳竷灞€骞朵慨澶嶆壒閲忔暣鐞嗘枃妗堜贡鐮?### 浠诲姟鍐呭
-- 缁х画鎸夌収 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 鎺ㄨ繘鍥捐氨鐩稿叧鑳藉姏锛屼紭鍏堣ˉ寮?`v0.6.0` 鍥捐氨浜у搧鍖栭噷鐨勯暱鏈熸暣鐞嗕綋楠屻€?- 鍦ㄥ凡鏈夆€滄寜鏉ユ簮鍒嗚 / 鍒嗗垪 / 鐢熸垚鏉ユ簮鍒嗙粍鈥濈殑鍩虹涓婏紝琛ヤ竴涓洿閫傚悎 20+ 鑺傜偣鍥捐氨鏁寸悊鐨勬潵婧愭吵閬撳竷灞€銆?### 瀹屾垚缁撴灉
-- 鏇存柊 [packages/graph-core/src/index.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/src/index.ts)锛屾柊澧?`buildSourceSwimlaneLayout`锛?  - 鎸夎祫鏂欍€佹壒娉ㄣ€佺瑪璁般€佸崱鐗囥€丄I銆佽嚜鐢辫妭鐐圭殑绋冲畾椤哄簭鐢熸垚鏉ユ簮娉抽亾
-  - 杩斿洖鏂扮殑鑺傜偣浣嶇疆鍜屽甫 `metadata.layoutKind = source-swimlane` 鐨勫垎缁勶紝涓嶄慨鏀瑰師濮嬭妭鐐规暟缁?  - 瀵硅妭鐐逛綅缃仛鐢诲竷杈圭晫绾︽潫锛岄伩鍏嶇敓鎴愬悗璺戝嚭鍙敤宸ヤ綔鍖?- 鏂板 [packages/graph-core/test/sourceSwimlaneLayout.test.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/test/sourceSwimlaneLayout.test.ts)锛岃鐩栨潵婧愭吵閬撻『搴忋€佸垎缁勫厓鏁版嵁銆佷笉鍙彉鎬у拰杈圭晫绾︽潫銆?- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 澶氶€夎妭鐐圭殑鈥滄寜鏉ユ簮鏁寸悊鈥濋潰鏉挎柊澧炩€滅敓鎴愭潵婧愭吵閬撯€?  - 鐢熸垚娉抽亾鏃朵細鏇挎崲鍚屼竴鎵硅妭鐐逛笂鏃х殑鑷姩鏉ユ簮娉抽亾锛岄伩鍏嶉噸澶嶅爢鍙?  - 淇鎵归噺瀵归綈銆佸眳涓拰鍧囧垎鎸夐挳鐨勪贡鐮佷腑鏂囨枃妗?- 鏇存柊 [backend/internal/modules/graph/dto/graph.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/dto/graph.go) 鍜?[frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts)锛屼负鍥捐氨鍒嗙粍琛ュ厖鍙€?`metadata` 瀛楁锛岀敤浜庢爣璁拌嚜鍔ㄧ敓鎴愮殑鏉ユ簮娉抽亾銆?- 鏇存柊 [docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md) 涓?[docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)锛屽悓姝ュ浘璋卞垎缁勫厓鏁版嵁鍜屽綋鍓嶆湰鍦拌兘鍔涜鏄庛€?### 楠岃瘉缁撴灉
+### 后续影响
+- 图谱页离开体验回到和其他模块一致的单页应用切换。
+- 如果后续仍出现图谱切页问题，应继续修具体运行态泄漏，而不是恢复整页刷新兜底。
+
+## 2026-06-01 18:06:00 +08:00 | v0.0.68 | 增加图谱来源关系摘要以补齐内容到图谱的可见链路
+### 任务内容
+- 继续按照 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 推进下一步功能实现。
+- 当前阶段重点仍是收束 `v0.4.0` 到 `v0.5.0` 的交界：让资料、批注、笔记到图谱节点的来源关系清晰可见。
+### 完成结果
+- 更新 [packages/graph-core/src/index.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/src/index.ts)：
+  - 新增 `summarizeGraphSourceReferences`
+  - 对图谱节点中的 `source` 做去重汇总，输出总来源数、带来源节点数、按来源类型聚合和来源明细
+  - 来源类型按资料、批注、笔记、卡片、AI 草稿等稳定顺序输出
+- 更新 [packages/graph-core/test/sourceSwimlaneLayout.test.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/test/sourceSwimlaneLayout.test.ts)：
+  - 新增来源关系摘要测试，覆盖同一来源被多个节点引用时的去重和节点计数
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 图谱右侧栏新增“来源关系 / 图谱引用”区块
+  - 展示来源对象数、带来源节点数、来源类型摘要和前 5 个来源明细
+  - 没有来源时显示空态，提示用户从资料、笔记或批注生成节点后会看到关系
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css) 和 [docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)，补齐来源关系列表样式和当前能力说明。
+### 验证结果
 - `npm --workspace @studymate/graph-core run test`
 - `npm run typecheck`
 - `npm run build:user`
 - `cd backend; go test ./...`
-### 鍚庣画褰卞搷
-- 鍥捐氨澶氶€夋暣鐞嗙幇鍦ㄥ彲浠ヤ粠鈥滄暎鐐规暣鐞嗏€濈洿鎺ユ彁鍗囧埌鈥滄寜鏉ユ簮娉抽亾褰掓。鈥濓紝鏇磋创杩戦暱鏈熷涔犵煡璇嗗簱鐨勬暣鐞嗗満鏅€?- 鍚庣画鍙互缁х画鎶婃潵婧愭吵閬撴墿灞曚负鍙姌鍙犳ā鏉裤€佹吵閬撻噸鎺掞紝鎴栨妸 AI 鑽夌纭鍚庣殑钀藉浘娴佺▼鐩存帴鎺ュ叆杩欏甯冨眬绠楁硶銆?
-## 2026-06-01 18:05:00 +08:00 | v0.0.63 | 灏嗗浘璋?AI 棰勮钀界偣浠庡浘璋辨枃妗ｅ啓鍏ユ敼涓虹函棰勮瑙嗗彛鏇存柊
-### 浠诲姟鍐呭
-- 鏍规嵁澶嶇幇绾跨储缁х画缂╁皬闂鑼冨洿锛氬彧鏈夊湪鈥滃畾浣嶅埌 AI 棰勮钀界偣鈥濅箣鍚庢墠浼氬嚭鐜拌矾鐢?URL 宸插彉鍖栦絾椤甸潰浠嶅仠鍦ㄥ浘璋辩殑鐜拌薄銆?- 閲嶇偣鎺掓煡 AI 棰勮钀界偣鏄惁閿欒鍦拌蛋杩涗簡鍥捐氨鏂囨。鐨勬寮忓彉鏇撮摼璺紝瀵艰嚧 dirty銆佽嚜鍔ㄤ繚瀛樻垨鍘嗗彶鐘舵€佸共鎵板悗缁垏椤点€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 鏂板 `GraphFocusNavigationState`锛岀户缁敮鎸佷粠 `location.state` 璇诲彇 AI 棰勮钀界偣鍜岀洰鏍囧浘璋?  - 寮曞叆 `consumedFocusRef` 鍜?`requestedFocusKey`锛屼繚璇佸悓涓€浠?AI 棰勮钀界偣鍙秷璐逛竴娆?  - 灏嗗師鏉ョ殑 `focusPreviewArea` 鏀逛负 `buildFocusPreviewViewport`锛屽彧璁＄畻棰勮瑙嗗彛
-  - 鏂板 `previewViewport`锛屼粎鏇存柊褰撳墠鍥捐氨椤甸潰鐨勮鍙ｅ睍绀猴紝涓嶅啀閫氳繃 `mutateDocument` 鎶?AI 棰勮钀界偣鍐欐垚鍥捐氨鏂囨。鏇存敼
-  - 鍒犻櫎 AI 棰勮钀界偣缁撴潫鍚庣殑璺敱鍥炲啓閫昏緫锛岄瑙堢粨鏉熷彧鍏抽棴楂樹寒锛屼笉鍐嶈Е鍙?`navigate`
-- 杩欐剰鍛崇潃 AI 棰勮钀界偣鐜板湪鏄€滀复鏃惰鍙ｉ瑙堚€濓紝涓嶄細鍐嶆妸鍥捐氨鎷栬繘 dirty銆佽嚜鍔ㄤ繚瀛樺拰鍘嗗彶鍫嗘爤閾捐矾銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 图谱不再只是“节点画布”，用户可以直接看见这张图谱和资料、批注、笔记、卡片之间的来源关系。
+- 后续如果要把 `graph_relations` 暴露为后端 API 或接入搜索/运营后台，可以复用当前摘要结构作为前端展示模型。
+
+## 2026-06-01 18:00:00 +08:00 | v0.0.67 | 修复空查询参数触发假 AI 落点循环并为图谱离页加浏览器级兜底
+### 任务内容
+- 用户反馈前两轮清理后依然无法点击侧边栏切换，要求自行查找、测试并解决，必要时回退或重做图谱功能，最终必须得到可正常切换的版本。
+- 继续追查 AI 预计落点逻辑本身是否在没有任何 focus 查询参数时仍被触发。
+### 完成结果
+- 找到关键根因：旧逻辑直接执行 `Number(focusSearch.get("focusX"))` 等解析。由于 `Number(null) === 0`，没有任何 `focusX / focusY / focusWidth / focusHeight` 参数时也会生成一个 `{ x: 0, y: 0, width: 0, height: 0 }` 的假 AI 预计落点，导致图谱页在普通 `/graph` 路由上也反复进入预计落点状态更新链。
+- 更新 [packages/graph-core/src/index.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/src/index.ts)：
+  - 新增 `parseGraphFocusPreviewSearch`
+  - 只有完整存在 `focusX / focusY / focusWidth / focusHeight`，且宽高大于 0 时才返回有效预计落点
+  - 空参数、缺参数、零尺寸参数全部返回 `null`
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)，改为使用安全解析函数，不再让普通图谱页误触发预计落点。
+- 更新 [packages/graph-core/test/sourceSwimlaneLayout.test.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/test/sourceSwimlaneLayout.test.ts)，新增空查询、缺字段、零尺寸和有效查询的回归测试。
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)，增加图谱离页兜底：
+  - 当前路径在 `/graph` 时，侧边栏主导航和快速动作离开图谱会使用 `reloadDocument`
+  - 这相当于只在离开复杂画布页时启用浏览器级切换保险，确保最终一定能从图谱切到其他模块
+### 验证结果
+- `npm --workspace @studymate/graph-core run test`
+- `npm run typecheck`
+- `npm run build:user`
+- `cd backend; go test ./...`
+### 后续影响
+- 预计落点不再因为空查询参数形成假状态循环，这是这次无法切换问题的实质修复。
+- 即使后续图谱页又引入新的复杂运行态，离开图谱也有浏览器级兜底，不再把用户锁在图谱页里。
+
+## 2026-06-01 17:52:00 +08:00 | v0.0.66 | 彻底清理 React Router 中的 AI 预计落点状态并加固图谱拖拽释放
+### 任务内容
+- 用户反馈清理浏览器 history 后仍无法点击侧边栏切换，说明只改 `window.history.replaceState` 没有同步清掉 React Router 内存中的 `location.state`。
+- 继续排查图谱运行态是否还有全局 pointer 拖拽状态残留，导致侧边栏点击被页面运行态持续干扰。
+### 完成结果
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 将 AI 预计落点消费后的清理方式从直接写 `window.history.replaceState` 改为 React Router `navigate(..., { replace: true, state: null })`
+  - 这样浏览器地址和 React Router 内存里的 `location.state` 会一起清掉，不再只清一半
+  - 保留对旧版 `focus*` 查询参数的同步删除
+  - 为图谱拖拽全局监听补充 `pointercancel`、`blur` 和 `event.buttons` 防漏保护，避免窗口外松手后拖拽态一直挂着
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)，提高侧边栏层级，避免图谱工作区任何溢出层抢侧边栏点击。
+### 验证结果
+- `npm run typecheck`
+- `npm run build:user`
+- `npm --workspace @studymate/graph-core run test`
+### 后续影响
+- AI 预计落点现在会被 React Router 真正消费并移除，不会继续留在当前路由对象里。
+- 即使图谱拖拽过程异常中断，页面也会自动释放全局拖拽监听，侧边栏切换不应再被图谱运行态拖住。
+
+## 2026-06-01 17:41:00 +08:00 | v0.0.65 | 清理 AI 预计落点的浏览器历史状态以解除侧边栏切换占用
+### 任务内容
+- 根据用户反馈继续追查“AI 预计落点一直占用浏览器运行状态，导致无法切换侧边栏”的问题。
+- 重点检查图谱页消费 `location.state` 和旧查询参数后，是否仍把预计落点上下文留在当前浏览器历史记录里。
+### 完成结果
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 新增 `clearFocusNavigationFromBrowserHistory`
+  - 图谱页在消费 AI 预计落点后，会立即清理当前 history entry 中 React Router 保存的 `usr` state
+  - 同时清理旧版 URL 深链里的 `graphId / focusX / focusY / focusWidth / focusHeight / focusLabel` 查询参数
+  - 清理过程使用 `window.history.replaceState`，不再触发一次额外的 React Router 导航，避免重新引入切页竞争
+### 验证结果
+- `npm run typecheck`
+- `npm run build:user`
+- `npm --workspace @studymate/graph-core run test`
+### 后续影响
+- AI 预计落点现在真正变成一次性输入：进入图谱后只负责临时定位和高亮，不再长期挂在浏览器历史状态上。
+- 侧边栏切换不再被上一条预计落点 state 牵住；如果后续还有残留，应继续查页面卸载边界或全局 pointer/keydown 监听，而不是预计落点路由状态。
+
+## 2026-06-01 17:25:00 +08:00 | v0.0.64 | 补齐图谱多选来源泳道布局并修复批量整理文案乱码
+### 任务内容
+- 继续按照 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 推进图谱相关能力，优先补强 `v0.6.0` 图谱产品化里的长期整理体验。
+- 在已有“按来源分行 / 分列 / 生成来源分组”的基础上，补一个更适合 20+ 节点图谱整理的来源泳道布局。
+### 完成结果
+- 更新 [packages/graph-core/src/index.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/src/index.ts)，新增 `buildSourceSwimlaneLayout`：
+  - 按资料、批注、笔记、卡片、AI、自由节点的稳定顺序生成来源泳道
+  - 返回新的节点位置和带 `metadata.layoutKind = source-swimlane` 的分组，不修改原始节点数组
+  - 对节点位置做画布边界约束，避免生成后跑出可用工作区
+- 新增 [packages/graph-core/test/sourceSwimlaneLayout.test.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/test/sourceSwimlaneLayout.test.ts)，覆盖来源泳道顺序、分组元数据、不可变性和边界约束。
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 多选节点的“按来源整理”面板新增“生成来源泳道”
+  - 生成泳道时会替换同一批节点上旧的自动来源泳道，避免重复堆叠
+  - 修复批量对齐、居中和均分按钮的乱码中文文案
+- 更新 [backend/internal/modules/graph/dto/graph.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/dto/graph.go) 和 [frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts)，为图谱分组补充可选 `metadata` 字段，用于标记自动生成的来源泳道。
+- 更新 [docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md) 与 [docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)，同步图谱分组元数据和当前本地能力说明。
+### 验证结果
+- `npm --workspace @studymate/graph-core run test`
+- `npm run typecheck`
+- `npm run build:user`
+- `cd backend; go test ./...`
+### 后续影响
+- 图谱多选整理现在可以从“散点整理”直接提升到“按来源泳道归档”，更贴近长期学习知识库的整理场景。
+- 后续可以继续把来源泳道扩展为可折叠模板、泳道重排，或把 AI 草稿确认后的落图流程直接接入这套布局算法。
+
+## 2026-06-01 18:05:00 +08:00 | v0.0.63 | 将图谱 AI 预计落点从图谱文档写入改为纯预览视口更新
+### 任务内容
+- 根据复现线索继续缩小问题范围：只有在“定位到 AI 预计落点”之后才会出现路由 URL 已变化但页面仍停在图谱的现象。
+- 重点排查 AI 预计落点是否错误地走进了图谱文档的正式变更链路，导致 dirty、自动保存或历史状态干扰后续切页。
+### 完成结果
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 新增 `GraphFocusNavigationState`，继续支持从 `location.state` 读取 AI 预计落点和目标图谱
+  - 引入 `consumedFocusRef` 和 `requestedFocusKey`，保证同一份 AI 预计落点只消费一次
+  - 将原来的 `focusPreviewArea` 改为 `buildFocusPreviewViewport`，只计算预览视口
+  - 新增 `previewViewport`，仅更新当前图谱页面的视口展示，不再通过 `mutateDocument` 把 AI 预计落点写成图谱文档更改
+  - 删除 AI 预计落点结束后的路由回写逻辑，预览结束只关闭高亮，不再触发 `navigate`
+- 这意味着 AI 预计落点现在是“临时视口预览”，不会再把图谱拖进 dirty、自动保存和历史堆栈链路。
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 鍥捐氨椤靛湪 AI 棰勮钀界偣鍚庝笉鍐嶄骇鐢熸棤鎰忎箟鐨勬枃妗ｄ慨鏀癸紝鍚庣画濡傛灉浠嶆湁鍒囬〉闂锛屽氨鍙互鏇存槑纭湴缁х画杩藉悜椤甸潰杩愯鎬佹垨 React Router 娓叉煋閾撅紝鑰屼笉鏄浘璋辨暟鎹啓鍏ラ摼銆?- 杩欎篃璁?AI 棰勮钀界偣鐨勮涔夋洿骞插噣锛氬畠鍙槸甯姪鐢ㄦ埛鐪嬭鈥滀細钀藉湪鍝噷鈥濓紝涓嶆槸鍋峰伔鏀瑰姩鍥捐氨鏈韩銆?
-## 2026-06-01 17:32:00 +08:00 | v0.0.62 | 灏嗗伐浣滃尯宓屽璺敱鏀逛负鐩稿璺緞骞跺 Outlet 鍋氳矾寰勭骇閲嶆寕杞?### 浠诲姟鍐呭
-- 鍦?`v0.0.61` 鐨勫祵濂楄矾鐢遍噸鏋勫悗锛岀户缁敹绱ц矾鐢辫竟鐣岋紝鎺掗櫎 React Router 涓粷瀵瑰瓙璺敱閰嶇疆鍜屽瓙椤甸潰澶嶇敤杈圭晫涓嶆竻瀵艰嚧鍥捐氨椤垫畫鐣欑殑鍙兘鎬с€?- 鍦ㄤ笉閫€鍥炴暣椤甸噸杞界殑鍓嶆彁涓嬶紝璁╀富宸ヤ綔鍖哄湪璺緞鍒囨崲鏃舵洿鏄庣‘鍦板嵏杞芥棫椤甸潰銆佹寕杞芥柊椤甸潰銆?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛?  - 灏嗗叕鍏卞伐浣滃尯涓庡彈淇濇姢宸ヤ綔鍖虹殑瀛愯矾鐢变粠缁濆璺緞鏀逛负鐩稿璺緞
-  - 灏嗛椤垫敼涓?`index` 璺敱锛屽叾浠栨ā鍧楅〉缁熶竴鏀朵负鏍囧噯鐨勫祵濂楄矾鐢卞啓娉?  - 鍦?`PublicShellRoute` 鍜?`ProtectedShellRoute` 涓紝涓?`Outlet` 澧炲姞 `key={location.pathname}`锛屾妸璺緞鍙樺寲鏃剁殑椤甸潰閲嶅缓杈圭晫鏀舵暃鍒扮湡姝ｇ殑瀛愰〉闈㈠眰
-### 楠岃瘉缁撴灉
+### 后续影响
+- 图谱页在 AI 预计落点后不再产生无意义的文档修改，后续如果仍有切页问题，就可以更明确地继续追向页面运行态或 React Router 渲染链，而不是图谱数据写入链。
+- 这也让 AI 预计落点的语义更干净：它只是帮助用户看见“会落在哪里”，不是偷偷改动图谱本身。
+
+## 2026-06-01 17:32:00 +08:00 | v0.0.62 | 将工作区嵌套路由改为相对路径并对 Outlet 做路径级重挂载
+### 任务内容
+- 在 `v0.0.61` 的嵌套路由重构后，继续收紧路由边界，排除 React Router 中绝对子路由配置和子页面复用边界不清导致图谱页残留的可能性。
+- 在不退回整页重载的前提下，让主工作区在路径切换时更明确地卸载旧页面、挂载新页面。
+### 完成结果
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 将公共工作区与受保护工作区的子路由从绝对路径改为相对路径
+  - 将首页改为 `index` 路由，其他模块页统一收为标准的嵌套路由写法
+  - 在 `PublicShellRoute` 和 `ProtectedShellRoute` 中，为 `Outlet` 增加 `key={location.pathname}`，把路径变化时的页面重建边界收敛到真正的子页面层
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 鐜板湪鍗充娇澶栧眰澹冲眰淇濇寔绋冲畾锛岀湡姝ｇ殑椤甸潰鍐呭涔熶細鎸夎矾寰勬樉寮忛噸鎸傝浇锛屽浘璋遍〉濡傛灉杩樻湁娈嬬暀鍓綔鐢紝浼氭洿瀹规槗琚檺瀹氬湪椤甸潰瀛愭爲鑰屼笉鏄墿鏁ｅ埌鏁翠釜宸ヤ綔鍖恒€?- 濡傛灉杩欎竴杞悗渚濈劧澶嶇幇锛屽氨搴旂户缁妸鎺掓煡閲嶇偣杞悜 `GraphWorkspacePage` 鑷韩鐨勮繍琛屾€佽娴嬶紝渚嬪鍔犺浇娴佺▼銆佽嚜鍔ㄤ繚瀛樸€佸叏灞€浜嬩欢鐩戝惉涓?AI 棰勮钀界偣楂樹寒鐨勭敓鍛藉懆鏈熻竟鐣屻€?
-## 2026-06-01 17:18:00 +08:00 | v0.0.61 | 灏嗗墠绔富宸ヤ綔鍖鸿矾鐢遍噸鏋勪负宓屽璺敱骞舵挙鍥炲浘璋卞垏椤电殑鏁撮〉閲嶈浇鍏滃簳
-### 浠诲姟鍐呭
-- 缁х画杩芥煡鈥滀粠 AI 棰勮钀界偣杩涘叆鍥捐氨鍚庯紝鍒囨崲鍒扮瑪璁扮瓑妯″潡鏃?URL 宸插彉鍖栦絾椤甸潰浠嶅仠鍦ㄥ浘璋扁€濈殑鏍瑰洜锛屼笉婊¤冻浜庨暱鏈熶緷璧?`reloadDocument` 鐨勬暣椤靛埛鏂扮粫杩囥€?- 閲嶇偣妫€鏌?`App.tsx` 涓噸澶嶅寘瑁?`ShellFrame` 鐨勮矾鐢辩粨鏋勬槸鍚﹀鑷村浘璋遍〉娈嬬暀杩愯鎬佹洿闅捐姝ｅ父鍗歌浇锛屽悓鏃朵繚鐣欏凡缁忎慨杩囩殑 AI 钀界偣涓€娆℃€у鑸姸鎬侀€昏緫銆?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛?  - 鏂板 `PublicShellRoute` 鍜?`ProtectedShellRoute`锛岀敤 `Outlet` 缁熶竴鎵胯浇宸ヤ綔鍖洪〉闈?  - 灏嗛椤点€佽祫鏂欏簱銆佺ぞ鍖恒€佹悳绱㈤〉鏀惰繘鍏叡澹冲眰璺敱
-  - 灏嗛槄璇诲櫒銆佺瑪璁般€佸浘璋便€佸涔犮€丄I銆佽缃〉鏀惰繘鍙椾繚鎶ゅ３灞傝矾鐢?  - 绉婚櫎宸︿晶涓诲鑸拰蹇€熷姩浣滀笂鐨?`reloadDocument`锛屾仮澶嶄负姝ｅ父 SPA 鍒囨崲
-  - 绉婚櫎涔嬪墠涓哄己鍒跺埛鏂伴〉闈㈣€屽姞涓婄殑璺緞绾т富宸ヤ綔鍖洪噸鎸傝浇鍏滃簳锛岃璺敱鐢熷懡鍛ㄦ湡閲嶆柊鍥炲埌鏇磋嚜鐒剁殑缁撴瀯杈圭晫涓?- 淇濈暀姝ゅ墠 AI 宸ヤ綔鍙板埌鍥捐氨椤电殑 `Link state` 浼犻€掓柟寮忥紝浠ュ強鍥捐氨椤靛彧娑堣垂涓€娆￠璁¤惤鐐圭殑瀹炵幇锛岄伩鍏嶆妸闂閲嶆柊甯﹀洖鏌ヨ鍙傛暟鍜岃矾鐢卞洖鍐欓摼璺噷銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 现在即使外层壳层保持稳定，真正的页面内容也会按路径显式重挂载，图谱页如果还有残留副作用，会更容易被限定在页面子树而不是扩散到整个工作区。
+- 如果这一轮后依然复现，就应继续把排查重点转向 `GraphWorkspacePage` 自身的运行态观测，例如加载流程、自动保存、全局事件监听与 AI 预计落点高亮的生命周期边界。
+
+## 2026-06-01 17:18:00 +08:00 | v0.0.61 | 将前端主工作区路由重构为嵌套路由并撤回图谱切页的整页重载兜底
+### 任务内容
+- 继续追查“从 AI 预计落点进入图谱后，切换到笔记等模块时 URL 已变化但页面仍停在图谱”的根因，不满足于长期依赖 `reloadDocument` 的整页刷新绕过。
+- 重点检查 `App.tsx` 中重复包裹 `ShellFrame` 的路由结构是否导致图谱页残留运行态更难被正常卸载，同时保留已经修过的 AI 落点一次性导航状态逻辑。
+### 完成结果
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 新增 `PublicShellRoute` 和 `ProtectedShellRoute`，用 `Outlet` 统一承载工作区页面
+  - 将首页、资料库、社区、搜索页收进公共壳层路由
+  - 将阅读器、笔记、图谱、复习、AI、设置页收进受保护壳层路由
+  - 移除左侧主导航和快速动作上的 `reloadDocument`，恢复为正常 SPA 切换
+  - 移除之前为强制刷新页面而加上的路径级主工作区重挂载兜底，让路由生命周期重新回到更自然的结构边界上
+- 保留此前 AI 工作台到图谱页的 `Link state` 传递方式，以及图谱页只消费一次预计落点的实现，避免把问题重新带回查询参数和路由回写链路里。
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 涓诲伐浣滃尯鐜板湪鍥炲埌鏍囧噯鐨勫崟椤靛簲鐢ㄨ矾鐢卞垏鎹㈠舰鎬侊紝鍥捐氨椤电寮€鏃剁殑鍗歌浇杈圭晫鏇存竻鏅帮紝鍚庣画缁х画鎺掓煡杩愯鎬佹畫鐣欐椂涔熸洿瀹规槗缂╁皬鍒板崟涓〉闈㈠壇浣滅敤锛岃€屼笉鏄暣濂楀澹崇粨鏋勩€?- 濡傛灉杩欐缁撴瀯鏀跺彛鍚庝粛鑳藉鐜板浘璋卞崱浣忓垏椤碉紝涓嬩竴姝ュ氨搴旂户缁 `GraphWorkspacePage` 鍋氳繍琛屾€佺骇鎺掓煡锛屼緥濡備负鍏抽敭鍓綔鐢ㄥ拰鍏ㄥ眬鐩戝惉澧炲姞鏇寸粏鐨勬秷璐?娓呯悊瑙傛祴锛岃€屼笉鏄啀鍥炲埌鏁撮〉閲嶈浇鏂规銆?
-## 2026-06-01 16:48:00 +08:00 | v0.0.60 | 灏?AI 鍒板浘璋辩殑棰勮钀界偣浼犻€掍粠 URL 鏌ヨ鍙傛暟鍒囨崲涓轰竴娆℃€у鑸姸鎬?### 浠诲姟鍐呭
-- 缁х画娌跨潃鈥滃浘璋遍〉 AI 鐩稿叧瀹炵幇鏄惁鏈韩鏈夐棶棰樷€濈殑鏂瑰悜鏀舵潫锛屾妸棰勮钀界偣杩欐潯閾句粠鍦板潃鏍忓弬鏁伴┍鍔ㄦ敼鎴愭洿閫傚悎涓€娆℃€ч瑙堢殑瀵艰埅鐘舵€併€?- 鐩爣鏄笉鍐嶈 AI 棰勮鎶婁富璺敱璇箟鍜屽浘璋卞唴閮ㄤ复鏃剁姸鎬佺粦鍦ㄤ竴璧枫€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛?  - 璋冩暣 AI 宸ヤ綔鍙伴噷鐨勨€滃幓鐩爣鍥捐氨鏌ョ湅钀界偣鈥濆叆鍙?  - 涓嶅啀鏋勯€?`/graph?graphId=...&focusX=...` 杩欑被鏌ヨ鍙傛暟閾炬帴
-  - 鏀逛负閫氳繃 `Link state` 浼犻€?`graphId` 鍜?`focusPreview`
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 鏂板鍥捐氨棰勮瀵艰埅鐘舵€佺被鍨?  - 浼樺厛浠?`location.state` 璇诲彇 `graphId` 鍜?`focusPreview`
-  - 涓?state 椹卞姩鐨勯瑙堣姹傜敓鎴愮嫭绔嬫秷璐?key锛岄伩鍏嶉噸澶嶈Е鍙?  - 淇濈暀瀵规棫鏌ヨ鍙傛暟褰㈠紡鐨勫吋瀹硅鍙栵紝閬垮厤鐜版湁閾炬帴澶辨晥
-### 楠岃瘉缁撴灉
+### 后续影响
+- 主工作区现在回到标准的单页应用路由切换形态，图谱页离开时的卸载边界更清晰，后续继续排查运行态残留时也更容易缩小到单个页面副作用，而不是整套外壳结构。
+- 如果这次结构收口后仍能复现图谱卡住切页，下一步就应继续对 `GraphWorkspacePage` 做运行态级排查，例如为关键副作用和全局监听增加更细的消费/清理观测，而不是再回到整页重载方案。
+
+## 2026-06-01 16:48:00 +08:00 | v0.0.60 | 将 AI 到图谱的预计落点传递从 URL 查询参数切换为一次性导航状态
+### 任务内容
+- 继续沿着“图谱页 AI 相关实现是否本身有问题”的方向收束，把预计落点这条链从地址栏参数驱动改成更适合一次性预览的导航状态。
+- 目标是不再让 AI 预览把主路由语义和图谱内部临时状态绑在一起。
+### 完成结果
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 调整 AI 工作台里的“去目标图谱查看落点”入口
+  - 不再构造 `/graph?graphId=...&focusX=...` 这类查询参数链接
+  - 改为通过 `Link state` 传递 `graphId` 和 `focusPreview`
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 新增图谱预览导航状态类型
+  - 优先从 `location.state` 读取 `graphId` 和 `focusPreview`
+  - 为 state 驱动的预览请求生成独立消费 key，避免重复触发
+  - 保留对旧查询参数形式的兼容读取，避免现有链接失效
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- AI 棰勮钀界偣鐜板湪鏇村儚涓€娆℃€х殑鈥滆烦杞笂涓嬫枃鈥濓紝涓嶄細鍐嶉暱鏈熸寕鍦ㄥ湴鍧€鏍忎笂锛屼篃鏇翠笉瀹规槗鍜屽浘璋遍〉鑷繁鐨勮矾鐢卞鐞嗙浉浜掑共鎵般€?- 鍚庣画濡傛灉瑕佺户缁ˉ AI 鍚堝苟寤鸿銆佸浘璋卞啿绐佸鏌ユ垨钀界偣纭娴侊紝鍙互鐩存帴娌跨潃杩欏 `location.state` 杈撳叆妯″瀷鎵╁睍锛岃€屼笉蹇呯户缁墿寮?URL 璇箟銆?
-## 2026-06-01 16:32:00 +08:00 | v0.0.59 | 灏嗕富瀵艰埅鍒囨崲涓烘枃妗ｇ骇璺宠浆浠ュ交搴曡閬垮浘璋遍〉娈嬬暀杩愯鎬佸崱浣忓垏椤?### 浠诲姟鍐呭
-- 鍦ㄥ浘璋遍〉 AI 钀界偣棰勮鐩稿叧鍓綔鐢ㄦ敹缂╁悗锛岀敤鎴蜂粛鍙嶉鈥滅偣鍑诲叾浠栭〉闈?URL 浼氬彉鍖栵紝浣嗛〉闈粛鍗″湪鍥捐氨锛屽彧鏈夊埛鏂版墠浼氳烦杞繃鍘烩€濄€?- 鍏堟彁渚涗竴灞傜ǔ瀹氬彲鐢ㄧ殑浜や簰鍏滃簳锛岃涓绘ā鍧楀垏鎹笉鍐嶄緷璧栧綋鍓嶅崟椤佃繍琛屾€佹槸鍚﹀畬鍏ㄥ仴搴枫€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛?  - 涓哄乏渚т富瀵艰埅鐨?`NavLink` 澧炲姞 `reloadDocument`
-  - 涓烘湭鐧诲綍鎬侀攣瀹氬鑸殑 `Link` 澧炲姞 `reloadDocument`
-  - 涓轰晶鏍忓揩閫熷姩浣滃叆鍙ｅ鍔?`reloadDocument`
-  - 璁╀粠鍥捐氨鍒囧埌绗旇銆佽祫鏂欏簱銆佺ぞ鍖恒€丄I 绛変富妯″潡鏃剁洿鎺ユ寜鐩爣 URL 閲嶆柊杩涘叆椤甸潰锛屼笉鍐嶈鏃х殑鍓嶇杩愯鎬佸崱浣?### 楠岃瘉缁撴灉
+### 后续影响
+- AI 预计落点现在更像一次性的“跳转上下文”，不会再长期挂在地址栏上，也更不容易和图谱页自己的路由处理相互干扰。
+- 后续如果要继续补 AI 合并建议、图谱冲突审查或落点确认流，可以直接沿着这套 `location.state` 输入模型扩展，而不必继续扩张 URL 语义。
+
+## 2026-06-01 16:32:00 +08:00 | v0.0.59 | 将主导航切换为文档级跳转以彻底规避图谱页残留运行态卡住切页
+### 任务内容
+- 在图谱页 AI 落点预览相关副作用收缩后，用户仍反馈“点击其他页面 URL 会变化，但页面仍卡在图谱，只有刷新才会跳转过去”。
+- 先提供一层稳定可用的交互兜底，让主模块切换不再依赖当前单页运行态是否完全健康。
+### 完成结果
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 为左侧主导航的 `NavLink` 增加 `reloadDocument`
+  - 为未登录态锁定导航的 `Link` 增加 `reloadDocument`
+  - 为侧栏快速动作入口增加 `reloadDocument`
+  - 让从图谱切到笔记、资料库、社区、AI 等主模块时直接按目标 URL 重新进入页面，不再被旧的前端运行态卡住
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 鐜板湪涓诲鑸垏鎹細琛ㄧ幇寰楁洿鍍忊€滃伐浣滃彴妯″潡璺宠浆鈥濊€屼笉鏄畬鍏ㄤ緷璧栧崟椤靛唴鍒囨崲锛屽褰撳墠杩欑被鍥捐氨杩愯鎬佹畫鐣欓棶棰樻湁鐩存帴鍏滃簳鏁堟灉銆?- 杩欎竴姝ュ厛淇濊瘉鍙敤鎬э紱鍚庣画浠嶅€煎緱缁х画杩芥牴鍥狅紝鎶婂浘璋遍〉杩愯鎬佹竻鐞嗗仛鍥炵湡姝ｇǔ瀹氱殑 SPA 鍒囨崲銆?
-## 2026-06-01 16:18:00 +08:00 | v0.0.58 | 鍘绘帀鍥捐氨 AI 钀界偣棰勮瀵硅矾鐢辩殑鍏ㄩ儴鍐欐搷浣?### 浠诲姟鍐呭
-- 鍦ㄤ笂涓€杞粛鏈畬鍏ㄨВ闄も€淎I 钀界偣棰勮鍚庡垏鍒扮瑪璁颁粛鍗″湪鍥捐氨鈥濈殑鎯呭喌涓嬶紝缁х画鎶婇棶棰樻敹缂╁埌鍥捐氨椤佃嚜韬殑璺敱鍓綔鐢ㄤ笂銆?- 鐩爣鏄鍥捐氨椤垫妸 AI 棰勮钀界偣鍙綋浣滀竴娆℃€ц緭鍏ユ秷璐癸紝涓嶅啀鍦ㄩ瑙堟湡闂翠富鍔ㄤ慨鏀逛换浣曡矾鐢辩姸鎬併€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 鏂板 `consumedFocusRef`锛屾寜褰撳墠 `location.search` 璁板綍宸叉秷璐硅繃鐨勮惤鐐归瑙堣姹?  - AI 钀界偣棰勮鍙湪鍚屼竴浠芥煡璇㈠弬鏁伴娆¤繘鍏ユ椂瑙﹀彂涓€娆★紝閬垮厤閲嶅瀹氫綅
-  - 瀹屽叏绉婚櫎鍥捐氨椤靛湪棰勮鏈熼棿瀵硅矾鐢辩殑 `navigate` 鍐欐搷浣?  - 璁℃椂鍣ㄥ彧璐熻矗鍏抽棴鏈湴楂樹寒锛屼笉鍐嶆竻 URL锛屼篃涓嶅啀鏇挎崲褰撳墠璺緞
-### 楠岃瘉缁撴灉
+### 后续影响
+- 现在主导航切换会表现得更像“工作台模块跳转”而不是完全依赖单页内切换，对当前这类图谱运行态残留问题有直接兜底效果。
+- 这一步先保证可用性；后续仍值得继续追根因，把图谱页运行态清理做回真正稳定的 SPA 切换。
+
+## 2026-06-01 16:18:00 +08:00 | v0.0.58 | 去掉图谱 AI 落点预览对路由的全部写操作
+### 任务内容
+- 在上一轮仍未完全解除“AI 落点预览后切到笔记仍卡在图谱”的情况下，继续把问题收缩到图谱页自身的路由副作用上。
+- 目标是让图谱页把 AI 预计落点只当作一次性输入消费，不再在预览期间主动修改任何路由状态。
+### 完成结果
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 新增 `consumedFocusRef`，按当前 `location.search` 记录已消费过的落点预览请求
+  - AI 落点预览只在同一份查询参数首次进入时触发一次，避免重复定位
+  - 完全移除图谱页在预览期间对路由的 `navigate` 写操作
+  - 计时器只负责关闭本地高亮，不再清 URL，也不再替换当前路径
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 鐜板湪鍥捐氨椤靛嵆浣夸粠 `/ai` 甯︾潃钀界偣鍙傛暟杩涘叆锛屼篃涓嶄細鍐嶅湪棰勮缁撴潫鏃跺洖鍐欒矾鐢憋紝鍥犳涓嶄細鍜岀敤鎴蜂富鍔ㄥ垏鎹㈠埌 `/notes`銆乣/materials` 绛夎矾寰勪骇鐢熺珵浜夈€?- 杩欎細璁?AI 钀界偣棰勮鏇村儚鏅€氱殑鈥滃垵濮嬪畾浣嶈緭鍏モ€濓紝鍚庣画濡傛灉瑕佸仛鏇村鏉傜殑鍥捐氨娣遍摼锛屼篃鑳藉湪涓嶅共鎵颁富璺敱鍒囨崲鐨勫墠鎻愪笅缁х画鎵╁睍銆?
-## 2026-06-01 16:05:00 +08:00 | v0.0.57 | 绉婚櫎 AI 钀界偣棰勮鐨勫欢杩熻矾鐢卞洖鍐欎互淇鍥捐氨棰勮鍚庡垏椤靛崱浣?### 浠诲姟鍐呭
-- 鏍规嵁澶嶇幇绾跨储缁х画鎺掓煡鈥滃彧鏈夎Е鍙?AI 棰勮钀界偣鍚庯紝鍒囨崲鍒扮瑪璁扮瓑鍏朵粬璺敱鏃堕〉闈㈡墠鍗″湪鍥捐氨鈥濈殑闂銆?- 鏀舵潫鍥捐氨椤?AI 钀界偣棰勮鐨勬煡璇㈠弬鏁版竻鐞嗘柟寮忥紝閬垮厤棰勮缁撴潫鍚庣殑寤惰繜瀵艰埅骞叉壈鍚庣画姝ｅ父鍒囬〉銆?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 淇濈暀 AI 钀界偣棰勮楂樹寒涓庤閲庡畾浣嶉€昏緫
-  - 灏嗏€滄竻鐞嗚惤鐐归瑙堟煡璇㈠弬鏁扳€濈殑鍔ㄤ綔浠?2.6 绉掑悗鐨勫欢杩?`navigate` 鏀规垚棰勮瑙﹀彂鍚庣珛鍗虫墽琛?  - 璁℃椂鍣ㄧ幇鍦ㄥ彧璐熻矗鍏抽棴鏈湴 `focusPreview` 楂樹寒锛屼笉鍐嶆壙鎷呬换浣曡矾鐢卞洖鍐欒亴璐?### 楠岃瘉缁撴灉
+### 后续影响
+- 现在图谱页即使从 `/ai` 带着落点参数进入，也不会再在预览结束时回写路由，因此不会和用户主动切换到 `/notes`、`/materials` 等路径产生竞争。
+- 这会让 AI 落点预览更像普通的“初始定位输入”，后续如果要做更复杂的图谱深链，也能在不干扰主路由切换的前提下继续扩展。
+
+## 2026-06-01 16:05:00 +08:00 | v0.0.57 | 移除 AI 落点预览的延迟路由回写以修复图谱预览后切页卡住
+### 任务内容
+- 根据复现线索继续排查“只有触发 AI 预计落点后，切换到笔记等其他路由时页面才卡在图谱”的问题。
+- 收束图谱页 AI 落点预览的查询参数清理方式，避免预览结束后的延迟导航干扰后续正常切页。
+### 完成结果
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 保留 AI 落点预览高亮与视野定位逻辑
+  - 将“清理落点预览查询参数”的动作从 2.6 秒后的延迟 `navigate` 改成预览触发后立即执行
+  - 计时器现在只负责关闭本地 `focusPreview` 高亮，不再承担任何路由回写职责
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 瑙﹀彂杩?AI 棰勮钀界偣鍚庯紝鍥捐氨椤典笉鍐嶄繚鐣欎竴涓偓鑰屾湭鍐崇殑寤惰繜瀵艰埅锛屽垏鍘?`/notes`銆乣/materials` 绛夐〉闈㈡椂涓嶄細鍐嶈鍥捐氨椤电殑鍚庣疆鏇挎崲鍔ㄤ綔鎷栧洖鍘汇€?- 杩欎篃鎶娾€滈珮浜瑙堚€濆拰鈥滃湴鍧€鏍忔竻鐞嗏€濆交搴曡В鑰︼紝鍚庨潰濡傛灉缁х画寮哄寲鍥捐氨棰勮浜や簰锛岃矾鐢卞眰闈㈢殑鍓綔鐢ㄤ細鏇村彲鎺с€?
-## 2026-06-01 15:42:00 +08:00 | v0.0.56 | 鍔犲己璺敱瀛愭爲閲嶆寕杞戒互淇鍥捐氨鍒囧埌绗旇浠嶅仠鐣欏師椤甸潰鐨勯棶棰?### 浠诲姟鍐呭
-- 缁х画鎺掓煡鐢ㄦ埛鍙嶉鐨勨€滀粠鍥捐氨鍒囧埌绗旇鏃?URL 宸插彉鎴?`/notes`锛屼絾鐣岄潰浠嶅仠鐣欏湪鍥捐氨鈥濈殑闂銆?- 鍦ㄥ凡涓轰富宸ヤ綔鍖哄鍔犺矾寰?key 鐨勫熀纭€涓婏紝鍐嶈ˉ涓€灞傛洿绋冲畾鐨勮矾鐢辩骇閲嶆寕杞戒繚鎶わ紝閬垮厤鏃ч〉闈㈠疄渚嬫畫鐣欍€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛?  - 鍦?`App` 椤跺眰璇诲彇褰撳墠 `location.pathname`
-  - 涓?`<Routes>` 澧炲姞 `key={location.pathname}`锛岃姣忔涓昏矾寰勫垏鎹㈡椂鏁存５褰撳墠璺敱瀛愭爲閲嶆柊鎸傝浇
-  - 閰嶅悎姝ゅ墠 `ShellFrame` 鍐呴儴 `main-grid` 鐨勮矾寰?key锛屼竴璧锋秷闄ゅ浘璋遍〉绂诲紑鍚庣殑娈嬬暀娓叉煋鐘舵€?### 楠岃瘉缁撴灉
+### 后续影响
+- 触发过 AI 预计落点后，图谱页不再保留一个悬而未决的延迟导航，切去 `/notes`、`/materials` 等页面时不会再被图谱页的后置替换动作拖回去。
+- 这也把“高亮预览”和“地址栏清理”彻底解耦，后面如果继续强化图谱预览交互，路由层面的副作用会更可控。
+
+## 2026-06-01 15:42:00 +08:00 | v0.0.56 | 加强路由子树重挂载以修复图谱切到笔记仍停留原页面的问题
+### 任务内容
+- 继续排查用户反馈的“从图谱切到笔记时 URL 已变成 `/notes`，但界面仍停留在图谱”的问题。
+- 在已为主工作区增加路径 key 的基础上，再补一层更稳定的路由级重挂载保护，避免旧页面实例残留。
+### 完成结果
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 在 `App` 顶层读取当前 `location.pathname`
+  - 为 `<Routes>` 增加 `key={location.pathname}`，让每次主路径切换时整棵当前路由子树重新挂载
+  - 配合此前 `ShellFrame` 内部 `main-grid` 的路径 key，一起消除图谱页离开后的残留渲染状态
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 鐜板湪浠?`/graph` 鍒囧埌 `/notes`銆乣/materials`銆乣/community` 杩欑被涓绘ā鍧楁椂锛岄〉闈細鎸夎矾鐢遍噸鏂板缓绔嬶紝涓嶅啀渚濊禆鍗曚釜椤甸潰鑷繁鏄惁娓呯悊瀹屾暣銆?- 濡傛灉鍚庨潰缁х画鎶婃洿澶氬鏉備氦浜掑爢杩涘浘璋遍〉锛岃繖灞傝矾鐢辩骇閲嶆寕杞戒篃鑳界户缁厹浣忓垏椤电ǔ瀹氭€с€?
-## 2026-06-01 15:20:00 +08:00 | v0.0.55 | 淇鍥捐氨椤靛垏鎹㈠悗椤甸潰涓嶅埛鏂扮殑鍗℃闂骞堕噸寤洪」鐩棩蹇楃紪鐮?### 浠诲姟鍐呭
-- 妫€鏌?`PROJECT_LOG.md` 涓悗缁柊澧炶褰曠殑涔辩爜銆侀噸澶嶆鍜屾贩鍚堢紪鐮侀棶棰橈紝鎭㈠鎴愬彲鎸佺画缁存姢鐨勬甯镐腑鏂囨枃妗ｃ€?- 淇鍓嶇鍦ㄨ繘鍏?`/graph` 鍚庡啀鍒囨崲鍒板叾浠栨ā鍧楁椂鈥滃湴鍧€鏍忓凡鍙樺寲锛屼絾椤甸潰鍐呭浠嶅仠鐣欏湪鍥捐氨鈥濈殑鍒囬〉鍗℃闂銆?### 瀹屾垚缁撴灉
-- 閲嶅缓 `PROJECT_LOG.md`锛?  - 浠?`28bff0b` 鎻愪氦涓殑骞插噣鍘嗗彶璁板綍涓哄熀搴?  - 閲嶆柊鏁寸悊骞惰ˉ鍥?`v0.0.50` 鍒?`v0.0.54` 鐨勭増鏈褰?  - 鍒犻櫎鍚庡崐娈甸噸澶嶈拷鍔犵殑鎹熷潖鍐呭锛屽苟缁熶竴淇濆瓨涓?UTF-8 缂栫爜
-- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛?  - 涓?`ShellFrame` 鍐呴儴鐨?`main-grid` 澧炲姞 `key={location.pathname}`
-  - 璁╀粠鍥捐氨椤靛垏鎹㈠埌鍏朵粬璺敱鏃讹紝涓诲伐浣滃尯瀛愭爲鎸夎矾寰勯噸鏂版寕杞斤紝閬垮厤鍥捐氨椤垫畫鐣欑姸鎬侀樆姝㈤〉闈㈠埛鏂?### 楠岃瘉缁撴灉
+### 后续影响
+- 现在从 `/graph` 切到 `/notes`、`/materials`、`/community` 这类主模块时，页面会按路由重新建立，不再依赖单个页面自己是否清理完整。
+- 如果后面继续把更多复杂交互堆进图谱页，这层路由级重挂载也能继续兜住切页稳定性。
+
+## 2026-06-01 15:20:00 +08:00 | v0.0.55 | 修复图谱页切换后页面不刷新的卡死问题并重建项目日志编码
+### 任务内容
+- 检查 `PROJECT_LOG.md` 中后续新增记录的乱码、重复段和混合编码问题，恢复成可持续维护的正常中文文档。
+- 修复前端在进入 `/graph` 后再切换到其他模块时“地址栏已变化，但页面内容仍停留在图谱”的切页卡死问题。
+### 完成结果
+- 重建 `PROJECT_LOG.md`：
+  - 以 `28bff0b` 提交中的干净历史记录为基底
+  - 重新整理并补回 `v0.0.50` 到 `v0.0.54` 的版本记录
+  - 删除后半段重复追加的损坏内容，并统一保存为 UTF-8 编码
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 为 `ShellFrame` 内部的 `main-grid` 增加 `key={location.pathname}`
+  - 让从图谱页切换到其他路由时，主工作区子树按路径重新挂载，避免图谱页残留状态阻止页面刷新
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- `PROJECT_LOG.md` 閲嶆柊鍥炲埌绋冲畾鍙鐘舵€侊紝鍚庣画缁х画杩藉姞璁板綍鏃朵笉浼氬啀琚綋鍓嶈繖娈垫贩鍚堢紪鐮佸巻鍙叉嫋鍧忋€?- 鍥捐氨宸ヤ綔鍖虹寮€鍚庝細骞插噣鍗歌浇锛涘鏋滃悗闈㈣繕瑕佺户缁寮虹敾甯冧氦浜掞紝寤鸿鎶婂浘璋遍〉閲屼笌鍏ㄥ眬鐩戝惉鍣ㄣ€佸畾鏃跺櫒鐩稿叧鐨勫壇浣滅敤缁х画淇濇寔鈥滆繘鍏ュ嵆鎸傝浇銆佺寮€鍗虫竻鐞嗏€濈殑杈圭晫銆?
-## 2026-06-01 14:10:00 +08:00 | v0.0.54 | 鎵╁瀛︿範宸ヤ綔鍙板３灞傚苟閲嶆帓棣栭〉宸ヤ綔鍖轰互鍏呭垎鍒╃敤澶у睆椤甸潰
-### 浠诲姟鍐呭
-- 鍝嶅簲娴忚鍣ㄦ壒娉ㄤ腑鈥滈渶瑕佸厖鍒嗕娇鐢ㄦ暣涓〉闈⑩€濈殑鍙嶉锛屾敹绱?StudyMate 棣栭〉涓庡３灞備腑杩囧鐨勭暀鐧姐€?- 鍦ㄤ笉鐗虹壊鐭ヨ瘑宸ヤ綔鍙版皵璐ㄧ殑鍓嶆彁涓嬶紝鎶婂ぇ灞忕┖闂磋浆鎴愮湡瀹炲彲鐢ㄧ殑宸ヤ綔闈紝鑰屼笉鏄崟绾斁澶х┖鐧藉尯鍩熴€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛?  - 灏?shell 鏈€澶у搴︺€佷晶鏍忎笌涓婁笅鏂囨爮瀹藉害閲嶆柊鏍″噯锛岃鐢ㄦ埛绔湪 2K/瓒呭灞忎笅浣跨敤鏇村妯悜绌洪棿
-  - 鏀惧鎼滅储鏍忎笌涓诲伐浣滃尯鍐呰竟璺濓紝骞惰鍙充晶 context panel 鏀逛负 sticky锛屾彁鍗囬暱椤垫祻瑙堟椂鐨勪俊鎭即闅忔劅
-  - 閲嶅仛 dashboard 棣栭〉缃戞牸锛屾敼鎴愪富宸ヤ綔鍒?+ 渚ц竟宸ヤ綔鍒楃殑甯冨眬锛岃涓婂崐灞忎笉鍐嶇┖鐫€
-  - 涓洪椤垫柊澧?story-card grid銆乤ction grid銆乪mpty card 绛夋牱寮忥紝淇濊瘉鎵╁鍚庝笉鏄€滄洿瀹界殑绌虹櫧鈥濓紝鑰屾槸鈥滄洿澶х殑宸ヤ綔闈⑩€?- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛?  - 缁?SectionFrame 澧炲姞 className 鎵╁睍鑳藉姏锛屾柟渚块椤典笉鍚屽伐浣滃尯閲囩敤宸紓鍖栧竷灞€
-  - 鎶婇椤电殑鈥滄渶杩戣祫鏂?/ 鏈€杩戠瑪璁?/ 楂橀鍏ュ彛 / 绀惧尯鍔ㄦ€佲€濋噸鏂扮紪鎺掕繘鍙屽垪宸ヤ綔鍙扮粨鏋?  - 鎶婂揩閫熷姩浣滄敼鎴愮湡瀹炲彲鐐瑰嚮鍏ュ彛锛屽苟鏍规嵁鐧诲綍鐘舵€佽嚜鍔ㄨ烦杞埌鐩爣椤垫垨鐧诲綍椤?  - 鎵╁ぇ棣栭〉鏈€杩戣祫鏂欍€佺瑪璁般€佺ぞ鍖哄唴瀹圭殑灞曠ず鏁伴噺锛岃棣栭〉鎵挎媴鏇村缁х画宸ヤ綔鍏ュ彛
-### 楠岃瘉缁撴灉
+### 后续影响
+- `PROJECT_LOG.md` 重新回到稳定可读状态，后续继续追加记录时不会再被当前这段混合编码历史拖坏。
+- 图谱工作区离开后会干净卸载；如果后面还要继续增强画布交互，建议把图谱页里与全局监听器、定时器相关的副作用继续保持“进入即挂载、离开即清理”的边界。
+
+## 2026-06-01 14:10:00 +08:00 | v0.0.54 | 扩宽学习工作台壳层并重排首页工作区以充分利用大屏页面
+### 任务内容
+- 响应浏览器批注中“需要充分使用整个页面”的反馈，收紧 StudyMate 首页与壳层中过多的留白。
+- 在不牺牲知识工作台气质的前提下，把大屏空间转成真实可用的工作面，而不是单纯放大空白区域。
+### 完成结果
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)：
+  - 将 shell 最大宽度、侧栏与上下文栏宽度重新校准，让用户端在 2K/超宽屏下使用更多横向空间
+  - 放宽搜索栏与主工作区内边距，并让右侧 context panel 改为 sticky，提升长页浏览时的信息伴随感
+  - 重做 dashboard 首页网格，改成主工作列 + 侧边工作列的布局，让上半屏不再空着
+  - 为首页新增 story-card grid、action grid、empty card 等样式，保证扩宽后不是“更宽的空白”，而是“更大的工作面”
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 给 SectionFrame 增加 className 扩展能力，方便首页不同工作区采用差异化布局
+  - 把首页的“最近资料 / 最近笔记 / 高频入口 / 社区动态”重新编排进双列工作台结构
+  - 把快速动作改成真实可点击入口，并根据登录状态自动跳转到目标页或登录页
+  - 扩大首页最近资料、笔记、社区内容的展示数量，让首页承担更多继续工作入口
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 杩欎竴杞妸棣栭〉浠庘€滃眳涓睍绀洪潰鈥濈户缁線鈥滅湡姝ｇ殑瀛︿範鍙伴潰鈥濇帹浜嗕竴姝ワ紝鍚庨潰鍐嶈ˉ鍥捐氨銆侀槄璇诲櫒鍜岀瑪璁伴〉鐨勫ぇ灞忎紭鍖栨椂鍙互鐩存帴娌跨敤杩欏瀹藉３灞傝鍒欍€?- 涓嬩竴姝ユ渶鍊煎緱缁х画鐨勬槸閽堝 `/reader`銆乣/notes`銆乣/graph` 鍋氬悓绾у埆鐨勫ぇ灞忓瘑搴︿紭鍖栵紝鎶婂綋鍓嶆洿瀹界殑澹冲眰杞崲鎴愭洿娣辩殑澶氶潰鏉垮崗浣滀綋楠屻€?
-## 2026-06-01 13:42:00 +08:00 | v0.0.53 | 閲嶅仛 StudyMate 鍓嶅悗鍙颁骇鍝?UI 椋庢牸骞跺洖閫€瀵瑰閮ㄩ」鐩殑鐓ф惉甯冨眬
-### 浠诲姟鍐呭
-- 鍥為€€姝ゅ墠瀵?`Zhenmeng8023/IT` 椋庢牸鐨勮繃搴﹀€熺敤锛屼笉鍐嶆部鐢ㄩ偅濂楀亸鍐疯壊鐜荤拑鍗＄墖鐨勫竷灞€澹冲眰銆?- 閲嶆柊鎸?StudyMate 浣滀负鐭ヨ瘑宸ヤ綔鍙扮殑浜у搧瀹氫綅锛岀粺涓€鐢ㄦ埛绔€佸浘璋卞伐浣滃尯銆丄I/鎼滅储/澶嶄範鍗＄墖鍜屽悗鍙版不鐞嗙晫闈㈢殑 UI 璇█銆?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛?  - 閲嶅缓鐢ㄦ埛绔?shell token锛屾敼鎴愭洿鍏嬪埗鐨勪腑鎬ц壊 + 娣辩豢寮鸿皟鑹诧紝鏀跺洖杩囬噸鐨勭幓鐠冨崱鐗囦笌钃濋潚娓愬彉
-  - 閲嶆柊璁捐渚ф爮銆侀《閮ㄥ伐鍏锋潯銆佷笂涓嬫枃闈㈡澘涓庝富宸ヤ綔鍖哄眰绾э紝璁╅〉闈㈡洿鎺ヨ繎鐭ヨ瘑宸ヤ綔鍙拌€屼笉鏄弬鑰冮」鐩殑澶栧３
-  - 缁熶竴鍥捐氨宸ヤ綔鍖虹殑 stage銆佽妭鐐广€佸彸閿彍鍗曘€佺缉鐣ュ浘銆佸揩鎹烽敭闈㈡澘涓庡绫诲伐浣滃崱鐗囩殑鍦嗚銆佸簳鑹插拰鐘舵€佽涔?  - 椤烘墜淇婵€娲绘€佹寜閽鐢ㄥ嵄闄╃孩鑹茬殑闂锛屽苟鎶婃悳绱€丄I銆佸涔犮€佺櫥褰曢〉绛夊父鐢ㄩ潰鏉夸竴璧锋敹鍥炲悓涓€濂楄瑙夎瑷€
-- 鏇存柊 [frontend-admin/src/App.vue](/E:/Code/1108026_rust_go/StudyMate/frontend-admin/src/App.vue)锛?  - 灏嗗悗鍙伴噸鏋勪负娣辫壊宸﹀鑸?+ 娴呰壊鍐呭鍖虹殑娌荤悊鎺у埗鍙伴鏍?  - 鍘绘帀鐓ф惉鑰屾潵鐨勮摑鐏扮幓鐠冩劅锛岀粺涓€鎸夐挳銆佸崱鐗囥€佽緭鍏ユ鍜岄《鏍忚妭濂?- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛?  - 淇椤舵爮鎼滅储妗嗗崰浣嶆枃妗堬紝鎭㈠姝ｅ父涓枃鎻愮ず
-### 楠岃瘉缁撴灉
+### 后续影响
+- 这一轮把首页从“居中展示面”继续往“真正的学习台面”推了一步，后面再补图谱、阅读器和笔记页的大屏优化时可以直接沿用这套宽壳层规则。
+- 下一步最值得继续的是针对 `/reader`、`/notes`、`/graph` 做同级别的大屏密度优化，把当前更宽的壳层转换成更深的多面板协作体验。
+
+## 2026-06-01 13:42:00 +08:00 | v0.0.53 | 重做 StudyMate 前后台产品 UI 风格并回退对外部项目的照搬布局
+### 任务内容
+- 回退此前对 `Zhenmeng8023/IT` 风格的过度借用，不再沿用那套偏冷色玻璃卡片的布局壳层。
+- 重新按 StudyMate 作为知识工作台的产品定位，统一用户端、图谱工作区、AI/搜索/复习卡片和后台治理界面的 UI 语言。
+### 完成结果
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)：
+  - 重建用户端 shell token，改成更克制的中性色 + 深绿强调色，收回过重的玻璃卡片与蓝青渐变
+  - 重新设计侧栏、顶部工具条、上下文面板与主工作区层级，让页面更接近知识工作台而不是参考项目的外壳
+  - 统一图谱工作区的 stage、节点、右键菜单、缩略图、快捷键面板与多类工作卡片的圆角、底色和状态语义
+  - 顺手修正激活态按钮误用危险红色的问题，并把搜索、AI、复习、登录页等常用面板一起收回同一套视觉语言
+- 更新 [frontend-admin/src/App.vue](/E:/Code/1108026_rust_go/StudyMate/frontend-admin/src/App.vue)：
+  - 将后台重构为深色左导航 + 浅色内容区的治理控制台风格
+  - 去掉照搬而来的蓝灰玻璃感，统一按钮、卡片、输入框和顶栏节奏
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 修正顶栏搜索框占位文案，恢复正常中文提示
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
 - `npm --workspace frontend-admin run build`
-### 鍚庣画褰卞搷
-- 杩欎竴杞妸 StudyMate 鐨勫墠绔鏍间粠鈥滃弬鑰冮」鐩奖瀛愨€濇媺鍥炲埌鏇撮€傚悎鐭ヨ瘑鏁寸悊涓庡涔犳祦鐨勪骇鍝佸熀璋冿紝鍚庨潰缁х画鎵╁睍鍥捐氨銆丄I 鍜屽涔犻〉鏃跺彲浠ョ洿鎺ユ部鐢ㄨ繖濂楀３灞傚拰鍗＄墖璇硶銆?- 涓嬩竴姝ラ€傚悎缁х画鍋氶〉闈㈢骇缁嗗寲锛屼緥濡傚浘璋辫鎯呬晶鏍忕殑瀵嗗害浼樺寲銆侀槄璇诲櫒宸ュ叿鏉＄殑淇℃伅缁勭粐锛屼互鍙婄Щ鍔ㄧ澹冲眰鐨勮繘涓€姝ユ敹鏉熴€?
-## 2026-06-01 12:08:00 +08:00 | v0.0.52 | 缁х画鎵撶（鍥捐氨宸ヤ綔鍖虹殑鍚搁檮鎻愮ず銆佸揩鎹烽敭璇存槑涓庢壒閲忔潵婧愭暣鐞?### 浠诲姟鍐呭
-- 鎸?[docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 缁х画鏀舵潫 `v0.5.0 / v0.6.0` 鍥捐氨宸ヤ綔鍖猴紝浼樺厛琛ラ綈澶氶€夊満鏅笅鐨勫惛闄勫弽棣堛€佸揩鎹烽敭鍏ュ彛鍜屾寜鏉ユ簮鏁寸悊鑳藉姏銆?- 鐩爣涓嶆槸鍐嶅姞闆舵暎鎸夐挳锛岃€屾槸璁?20+ 鑺傜偣鍥捐氨鐨勬暣鐞嗚繃绋嬫洿椤烘墜銆佹洿鍙鏈熴€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 鎵╁睍瀵归綈鍙傝€冪嚎閫昏緫锛屼负鍚搁檮缁撴灉琛ヤ笂宸﹁竟 / 鍙宠竟 / 涓嚎 / 椤惰竟 / 搴曡竟绾у埆鐨勮涔夋彁绀?  - 鍦?stage 鐘舵€佸尯鏂板鍚搁檮鎻愮ず pill锛岃鎷栧姩鏃朵笉鍙湅鍒扮嚎锛岃繕鐭ラ亾褰撳墠鍚搁檮鍒颁粈涔?  - 鏂板蹇嵎閿潰鏉垮叆鍙ｏ紝骞舵敮鎸?`?` 鎵撳紑鎴栧叧闂?  - 琛ヤ笂鍥捐氨宸ヤ綔鍖虹儹閿細`Ctrl/Cmd+A` 鍏ㄩ€夊彲瑙佽妭鐐广€乣F` 鑱氱劍鑺傜偣銆乣G` 寤虹粍銆乣L` 杩炵嚎妯″紡銆乣0` 閲嶇疆瑙嗛噹
-  - 涓哄閫夎妭鐐规柊澧炩€滄寜鏉ユ簮鍒嗗垪 / 鎸夋潵婧愬垎琛?/ 鐢熸垚鏉ユ簮鍒嗙粍鈥濅笁绉嶆暣鐞嗗姩浣?  - 澧炲姞鏉ユ簮缁熻鎽樿锛岃鎵归噺鏁寸悊鍓嶅厛鐪嬪埌褰撳墠閫変腑鑺傜偣鐨勬潵婧愭瀯鎴?- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛?  - 琛ュ厖鍚搁檮鎻愮ず pill銆佸揩鎹烽敭闈㈡澘銆佹潵婧愭憳瑕佽兌鍥婄瓑鏍峰紡
-  - 璁╂柊鍔犵殑宸ヤ綔鍙版彁绀哄眰寤剁画鐜版湁 graph workspace 鐨勪骇鍝佸寲瑙嗚璇皵
-### 楠岃瘉缁撴灉
+### 后续影响
+- 这一轮把 StudyMate 的前端风格从“参考项目影子”拉回到更适合知识整理与学习流的产品基调，后面继续扩展图谱、AI 和复习页时可以直接沿用这套壳层和卡片语法。
+- 下一步适合继续做页面级细化，例如图谱详情侧栏的密度优化、阅读器工具条的信息组织，以及移动端壳层的进一步收束。
+
+## 2026-06-01 12:08:00 +08:00 | v0.0.52 | 继续打磨图谱工作区的吸附提示、快捷键说明与批量来源整理
+### 任务内容
+- 按 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 继续收束 `v0.5.0 / v0.6.0` 图谱工作区，优先补齐多选场景下的吸附反馈、快捷键入口和按来源整理能力。
+- 目标不是再加零散按钮，而是让 20+ 节点图谱的整理过程更顺手、更可预期。
+### 完成结果
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 扩展对齐参考线逻辑，为吸附结果补上左边 / 右边 / 中线 / 顶边 / 底边级别的语义提示
+  - 在 stage 状态区新增吸附提示 pill，让拖动时不只看到线，还知道当前吸附到什么
+  - 新增快捷键面板入口，并支持 `?` 打开或关闭
+  - 补上图谱工作区热键：`Ctrl/Cmd+A` 全选可见节点、`F` 聚焦节点、`G` 建组、`L` 连线模式、`0` 重置视野
+  - 为多选节点新增“按来源分列 / 按来源分行 / 生成来源分组”三种整理动作
+  - 增加来源统计摘要，让批量整理前先看到当前选中节点的来源构成
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)：
+  - 补充吸附提示 pill、快捷键面板、来源摘要胶囊等样式
+  - 让新加的工作台提示层延续现有 graph workspace 的产品化视觉语气
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 杩欎竴姝ユ妸鍥捐氨宸ヤ綔鍖轰粠鈥滃閫夊凡鍙敤鈥濆線鈥滃閫夋暣鐞嗙湡鐨勯『鎵嬧€濇帹杩涗簡涓€鎴紝鐗瑰埆閫傚悎鍚庨潰缁х画鎵╁浘璋变骇鍝佸寲鍔熻兘鏃跺鐢ㄣ€?- 涓嬩竴姝ユ渶鍊煎緱缁х画鐨勬槸鍋氭洿缁嗙殑鍚搁檮浣撻獙锛屾瘮濡傝妭鐐逛笌鍒嗙粍杈圭晫鐨勫惛闄勩€佹嫋鍔ㄦ椂鐨勯棿璺濇彁绀猴紝浠ュ強鎶婃壒閲忔潵婧愭暣鐞嗚繘涓€姝ユ墿鍒扳€滄寜鏉ユ簮鑷姩鐢熸垚娉抽亾甯冨眬鈥濄€?
-## 2026-06-01 00:20:41 +08:00 | v0.0.51 | 缁х画鍔犲帤鍥捐氨宸ヤ綔鍖虹殑鎵归噺鏍峰紡涓庢嫋鍔ㄥ弬鑰冭兘鍔?### 浠诲姟鍐呭
-- 缁х画鍦?[docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 鍜?[docs/planning/versions/v0.6.0-graph-product.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/versions/v0.6.0-graph-product.md) 鑼冨洿鍐呮帹杩?`v0.6` 鍥捐氨浜у搧鍖栵紝涓嶅仠鐣欏湪鈥滆兘澶氶€夆€濓紝鑰屾槸缁х画琛モ€滃閫変箣鍚庢€庝箞鏇撮珮鏁堝湴鏁寸悊鈥濄€?- 缁撳悎鏈湴 ECC 鐨?`product-capability / tdd-workflow / verification-loop` 鎬濊矾鍜?CodeGraph 涓婁笅鏂囷紝浼樺厛瀹炵幇鈥滄嫋鍔ㄥ榻愬弬鑰冪嚎鈥濅笌鈥滄壒閲忔牱寮忕紪杈戔€濊繖涓ゅ潡鏁寸悊鏁堢巼鑳藉姏銆?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 鏂板瀵归綈鍙傝€冪嚎璁＄畻閫昏緫锛屽崟鑺傜偣鍜屽鑺傜偣鎷栧姩鏃堕兘浼氬拰鏈€変腑鑺傜偣鍋氳竟缂?/ 涓績鍚搁檮鍒ゆ柇
-  - 鎷栧姩杩囩▼涓細瀹炴椂鏄剧ず鍨傜洿 / 姘村钩鍙傝€冪嚎锛岀粨鏉熸嫋鍔ㄣ€佸垏鎹㈢敾甯冩垨鎸?`Esc` 鏃朵細鑷姩娓呯┖
-  - 澶氶€夐潰鏉挎柊澧炴壒閲忛鑹层€佹壒閲忓己璋冦€佹壒閲忓昂瀵告帶鍒讹紝鐩存帴澶嶇敤鐜版湁鑺傜偣鏍峰紡妯″瀷鎵归噺鍐欏洖 metadata
-  - 鎵归噺缂栬緫浼氳瘑鍒綋鍓嶆槸鍚︹€滄牱寮忎竴鑷粹€濓紝浠庤€屾纭偣浜綋鍓嶉€夐」锛岃€屼笉鏄洸鐩樉绀哄崟鍊?  - 椤烘墜淇杈归€夐€昏緫閲岀殑鑺傜偣閫夋嫨娓呯悊锛岄伩鍏嶈妭鐐瑰閫夋畫鐣欏共鎵拌繛绾跨紪杈?- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛岃ˉ鍏呭榻愬弬鑰冪嚎鐨勫彲瑙嗗寲鏍峰紡銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 这一步把图谱工作区从“多选已可用”往“多选整理真的顺手”推进了一截，特别适合后面继续扩图谱产品化功能时复用。
+- 下一步最值得继续的是做更细的吸附体验，比如节点与分组边界的吸附、拖动时的间距提示，以及把批量来源整理进一步扩到“按来源自动生成泳道布局”。
+
+## 2026-06-01 00:20:41 +08:00 | v0.0.51 | 继续加厚图谱工作区的批量样式与拖动参考能力
+### 任务内容
+- 继续在 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 和 [docs/planning/versions/v0.6.0-graph-product.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/versions/v0.6.0-graph-product.md) 范围内推进 `v0.6` 图谱产品化，不停留在“能多选”，而是继续补“多选之后怎么更高效地整理”。
+- 结合本地 ECC 的 `product-capability / tdd-workflow / verification-loop` 思路和 CodeGraph 上下文，优先实现“拖动对齐参考线”与“批量样式编辑”这两块整理效率能力。
+### 完成结果
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 新增对齐参考线计算逻辑，单节点和多节点拖动时都会和未选中节点做边缘 / 中心吸附判断
+  - 拖动过程中会实时显示垂直 / 水平参考线，结束拖动、切换画布或按 `Esc` 时会自动清空
+  - 多选面板新增批量颜色、批量强调、批量尺寸控制，直接复用现有节点样式模型批量写回 metadata
+  - 批量编辑会识别当前是否“样式一致”，从而正确点亮当前选项，而不是盲目显示单值
+  - 顺手修正边选逻辑里的节点选择清理，避免节点多选残留干扰连线编辑
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)，补充对齐参考线的可视化样式。
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 鍒拌繖涓€姝ワ紝鍥捐氨宸ヤ綔鍖哄凡缁忎粠鈥滆兘妗嗛€夊拰鎵归噺绉诲姩鈥濈户缁帹杩涘埌鈥滄壒閲忕Щ鍔ㄦ椂鏇存湁鍙傜収銆佹壒閲忔暣鐞嗘椂鏇村皯閲嶅鍔冲姩鈥濓紝绂?`v0.6.0` 閲屸€滈€傚悎闀挎湡鏁寸悊鐭ヨ瘑鈥濈殑鐩爣鍙堣繎浜嗕竴姝ャ€?- 涓嬩竴姝ユ渶椤虹殑鏄户缁ˉ鈥滃惛闄勬彁绀烘枃妗?/ 蹇嵎閿鏄?/ 鎵归噺鏉ユ簮鏍囪鈥濓紝鎴栬€呮妸杩欏澶氶€夋暣鐞嗚兘鍔涚户缁帴鍒?AI 鑽夌纭鍚庣殑钀藉浘娴佺▼閲屻€?
-## 2026-06-01 11:36:00 +08:00 | v0.0.50 | 瀵规爣 Zhenmeng8023/IT 鏀舵潫 StudyMate 鍓嶅悗鍙颁骇鍝佸寲 UI 椋庢牸
-### 浠诲姟鍐呭
-- 鎸夌敤鎴疯姹傚涔犲弬鑰冮」鐩?`Zhenmeng8023/IT` 鐨勫墠绔晫闈㈤鏍硷紝骞剁粨鍚堟湰鍦?`design-taste-frontend` skill锛屾妸瀹冪炕璇戞垚閫傚悎 StudyMate 鐨勪骇鍝?UI 璇█锛岃€屼笉鏄洿鎺ョ収鎼?Element UI 瑙嗚銆?- 鍩轰簬 CodeGraph 鍜屾簮鐮侀槄璇伙紝浼樺厛鏀舵潫鍓嶅彴瀛︿範宸ヤ綔鍖轰笌鍚庡彴娌荤悊鎺у埗鍙扮殑澹冲眰銆佸鑸€侀潰鏉裤€佸崱鐗囥€佸伐鍏锋潯鍜屾寜閽郴缁燂紝璁╂暣浣撶晫闈粠鈥滃崟椤靛悇鑷垚绔嬧€濆崌绾ф垚鈥滃悓涓€瀹朵骇鍝佺殑缁熶竴宸ヤ綔鍙扳€濄€?### 瀹屾垚缁撴灉
-- 鍙傝€冧粨搴撴湰鍦板垎鏋愶細
-  - 璇诲彇骞舵媶瑙?`E:/Code/reference-ui/IT/it-ui/ui/layouts/manage.vue`
-  - 璇诲彇骞舵媶瑙?`E:/Code/reference-ui/IT/it-ui/ui/components/front/FrontNavShell.vue`
-  - 璇诲彇骞舵媶瑙?`E:/Code/reference-ui/IT/it-ui/ui/components/admin/AdminTableCard.vue`
-  - 鎻愮偧鍑洪€傚悎 StudyMate 鐨勪笁鏉¤璁′富绾匡細涓婚 token 鍖栥€佸墠鍚庡彴绋冲畾澹冲眰銆佸鐢ㄥ瀷椤甸潰鍘熻
-- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛?  - 閲嶅缓鐢ㄦ埛绔璁?token锛屾敼涓烘洿鍋忎骇鍝佸寲鐨勫喎闈欎腑鎬ц壊鍩哄簳锛屼繚鐣?StudyMate 鑷繁鐨勫涔犳劅浣嗗噺杞诲師鍏堝亸鏆栧亸鏉傚織鍖栫殑瑙傛劅
-  - 鏂板 shell / sidebar / context rail / topbar 绾у埆鐨勭粨鏋勫彉閲忥紝缁熶竴瀹藉害銆佸渾瑙掋€侀槾褰便€佽〃闈㈠眰绾т笌鍚搁《琛屼负
-  - 璁?`workspace-surface / context-panel / section-frame / metric-tile / sidebar-card` 杩涘叆鍚屼竴闈㈡澘绯荤粺
-  - 鎶婁富瑕佹爣棰樸€佸浘璋卞崱鐗囥€佸涔犲崱鐗囩瓑浠庡ぇ闈㈢Н琛嚎鍒囧洖鏇寸ǔ鐨勪骇鍝佸瓧浣撴潈閲嶏紝鍑忓皯 UI 鐨勨€滅紪杈戝櫒娴锋姤鎰熲€?  - 缁熶竴鎸夐挳銆佺瓫閫?chip銆佹悳绱㈡鍜屽鑸」鐨勪氦浜掑舰鎬侊紝璁╁伐鍏锋搷浣滄洿鍍忓伐浣滃彴鑰屼笉鏄惀閿€椤电粍浠?- 鏇存柊 [frontend-admin/src/App.vue](/E:/Code/1108026_rust_go/StudyMate/frontend-admin/src/App.vue)锛?  - 閲嶆瀯鍚庡彴 scoped 鏍峰紡 token锛屼娇鍚庡彴涓庣敤鎴风杩涘叆鍚屼竴濂椾骇鍝佸鏃?  - 鎶婂悗鍙拌皟鏁翠负鏇存帴杩?IT 鍙傝€冮」鐩殑娌荤悊鎺у埗鍙扮粨鏋勶細绋冲畾宸︿晶瀵艰埅銆佸惛椤?topbar銆佺姸鎬佹潯銆佹暟鎹崱鍜屽唴瀹瑰崱灞傜骇
-  - 鏀舵潫鐧诲綍鍗°€佸鑸」銆佸鏍稿崱銆佸崰浣嶆ā鍧楀崱鍜屾寜閽牱寮忥紝浣垮悗鍙颁笉鍐嶅彧鏄€滆兘鐢ㄢ€濓紝鑰屾槸鏇存帴杩戠湡瀹炶繍钀ュ彴
-  - 鏂板 `status-stack`锛屾妸 notice 涓?error 淇℃伅鏀剁撼鍒颁竴鑷寸殑鐘舵€佸尯锛岃€屼笉鏄暎钀藉湪鍐呭娴侀噷
-### 楠岃瘉缁撴灉
+### 后续影响
+- 到这一步，图谱工作区已经从“能框选和批量移动”继续推进到“批量移动时更有参照、批量整理时更少重复劳动”，离 `v0.6.0` 里“适合长期整理知识”的目标又近了一步。
+- 下一步最顺的是继续补“吸附提示文案 / 快捷键说明 / 批量来源标记”，或者把这套多选整理能力继续接到 AI 草稿确认后的落图流程里。
+
+## 2026-06-01 11:36:00 +08:00 | v0.0.50 | 对标 Zhenmeng8023/IT 收束 StudyMate 前后台产品化 UI 风格
+### 任务内容
+- 按用户要求学习参考项目 `Zhenmeng8023/IT` 的前端界面风格，并结合本地 `design-taste-frontend` skill，把它翻译成适合 StudyMate 的产品 UI 语言，而不是直接照搬 Element UI 视觉。
+- 基于 CodeGraph 和源码阅读，优先收束前台学习工作区与后台治理控制台的壳层、导航、面板、卡片、工具条和按钮系统，让整体界面从“单页各自成立”升级成“同一家产品的统一工作台”。
+### 完成结果
+- 参考仓库本地分析：
+  - 读取并拆解 `E:/Code/reference-ui/IT/it-ui/ui/layouts/manage.vue`
+  - 读取并拆解 `E:/Code/reference-ui/IT/it-ui/ui/components/front/FrontNavShell.vue`
+  - 读取并拆解 `E:/Code/reference-ui/IT/it-ui/ui/components/admin/AdminTableCard.vue`
+  - 提炼出适合 StudyMate 的三条设计主线：主题 token 化、前后台稳定壳层、复用型页面原语
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)：
+  - 重建用户端设计 token，改为更偏产品化的冷静中性色基底，保留 StudyMate 自己的学习感但减轻原先偏暖偏杂志化的观感
+  - 新增 shell / sidebar / context rail / topbar 级别的结构变量，统一宽度、圆角、阴影、表面层级与吸顶行为
+  - 让 `workspace-surface / context-panel / section-frame / metric-tile / sidebar-card` 进入同一面板系统
+  - 把主要标题、图谱卡片、复习卡片等从大面积衬线切回更稳的产品字体权重，减少 UI 的“编辑器海报感”
+  - 统一按钮、筛选 chip、搜索框和导航项的交互形态，让工具操作更像工作台而不是营销页组件
+- 更新 [frontend-admin/src/App.vue](/E:/Code/1108026_rust_go/StudyMate/frontend-admin/src/App.vue)：
+  - 重构后台 scoped 样式 token，使后台与用户端进入同一套产品家族
+  - 把后台调整为更接近 IT 参考项目的治理控制台结构：稳定左侧导航、吸顶 topbar、状态条、数据卡和内容卡层级
+  - 收束登录卡、导航项、审核卡、占位模块卡和按钮样式，使后台不再只是“能用”，而是更接近真实运营台
+  - 新增 `status-stack`，把 notice 与 error 信息收纳到一致的状态区，而不是散落在内容流里
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
 - `npm --workspace frontend-admin run build`
-### 鍚庣画褰卞搷
-- 杩欒疆涓嶆槸琛ュ崟涓姛鑳斤紝鑰屾槸琛ヤ簡涓€灞備細鎸佺画褰卞搷鍚庣画寮€鍙戠殑鍓嶇璁捐鍩虹璁炬柦銆傚悗闈㈢户缁仛鍥捐氨銆佸涔犮€丄I銆佹悳绱㈠拰鍚庡彴娌荤悊椤垫椂锛屽彲浠ョ洿鎺ユ部鐫€杩欏澹冲眰鍜岄潰鏉夸綋绯绘墿灞曪紝鑰屼笉鐢ㄦ瘡椤甸噸鏂版壘瑙嗚璇皵銆?- 涓嬩竴姝ユ渶鍊煎緱缁х画鐨勬槸鎶婄敤鎴风椤甸潰鍐呴儴鍐嶈繘涓€姝ョ粍浠跺寲锛岃ˉ鍑烘洿鏄庣‘鐨?`page header / table card / filter bar / side rail` 鍘熻锛屽苟閫愭鎶婅秴澶х殑 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx) 鍜?[frontend-admin/src/App.vue](/E:/Code/1108026_rust_go/StudyMate/frontend-admin/src/App.vue) 鎷嗘垚鏇存竻鏅扮殑 UI 缁撴瀯浠躲€?
-## 2026-05-31 23:46:27 +08:00 | v0.0.49 | 琛ラ綈鍥捐氨浜у搧鍖栭噷鐨?PNG 瀵煎嚭涓庤妭鐐瑰彸閿彍鍗?### 浠诲姟鍐呭
-- 缁х画鍦?[docs/planning/versions/v0.6.0-graph-product.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/versions/v0.6.0-graph-product.md) 鑼冨洿鍐呮帹杩涘浘璋卞伐浣滃尯锛屾妸鈥滃鍏ュ鍑哄叆鍙ｂ€濆拰鈥滄洿椤烘墜鐨勭敾甯冧氦浜掆€濆仛寰楁洿鍍忓畬鏁翠骇鍝併€?- 鍩轰簬 CodeGraph 姊崇悊褰撳墠鍥捐氨椤电殑瀵煎嚭閾捐矾鍜岃妭鐐逛氦浜掑叆鍙ｅ悗锛屼紭鍏堣ˉ `PNG 瀵煎嚭` 涓?`鍙抽敭鑿滃崟` 杩欎袱涓槑鏄捐繕娆犱竴鎴殑鑳藉姏銆?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 鏂板 PNG 瀵煎嚭閫昏緫锛屽鐢ㄧ幇鏈?SVG 娓叉煋缁撴灉鐢熸垚 PNG 鏂囦欢
-  - 宸ュ叿鏍忕幇鍦ㄥ悓鏃舵彁渚?PNG 鍜?SVG 涓ょ瀵煎嚭鍏ュ彛
-  - 鐢诲竷銆佽妭鐐瑰拰杩炵嚎閮芥帴鍏ュ彸閿彍鍗?  - 鑺傜偣鍙抽敭鑿滃崟鏀寔鑱氱劍銆佸鍒躲€佸缓绔嬪垎缁勩€佽缃繛绾胯捣鐐广€佹墦寮€鏉ユ簮銆佸垹闄?  - 杩炵嚎鍙抽敭鑿滃崟鏀寔鐩寸嚎/鏇茬嚎鍒囨崲鍜屽垹闄?  - 鐢诲竷绌虹櫧澶勫彸閿彍鍗曟敮鎸佸揩閫熸柊寤鸿妭鐐瑰拰鐩存帴瀵煎嚭 PNG
-- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛岃ˉ鍏呭彸閿彍鍗曚笌鑿滃崟椤规牱寮忋€?### 楠岃瘉缁撴灉
+### 后续影响
+- 这轮不是补单个功能，而是补了一层会持续影响后续开发的前端设计基础设施。后面继续做图谱、复习、AI、搜索和后台治理页时，可以直接沿着这套壳层和面板体系扩展，而不用每页重新找视觉语气。
+- 下一步最值得继续的是把用户端页面内部再进一步组件化，补出更明确的 `page header / table card / filter bar / side rail` 原语，并逐步把超大的 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx) 和 [frontend-admin/src/App.vue](/E:/Code/1108026_rust_go/StudyMate/frontend-admin/src/App.vue) 拆成更清晰的 UI 结构件。
+
+## 2026-05-31 23:46:27 +08:00 | v0.0.49 | 补齐图谱产品化里的 PNG 导出与节点右键菜单
+### 任务内容
+- 继续在 [docs/planning/versions/v0.6.0-graph-product.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/versions/v0.6.0-graph-product.md) 范围内推进图谱工作区，把“导入导出入口”和“更顺手的画布交互”做得更像完整产品。
+- 基于 CodeGraph 梳理当前图谱页的导出链路和节点交互入口后，优先补 `PNG 导出` 与 `右键菜单` 这两个明显还欠一截的能力。
+### 完成结果
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 新增 PNG 导出逻辑，复用现有 SVG 渲染结果生成 PNG 文件
+  - 工具栏现在同时提供 PNG 和 SVG 两种导出入口
+  - 画布、节点和连线都接入右键菜单
+  - 节点右键菜单支持聚焦、复制、建立分组、设置连线起点、打开来源、删除
+  - 连线右键菜单支持直线/曲线切换和删除
+  - 画布空白处右键菜单支持快速新建节点和直接导出 PNG
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)，补充右键菜单与菜单项样式。
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 鍒拌繖涓€姝ワ紝鍥捐氨椤靛凡缁忔洿鎺ヨ繎 `v0.6.0` 鏂囨。閲岃鐨勨€滈€傚悎闀挎湡鏁寸悊鐭ヨ瘑鈥濈殑宸ヤ綔鍖轰簡锛氬鍑轰笉鍐嶅彧鍓?SVG锛屽父鐢ㄨ妭鐐规搷浣滀篃涓嶅繀鍙嶅璺戝埌渚ц竟鏍忋€?- 涓嬩竴姝ユ渶椤虹殑鏄户缁ˉ `v0.5.0` 閲岃繕鍋忓急鐨勪氦浜掗」锛屾瘮濡傛閫夛紱鎴栬€呯户缁妸鍙抽敭鑿滃崟鍜屾潵婧愪笂涓嬫枃鑱斿姩寰楁洿娣憋紝渚嬪浠庢潗鏂欒妭鐐瑰彸閿洿鎺ュ洖闃呰鍣ㄥ苟灏介噺淇濈暀涓婁笅鏂囥€?
-## 2026-05-31 23:32:28 +08:00 | v0.0.48 | 缁х画琛ラ綈鍥捐氨鑺傜偣鏉ユ簮鍥炵湅涓庤烦杞摼璺?### 浠诲姟鍐呭
-- 缁х画娌跨潃 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 鐨勫浘璋辨敹鏉熸柟鍚戯紝琛ュ己鑺傜偣璇︽儏閲岀殑鈥滄潵婧愪笂涓嬫枃鍥炵湅鈥濊兘鍔涖€?- 璁╁浘璋变腑鐨勬潵婧愯妭鐐逛笉鍙槸鏄剧ず鏉ユ簮鏍囩锛岃€屾槸鍙互鐩存帴鍥炲埌绗旇銆侀槄璇诲櫒鎴栧涔犻〉鏌ョ湅鍘熷涓婁笅鏂囥€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 鏂板鑺傜偣鏉ユ簮绫诲瀷鍒扮洰鏍囬〉闈㈢殑璺宠浆鏄犲皠
-  - 鑺傜偣璇︽儏闈㈡澘閲屾柊澧炩€滃洖鍒伴槄璇诲櫒 / 鍥炲埌绗旇 / 鍘诲涔犻〉鈥濆揩鎹峰叆鍙?  - 鏉ユ簮鏍囪瘑鐜板湪浼氭樉绀烘洿鍙嬪ソ鐨勬潵婧愮被鍨嬪悕绉帮紝鑰屼笉鏄彧鏄剧ず鍘熷 type
-  - 瀵规病鏈夋憳褰曞唴瀹逛絾瀛樺湪鏉ユ簮寮曠敤鐨勮妭鐐癸紝琛ュ厖浜嗏€滄潵婧愪笂涓嬫枃鈥濇彁绀烘枃妗堬紝鎻愰啋鐢ㄦ埛鍥炲師椤甸潰鏌ョ湅
-### 楠岃瘉缁撴灉
+### 后续影响
+- 到这一步，图谱页已经更接近 `v0.6.0` 文档里说的“适合长期整理知识”的工作区了：导出不再只剩 SVG，常用节点操作也不必反复跑到侧边栏。
+- 下一步最顺的是继续补 `v0.5.0` 里还偏弱的交互项，比如框选；或者继续把右键菜单和来源上下文联动得更深，例如从材料节点右键直接回阅读器并尽量保留上下文。
+
+## 2026-05-31 23:32:28 +08:00 | v0.0.48 | 继续补齐图谱节点来源回看与跳转链路
+### 任务内容
+- 继续沿着 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 的图谱收束方向，补强节点详情里的“来源上下文回看”能力。
+- 让图谱中的来源节点不只是显示来源标签，而是可以直接回到笔记、阅读器或复习页查看原始上下文。
+### 完成结果
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 新增节点来源类型到目标页面的跳转映射
+  - 节点详情面板里新增“回到阅读器 / 回到笔记 / 去复习页”快捷入口
+  - 来源标识现在会显示更友好的来源类型名称，而不是只显示原始 type
+  - 对没有摘录内容但存在来源引用的节点，补充了“来源上下文”提示文案，提醒用户回原页面查看
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 鐜板湪鍥捐氨鑺傜偣宸茬粡涓嶅彧鏄€滄壙杞芥潵婧愪俊鎭€濓紝鑰屾槸寮€濮嬬湡姝ｈ繘鍏モ€滃浘璋辨暣鐞?-> 鍥炲師濮嬩笂涓嬫枃 -> 鍐嶅洖鏉ョ户缁暣鐞嗏€濈殑寰€杩斿伐浣滄祦銆?- 涓嬩竴姝ユ渶椤虹殑鏄妸璺宠浆鍋氬緱鍐嶇簿涓€鐐癸紝渚嬪浠庡浘璋卞洖鍒扮瑪璁版椂鑷姩瀹氫綅鍒扮洰鏍?note锛屾垨鑰呭洖鍒伴槄璇诲櫒鏃跺甫涓婃洿鍏蜂綋鐨勬壒娉?椤电爜涓婁笅鏂囥€?
-## 2026-05-31 22:47:40 +08:00 | v0.0.47 | 缁х画琛ラ綈鍥捐氨鑺傜偣璇︽儏缁撴瀯鐨勬潵婧愰瑙堜笌灏哄棰勮
-### 浠诲姟鍐呭
-- 缁х画娌跨潃 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 鍜?[docs/planning/versions/v0.6.0-graph-product.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/versions/v0.6.0-graph-product.md) 鐨勬柟鍚戞敹鏉熷浘璋卞伐浣滃尯锛屾妸鈥滆妭鐐硅鎯呪€濅粠鍩虹缂栬緫鍐嶅線鍓嶆帹杩涗竴姝ャ€?- 浼樺厛琛ラ暱鏈熸暣鐞嗙煡璇嗘椂鏈€甯哥敤鐨勪袱涓粏鑺傦細鏉ユ簮鎽樺綍棰勮锛屼互鍙婅妭鐐瑰昂瀵搁璁俱€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 鑺傜偣璇︽儏闈㈡澘鏂板鈥滅揣鍑?/ 鏍囧噯 / 灞曞紑鈥濅笁妗ｅ昂瀵搁璁?  - 鑺傜偣璇︽儏闈㈡澘鏂板鑺傜偣瑙勬牸灞曠ず锛屼究浜庣悊瑙ｅ綋鍓嶈妭鐐瑰昂瀵?  - 褰撹妭鐐瑰甫鏈夋潵婧愪俊鎭椂锛屼細灞曠ず鏉ユ簮绫诲瀷/ID 鍜屾潵婧愭憳褰曢瑙?- 鏇存柊 [frontend-user/src/modules/graph/nodeAppearance.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/nodeAppearance.ts)锛岃ˉ鍏呰妭鐐瑰昂瀵搁璁惧畾涔夈€佸綋鍓嶅昂瀵稿垽鏂拰灏哄搴旂敤閫昏緫銆?- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛岃ˉ鍏呰妭鐐硅鎯呭尯鐨勫弻鍒楀厓淇℃伅甯冨眬鏍峰紡銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 现在图谱节点已经不只是“承载来源信息”，而是开始真正进入“图谱整理 -> 回原始上下文 -> 再回来继续整理”的往返工作流。
+- 下一步最顺的是把跳转做得再精一点，例如从图谱回到笔记时自动定位到目标 note，或者回到阅读器时带上更具体的批注/页码上下文。
+
+## 2026-05-31 22:47:40 +08:00 | v0.0.47 | 继续补齐图谱节点详情结构的来源预览与尺寸预设
+### 任务内容
+- 继续沿着 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 和 [docs/planning/versions/v0.6.0-graph-product.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/versions/v0.6.0-graph-product.md) 的方向收束图谱工作区，把“节点详情”从基础编辑再往前推进一步。
+- 优先补长期整理知识时最常用的两个细节：来源摘录预览，以及节点尺寸预设。
+### 完成结果
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 节点详情面板新增“紧凑 / 标准 / 展开”三档尺寸预设
+  - 节点详情面板新增节点规格展示，便于理解当前节点尺寸
+  - 当节点带有来源信息时，会展示来源类型/ID 和来源摘录预览
+- 更新 [frontend-user/src/modules/graph/nodeAppearance.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/nodeAppearance.ts)，补充节点尺寸预设定义、当前尺寸判断和尺寸应用逻辑。
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)，补充节点详情区的双列元信息布局样式。
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 鐜板湪鍥捐氨鑺傜偣宸茬粡鏇存帴杩戔€滃彲闀挎湡缁存姢鐨勭煡璇嗗崟鍏冣€濓細涓嶄粎鑳藉啓鏍囬鍜屾牱寮忥紝杩樿兘鎵胯浇鏉ユ簮涓婁笅鏂囷紝骞跺揩閫熷垏鎹㈠睍绀哄瘑搴︺€?- 涓嬩竴姝ユ渶椤虹殑鏄户缁ˉ鑺傜偣璇︽儏閲岀殑鈥滄潵婧愯烦杞?/ 涓婁笅鏂囧洖鐪嬧€濊兘鍔涳紝鎴栬€呮妸灏哄棰勮鍜?AI 钀界偣棰勮鑱斿姩璧锋潵锛岃瀵煎叆鍚庣殑鑺傜偣鏇村鏄撳氨鍦版暣鐞嗐€?
-## 2026-05-31 22:36:02 +08:00 | v0.0.46 | 鎸夌増鏈鍒掕ˉ榻愬浘璋辫妭鐐硅鎯呬笌鍩虹鏍峰紡缂栬緫
-### 浠诲姟鍐呭
-- 渚濇嵁 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 褰撳墠搴斾紭鍏堟敹鏉?`v0.5.0 / v0.6.0` 鍥捐氨宸ヤ綔鍖虹殑瑕佹眰锛岀户缁ˉ榻愨€滆妭鐐硅鎯呯粨鏋勨€濆拰鈥滆妭鐐归鑹?鍩虹鏍峰紡缂栬緫鈥濊繖涓や釜浠嶇劧鍋忓急鐨勯獙鏀剁偣銆?- 淇濊瘉鍥捐氨鑺傜偣鐨勬牱寮忓拰璇︽儏 metadata 涓嶅彧鍋滅暀鍦ㄥ墠绔复鏃剁姸鎬侀噷锛岃€屾槸鑳借窡闅忎繚瀛樸€佸揩鐓у拰瀵煎嚭閾捐矾涓€璧风ǔ瀹氬瓨鍦ㄣ€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 鑺傜偣璇︽儏闈㈡澘鏂板鈥滆妭鐐圭瑪璁扳€濈紪杈戯紝鍐欏叆鑺傜偣 `metadata.detail`
-  - 鑺傜偣璇︽儏闈㈡澘鏂板棰滆壊鍒囨崲鍜屸€滈粯璁?/ 閲嶇偣 / 寮卞寲鈥濆己璋冩€佸垏鎹?  - 鍒嗙粍鍒楄〃鏀寔鐩存帴鏀瑰垎缁勬爣棰?  - 鐢诲竷涓婄殑鑺傜偣娓叉煋鍜?SVG 瀵煎嚭浼氫竴璧峰弽鏄犺妭鐐规牱寮?- 鏂板 [frontend-user/src/modules/graph/nodeAppearance.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/nodeAppearance.ts)锛岄泦涓皝瑁呭浘璋辫妭鐐规牱寮忚鍙栥€侀粯璁ゅ€笺€佹覆鏌?token 鍜?metadata 鍥炲啓閫昏緫锛岄伩鍏嶆牱寮忚鍒欐暎钀藉湪椤甸潰缁勪欢閲屻€?- 鏇存柊 [frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts) 鍜?[packages/graph-core/src/index.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/src/index.ts)锛屾妸鑺傜偣 `appearance/detail` 鐩稿叧绫诲瀷琛ユ垚鏄庣‘缁撴瀯锛岃€屼笉鍐嶅彧鏄澗鏁ｇ殑 `Record<string, unknown>`銆?- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛岃ˉ鍏呰妭鐐规牱寮忓垏鎹€佺揣鍑戝垎娈垫帶鍒跺拰鍒嗙粍鏍囬杈撳叆鐨勭晫闈㈡牱寮忋€?- 鏇存柊 [backend/internal/modules/graph/repository/document_repository_test.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/repository/document_repository_test.go)锛岃ˉ鍏呭浘璋辫妭鐐?metadata銆乼heme 鍜屾枃妗?metadata 鍦ㄦ寔涔呭寲鏋勫缓闃舵涓嶄細涓㈠け鐨勬祴璇曘€?### 楠岃瘉缁撴灉
+### 后续影响
+- 现在图谱节点已经更接近“可长期维护的知识单元”：不仅能写标题和样式，还能承载来源上下文，并快速切换展示密度。
+- 下一步最顺的是继续补节点详情里的“来源跳转 / 上下文回看”能力，或者把尺寸预设和 AI 落点预览联动起来，让导入后的节点更容易就地整理。
+
+## 2026-05-31 22:36:02 +08:00 | v0.0.46 | 按版本计划补齐图谱节点详情与基础样式编辑
+### 任务内容
+- 依据 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 当前应优先收束 `v0.5.0 / v0.6.0` 图谱工作区的要求，继续补齐“节点详情结构”和“节点颜色/基础样式编辑”这两个仍然偏弱的验收点。
+- 保证图谱节点的样式和详情 metadata 不只停留在前端临时状态里，而是能跟随保存、快照和导出链路一起稳定存在。
+### 完成结果
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 节点详情面板新增“节点笔记”编辑，写入节点 `metadata.detail`
+  - 节点详情面板新增颜色切换和“默认 / 重点 / 弱化”强调态切换
+  - 分组列表支持直接改分组标题
+  - 画布上的节点渲染和 SVG 导出会一起反映节点样式
+- 新增 [frontend-user/src/modules/graph/nodeAppearance.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/nodeAppearance.ts)，集中封装图谱节点样式读取、默认值、渲染 token 和 metadata 回写逻辑，避免样式规则散落在页面组件里。
+- 更新 [frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts) 和 [packages/graph-core/src/index.ts](/E:/Code/1108026_rust_go/StudyMate/packages/graph-core/src/index.ts)，把节点 `appearance/detail` 相关类型补成明确结构，而不再只是松散的 `Record<string, unknown>`。
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)，补充节点样式切换、紧凑分段控制和分组标题输入的界面样式。
+- 更新 [backend/internal/modules/graph/repository/document_repository_test.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/repository/document_repository_test.go)，补充图谱节点 metadata、theme 和文档 metadata 在持久化构建阶段不会丢失的测试。
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
 - `go test ./...`
-### 鍚庣画褰卞搷
-- 杩欎竴姝ヨ鍥捐氨椤垫洿璐磋繎 `v0.6.0 鍥捐氨浜у搧鍖栫増` 鐨勯獙鏀跺彛寰勶細鐜板湪鑺傜偣涓嶅彧鏄€滆兘鎷栥€佽兘杩炩€濓紝涔熷紑濮嬪叿澶囬暱鏈熸暣鐞嗙煡璇嗘椂闇€瑕佺殑鍩虹琛ㄨ揪鑳藉姏銆?- 涓嬩竴姝ユ渶椤虹殑鏄妸鑺傜偣绗旇鍜屽浘璋变晶杈归潰鏉跨户缁線鈥滆妭鐐硅鎯呯粨鏋勨€濇帹杩涳紝渚嬪琛ユ潵婧愭憳褰曢瑙堛€佽妭鐐瑰昂瀵?甯冨眬棰勮锛屾垨鑰呮妸 AI 钀界偣棰勮鐩存帴鎺ュ埌鑺傜偣璇︽儏缂栬緫娴侀噷銆?
-## 2026-05-31 22:24:41 +08:00 | v0.0.45 | 鎸夌増鏈鍒掓敹鏉熷浘璋卞伐浣滃尯瀹氫綅棰勮骞朵慨姝ｉ儴鍒嗘帴鍙楄涔?### 浠诲姟鍐呭
-- 渚濇嵁 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 褰撳墠鈥滀紭鍏堢ǔ浣忓浘璋卞伐浣滃尯鈥濈殑鏂瑰悜锛岀户缁妸 `/ai -> graph` 鐨勫畾浣嶉瑙堣ˉ鍒板彲鐢ㄧ姸鎬併€?- 淇鍥捐氨鍙樻洿鑽夌鈥滈儴鍒嗘帴鍙椻€濇椂鐨勫悗绔涔夛紝閬垮厤鏈€夎妭鐐硅鏁存潯鑽夌纭鍚庣洿鎺ヤ涪澶便€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 鏀寔閫氳繃鏌ヨ鍙傛暟鐩存帴鎵撳紑鐩爣 graph
-  - 鏀寔鑷姩骞崇Щ鍒伴璁¤惤鐐瑰尯鍩熷苟鏄剧ず鐭殏楂樹寒妗?  - 棰勮缁撴潫鍚庤嚜鍔ㄦ竻鐞嗘煡璇㈠弬鏁?- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛岃 AI 鑽夌涓殑鍊欓€夎妭鐐瑰彲浠ヤ竴閿烦杞埌鐩爣鍥捐氨鏌ョ湅钀界偣銆?- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛岃ˉ鍏呭浘璋辫惤鐐归珮浜鏍峰紡銆?- 鏇存柊鍚庣鍥捐氨鑽夌搴旂敤閫昏緫锛?  - [backend/internal/modules/graph/service/helpers.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/service/helpers.go)
+### 后续影响
+- 这一步让图谱页更贴近 `v0.6.0 图谱产品化版` 的验收口径：现在节点不只是“能拖、能连”，也开始具备长期整理知识时需要的基础表达能力。
+- 下一步最顺的是把节点笔记和图谱侧边面板继续往“节点详情结构”推进，例如补来源摘录预览、节点尺寸/布局预设，或者把 AI 落点预览直接接到节点详情编辑流里。
+
+## 2026-05-31 22:24:41 +08:00 | v0.0.45 | 按版本计划收束图谱工作区定位预览并修正部分接受语义
+### 任务内容
+- 依据 [docs/planning/VERSION_PLAN.md](/E:/Code/1108026_rust_go/StudyMate/docs/planning/VERSION_PLAN.md) 当前“优先稳住图谱工作区”的方向，继续把 `/ai -> graph` 的定位预览补到可用状态。
+- 修正图谱变更草稿“部分接受”时的后端语义，避免未选节点被整条草稿确认后直接丢失。
+### 完成结果
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 支持通过查询参数直接打开目标 graph
+  - 支持自动平移到预计落点区域并显示短暂高亮框
+  - 预览结束后自动清理查询参数
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)，让 AI 草稿中的候选节点可以一键跳转到目标图谱查看落点。
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)，补充图谱落点高亮框样式。
+- 更新后端图谱草稿应用逻辑：
+  - [backend/internal/modules/graph/service/helpers.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/service/helpers.go)
   - [backend/internal/modules/graph/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/service/service.go)
   - [backend/internal/modules/ai/repository/document_repository.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/repository/document_repository.go)
   - [backend/internal/modules/ai/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/service/service.go)
-  鐜板湪鍥捐氨鑽夌鎸夎妭鐐圭瓫閫夐儴鍒嗘帴鍙楀悗锛屼細鎶婃湭閫夎妭鐐逛繚鐣欏湪鑽夌閲岋紝鑰屼笉鏄妸鏁存潯鑽夌鐩存帴鏍囦负宸茬‘璁ゃ€?### 楠岃瘉缁撴灉
+  现在图谱草稿按节点筛选部分接受后，会把未选节点保留在草稿里，而不是把整条草稿直接标为已确认。
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 杩欎竴姝ユ洿璐村悎鐗堟湰璁″垝閲?`v0.5.0 / v0.6.0` 鐨勫浘璋卞伐浣滃尯鏀舵潫鐩爣锛氫笉鏄户缁í鍚戞墿鍔熻兘锛岃€屾槸鎶婂浘璋辩紪杈戝拰棰勮閾捐矾鍋氭墡瀹炪€?- 涓嬩竴姝ユ渶椤虹殑鏄妸楂樹寒棰勮鍖哄煙鍜屽浘璋变晶杈瑰睘鎬ч潰鏉胯繛璧锋潵锛岃鐢ㄦ埛鍒颁簡 graph 椤靛悗鍙互鐩存帴鍥寸粫璇ュ尯鍩熺户缁紪杈戯紝鑰屼笉鍙槸鐪嬩竴鐪笺€?
-## 2026-05-31 21:27:18 +08:00 | v0.0.44 | 鎵撻€?/ai 鍒板浘璋遍〉鐨勮惤鐐硅烦杞笌楂樹寒棰勮
-### 浠诲姟鍐呭
-- 璁?`/ai` 閲岀殑鍥捐氨鍙樻洿鍊欓€夎妭鐐逛笉姝㈣兘鐪嬪埌棰勮钀界偣锛岃繕鑳戒竴閿烦鍘荤洰鏍囧浘璋辨煡鐪嬭鍖哄煙銆?- 璁╁浘璋遍〉鏀跺埌瀹氫綅鍙傛暟鍚庤嚜鍔ㄥ垏鎹㈠埌鐩爣 graph銆佸钩绉诲埌棰勮鍖哄煙骞剁粰鍑虹煭鏆傞珮浜€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛?  - 鏂板鍥捐氨钀界偣璺宠浆閾炬帴鐢熸垚閫昏緫
-  - 鍦ㄥ€欓€夎妭鐐瑰厓淇℃伅閲岃ˉ涓娾€滃幓鐩爣鍥捐氨鏌ョ湅钀界偣鈥濆叆鍙?- 鏇存柊 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)锛?  - 璇诲彇 `graphId / focusX / focusY / focusWidth / focusHeight / focusLabel` 鏌ヨ鍙傛暟
-  - 鍒濆鍔犺浇鏃朵紭鍏堟墦寮€鐩爣 graph
-  - 鑷姩骞崇Щ瑙嗛噹鍒版寚瀹氬尯鍩燂紝骞舵覆鏌撶煭鏆傞珮浜
-  - 楂樹寒缁撴潫鍚庤嚜鍔ㄦ竻鐞嗘煡璇㈠弬鏁?- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛岃ˉ鍏呭浘璋辫惤鐐归珮浜牱寮忎笌鍔ㄦ晥銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 这一步更贴合版本计划里 `v0.5.0 / v0.6.0` 的图谱工作区收束目标：不是继续横向扩功能，而是把图谱编辑和预览链路做扎实。
+- 下一步最顺的是把高亮预览区域和图谱侧边属性面板连起来，让用户到了 graph 页后可以直接围绕该区域继续编辑，而不只是看一眼。
+
+## 2026-05-31 21:27:18 +08:00 | v0.0.44 | 打通 /ai 到图谱页的落点跳转与高亮预览
+### 任务内容
+- 让 `/ai` 里的图谱变更候选节点不止能看到预计落点，还能一键跳去目标图谱查看该区域。
+- 让图谱页收到定位参数后自动切换到目标 graph、平移到预计区域并给出短暂高亮。
+### 完成结果
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 新增图谱落点跳转链接生成逻辑
+  - 在候选节点元信息里补上“去目标图谱查看落点”入口
+- 更新 [frontend-user/src/modules/graph/GraphWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/graph/GraphWorkspacePage.tsx)：
+  - 读取 `graphId / focusX / focusY / focusWidth / focusHeight / focusLabel` 查询参数
+  - 初始加载时优先打开目标 graph
+  - 自动平移视野到指定区域，并渲染短暂高亮框
+  - 高亮结束后自动清理查询参数
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)，补充图谱落点高亮样式与动效。
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 鐜板湪 `/ai -> graph` 宸茬粡涓嶆槸鎶借薄鐨勨€滃幓鐪嬬湅鈥濓紝鑰屾槸鑳界洿鎺ユ妸浜洪€佸埌棰勮鍖哄煙锛岀‘璁や笌鍚庣画缂栬緫鐨勯摼璺『浜嗗緢澶氥€?- 涓嬩竴姝ュ彲浠ョ户缁ˉ鈥滀粠楂樹寒鍖哄煙鍙嶅悜鎺ュ彈 / 鎷掔粷鑺傜偣鈥濇垨鑰呪€滃湪鍥捐氨椤电洿鎺ュ畬鎴愬悎骞跺缓璁€濓紝鎶婁袱杈瑰伐浣滃彴鐪熸杩炴垚涓€浣撱€?
-## 2026-05-31 21:11:29 +08:00 | v0.0.43 | 涓哄浘璋卞彉鏇寸‘璁よˉ棰勮钀界偣涓庣浉浼艰妭鐐规彁绀?### 浠诲姟鍐呭
-- 缁х画鎻愬崌 `/ai` 鍥捐氨鍙樻洿纭鏃剁殑绌洪棿鎰燂紝璁╁€欓€夎妭鐐逛笉鍙槸鈥滄湁鍚嶅瓧鈥濓紝鑰屾槸鑳芥彁鍓嶇湅鍒板ぇ鑷翠細钀藉埌鍥捐氨鍝竴鍧椼€?- 琛ュ厖涓庣洰鏍囧浘璋变腑宸叉湁鑺傜偣鐨勭浉浼兼彁绀猴紝鍑忓皯纭鏃剁殑绾枃鏈垽鏂礋鎷呫€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛?  - 涓哄浘璋卞彉鏇村€欓€夎妭鐐硅ˉ鍏呴璁″啓鍏ヤ綅缃帹绠?  - 涓烘瘡涓€欓€夎妭鐐硅ˉ鍏呪€滃乏渚?/ 涓儴 / 鍙充晶鈥濊惤鐐瑰尯鍩熸彁绀?  - 鍩轰簬鐩爣鍥捐氨褰撳墠鑺傜偣鏍囬锛岀粰鍑烘渶澶?3 涓浉浼煎凡鏈夎妭鐐规彁绀?- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛岃ˉ鍏呭€欓€夎妭鐐瑰厓淇℃伅鏍峰紡銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 现在 `/ai -> graph` 已经不是抽象的“去看看”，而是能直接把人送到预计区域，确认与后续编辑的链路顺了很多。
+- 下一步可以继续补“从高亮区域反向接受 / 拒绝节点”或者“在图谱页直接完成合并建议”，把两边工作台真正连成一体。
+
+## 2026-05-31 21:11:29 +08:00 | v0.0.43 | 为图谱变更确认补预计落点与相似节点提示
+### 任务内容
+- 继续提升 `/ai` 图谱变更确认时的空间感，让候选节点不只是“有名字”，而是能提前看到大致会落到图谱哪一块。
+- 补充与目标图谱中已有节点的相似提示，减少确认时的纯文本判断负担。
+### 完成结果
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 为图谱变更候选节点补充预计写入位置推算
+  - 为每个候选节点补充“左侧 / 中部 / 右侧”落点区域提示
+  - 基于目标图谱当前节点标题，给出最多 3 个相似已有节点提示
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)，补充候选节点元信息样式。
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- `/ai` 閲岀殑鍥捐氨鍙樻洿棰勮宸茬粡浠庘€滅湅鍊欓€夎妭鐐光€濆崌绾ф垚鈥滅湅鍊欓€夎妭鐐逛細钀藉埌鍝噷銆佸拰璋佹挒杞︹€濓紝纭浣撻獙鏇存帴杩戠湡瀹炵紪杈戝墠瀹￠槄銆?- 涓嬩竴姝ュ彲浠ョ户缁ˉ鈥滀粠棰勮鐩存帴璺冲幓鐩爣鍥捐氨瀹氫綅鍖哄煙鈥濆拰鈥滅浉浼艰妭鐐圭殑鍚堝苟寤鸿鈥濓紝鎶婄‘璁ゅ姩浣滃拰鍚庣画缂栬緫杩炶捣鏉ャ€?
-## 2026-05-31 20:13:09 +08:00 | v0.0.42 | 涓哄浘璋卞彉鏇寸‘璁よˉ鑺傜偣绾у嬀閫変笌鐩爣鍥捐氨鍐茬獊鎻愮ず
-### 浠诲姟鍐呭
-- 鎶?`/ai` 涓浘璋卞彉鏇磋崏绋跨殑纭绮掑害缁х画涓嬫帰鍒拌妭鐐圭骇锛岃€屼笉鏄彧鎸夋暣鏉¤崏绋跨‘璁ゃ€?- 鍦ㄧ‘璁ゅ墠琛ョ洰鏍囧浘璋辩殑鍚屽悕鑺傜偣鍐茬獊鎻愮ず锛屽府鍔╃敤鎴峰垽鏂摢浜涘€欓€夎妭鐐瑰彲鑳戒細閲嶅銆?### 瀹屾垚缁撴灉
-- 鎵╁睍鍚庣鍥捐氨纭璇锋眰锛?  - [backend/internal/modules/graph/dto/graph.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/dto/graph.go)
+### 后续影响
+- `/ai` 里的图谱变更预览已经从“看候选节点”升级成“看候选节点会落到哪里、和谁撞车”，确认体验更接近真实编辑前审阅。
+- 下一步可以继续补“从预览直接跳去目标图谱定位区域”和“相似节点的合并建议”，把确认动作和后续编辑连起来。
+
+## 2026-05-31 20:13:09 +08:00 | v0.0.42 | 为图谱变更确认补节点级勾选与目标图谱冲突提示
+### 任务内容
+- 把 `/ai` 中图谱变更草稿的确认粒度继续下探到节点级，而不是只按整条草稿确认。
+- 在确认前补目标图谱的同名节点冲突提示，帮助用户判断哪些候选节点可能会重复。
+### 完成结果
+- 扩展后端图谱确认请求：
+  - [backend/internal/modules/graph/dto/graph.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/dto/graph.go)
   - [backend/internal/modules/graph/service/helpers.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/service/helpers.go)
   - [backend/internal/modules/graph/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/service/service.go)
-  鐜板湪 `POST /api/v1/graphs/:id/ai/commit-changes` 鏀寔鎸?`draftId -> nodeIds` 浼犲叆鑺傜偣閫夋嫨锛屽悗绔細鑷姩杩囨护鏈€夎妭鐐瑰強鍏跺け鏁堣繛绾裤€?- 鏇存柊 [backend/internal/modules/graph/service/helpers_test.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/service/helpers_test.go)锛岃ˉ涓婅妭鐐硅繃婊ゅ悗鐨勫簲鐢ㄦ祴璇曘€?- 鏇存柊鍓嶇锛?  - [frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts) 鏂板甯?`nodeSelections` 鐨勫浘璋辩‘璁よ姹?  - [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx) 涓烘瘡鏉″浘璋卞彉鏇磋崏绋胯ˉ鑺傜偣绾у閫夋銆佺洰鏍囧浘璋卞悓鍚嶅啿绐佹彁绀猴紝骞跺湪纭鏃跺彧鎻愪氦淇濈暀鐨勮妭鐐?  - [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css) 琛ュ厖鑺傜偣绾у嬀閫夋牱寮?### 楠岃瘉缁撴灉
+  现在 `POST /api/v1/graphs/:id/ai/commit-changes` 支持按 `draftId -> nodeIds` 传入节点选择，后端会自动过滤未选节点及其失效连线。
+- 更新 [backend/internal/modules/graph/service/helpers_test.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/service/helpers_test.go)，补上节点过滤后的应用测试。
+- 更新前端：
+  - [frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts) 新增带 `nodeSelections` 的图谱确认请求
+  - [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx) 为每条图谱变更草稿补节点级复选框、目标图谱同名冲突提示，并在确认时只提交保留的节点
+  - [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css) 补充节点级勾选样式
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- 鍥捐氨鍙樻洿纭娴佺幇鍦ㄥ凡缁忚兘鍋氬埌鈥滃厛鐪嬪啿绐侊紝鍐嶆寜鑺傜偣瑁佸壀鍚庡啓鍏モ€濓紝鏄庢樉鏇存帴杩戠湡姝ｅ彲鐢ㄧ殑 AI 瀹℃牳鍙般€?- 涓嬩竴姝ュ彲浠ョ户缁ˉ鈥滆妭鐐瑰啓鍏ュ墠鐨勫畾浣嶉瑙堚€濆拰鈥滅浉浼艰€岄潪鍚屽悕鐨勬蹇垫彁閱掆€濓紝鎶婄‘璁よ川閲忓啀寰€鍓嶆帹涓€姝ャ€?
-## 2026-05-31 20:07:20 +08:00 | v0.0.41 | 涓?/ai 鍥捐氨鍙樻洿鑽夌琛ュ樊寮傞瑙堜笌鍗曟潯鍕鹃€夌‘璁?### 浠诲姟鍐呭
-- 缁х画鎻愬崌 `/ai` 鐨勭‘璁や綋楠岋紝涓嶅啀鍙敮鎸佲€滄暣鎵瑰啓鍏ュ浘璋扁€濓紝鑰屾槸鍏佽鎸夋潯鍕鹃€夊緟纭鐨勫浘璋卞彉鏇磋崏绋裤€?- 涓?`graph_change` 鑽夌琛ヨ妭鐐?/ 杩炵嚎鐨勫樊寮傞瑙堬紝闄嶄綆纭鍓嶇殑淇℃伅涓嶉€忔槑鎰熴€?### 瀹屾垚缁撴灉
-- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛?  - 涓哄浘璋卞彉鏇磋崏绋挎柊澧炲崟鏉″嬀閫夌姸鎬?  - 鏀寔鈥滃叏閫夊綋鍓嶇瓫閫夌粨鏋?/ 娓呯┖閫夋嫨鈥?  - 鍥捐氨纭鍔ㄤ綔鍙彁浜ゅ綋鍓嶉€変腑鐨勮崏绋?  - 涓烘瘡鏉?`graph_change` 鑽夌灞曠ず鍊欓€夎妭鐐瑰垪琛ㄤ笌鍊欓€夎繛绾垮垪琛?- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛岃ˉ鍏呭浘璋卞彉鏇撮瑙堛€佸嬀閫夎鍜屽弻鍒楀樊寮傚垪琛ㄧ殑鏍峰紡銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 图谱变更确认流现在已经能做到“先看冲突，再按节点裁剪后写入”，明显更接近真正可用的 AI 审核台。
+- 下一步可以继续补“节点写入前的定位预览”和“相似而非同名的概念提醒”，把确认质量再往前推一步。
+
+## 2026-05-31 20:07:20 +08:00 | v0.0.41 | 为 /ai 图谱变更草稿补差异预览与单条勾选确认
+### 任务内容
+- 继续提升 `/ai` 的确认体验，不再只支持“整批写入图谱”，而是允许按条勾选待确认的图谱变更草稿。
+- 为 `graph_change` 草稿补节点 / 连线的差异预览，降低确认前的信息不透明感。
+### 完成结果
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)：
+  - 为图谱变更草稿新增单条勾选状态
+  - 支持“全选当前筛选结果 / 清空选择”
+  - 图谱确认动作只提交当前选中的草稿
+  - 为每条 `graph_change` 草稿展示候选节点列表与候选连线列表
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)，补充图谱变更预览、勾选行和双列差异列表的样式。
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- `/ai` 閲岀殑鍥捐氨纭娴佸凡缁忎粠鈥滆兘鎵归噺纭鈥濇彁鍗囧埌鈥滆兘閫愭潯瀹￠槄鍚庣‘璁も€濓紝鏇存帴杩戠湡瀹炵敓浜х幆澧冧笅鐨?AI 瀹℃牳宸ヤ綔鍙般€?- 涓嬩竴姝ュ彲浠ョ户缁ˉ鈥滃浘璋卞彉鏇撮瑙堜腑鐨勮妭鐐圭骇鍕鹃€夆€濆拰鈥滅‘璁ゅ墠鐩爣鍥捐氨鍐茬獊鎻愮ず鈥濓紝璁╃‘璁ょ矑搴﹀啀缁嗕竴灞傘€?
-## 2026-05-31 19:28:14 +08:00 | v0.0.40 | 鎶?/ai 琛ユ垚鑽夌绛涢€変笌鍥捐氨鍙樻洿纭宸ヤ綔鍙?### 浠诲姟鍐呭
-- 缁х画寮哄寲 `/ai` 宸ヤ綔鍙帮紝琛ヤ笂鎸夋潵婧?/ 鐘舵€佺瓫閫夎崏绋跨殑鑳藉姏锛岃寰呯‘璁ょ粨鏋滀笉鍐嶅彧鑳芥暣鎵规煡鐪嬨€?- 鎶?`note -> graph` 涓?`pdf annotations -> graph` 鐨勫緟纭鍙樻洿鎺ュ叆鍚屼竴濂?`ai_drafts` 鏈哄埗锛屽苟鍏佽鍦?`/ai` 閲岀洿鎺ョ‘璁ゅ啓鍏ョ洰鏍囧浘璋便€?### 瀹屾垚缁撴灉
-- 鎵╁睍鍚庣 AI 鑽夌妯″瀷涓庝粨鍌細
+### 后续影响
+- `/ai` 里的图谱确认流已经从“能批量确认”提升到“能逐条审阅后确认”，更接近真实生产环境下的 AI 审核工作台。
+- 下一步可以继续补“图谱变更预览中的节点级勾选”和“确认前目标图谱冲突提示”，让确认粒度再细一层。
+
+## 2026-05-31 19:28:14 +08:00 | v0.0.40 | 把 /ai 补成草稿筛选与图谱变更确认工作台
+### 任务内容
+- 继续强化 `/ai` 工作台，补上按来源 / 状态筛选草稿的能力，让待确认结果不再只能整批查看。
+- 把 `note -> graph` 与 `pdf annotations -> graph` 的待确认变更接入同一套 `ai_drafts` 机制，并允许在 `/ai` 里直接确认写入目标图谱。
+### 完成结果
+- 扩展后端 AI 草稿模型与仓储：
   - [backend/internal/modules/ai/dto/ai.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/dto/ai.go)
   - [backend/internal/modules/ai/repository/document_repository.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/repository/document_repository.go)
   - [backend/internal/modules/ai/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/service/service.go)
-  鐜板湪鏀寔 `metadata` 鎸佷箙鍖栥€佹寜 `draftIds` 璇诲彇鑽夌銆佽褰?`graph_change` 绫诲瀷鑽夌銆?- 鏂板绗旇 / 闃呰鍣ㄧ敓鎴愬浘璋卞彉鏇磋崏绋胯兘鍔涳細
+  现在支持 `metadata` 持久化、按 `draftIds` 读取草稿、记录 `graph_change` 类型草稿。
+- 新增笔记 / 阅读器生成图谱变更草稿能力：
   - [backend/internal/modules/note/service/graph_drafts.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/service/graph_drafts.go)
   - [backend/internal/modules/reader/service/graph_drafts.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/reader/service/graph_drafts.go)
-  - 鏂版帴鍙ｏ細
+  - 新接口：
     - `POST /api/v1/notes/:id/ai/generate-graph-drafts`
     - `POST /api/v1/materials/:id/reader/annotations/generate-graph-drafts`
-- 鏂板鍥捐氨鍙樻洿纭鎺ュ彛 `POST /api/v1/graphs/:id/ai/commit-changes`锛屽苟鍦?[backend/internal/modules/graph/service/helpers.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/service/helpers.go) 瀹炵幇鑽夌搴旂敤銆佽妭鐐?杩炵嚎 ID 閲嶆槧灏勪笌杩藉姞鍐欏叆銆?- 鏇存柊鍓嶇锛?  - [frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts) 澧炲姞鍥捐氨鍙樻洿鐩稿叧鎺ュ彛涓?`AiDraftPayload.metadata`
-  - [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx) 涓殑 `/ai` 椤甸潰鏀寔鏉ユ簮 / 鐘舵€佺瓫閫夈€佸崱鐗囪崏绋垮啓 deck銆佸浘璋卞彉鏇村啓 graph锛涚瑪璁伴〉鍜岄槄璇诲櫒椤典篃琛ヤ簡鈥滅敓鎴愬浘璋卞彉鏇粹€濆叆鍙?  - [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css) 琛ヤ簡 AI 绛涢€夐潰鏉挎牱寮?### 楠岃瘉缁撴灉
+- 新增图谱变更确认接口 `POST /api/v1/graphs/:id/ai/commit-changes`，并在 [backend/internal/modules/graph/service/helpers.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/service/helpers.go) 实现草稿应用、节点/连线 ID 重映射与追加写入。
+- 更新前端：
+  - [frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts) 增加图谱变更相关接口与 `AiDraftPayload.metadata`
+  - [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx) 中的 `/ai` 页面支持来源 / 状态筛选、卡片草稿写 deck、图谱变更写 graph；笔记页和阅读器页也补了“生成图谱变更”入口
+  - [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css) 补了 AI 筛选面板样式
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- `/ai` 鐜板湪宸茬粡鑳界粺涓€鎵挎帴涓ょ被纭娴侊細`card_draft -> deck/card` 鍜?`graph_change -> graph`锛屾洿鎺ヨ繎 1.0 閲屸€滃彲瀹￠槄銆佸彲纭銆佸彲杩借釜鈥濈殑 AI 宸ヤ綔鍙般€?- 涓嬩竴姝ュ彲浠ョ户缁ˉ涓ゅ潡楂樹环鍊艰兘鍔涳細涓€鏄负鍥捐氨鍙樻洿澧炲姞棰勮宸紓鍜屽崟鏉″嬀閫夌‘璁わ紱浜屾槸鎶?graph -> note / review 鐨勫弽鍚戝缓璁篃鎺ヨ繘鍚屼竴濂楄崏绋挎睜銆?
-## 2026-05-31 19:10:23 +08:00 | v0.0.39 | 璁?AI 宸ヤ綔鍙版敮鎸佺洿鎺ョ‘璁よ崏绋垮苟鍐欏叆 deck
-### 浠诲姟鍐呭
-- 鎶?`/ai` 浠庡彧璇诲巻鍙查〉鎺ㄨ繘鎴愬彲鎵ц宸ヤ綔鍙帮紝璁╁緟纭鑽夌鍙互鐩存帴閫夋嫨鐩爣 deck 骞跺啓鍏ュ涔犵郴缁熴€?- 琛ラ綈鑽夌鏉ユ簮璺宠浆鍜屽鎴风 `draftId` 閫忎紶锛岄伩鍏嶇‘璁ゅ姩浣滀涪澶辫崏绋垮叧鑱斻€?### 瀹屾垚缁撴灉
-- 鎵╁睍 [frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts)锛岃 `bulkCreateDeckCards` 鏄庣‘鏀寔 `draftId`锛屼笌鍚庣鑽夌纭閾捐矾瀵归綈銆?- 鏇存柊 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx) 涓殑 `AiPage`锛?  - 鏂板 deck 鍒楄〃鍔犺浇涓庨粯璁ょ洰鏍囬€夋嫨
-  - 鏀寔鎶?`pending` 鑽夌涓€閿啓鍏ュ涔犵郴缁?  - 鍐欏叆鍚庤嚜鍔ㄥ埛鏂?AI 浠诲姟銆佽崏绋垮拰鐢ㄩ噺鎽樿
-  - 涓哄浘璋?/ 绗旇 / 闃呰鍣ㄨ崏绋胯ˉ鍏呪€滄墦寮€鏉ユ簮宸ヤ綔鍙扳€濊烦杞?- 鏇存柊 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)锛岃ˉ鍏?AI 宸ヤ綔鍙扮‘璁ら潰鏉跨殑甯冨眬鏍峰紡銆?### 楠岃瘉缁撴灉
+### 后续影响
+- `/ai` 现在已经能统一承接两类确认流：`card_draft -> deck/card` 和 `graph_change -> graph`，更接近 1.0 里“可审阅、可确认、可追踪”的 AI 工作台。
+- 下一步可以继续补两块高价值能力：一是为图谱变更增加预览差异和单条勾选确认；二是把 graph -> note / review 的反向建议也接进同一套草稿池。
+
+## 2026-05-31 19:10:23 +08:00 | v0.0.39 | 让 AI 工作台支持直接确认草稿并写入 deck
+### 任务内容
+- 把 `/ai` 从只读历史页推进成可执行工作台，让待确认草稿可以直接选择目标 deck 并写入复习系统。
+- 补齐草稿来源跳转和客户端 `draftId` 透传，避免确认动作丢失草稿关联。
+### 完成结果
+- 扩展 [frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts)，让 `bulkCreateDeckCards` 明确支持 `draftId`，与后端草稿确认链路对齐。
+- 更新 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx) 中的 `AiPage`：
+  - 新增 deck 列表加载与默认目标选择
+  - 支持把 `pending` 草稿一键写入复习系统
+  - 写入后自动刷新 AI 任务、草稿和用量摘要
+  - 为图谱 / 笔记 / 阅读器草稿补充“打开来源工作台”跳转
+- 更新 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)，补充 AI 工作台确认面板的布局样式。
+### 验证结果
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
-### 鍚庣画褰卞搷
-- `/ai` 鐜板湪宸茬粡浠庘€滅湅缁撴灉鈥濊繘鍏モ€滃鐞嗙粨鏋溾€濋樁娈碉紝寰呯‘璁よ崏绋垮彲浠ョ洿鎺ヨ惤鍒?deck锛宍Phase 7 -> Phase 6` 鐨勫崗鍚屾洿椤轰簡銆?- 涓嬩竴姝ュ彲浠ョ户缁仛涓や欢楂樹环鍊间簨鎯咃細涓€鏄敮鎸佸湪 `/ai` 閲屾寜鏉ユ簮銆佺姸鎬佺瓫閫夎崏绋匡紱浜屾槸鎶?`note/pdf -> graph` 鐨勫緟纭鍙樻洿涔熷苟鍏ュ悓涓€濂?AI 宸ヤ綔鍙般€?
-## 2026-05-31 16:48:56 +08:00 | v0.0.38 | 鎸佷箙鍖?AI 寰呯‘璁よ崏绋垮苟鎵撻€氱‘璁ゅ悗鐘舵€佸洖鍐?### 浠诲姟鍐呭
-- 鎶婁笂涓€杞殑 AI 浠诲姟璁板綍缁х画鎺ㄨ繘鍒?`ai_drafts` 鎸佷箙鍖栵紝璁╄崏绋跨粨鏋滅湡姝ｅ彲鍥炵湅锛岃€屼笉鏄彧鐣欎笅浠诲姟澹炽€?- 璁╄崏绋垮湪鍐欏叆 deck 鍚庡洖鍐欎负宸茬‘璁ょ姸鎬侊紝閬垮厤 AI 宸ヤ綔鍙版案杩滃爢绉棫鑽夌銆?### 瀹屾垚缁撴灉
-- 鏂板 Mongo 鑽夌浠撳偍 [backend/internal/modules/ai/repository/document_repository.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/repository/document_repository.go)锛屽皢 AI 鍗＄墖鑽夌鎸夊崟鏉℃枃妗ｅ啓鍏?`ai_drafts`銆?- 鎵╁睍 [backend/internal/modules/ai/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/service/service.go)锛屾柊澧烇細
+### 后续影响
+- `/ai` 现在已经从“看结果”进入“处理结果”阶段，待确认草稿可以直接落到 deck，`Phase 7 -> Phase 6` 的协同更顺了。
+- 下一步可以继续做两件高价值事情：一是支持在 `/ai` 里按来源、状态筛选草稿；二是把 `note/pdf -> graph` 的待确认变更也并入同一套 AI 工作台。
+
+## 2026-05-31 16:48:56 +08:00 | v0.0.38 | 持久化 AI 待确认草稿并打通确认后状态回写
+### 任务内容
+- 把上一轮的 AI 任务记录继续推进到 `ai_drafts` 持久化，让草稿结果真正可回看，而不是只留下任务壳。
+- 让草稿在写入 deck 后回写为已确认状态，避免 AI 工作台永远堆积旧草稿。
+### 完成结果
+- 新增 Mongo 草稿仓储 [backend/internal/modules/ai/repository/document_repository.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/repository/document_repository.go)，将 AI 卡片草稿按单条文档写入 `ai_drafts`。
+- 扩展 [backend/internal/modules/ai/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/service/service.go)，新增：
   - `ListDrafts`
   - `RecordNoteCardDrafts`
   - `RecordReaderCardDrafts`
   - `RecordGraphCardDrafts`
   - `ConfirmDrafts`
-- 鏂板鎺ュ彛锛?  - `GET /api/v1/ai/drafts`
-- 鎵╁睍鍥捐氨銆佺瑪璁般€丳DF 鎵规敞鑽夌鐢熸垚閾捐矾锛岃繑鍥炲彲杩借釜鐨?`draftId`锛涘搴旂‘璁ゅ啓鍗℃椂锛岄€氳繃 [backend/internal/modules/card/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/card/service/service.go) 灏嗚崏绋挎爣璁颁负 `confirmed`銆?- 鍓嶅彴 AI 宸ヤ綔鍙拌ˉ涓娾€滄渶杩?AI 鑽夌鈥濋潰鏉匡紝骞跺睍绀哄緟纭鏁伴噺銆佽崏绋跨姸鎬佷笌鍐呭棰勮锛涚浉鍏虫敼鍔ㄥ湪 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)銆乕frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts)銆乕frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)銆?### 楠岃瘉缁撴灉
+- 新增接口：
+  - `GET /api/v1/ai/drafts`
+- 扩展图谱、笔记、PDF 批注草稿生成链路，返回可追踪的 `draftId`；对应确认写卡时，通过 [backend/internal/modules/card/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/card/service/service.go) 将草稿标记为 `confirmed`。
+- 前台 AI 工作台补上“最近 AI 草稿”面板，并展示待确认数量、草稿状态与内容预览；相关改动在 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)、[frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts)、[frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)。
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
 - `npm --workspace frontend-admin run build`
-### 鍚庣画褰卞搷
-- AI 宸ヤ綔鍙扮幇鍦ㄥ凡缁忎笉鍙槸鈥滀换鍔℃棩蹇椻€濓紝鑰屾槸寮€濮嬪叿澶囩湡姝ｇ殑寰呯‘璁ょ粨鏋滄睜锛岀鍚堣璁¤鏄庝功閲?`ai_drafts` 鐨勮惤鍦版柟鍚戙€?- 涓嬩竴姝ュ彲浠ョ户缁仛涓や欢楂樹环鍊间簨鎯咃細涓€鏄妸 `/ai` 涓婄殑鑽夌缁撴灉鐩存帴璺宠浆鍥炴潵婧愰〉闈㈡垨纭鐩爣锛屼簩鏄妸 `note/pdf -> graph` 鐨勫緟纭鍙樻洿娴佸仛鎴愬悓涓€濂楁寔涔呭寲鏈哄埗銆?
-## 2026-05-31 14:04:55 +08:00 | v0.0.37 | 鎺ュ叆 AI 浠诲姟涓庣敤閲忚拷韪苟钀藉湴 AI 鍘嗗彶椤?### 浠诲姟鍐呭
-- 琛ラ綈 `Phase 7` 涓綋鍓嶆渶缂虹殑 `ai_tasks / ai_usage_logs` 杩借釜鑳藉姏锛岃鍥捐氨銆佺瑪璁般€丳DF 鎵规敞鐢熸垚鑽夌鏃剁暀涓嬩换鍔¤褰曚笌鐘舵€併€?- 鎶婂墠鍙?`/ai` 浠庡崰浣嶉〉鍗囩骇涓虹湡瀹炵殑 AI 鍘嗗彶涓庣敤閲忓伐浣滃彴銆?### 瀹屾垚缁撴灉
-- 鏂板鍚庣 AI 妯″潡锛?  - [backend/internal/modules/ai/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/service/service.go)
+### 后续影响
+- AI 工作台现在已经不只是“任务日志”，而是开始具备真正的待确认结果池，符合设计说明书里 `ai_drafts` 的落地方向。
+- 下一步可以继续做两件高价值事情：一是把 `/ai` 上的草稿结果直接跳转回来源页面或确认目标，二是把 `note/pdf -> graph` 的待确认变更流做成同一套持久化机制。
+
+## 2026-05-31 14:04:55 +08:00 | v0.0.37 | 接入 AI 任务与用量追踪并落地 AI 历史页
+### 任务内容
+- 补齐 `Phase 7` 中当前最缺的 `ai_tasks / ai_usage_logs` 追踪能力，让图谱、笔记、PDF 批注生成草稿时留下任务记录与状态。
+- 把前台 `/ai` 从占位页升级为真实的 AI 历史与用量工作台。
+### 完成结果
+- 新增后端 AI 模块：
+  - [backend/internal/modules/ai/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/service/service.go)
   - [backend/internal/modules/ai/repository/repository.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/repository/repository.go)
   - [backend/internal/modules/ai/handler/handler.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/handler/handler.go)
   - [backend/internal/modules/ai/router/router.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/ai/router/router.go)
-- 鏂板鎺ュ彛锛?  - `GET /api/v1/ai/tasks`
+- 新增接口：
+  - `GET /api/v1/ai/tasks`
   - `GET /api/v1/ai/usage`
-- 鍦?[backend/internal/modules/graph/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/service/service.go)銆乕backend/internal/modules/note/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/service/service.go)銆乕backend/internal/modules/reader/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/reader/service/service.go) 鎺ュ叆鑽夌鐢熸垚浠诲姟璁板綍锛屾垚鍔?澶辫触閮戒細鐣欎笅鍙拷韪姸鎬併€?- 鍓嶇 AI 椤靛崌绾т负鐪熷疄椤甸潰锛屼綅浜?[frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)锛涘鎴风鎺ュ彛琛ュ湪 [frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts)锛屾牱寮忚ˉ鍦?[frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)銆?- 宸查噸鍚湰鍦板墠鍚庣鏈嶅姟锛屼娇 `http://localhost:8001/ai` 鍜?`http://localhost:8023/api/v1/ai/tasks` 鎸囧悜鏈€鏂颁唬鐮併€?### 楠岃瘉缁撴灉
+- 在 [backend/internal/modules/graph/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/graph/service/service.go)、[backend/internal/modules/note/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/service/service.go)、[backend/internal/modules/reader/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/reader/service/service.go) 接入草稿生成任务记录，成功/失败都会留下可追踪状态。
+- 前端 AI 页升级为真实页面，位于 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx)；客户端接口补在 [frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts)，样式补在 [frontend-user/src/styles.css](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/styles.css)。
+- 已重启本地前后端服务，使 `http://localhost:8001/ai` 和 `http://localhost:8023/api/v1/ai/tasks` 指向最新代码。
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
 - `npm --workspace frontend-admin run build`
-### 鍚庣画褰卞搷
-- AI 鑽夌鐢熸垚宸茬粡寮€濮嬪叿澶団€滀换鍔″巻鍙层€佺姸鎬併€佹潵婧愩€佺敤閲忊€濈殑鍙洖鐪嬭兘鍔涳紝鍚庣画琛?`ai_quota_logs`銆佸け璐ラ噸璇曞拰鍚庡彴 AI 浠诲姟鐩戞帶浼氶『寰楀銆?- 涓嬩竴姝ュ彲浠ョ户缁妸 `AI 寰呯‘璁ょ粨鏋渀 浠庝粎璁板綍浠诲姟鎺ㄨ繘鍒扮湡姝ｆ寔涔呭寲鑽夌鍐呭锛屼緥濡?`ai_drafts` 涓?`note/pdf -> graph` 鐨勫緟纭鍙樻洿娴併€?
-## 2026-05-31 13:38:23 +08:00 | v0.0.36 | 鎺ュ叆绗旇 / PDF 鎵规敞鍒板涔犺崏绋块摼璺苟瑙勮寖 PROJECT_LOG 缁存姢
-### 浠诲姟鍐呭
-- 琛ラ綈 `note -> card drafts -> deck` 鍜?`reader annotations -> card drafts -> deck` 鐨勫悗绔帴鍙ｄ笌鍓嶇浜や簰銆?- 鎶?`PROJECT_LOG.md` 绾冲叆姣忔杩唬鐨勫父瑙勬洿鏂版竻鍗曪紝骞惰ˉ褰曡繎鍑犺疆鐗堟湰杩涘睍銆?### 瀹屾垚缁撴灉
-- 鏂板鍚庣鎺ュ彛锛?  - `POST /api/v1/notes/:id/ai/generate-cards`
+### 后续影响
+- AI 草稿生成已经开始具备“任务历史、状态、来源、用量”的可回看能力，后续补 `ai_quota_logs`、失败重试和后台 AI 任务监控会顺得多。
+- 下一步可以继续把 `AI 待确认结果` 从仅记录任务推进到真正持久化草稿内容，例如 `ai_drafts` 与 `note/pdf -> graph` 的待确认变更流。
+
+## 2026-05-31 13:38:23 +08:00 | v0.0.36 | 接入笔记 / PDF 批注到复习草稿链路并规范 PROJECT_LOG 维护
+### 任务内容
+- 补齐 `note -> card drafts -> deck` 和 `reader annotations -> card drafts -> deck` 的后端接口与前端交互。
+- 把 `PROJECT_LOG.md` 纳入每次迭代的常规更新清单，并补录近几轮版本进展。
+### 完成结果
+- 新增后端接口：
+  - `POST /api/v1/notes/:id/ai/generate-cards`
   - `POST /api/v1/materials/:id/reader/annotations/generate-cards`
   - `POST /api/v1/decks/:id/cards/bulk`
-- 鎵╁睍 [backend/internal/modules/note/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/service/service.go) 鍜?[backend/internal/modules/reader/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/reader/service/service.go)锛屾妸绗旇姝ｆ枃銆佹壒娉ㄥ紩鐢ㄦ寮忚浆鎴愬彲缂栬緫鍗＄墖鑽夌銆?- 鎵╁睍 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx) 鍜?[frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts)锛屽湪绗旇椤点€侀槄璇诲櫒椤垫帴鍏?deck 閫夋嫨銆佽崏绋跨紪杈戙€佺‘璁ゅ啓鍏ヤ氦浜掋€?- 鍦ㄦ湰鏂囨。琛ュ綍 v0.0.34 / v0.0.35 / v0.0.36 鐨勪富瑕佸彉鏇达紝鍚庣画缁х画鎸夊悓鏍锋柟寮忕淮鎶ゃ€?### 楠岃瘉缁撴灉
+- 扩展 [backend/internal/modules/note/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/service/service.go) 和 [backend/internal/modules/reader/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/reader/service/service.go)，把笔记正文、批注引用正式转成可编辑卡片草稿。
+- 扩展 [frontend-user/src/app/App.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/app/App.tsx) 和 [frontend-user/src/api/client.ts](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/api/client.ts)，在笔记页、阅读器页接入 deck 选择、草稿编辑、确认写入交互。
+- 在本文档补录 v0.0.34 / v0.0.35 / v0.0.36 的主要变更，后续继续按同样方式维护。
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
 - `npm --workspace frontend-admin run build`
-### 鍚庣画褰卞搷
-- `Phase 5 -> 6/7` 鐨勫浘璋便€佺瑪璁般€侀槄璇诲櫒銆佸涔犵郴缁熷凡缁忓紑濮嬪叡鐢ㄥ悓涓€濂楀崱鐗囪崏绋跨‘璁ゆ祦绋嬨€?- 鍚庣画鍙互缁х画鎶?`ai_tasks / ai_usage_logs` 鍜?`note/pdf -> graph` 鐨勫弻鍚戦摼璺ˉ鍏ㄥ埌 1.0 鑼冨洿銆?
-## 2026-05-31 12:55:00 +08:00 | v0.0.35 | 鎵撻€氬浘璋卞崱鐗囪崏绋跨‘璁ゅ啓鍏?deck
-### 浠诲姟鍐呭
-- 鎶婂浘璋辨彁鍙栧埌鐨勫涔犺崏绋垮彉鎴愬彲浠ョ洿鎺ョ‘璁ゅ啓鍏?deck 鐨勭湡瀹炴祦绋嬨€?### 瀹屾垚缁撴灉
-- 鏂板 `POST /api/v1/graphs/:id/ai/commit-cards`銆?- 鍓嶇鍥捐氨椤垫敮鎸?deck 閫夋嫨銆佽崏绋跨紪杈戙€佷竴閿啓鍏ュ涔犵郴缁熴€?### 楠岃瘉缁撴灉
+### 后续影响
+- `Phase 5 -> 6/7` 的图谱、笔记、阅读器、复习系统已经开始共用同一套卡片草稿确认流程。
+- 后续可以继续把 `ai_tasks / ai_usage_logs` 和 `note/pdf -> graph` 的双向链路补全到 1.0 范围。
+
+## 2026-05-31 12:55:00 +08:00 | v0.0.35 | 打通图谱卡片草稿确认写入 deck
+### 任务内容
+- 把图谱提取到的复习草稿变成可以直接确认写入 deck 的真实流程。
+### 完成结果
+- 新增 `POST /api/v1/graphs/:id/ai/commit-cards`。
+- 前端图谱页支持 deck 选择、草稿编辑、一键写入复习系统。
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
 - `npm --workspace frontend-admin run build`
-### 鍚庣画褰卞搷
-- 涓哄悗缁瑪璁般€丳DF 鎵规敞銆丄I 鑽夌澶嶇敤鍚屼竴鏉″崱鐗囪惤鍦伴摼璺墦濂藉熀纭€銆?
-## 2026-05-31 12:10:00 +08:00 | v0.0.34 | 瀹屾垚 deck / card / SM-2 澶嶄範闂幆
-### 浠诲姟鍐呭
-- 鎶?`Phase 6` 鐨?`deck`銆乣card`銆乣today queue`銆乣review submit` 鍜?`SM-2` 璋冨害鎺ュ埌鐪熷疄鍚庣涓庡墠绔€?### 瀹屾垚缁撴灉
-- 鏂板鍚庣 `card` 妯″潡锛屾敮鎸佸崱缁勩€佸崱鐗囧垱寤恒€佷粖鏃ュ埌鏈熼槦鍒椼€佽瘎鍒嗘彁浜ゅ拰 SM-2 璋冨害銆?- 鏂板鍓嶇 [frontend-user/src/modules/review/ReviewWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/review/ReviewWorkspacePage.tsx)锛屾敮鎸佸垱寤?deck銆佹坊鍔犲崱鐗囥€佺炕闈€佹寜 `Again / Hard / Good / Easy` 澶嶄範銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 为后续笔记、PDF 批注、AI 草稿复用同一条卡片落地链路打好基础。
+
+## 2026-05-31 12:10:00 +08:00 | v0.0.34 | 完成 deck / card / SM-2 复习闭环
+### 任务内容
+- 把 `Phase 6` 的 `deck`、`card`、`today queue`、`review submit` 和 `SM-2` 调度接到真实后端与前端。
+### 完成结果
+- 新增后端 `card` 模块，支持卡组、卡片创建、今日到期队列、评分提交和 SM-2 调度。
+- 新增前端 [frontend-user/src/modules/review/ReviewWorkspacePage.tsx](/E:/Code/1108026_rust_go/StudyMate/frontend-user/src/modules/review/ReviewWorkspacePage.tsx)，支持创建 deck、添加卡片、翻面、按 `Again / Hard / Good / Easy` 复习。
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
 - `npm --workspace frontend-user run build`
 - `npm --workspace frontend-admin run build`
-### 鍚庣画褰卞搷
-- 澶嶄範绯荤粺宸茬粡鍙互鎵胯浇鍥捐氨銆佺瑪璁板拰 AI 鑽夌鐢熸垚鐨勫崱鐗囧唴瀹癸紝鎴愪负 1.0 涓殑鐪熷疄涓诲共銆?
-## 2026-05-27 14:27:30 +08:00 | v0.0.33 | 鎺ュ叆绗旇鍐呭 Mongo 鍙屽啓骞朵慨澶嶅垹闄ゆ竻鐞嗛摼璺?### 浠诲姟鍐呭
-- 鎸夊綋鍓嶉」鐩繘灞曪紝鎶婄瑪璁版鏂囧紑濮嬫帴鍏?MongoDB銆?- 璁?`notes` 鍜?`note_versions` 鍦ㄥ啓鍏?MySQL 鐨勫悓鏃讹紝鍙屽啓鍒?`note_documents` 鍜?`note_snapshots`銆?- 楠岃瘉鍒涘缓銆佹洿鏂般€佸垹闄や笁鏉℃牳蹇冮摼璺紝骞朵慨澶嶈繃绋嬩腑鍙戠幇鐨勬暟鎹畫鐣欓棶棰樸€?### 瀹屾垚缁撴灉
-- 鏂板 [backend/internal/modules/note/repository/document_repository.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/repository/document_repository.go)锛屽疄鐜帮細
-  - `note_documents` 褰撳墠鏂囨。 upsert
-  - `note_snapshots` 鐗堟湰蹇収 upsert
-  - 鍒犻櫎绗旇鏃剁殑 Mongo 鏂囨。娓呯悊
-  - HTML 鍒?`plain_text` 鐨勬彁鍙栦笌鍗曞潡缁撴瀯灏佽
-- 鏂板 [backend/internal/modules/note/repository/document_repository_test.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/repository/document_repository_test.go)锛岃鐩栫函鏂囨湰鎻愬彇鍜屾枃妗ｆ瀯寤恒€?- 鏇存柊 [backend/internal/modules/note/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/service/service.go)锛屽湪鍒涘缓銆佹洿鏂般€佹仮澶嶇増鏈€佸垹闄ょ瑪璁版椂鎺ュ叆 Mongo 鍙屽啓鍜屾竻鐞嗐€?- 鏇存柊 [backend/internal/app/server.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/app/server.go)锛屼负 `note` 妯″潡娉ㄥ叆 Mongo 鏂囨。浠撳偍銆?- 鏇存柊 [backend/internal/modules/note/repository/repository.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/repository/repository.go)锛岃ˉ鍏呭垹闄?`note_versions / note_relations` 鐨勮兘鍔涖€?- 鏇存柊 Mongo 鍒濆鍖栬剼鏈?[backend/internal/migrations/mongo/001_init_content_collections.js](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mongo/001_init_content_collections.js)锛屼慨澶嶅揩鐓у敮涓€绱㈠紩瀛楁鍚嶉敊璇紝骞舵敮鎸佽嚜鍔ㄩ噸寤哄悓鍚嶆棫绱㈠紩銆?- 鏇存柊 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md)銆乕docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)銆乕docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md)锛屽悓姝ュ綋鍓嶅疄鐜扮姸鎬併€?### 楠岃瘉缁撴灉
-- `go test ./...` 閫氳繃銆?- 鐪熷疄鎺ュ彛鑱旇皟閫氳繃锛?  - 娉ㄥ唽涓存椂鐢ㄦ埛
-  - 鍒涘缓绗旇鍚?`note_documents = 1`锛宍note_snapshots = 1`
-  - 鏇存柊绗旇鍚?`note_documents.version = 2`锛宍note_snapshots = 2`
-  - 鍒犻櫎绗旇鍚?Mongo 涓?`note_documents = 0`銆乣note_snapshots = 0`
-  - 鍒犻櫎绗旇鍚?MySQL 涓?`notes = 0`銆乣note_versions = 0`銆乣note_relations = 0`
-- 宸蹭慨澶?`note_snapshots` 绱㈠紩瀛楁鍚嶄粠 `version_number` 鍒?`version` 鐨勪笉涓€鑷撮棶棰橈紝骞跺湪鐜版湁 `studymate_content` 涓婇噸寤烘垚鍔熴€?- 宸叉竻鐞嗘湰杞皟璇曠敓鎴愮殑涓存椂娈嬬暀绗旇鍜?Mongo 鏂囨。銆?### 鍚庣画褰卞搷
-- 绗旇妯″潡宸茬粡杩涘叆鈥滀富璁板綍鍦?MySQL銆佸唴瀹规枃妗ｅ湪 Mongo 鍙屽啓鈥濈殑鐘舵€併€?- 涓嬩竴姝ュ彲浠ョ户缁妸璇诲彇閾捐矾閫愭鍒囨崲鍒?Mongo锛屾垨鑰呭紑濮嬫妸闃呰鎵规敞涔熸帴鍏?`pdf_annotation_documents`銆?
-## 2026-05-27 13:34:10 +08:00 | v0.0.32 | 娓呯悊 Mongo 涓存椂 test 搴?### 浠诲姟鍐呭
-- 鍒犻櫎 MongoDB 涓笉鍐嶉渶瑕佺殑涓存椂 `test` 鏁版嵁搴撱€?- 淇濈暀 MongoDB 绯荤粺搴撳拰椤圭洰涓氬姟搴撱€?### 瀹屾垚缁撴灉
-- 宸插垹闄?Mongo `test` 搴撱€?- 褰撳墠 Mongo 鏁版嵁搴撳垪琛ㄤ负锛?  - `admin`
+### 后续影响
+- 复习系统已经可以承载图谱、笔记和 AI 草稿生成的卡片内容，成为 1.0 中的真实主干。
+
+## 2026-05-27 14:27:30 +08:00 | v0.0.33 | 接入笔记内容 Mongo 双写并修复删除清理链路
+### 任务内容
+- 按当前项目进展，把笔记正文开始接入 MongoDB。
+- 让 `notes` 和 `note_versions` 在写入 MySQL 的同时，双写到 `note_documents` 和 `note_snapshots`。
+- 验证创建、更新、删除三条核心链路，并修复过程中发现的数据残留问题。
+### 完成结果
+- 新增 [backend/internal/modules/note/repository/document_repository.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/repository/document_repository.go)，实现：
+  - `note_documents` 当前文档 upsert
+  - `note_snapshots` 版本快照 upsert
+  - 删除笔记时的 Mongo 文档清理
+  - HTML 到 `plain_text` 的提取与单块结构封装
+- 新增 [backend/internal/modules/note/repository/document_repository_test.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/repository/document_repository_test.go)，覆盖纯文本提取和文档构建。
+- 更新 [backend/internal/modules/note/service/service.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/service/service.go)，在创建、更新、恢复版本、删除笔记时接入 Mongo 双写和清理。
+- 更新 [backend/internal/app/server.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/app/server.go)，为 `note` 模块注入 Mongo 文档仓储。
+- 更新 [backend/internal/modules/note/repository/repository.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/modules/note/repository/repository.go)，补充删除 `note_versions / note_relations` 的能力。
+- 更新 Mongo 初始化脚本 [backend/internal/migrations/mongo/001_init_content_collections.js](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mongo/001_init_content_collections.js)，修复快照唯一索引字段名错误，并支持自动重建同名旧索引。
+- 更新 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md)、[docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)、[docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md)，同步当前实现状态。
+### 验证结果
+- `go test ./...` 通过。
+- 真实接口联调通过：
+  - 注册临时用户
+  - 创建笔记后 `note_documents = 1`，`note_snapshots = 1`
+  - 更新笔记后 `note_documents.version = 2`，`note_snapshots = 2`
+  - 删除笔记后 Mongo 中 `note_documents = 0`、`note_snapshots = 0`
+  - 删除笔记后 MySQL 中 `notes = 0`、`note_versions = 0`、`note_relations = 0`
+- 已修复 `note_snapshots` 索引字段名从 `version_number` 到 `version` 的不一致问题，并在现有 `studymate_content` 上重建成功。
+- 已清理本轮调试生成的临时残留笔记和 Mongo 文档。
+### 后续影响
+- 笔记模块已经进入“主记录在 MySQL、内容文档在 Mongo 双写”的状态。
+- 下一步可以继续把读取链路逐步切换到 Mongo，或者开始把阅读批注也接入 `pdf_annotation_documents`。
+
+## 2026-05-27 13:34:10 +08:00 | v0.0.32 | 清理 Mongo 临时 test 库
+### 任务内容
+- 删除 MongoDB 中不再需要的临时 `test` 数据库。
+- 保留 MongoDB 系统库和项目业务库。
+### 完成结果
+- 已删除 Mongo `test` 库。
+- 当前 Mongo 数据库列表为：
+  - `admin`
   - `config`
   - `local`
   - `studymate_content`
-### 楠岃瘉缁撴灉
-- `dropDatabase()` 杩斿洖鎴愬姛銆?- 閲嶆柊璇诲彇鏁版嵁搴撳垪琛ㄥ悗锛宍test` 宸蹭笉瀛樺湪銆?### 鍚庣画褰卞搷
-- 褰撳墠 Mongo 鐜鏇存帴杩戦」鐩寮忎娇鐢ㄧ姸鎬併€?- `admin`銆乣config`銆乣local` 涓虹郴缁熷簱锛屽悗缁棤闇€澶勭悊銆?
-## 2026-05-27 13:28:20 +08:00 | v0.0.31 | 鍒濆鍖栨湰鏈?Mongo 涓氬姟搴?studymate_content
-### 浠诲姟鍐呭
-- 灏嗘湰鏈?MongoDB 涓殑 `studymate_content` 涓氬姟搴撴寜椤圭洰鑴氭湰鍒濆鍖栧畬鎴愩€?- 楠岃瘉闆嗗悎涓庡叧閿储寮曟槸鍚︾湡瀹炶惤搴擄紝鑰屼笉鏄粎鑴氭湰鎵撳嵃鎴愬姛銆?### 瀹屾垚缁撴灉
-- 鎵ц [backend/internal/migrations/mongo/001_init_content_collections.js](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mongo/001_init_content_collections.js) 鎴愬姛銆?- `studymate_content` 褰撳墠宸插垱寤洪泦鍚堬細
+### 验证结果
+- `dropDatabase()` 返回成功。
+- 重新读取数据库列表后，`test` 已不存在。
+### 后续影响
+- 当前 Mongo 环境更接近项目正式使用状态。
+- `admin`、`config`、`local` 为系统库，后续无需处理。
+
+## 2026-05-27 13:28:20 +08:00 | v0.0.31 | 初始化本机 Mongo 业务库 studymate_content
+### 任务内容
+- 将本机 MongoDB 中的 `studymate_content` 业务库按项目脚本初始化完成。
+- 验证集合与关键索引是否真实落库，而不是仅脚本打印成功。
+### 完成结果
+- 执行 [backend/internal/migrations/mongo/001_init_content_collections.js](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mongo/001_init_content_collections.js) 成功。
+- `studymate_content` 当前已创建集合：
   - `ai_conversations`
   - `ai_drafts`
   - `diagram_source_documents`
@@ -2754,22 +5290,29 @@
   - `note_snapshots`
   - `pdf_annotation_documents`
   - `user_workspace_states`
-- 宸茬‘璁ゅ叧閿储寮曞瓨鍦細
+- 已确认关键索引存在：
   - `note_documents.uk_note_documents_note_id`
   - `note_documents.idx_note_documents_owner_updated_at`
   - `note_documents.idx_note_documents_material_updated_at`
   - `user_workspace_states.uk_user_workspace_states_user_workspace`
   - `user_workspace_states.idx_user_workspace_states_updated_at`
-### 楠岃瘉缁撴灉
-- `studymate_content` 宸插嚭鐜板湪 Mongo 鏁版嵁搴撳垪琛ㄤ腑銆?- 闆嗗悎鍒楄〃涓庣储寮曟煡璇㈠潎杩斿洖鎴愬姛銆?### 鍚庣画褰卞搷
-- 鍚庣画鍙互寮€濮嬫妸绗旇姝ｆ枃銆佸揩鐓с€佸浘璋辨枃妗ｇ瓑鍐呭閫愭杩佺Щ鍒?MongoDB銆?
-## 2026-05-27 13:22:40 +08:00 | v0.0.30 | 楠岃瘉鎵嬪姩鎵ц鐨?MySQL 杩佺Щ骞惰ˉ榻?Mongo 鍒濆鍖栬剼鏈?### 浠诲姟鍐呭
-- 妫€鏌?`studymate` 涓墜鍔ㄦ墽琛岀殑 `001/002/003` MySQL 鑴氭湰鏄惁鎴愬姛钀藉簱銆?- 纭褰撳墠鍚庣鍙户缁甯镐娇鐢ㄨ鏁版嵁搴撱€?- 鍦ㄤ笅涓€姝ュ伐浣滀腑琛ラ綈 MongoDB 鍐呭搴撳垵濮嬪寲涓庡洖婊氳剼鏈紝骞跺仛瀹炶窇楠岃瘉銆?### 瀹屾垚缁撴灉
-- 宸查獙璇?`studymate` 涓瓨鍦ㄨ縼绉昏褰曪細
+### 验证结果
+- `studymate_content` 已出现在 Mongo 数据库列表中。
+- 集合列表与索引查询均返回成功。
+### 后续影响
+- 后续可以开始把笔记正文、快照、图谱文档等内容逐步迁移到 MongoDB。
+
+## 2026-05-27 13:22:40 +08:00 | v0.0.30 | 验证手动执行的 MySQL 迁移并补齐 Mongo 初始化脚本
+### 任务内容
+- 检查 `studymate` 中手动执行的 `001/002/003` MySQL 脚本是否成功落库。
+- 确认当前后端可继续正常使用该数据库。
+- 在下一步工作中补齐 MongoDB 内容库初始化与回滚脚本，并做实跑验证。
+### 完成结果
+- 已验证 `studymate` 中存在迁移记录：
   - `001_init_schema.sql`
   - `002_seed_baseline.sql`
   - `003_align_current_tables.sql`
-- 宸茬‘璁ゅ叧閿瓧娈靛拰绱㈠紩瀛樺湪锛屽寘鎷細
+- 已确认关键字段和索引存在，包括：
   - `users.status`
   - `file_records.storage_provider`
   - `posts.summary`
@@ -2778,653 +5321,1174 @@
   - `idx_posts_status_created_at`
   - `idx_comments_post_status_created_at`
   - `idx_pdf_annotations_user_material_updated_at`
-- 宸茬‘璁ゅ熀纭€绉嶅瓙鏁版嵁瀛樺湪锛?  - `roles = 3`
+- 已确认基础种子数据存在：
+  - `roles = 3`
   - `permissions = 12`
   - `role_permissions = 25`
   - `system_configs = 5`
-- 鏂板 Mongo 鍒濆鍖栬剼鏈細
+- 新增 Mongo 初始化脚本：
   - [backend/internal/migrations/mongo/001_init_content_collections.js](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mongo/001_init_content_collections.js)
   - [backend/internal/migrations/mongo/001_init_content_collections.down.js](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mongo/001_init_content_collections.down.js)
-- 鏇存柊 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md)銆乕docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)銆乕docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md)锛岃ˉ鍏?Mongo 杩佺Щ浣跨敤鏂瑰紡銆?### 楠岃瘉缁撴灉
-- `go run ./cmd/migrate` 鍦ㄤ富搴?`studymate` 涓婃墽琛屾垚鍔熴€?- 鍚庣浣跨敤 `studymate` 鍚姩鍚庯紝`http://localhost:8126/health` 杩斿洖鎴愬姛锛屼緷璧栫姸鎬佹甯搞€?- Mongo 涓存椂搴?`studymate_content_check` 宸插畬鎴愶細
-  - `001_init_content_collections.js` 鎵ц鎴愬姛
-  - 闆嗗悎涓庣储寮曟鏌ユ垚鍔?  - `001_init_content_collections.down.js` 鎵ц鎴愬姛
-  - 鍥炴粴鍚庨泦鍚堟竻绌猴紝涓存椂搴撳凡鍒犻櫎
-### 鍚庣画褰卞搷
-- 褰撳墠 MySQL 鎵嬪姩杩佺Щ缁撴灉娌℃湁鍙戠幇闃诲鎬ч棶棰橈紝鍙互缁х画鍦ㄨ繖濂楀簱涓婂紑鍙戙€?- 椤圭洰宸茬粡鍏峰 Mongo 鍐呭搴撶殑鍒濆鍖栧拰鍥炴粴鑴氭湰锛屼负鍚庣画鎶婄瑪璁?鍥捐氨鍐呭閫愭杩佺Щ鍒?Mongo 濂犲畾浜嗗熀纭€銆?
-## 2026-05-27 13:10:20 +08:00 | v0.0.29 | 琛ラ綈 MySQL 杩佺Щ down SQL 骞堕獙璇佸洖婊氶摼璺?### 浠诲姟鍐呭
-- 鍦ㄧ幇鏈?MySQL 杩佺Щ浣撶郴涓婅ˉ榻愬搴旂殑 down SQL 鏂囦欢銆?- 閬垮厤 `.down.sql` 琚悗绔嚜鍔ㄨ縼绉婚€昏緫璇墽琛屻€?- 楠岃瘉 `up -> down` 鍥炴粴閾捐矾鍦ㄤ复鏃舵暟鎹簱涓彲杩愯銆?### 瀹屾垚缁撴灉
-- 鏇存柊 [backend/internal/migrations/mysql/migrator.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/migrator.go)锛岃嚜鍔ㄨ縼绉荤幇鍦ㄤ細蹇界暐 `.down.sql` 鏂囦欢銆?- 鏇存柊 [backend/internal/migrations/mysql/migrator_test.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/migrator_test.go)锛屾柊澧炲拷鐣ュ洖婊氭枃浠舵祴璇曘€?- 鏂板鍥炴粴鏂囦欢锛?  - [001_init_schema.down.sql](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/001_init_schema.down.sql)
+- 更新 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md)、[docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)、[docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md)，补充 Mongo 迁移使用方式。
+### 验证结果
+- `go run ./cmd/migrate` 在主库 `studymate` 上执行成功。
+- 后端使用 `studymate` 启动后，`http://localhost:8126/health` 返回成功，依赖状态正常。
+- Mongo 临时库 `studymate_content_check` 已完成：
+  - `001_init_content_collections.js` 执行成功
+  - 集合与索引检查成功
+  - `001_init_content_collections.down.js` 执行成功
+  - 回滚后集合清空，临时库已删除
+### 后续影响
+- 当前 MySQL 手动迁移结果没有发现阻塞性问题，可以继续在这套库上开发。
+- 项目已经具备 Mongo 内容库的初始化和回滚脚本，为后续把笔记/图谱内容逐步迁移到 Mongo 奠定了基础。
+
+## 2026-05-27 13:10:20 +08:00 | v0.0.29 | 补齐 MySQL 迁移 down SQL 并验证回滚链路
+### 任务内容
+- 在现有 MySQL 迁移体系上补齐对应的 down SQL 文件。
+- 避免 `.down.sql` 被后端自动迁移逻辑误执行。
+- 验证 `up -> down` 回滚链路在临时数据库中可运行。
+### 完成结果
+- 更新 [backend/internal/migrations/mysql/migrator.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/migrator.go)，自动迁移现在会忽略 `.down.sql` 文件。
+- 更新 [backend/internal/migrations/mysql/migrator_test.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/migrator_test.go)，新增忽略回滚文件测试。
+- 新增回滚文件：
+  - [001_init_schema.down.sql](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/001_init_schema.down.sql)
   - [002_seed_baseline.down.sql](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/002_seed_baseline.down.sql)
   - [003_align_current_tables.down.sql](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/003_align_current_tables.down.sql)
-- 鏇存柊 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md)銆乕docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)銆乕docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md)锛岃ˉ鍏?up/down 璇存槑銆?- 灏嗕富搴?`studymate` 杩佺Щ鍒?`003`锛岀‘璁ゅ綋鍓嶆湰鍦版暟鎹簱宸茬粡涓庝粨搴撹縼绉荤増鏈榻愩€?### 楠岃瘉缁撴灉
-- `go test ./...` 閫氳繃銆?- 鍦ㄤ复鏃跺簱 `studymate_rollback_check` 涓墽琛屽畬鏁撮獙璇侊細
-  - `go run ./cmd/migrate` 鎴愬姛搴旂敤 `001`銆乣002`銆乣003`
-  - 鎵嬪姩鎵ц `003_align_current_tables.down.sql` 鎴愬姛
-  - 鎵嬪姩鎵ц `002_seed_baseline.down.sql` 鎴愬姛
-  - 鎵嬪姩鎵ц `001_init_schema.down.sql` 鎴愬姛
-  - 鍥炴粴鍚庝复鏃跺簱琛ㄧ粨鏋勫凡娓呯┖
-- 涓诲簱 `studymate` 宸茬‘璁ゅ瓨鍦?`003` 杩佺Щ璁板綍锛屼笖 `users.status`銆乣idx_notes_owner_updated_at` 绛?`003` 瀵归綈缁撴灉宸茬敓鏁堛€?### 鍚庣画褰卞搷
-- 椤圭洰鐜板湪鍚屾椂鍏峰 up/down SQL 鏂囦欢锛屽彲鏀寔鏇磋鑼冪殑鏁版嵁搴撳彉鏇翠氦浠樸€?- 鍚庣画鏂板杩佺Щ寤鸿缁х画鎴愬琛ラ綈 `004_xxx.sql` 鍜?`004_xxx.down.sql`銆?
-## 2026-05-27 12:36:30 +08:00 | v0.0.28 | 鏂板 002 澧為噺杩佺Щ骞堕獙璇佺┖搴撹縼绉诲吋瀹规€?### 浠诲姟鍐呭
-- 鍦ㄥ凡鎺ュ叆鐨?MySQL 杩佺Щ浣撶郴涓婄户缁ˉ鍏呭閲忚縼绉汇€?- 涓烘渶缁堣璁￠鐣欑殑 RBAC 鍜岀郴缁熼厤缃綋绯诲姞鍏ュ熀纭€绉嶅瓙鏁版嵁銆?- 楠岃瘉鈥滅┖搴撳彧闈犺縼绉昏剼鏈缓璧锋潵鍚庯紝鍚庣鍙洿鎺ュ惎鍔ㄢ€濄€?### 瀹屾垚缁撴灉
-- 鏂板 [backend/internal/migrations/mysql/002_seed_baseline.sql](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/002_seed_baseline.sql)銆?- 璇ヨ縼绉昏剼鏈寘鍚細
-  - 3 涓熀纭€瑙掕壊锛歚admin`銆乣moderator`銆乣user`
-  - 12 涓熀纭€鏉冮檺
-  - 25 鏉¤鑹叉潈闄愭槧灏?  - 5 鏉＄郴缁熼厤缃瀛愭暟鎹?- 鏇存柊 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md)銆乕docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)銆乕docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md)锛岃ˉ鍏呭鏂囦欢杩佺Щ鍜岀瀛愭暟鎹鏄庛€?- 鏂板缓涓存椂绌哄簱 `studymate_migration_check` 鍋氫粠闆惰縼绉婚獙鏀讹紝楠岃瘉缁撴潫鍚庡凡鍒犻櫎锛屼繚鎸佹湰鍦扮幆澧冩暣娲併€?### 楠岃瘉缁撴灉
-- `go test ./...` 閫氳繃銆?- 褰撳墠涓诲簱 `studymate` 鎵ц `go run ./cmd/migrate` 鎴愬姛銆?- 涓存椂绌哄簱鎵ц `go run ./cmd/migrate` 鎴愬姛銆?- 宸茬‘璁?`schema_migrations` 涓瓨鍦ㄧ増鏈?`001`銆乣002`銆?- 宸茬‘璁ゅ熀纭€绉嶅瓙鏁版嵁鏁伴噺姝ｇ‘锛?  - `roles = 3`
+- 更新 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md)、[docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)、[docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md)，补充 up/down 说明。
+- 将主库 `studymate` 迁移到 `003`，确认当前本地数据库已经与仓库迁移版本对齐。
+### 验证结果
+- `go test ./...` 通过。
+- 在临时库 `studymate_rollback_check` 中执行完整验证：
+  - `go run ./cmd/migrate` 成功应用 `001`、`002`、`003`
+  - 手动执行 `003_align_current_tables.down.sql` 成功
+  - 手动执行 `002_seed_baseline.down.sql` 成功
+  - 手动执行 `001_init_schema.down.sql` 成功
+  - 回滚后临时库表结构已清空
+- 主库 `studymate` 已确认存在 `003` 迁移记录，且 `users.status`、`idx_notes_owner_updated_at` 等 `003` 对齐结果已生效。
+### 后续影响
+- 项目现在同时具备 up/down SQL 文件，可支持更规范的数据库变更交付。
+- 后续新增迁移建议继续成对补齐 `004_xxx.sql` 和 `004_xxx.down.sql`。
+
+## 2026-05-27 12:36:30 +08:00 | v0.0.28 | 新增 002 增量迁移并验证空库迁移兼容性
+### 任务内容
+- 在已接入的 MySQL 迁移体系上继续补充增量迁移。
+- 为最终设计预留的 RBAC 和系统配置体系加入基础种子数据。
+- 验证“空库只靠迁移脚本建起来后，后端可直接启动”。
+### 完成结果
+- 新增 [backend/internal/migrations/mysql/002_seed_baseline.sql](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/002_seed_baseline.sql)。
+- 该迁移脚本包含：
+  - 3 个基础角色：`admin`、`moderator`、`user`
+  - 12 个基础权限
+  - 25 条角色权限映射
+  - 5 条系统配置种子数据
+- 更新 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md)、[docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)、[docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md)，补充多文件迁移和种子数据说明。
+- 新建临时空库 `studymate_migration_check` 做从零迁移验收，验证结束后已删除，保持本地环境整洁。
+### 验证结果
+- `go test ./...` 通过。
+- 当前主库 `studymate` 执行 `go run ./cmd/migrate` 成功。
+- 临时空库执行 `go run ./cmd/migrate` 成功。
+- 已确认 `schema_migrations` 中存在版本 `001`、`002`。
+- 已确认基础种子数据数量正确：
+  - `roles = 3`
   - `permissions = 12`
   - `role_permissions = 25`
   - `system_configs = 5`
-- 浣跨敤涓存椂绌哄簱鍚姩鍚庣鏈嶅姟锛屽仴搴锋鏌ヨ繑鍥炴垚鍔熴€?### 鍚庣画褰卞搷
-- 鍚庣画鏉冮檺浣撶郴銆佺鐞嗗悗鍙版不鐞嗚兘鍔涘拰鍔熻兘寮€鍏抽厤缃凡缁忔湁缁熶竴鏁版嵁钀界偣銆?- 鍚庣画鏂板琛ㄧ粨鏋勬垨绉嶅瓙鏁版嵁鏃讹紝鍙户缁寜 `003_xxx.sql`銆乣004_xxx.sql` 鐨勬柟寮忓閲忔墿灞曘€?
-## 2026-05-27 12:26:40 +08:00 | v0.0.27 | 鎺ュ叆 MySQL 杩佺Щ鎵ц鍣ㄥ苟鏇挎崲鍚庣 AutoMigrate
-### 浠诲姟鍐呭
-- 鎶婂凡瀹屾垚鐨?MySQL 鍒濆鍖?SQL 鑴氭湰鎺ュ叆鍚庣杩愯閾捐矾銆?- 璁╅」鐩棦鏀寔鏈嶅姟鍚姩鑷姩杩佺Щ锛屼篃鏀寔鍗曠嫭鎵ц杩佺Щ鍛戒护銆?- 绉婚櫎涓庣粺涓€ SQL 杩佺Щ浣撶郴鍐茬獊鐨?GORM `AutoMigrate` 鍚姩閫昏緫銆?### 瀹屾垚缁撴灉
-- 鏂板 [backend/internal/migrations/mysql/migrator.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/migrator.go)锛屽疄鐜帮細
-  - 鍐呭祵 `*.sql` 杩佺Щ鏂囦欢銆?  - 杩佺Щ鏂囦欢鎸夊悕绉版帓搴忔墽琛屻€?  - SQL 璇彞鎷嗗垎銆佹敞閲婅烦杩囥€乣USE` 璇彞蹇界暐銆?- 鏂板 [backend/internal/migrations/mysql/migrator_test.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/migrator_test.go)锛岃鐩?SQL 璇彞鎷嗗垎鍜屽唴宓岃縼绉诲彂鐜伴€昏緫銆?- 鏇存柊 [backend/internal/app/server.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/app/server.go)锛屾湇鍔″惎鍔ㄦ敼涓烘墽琛?MySQL 杩佺Щ锛屼笉鍐嶈皟鐢?GORM `AutoMigrate`銆?- 鏇存柊 [backend/internal/pkg/database/database.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/pkg/database/database.go)锛屽鍑轰富鏁版嵁搴撹繛鎺ユ柟娉曚緵杩佺Щ鍛戒护澶嶇敤銆?- 鏂板 [backend/cmd/migrate/main.go](/E:/Code/1108026_rust_go/StudyMate/backend/cmd/migrate/main.go)锛屾敮鎸佸崟鐙墽琛岋細
+- 使用临时空库启动后端服务，健康检查返回成功。
+### 后续影响
+- 后续权限体系、管理后台治理能力和功能开关配置已经有统一数据落点。
+- 后续新增表结构或种子数据时，可继续按 `003_xxx.sql`、`004_xxx.sql` 的方式增量扩展。
+
+## 2026-05-27 12:26:40 +08:00 | v0.0.27 | 接入 MySQL 迁移执行器并替换后端 AutoMigrate
+### 任务内容
+- 把已完成的 MySQL 初始化 SQL 脚本接入后端运行链路。
+- 让项目既支持服务启动自动迁移，也支持单独执行迁移命令。
+- 移除与统一 SQL 迁移体系冲突的 GORM `AutoMigrate` 启动逻辑。
+### 完成结果
+- 新增 [backend/internal/migrations/mysql/migrator.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/migrator.go)，实现：
+  - 内嵌 `*.sql` 迁移文件。
+  - 迁移文件按名称排序执行。
+  - SQL 语句拆分、注释跳过、`USE` 语句忽略。
+- 新增 [backend/internal/migrations/mysql/migrator_test.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/migrator_test.go)，覆盖 SQL 语句拆分和内嵌迁移发现逻辑。
+- 更新 [backend/internal/app/server.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/app/server.go)，服务启动改为执行 MySQL 迁移，不再调用 GORM `AutoMigrate`。
+- 更新 [backend/internal/pkg/database/database.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/pkg/database/database.go)，导出主数据库连接方法供迁移命令复用。
+- 新增 [backend/cmd/migrate/main.go](/E:/Code/1108026_rust_go/StudyMate/backend/cmd/migrate/main.go)，支持单独执行：
   - `cd backend`
   - `go run ./cmd/migrate`
-- 鏇存柊 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md) 鍜?[docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)锛岃ˉ鍏呰縼绉昏鏄庛€?### 楠岃瘉缁撴灉
-- `go test ./...` 閫氳繃銆?- `go run ./cmd/migrate` 鎵ц鎴愬姛銆?- 浣跨敤涓存椂绔彛 `8123` 鍚姩鍚庣锛屽仴搴锋鏌ヨ繑鍥炴垚鍔燂紝渚濊禆鐘舵€佷负 `sql=up`銆乣redis=up`銆乣mongo=up`銆乣mode=mysql`銆?### 鍚庣画褰卞搷
-- 鍚庣鏁版嵁搴撳垵濮嬪寲宸茬粡缁熶竴鍒囨崲鍒?SQL 杩佺Щ浣撶郴銆?- 鍚庣画琛ㄧ粨鏋勫崌绾у缓璁柊澧?`002_xxx.sql`銆乣003_xxx.sql` 绛夊閲忚剼鏈紝涓嶅啀渚濊禆 GORM 鑷姩寤鸿〃銆?
-## 2026-05-27 00:29:30 +08:00 | v0.0.26 | 鐢熸垚骞堕獙璇?MySQL 鍒濆骞傜瓑 SQL 鑴氭湰
-### 浠诲姟鍐呭
-- 鏍规嵁鏈€缁堝鍚戞暟鎹簱璁捐锛岃緭鍑哄彲鐩存帴鎵ц鐨?MySQL 鍒濆鍖?SQL 鏂囦欢銆?- 鍏奸【褰撳墠宸插紑鍙戞ā鍧椾笌鍚庣画鍥捐氨銆佸崱鐗囥€丄I銆佸伐绋嬪浘绛夋墿灞曟ā鍧椼€?- 鍦ㄦ湰鏈哄凡鍒涘缓鐨?`studymate` 鏁版嵁搴撲笂瀹為檯鎵ц锛岄獙璇佽剼鏈畬鏁存€т笌骞傜瓑鎬с€?### 瀹屾垚缁撴灉
-- 鏂板 [backend/internal/migrations/mysql/001_init_schema.sql](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/001_init_schema.sql)銆?- 鑴氭湰鍖呭惈锛?  - `schema_migrations` 杩佺Щ璁板綍琛ㄣ€?  - 褰撳墠宸插疄鐜版ā鍧楀搴旇〃锛氱敤鎴枫€佽璇併€佹枃浠躲€佽祫鏂欍€佺ぞ鍖恒€侀槄璇汇€佺瑪璁般€佸璁°€?  - 鏈€缁堣璁￠鐣欐墿灞曡〃锛氬洟闃熴€佽瘽棰樸€佷妇鎶ャ€佸悎闆嗐€佸浘璋便€佸伐绋嬪浘銆佸崱鐗囥€丄I銆佽绋嬨€佹悳绱€佽繍钀ラ厤缃瓑銆?  - 缁熶竴瀛楃闆?`utf8mb4`銆佹绉掔骇鏃堕棿瀛楁銆佸敮涓€绾︽潫銆佺粍鍚堢储寮曘€佸繀瑕佹鏌ョ害鏉熴€?- 鏇存柊 [docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md)锛岃ˉ鍏?SQL 钀藉湴鏂囦欢鍏ュ彛鍜岃剼鏈畾浣嶈鏄庛€?### 楠岃瘉缁撴灉
-- 宸叉鏌?SQL 鏂囦欢瀹屾暣鎬э紝鏂囦欢鍏?`978` 琛岋紝灏鹃儴杩佺Щ璁板綍鎻掑叆璇彞闂悎姝ｅ父銆?- 浣跨敤鏈満 MySQL 8.0 瀵?`studymate` 鎵ц鑴氭湰涓ゆ锛屽潎鎴愬姛锛屾棤閲嶅寤鸿〃閿欒銆?- 鎵ц鍚庢暟鎹簱琛ㄦ暟閲忎负 `65` 寮犮€?- 宸茬‘璁ゅ叧閿墿灞曡〃鍒涘缓鎴愬姛锛歚graphs`銆乣cards`銆乣ai_tasks`銆乣diagram_sources`銆乣document_chunks`銆?- 宸茬‘璁?`schema_migrations` 涓粎瀛樺湪鐗堟湰 `001` 璁板綍銆?### 鍚庣画褰卞搷
-- 褰撳墠鍒濆鍖栬剼鏈凡鍙綔涓洪」鐩?MySQL 鐨勭粺涓€璧风偣銆?- 鍚庣画鑻ュ嚭鐜扮粨鏋勫樊寮傝皟鏁达紝搴旇拷鍔?`002_xxx.sql` 涔嬬被澧為噺杩佺Щ锛岃€屼笉鏄洿鎺ヨ鍐欏垵濮嬪寲鑴氭湰鎵挎媴鎵€鏈夊崌绾ч€昏緫銆?
-## 2026-05-27 00:00:39 +08:00 | v0.0.25 | 璁捐 MySQL 涓?MongoDB 鏁版嵁搴撶粨鏋?### 浠诲姟鍐呭
-- 鏍规嵁銆婂浼撮」鐩細瀵规爣 Project Graph 鐨勫崌绾ц璁°€嬫暣鐞嗘渶缁堝鍚戠殑鏁版嵁搴撶粨鏋勩€?- 缁撳悎褰撳墠宸插疄鐜扮殑鐢ㄦ埛銆佽祫鏂欍€佺ぞ鍖恒€侀槄璇汇€佺瑪璁版ā鍧楋紝璁捐鍙€愭钀藉湴鐨?MySQL 涓?MongoDB 鍒嗗伐銆?- 灏嗘暟鎹簱璁捐鏀惧叆鍙彁浜ょ殑椤圭洰鏋舵瀯鏂囨。鐩綍銆?### 瀹屾垚缁撴灉
-- 鏂板 [docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md)銆?- 鏂囨。瑕嗙洊锛?  - MySQL 涓?MongoDB 鐨勮亴璐ｈ竟鐣屻€?  - 褰撳墠闃舵 MySQL 琛ㄧ粨鏋勩€?  - 鏈€缁堢洰鏍囨墿灞曡〃缁撴瀯銆?  - MongoDB 鍐呭闆嗗悎缁撴瀯銆?  - 绗旇銆佸浘璋便€丳DF 鎵规敞銆丄I 鑽夌鐨勮法搴撳啓鍏ユ祦绋嬨€?  - 鍒嗛樁娈佃惤鍦拌矾绾裤€?- 鏇存柊 [docs/architecture/ARCHITECTURE.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/ARCHITECTURE.md)锛屽鍔犳暟鎹簱璁捐鏂囨。鍏ュ彛銆?### 楠岃瘉缁撴灉
-- 宸茬‘璁ゆ柊鏂囨。浣嶄簬 `docs/architecture/`锛屼笉鍙?`docs/planning/` 鍜?`docs/design/` 蹇界暐瑙勫垯褰卞搷銆?- 鏈浠呮柊澧炴灦鏋勬枃妗ｏ紝鏈敼鍔ㄤ笟鍔′唬鐮侊紝鏈繍琛岀紪璇戞祴璇曘€?### 鍚庣画褰卞搷
-- 鍚庣画瀹炵幇 MongoDB 鎺ュ叆銆佸浘璋辨ā鍧椼€佸崱鐗囨ā鍧椼€丄I 妯″潡鏃讹紝鍙寜璇ユ枃妗ｉ€愭鎵╁睍銆?- 涓嬩竴姝ュ缓璁紭鍏堝疄鐜?`note_documents` 涓?`note_snapshots`锛岃绗旇鍐呭浠?HTML 杩囨浮鍒板潡鏂囨。銆?
-## 2026-05-26 23:52:45 +08:00 | v0.0.24 | 鎻愪氦褰撳墠鍙氦浠樻敼鍔ㄥ苟鏁寸悊蹇界暐瑙勫垯
-### 浠诲姟鍐呭
-- 鎸夎姹傛彁浜ゅ綋鍓嶆湭鎻愪氦鐨勫彲浜や粯鍐呭銆?- 鏃ュ織璁板綍鍜屽紑鍙戣鍒掔浉鍏虫枃妗ｄ笉杩涘叆鎻愪氦锛屽苟鍔犲叆蹇界暐鍚嶅崟銆?- `.docx` 鏂囦欢鍙厑璁搁」鐩枃妗ｇ洰褰曚笅鐨勬枃浠惰繘鍏ョ増鏈簱銆?### 瀹屾垚缁撴灉
-- 鏂板骞舵彁浜ゅ拷鐣ヨ鍒欙細
-  - 蹇界暐 `PROJECT_LOG.md`銆乣docs/planning/`銆乣docs/design/`銆?  - 蹇界暐鏈湴缂撳瓨銆佹瀯寤轰骇鐗┿€乣tsbuildinfo`銆佽繍琛屾湡鏁版嵁搴撴枃浠跺拰鏈湴瑙嗚浜х墿銆?  - 榛樿蹇界暐 `.docx`锛屼絾鍏佽 `docs/**/*.docx` 浣滀负椤圭洰鏂囨。鎻愪氦銆?- 浠庣増鏈储寮曠Щ闄ゅ凡杩借釜鐨勬湰鍦扮紦瀛樸€佹瀯寤轰俊鎭拰杩愯鏈熸暟鎹簱鏂囦欢銆?- 淇濈暀鏈湴 `PROJECT_LOG.md`锛屼絾鏈皢鏃ュ織鍐呭绾冲叆鎻愪氦銆?- 鍒涘缓鎻愪氦 `060c109 feat: 瀹炵幇闃呰绗旇闂幆骞剁粺涓€ MySQL 閰嶇疆`銆?### 楠岃瘉缁撴灉
-- `go test ./...` 閫氳繃銆?- `npm run typecheck` 閫氳繃銆?- `npm run build:user` 閫氳繃銆?- `npm run build:admin` 閫氳繃銆?- 鎻愪氦鍓嶆鏌ョ‘璁?`PROJECT_LOG.md`銆乣docs/planning/`銆乣docs/design/`銆乣.env` 鍜?`.docx` 鏈繘鍏ユ彁浜ゅ唴瀹广€?### 鍚庣画褰卞搷
-- 鍚庣画鎻愪氦榛樿涓嶄細鍐嶆贩鍏ユ棩蹇椼€佽鍒掕崏绋裤€佹湰鍦扮紦瀛樺拰杩愯鏈熸枃浠躲€?- 褰撳墠宸ヤ綔鍖洪櫎蹇界暐椤瑰宸茬粡骞插噣銆?
-## 2026-05-26 23:41:56 +08:00 | v0.0.23 | 瀹屽叏绉婚櫎鏃ф湰鍦板崟鏂囦欢鏁版嵁搴撴柟妗堬紝鏁版嵁搴撳眰缁熶竴涓?MySQL
-### 浠诲姟鍐呭
-- 鎸夎璁¤鏄庢墽琛屾暟鎹簱鏂规锛屼笉鍐嶄繚鐣欐棫鏈湴鍗曟枃浠舵暟鎹簱閰嶇疆銆侀┍鍔ㄥ垎鏀垨渚濊禆銆?- 鍚庣缁熶竴浣跨敤 MySQL锛岃处鍙?`root`锛屽瘑鐮?`123456`锛屾暟鎹簱 `studymate`銆?- 鍚屾鐜鏂囦欢銆佸紑鍙戣鏄庛€丷EADME 鍜岄」鐩褰曘€?### 瀹屾垚缁撴灉
-- 鏇存柊 [backend/internal/config/config.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/config/config.go)锛岀Щ闄ゆ棫璺緞閰嶇疆锛屼粎淇濈暀 MySQL 鏁版嵁婧愰厤缃€?- 鏇存柊 [backend/internal/pkg/database/database.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/pkg/database/database.go)锛屽垹闄ゆ棫椹卞姩瀵煎叆鍜岃繛鎺ュ垎鏀紝鍚庣鍙帴鍙?`DB_DRIVER=mysql`銆?- 鏇存柊 [.env](/E:/Code/1108026_rust_go/StudyMate/.env) 鍜?[.env.example](/E:/Code/1108026_rust_go/StudyMate/.env.example)锛屽垹闄ゆ棫璺緞鍙橀噺锛岄粯璁?`MYSQL_DSN` 鎸囧悜鏈湴 MySQL銆?- 鏇存柊 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md) 鍜?[docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)锛岀Щ闄ゆ棫鏁版嵁搴撳洖閫€璇存槑銆?- 鎵ц `go mod tidy`锛屾竻鐞嗘棫鏈湴鍗曟枃浠舵暟鎹簱鐩稿叧渚濊禆銆?- 鍋滄浠嶅崰鐢ㄦ棫鏁版嵁搴撴枃浠剁殑鍘嗗彶鍚庣杩涚▼锛屽垹闄?[storage/studymate.db](/E:/Code/1108026_rust_go/StudyMate/storage/studymate.db)銆?- 浣跨敤 MySQL 閰嶇疆閲嶆柊鍚姩 `8023` 鍚庣鏈嶅姟銆?### 楠岃瘉缁撴灉
-- 鍏ㄥ眬妫€绱㈡棫鏁版嵁搴撳叧閿瓧鏃犲尮閰嶇粨鏋溿€?- `go test ./...` 閫氳繃銆?- 璁块棶 `http://localhost:8023/health` 鎴愬姛锛岃繑鍥?`deps.mode = mysql`銆?### 鍚庣画褰卞搷
-- 椤圭洰鏁版嵁搴撳眰鐜板湪瀹屽叏鎸夎璁¤鏄庤蛋 MySQL銆?- 鍚庣画鏈湴鍚姩鍓嶉渶瑕佺‘淇?MySQL 鏈嶅姟鍙敤锛屽苟宸插垱寤?`studymate` 鏁版嵁搴撱€?- 鏃㈡湁鏃ф湰鍦版暟鎹簱鏂囦欢宸插垹闄わ紱濡傛灉鏈潵闇€瑕佸巻鍙叉暟鎹紝搴斾粠澶栭儴澶囦唤鍙﹀仛涓€娆℃€у鍏ヨ剼鏈€?
-## 2026-05-27 00:18:42 +08:00 | v0.0.22 | 淇鍏抽敭鏂囨。骞剁粺涓€绠＄悊绔富棰?### 浠诲姟鍐呭
-- 妫€鏌ュ綋鍓嶅墠绔富棰樻槸鍚︾湡姝ｇ粺涓€锛屽苟瀹氫綅鏈畬鎴愮粺涓€娓叉煋鐨勫悗鍙伴儴鍒嗐€?- 淇 README銆佸紑鍙戞枃妗ｃ€佸墠绔璁℃柟妗堝拰椤圭洰鏃ュ織涓殑鐪熷疄涔辩爜涓庢崯鍧忓唴瀹广€?- 缁х画鏀舵暃绠＄悊绔紝浣垮叾鍥炲埌涓庣敤鎴风涓€鑷寸殑璁捐璇█銆?### 瀹屾垚缁撴灉
-- 閲嶅缓 `README.md`锛屾仮澶嶉」鐩杩般€佹妧鏈爤銆佸綋鍓嶉樁娈靛拰鏂囨。鍏ュ彛銆?- 閲嶅缓 `docs/DEVELOPMENT.md`锛屾仮澶嶇幆澧冭鏄庛€佸惎鍔ㄦ柟寮忋€佺鍙ｈ鏄庡拰 Go 浠ｇ悊鎺掓煡銆?- 閲嶅缓 `docs/design/FRONTEND_REBUILD_PLAN.md`锛屾仮澶嶅墠绔洰鏍囥€佽璁″師鍒欍€佺粨鏋勮鍒掑拰瀹炴柦椤哄簭銆?- 閲嶅啓 `PROJECT_LOG.md`锛屾竻鐞嗗巻鍙蹭贡鐮侊紝骞舵寜鐗堟湰閲嶆柊鏁寸悊椤圭洰鎺ㄨ繘璁板綍銆?- 鏀舵暃绠＄悊绔富棰橈紝浣垮叾涓庣敤鎴风缁х画鍥寸粫鍚屼竴濂楁殩鐏拌儗鏅€佹澗鏌忕豢涓昏壊銆佺惀鐝€寮鸿皟鑹插拰鍦嗚鍗＄墖浣撶郴灞曞紑銆?- 淇鍓嶅悗鍙?HTML 鏍囬涓烘甯镐腑鏂囥€?### 楠岃瘉缁撴灉
+- 更新 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md) 和 [docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)，补充迁移说明。
+### 验证结果
+- `go test ./...` 通过。
+- `go run ./cmd/migrate` 执行成功。
+- 使用临时端口 `8123` 启动后端，健康检查返回成功，依赖状态为 `sql=up`、`redis=up`、`mongo=up`、`mode=mysql`。
+### 后续影响
+- 后端数据库初始化已经统一切换到 SQL 迁移体系。
+- 后续表结构升级建议新增 `002_xxx.sql`、`003_xxx.sql` 等增量脚本，不再依赖 GORM 自动建表。
+
+## 2026-05-27 00:29:30 +08:00 | v0.0.26 | 生成并验证 MySQL 初始幂等 SQL 脚本
+### 任务内容
+- 根据最终导向数据库设计，输出可直接执行的 MySQL 初始化 SQL 文件。
+- 兼顾当前已开发模块与后续图谱、卡片、AI、工程图等扩展模块。
+- 在本机已创建的 `studymate` 数据库上实际执行，验证脚本完整性与幂等性。
+### 完成结果
+- 新增 [backend/internal/migrations/mysql/001_init_schema.sql](/E:/Code/1108026_rust_go/StudyMate/backend/internal/migrations/mysql/001_init_schema.sql)。
+- 脚本包含：
+  - `schema_migrations` 迁移记录表。
+  - 当前已实现模块对应表：用户、认证、文件、资料、社区、阅读、笔记、审计。
+  - 最终设计预留扩展表：团队、话题、举报、合集、图谱、工程图、卡片、AI、课程、搜索、运营配置等。
+  - 统一字符集 `utf8mb4`、毫秒级时间字段、唯一约束、组合索引、必要检查约束。
+- 更新 [docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md)，补充 SQL 落地文件入口和脚本定位说明。
+### 验证结果
+- 已检查 SQL 文件完整性，文件共 `978` 行，尾部迁移记录插入语句闭合正常。
+- 使用本机 MySQL 8.0 对 `studymate` 执行脚本两次，均成功，无重复建表错误。
+- 执行后数据库表数量为 `65` 张。
+- 已确认关键扩展表创建成功：`graphs`、`cards`、`ai_tasks`、`diagram_sources`、`document_chunks`。
+- 已确认 `schema_migrations` 中仅存在版本 `001` 记录。
+### 后续影响
+- 当前初始化脚本已可作为项目 MySQL 的统一起点。
+- 后续若出现结构差异调整，应追加 `002_xxx.sql` 之类增量迁移，而不是直接覆写初始化脚本承担所有升级逻辑。
+
+## 2026-05-27 00:00:39 +08:00 | v0.0.25 | 设计 MySQL 与 MongoDB 数据库结构
+### 任务内容
+- 根据《学伴项目：对标 Project Graph 的升级设计》整理最终导向的数据库结构。
+- 结合当前已实现的用户、资料、社区、阅读、笔记模块，设计可逐步落地的 MySQL 与 MongoDB 分工。
+- 将数据库设计放入可提交的项目架构文档目录。
+### 完成结果
+- 新增 [docs/architecture/DATABASE_DESIGN.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/DATABASE_DESIGN.md)。
+- 文档覆盖：
+  - MySQL 与 MongoDB 的职责边界。
+  - 当前阶段 MySQL 表结构。
+  - 最终目标扩展表结构。
+  - MongoDB 内容集合结构。
+  - 笔记、图谱、PDF 批注、AI 草稿的跨库写入流程。
+  - 分阶段落地路线。
+- 更新 [docs/architecture/ARCHITECTURE.md](/E:/Code/1108026_rust_go/StudyMate/docs/architecture/ARCHITECTURE.md)，增加数据库设计文档入口。
+### 验证结果
+- 已确认新文档位于 `docs/architecture/`，不受 `docs/planning/` 和 `docs/design/` 忽略规则影响。
+- 本次仅新增架构文档，未改动业务代码，未运行编译测试。
+### 后续影响
+- 后续实现 MongoDB 接入、图谱模块、卡片模块、AI 模块时，可按该文档逐步扩展。
+- 下一步建议优先实现 `note_documents` 与 `note_snapshots`，让笔记内容从 HTML 过渡到块文档。
+
+## 2026-05-26 23:52:45 +08:00 | v0.0.24 | 提交当前可交付改动并整理忽略规则
+### 任务内容
+- 按要求提交当前未提交的可交付内容。
+- 日志记录和开发计划相关文档不进入提交，并加入忽略名单。
+- `.docx` 文件只允许项目文档目录下的文件进入版本库。
+### 完成结果
+- 新增并提交忽略规则：
+  - 忽略 `PROJECT_LOG.md`、`docs/planning/`、`docs/design/`。
+  - 忽略本地缓存、构建产物、`tsbuildinfo`、运行期数据库文件和本地视觉产物。
+  - 默认忽略 `.docx`，但允许 `docs/**/*.docx` 作为项目文档提交。
+- 从版本索引移除已追踪的本地缓存、构建信息和运行期数据库文件。
+- 保留本地 `PROJECT_LOG.md`，但未将日志内容纳入提交。
+- 创建提交 `060c109 feat: 实现阅读笔记闭环并统一 MySQL 配置`。
+### 验证结果
+- `go test ./...` 通过。
+- `npm run typecheck` 通过。
+- `npm run build:user` 通过。
+- `npm run build:admin` 通过。
+- 提交前检查确认 `PROJECT_LOG.md`、`docs/planning/`、`docs/design/`、`.env` 和 `.docx` 未进入提交内容。
+### 后续影响
+- 后续提交默认不会再混入日志、计划草稿、本地缓存和运行期文件。
+- 当前工作区除忽略项外已经干净。
+
+## 2026-05-26 23:41:56 +08:00 | v0.0.23 | 完全移除旧本地单文件数据库方案，数据库层统一为 MySQL
+### 任务内容
+- 按设计说明执行数据库方案，不再保留旧本地单文件数据库配置、驱动分支或依赖。
+- 后端统一使用 MySQL，账号 `root`，密码 `123456`，数据库 `studymate`。
+- 同步环境文件、开发说明、README 和项目记录。
+### 完成结果
+- 更新 [backend/internal/config/config.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/config/config.go)，移除旧路径配置，仅保留 MySQL 数据源配置。
+- 更新 [backend/internal/pkg/database/database.go](/E:/Code/1108026_rust_go/StudyMate/backend/internal/pkg/database/database.go)，删除旧驱动导入和连接分支，后端只接受 `DB_DRIVER=mysql`。
+- 更新 [.env](/E:/Code/1108026_rust_go/StudyMate/.env) 和 [.env.example](/E:/Code/1108026_rust_go/StudyMate/.env.example)，删除旧路径变量，默认 `MYSQL_DSN` 指向本地 MySQL。
+- 更新 [README.md](/E:/Code/1108026_rust_go/StudyMate/README.md) 和 [docs/DEVELOPMENT.md](/E:/Code/1108026_rust_go/StudyMate/docs/DEVELOPMENT.md)，移除旧数据库回退说明。
+- 执行 `go mod tidy`，清理旧本地单文件数据库相关依赖。
+- 停止仍占用旧数据库文件的历史后端进程，删除 [storage/studymate.db](/E:/Code/1108026_rust_go/StudyMate/storage/studymate.db)。
+- 使用 MySQL 配置重新启动 `8023` 后端服务。
+### 验证结果
+- 全局检索旧数据库关键字无匹配结果。
+- `go test ./...` 通过。
+- 访问 `http://localhost:8023/health` 成功，返回 `deps.mode = mysql`。
+### 后续影响
+- 项目数据库层现在完全按设计说明走 MySQL。
+- 后续本地启动前需要确保 MySQL 服务可用，并已创建 `studymate` 数据库。
+- 既有旧本地数据库文件已删除；如果未来需要历史数据，应从外部备份另做一次性导入脚本。
+
+## 2026-05-27 00:18:42 +08:00 | v0.0.22 | 修复关键文档并统一管理端主题
+### 任务内容
+- 检查当前前端主题是否真正统一，并定位未完成统一渲染的后台部分。
+- 修复 README、开发文档、前端设计方案和项目日志中的真实乱码与损坏内容。
+- 继续收敛管理端，使其回到与用户端一致的设计语言。
+### 完成结果
+- 重建 `README.md`，恢复项目概述、技术栈、当前阶段和文档入口。
+- 重建 `docs/DEVELOPMENT.md`，恢复环境说明、启动方式、端口说明和 Go 代理排查。
+- 重建 `docs/design/FRONTEND_REBUILD_PLAN.md`，恢复前端目标、设计原则、结构规划和实施顺序。
+- 重写 `PROJECT_LOG.md`，清理历史乱码，并按版本重新整理项目推进记录。
+- 收敛管理端主题，使其与用户端继续围绕同一套暖灰背景、松柏绿主色、琥珀强调色和圆角卡片体系展开。
+- 修正前后台 HTML 标题为正常中文。
+### 验证结果
 - `npm run typecheck`
 - `npm run build:user`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
-- 褰撳墠鍏抽敭鏂囨。宸茬粡鎭㈠涓哄彲璇讳腑鏂囷紝涓嶅啀褰卞搷鍚庣画寮€鍙戝拰浜ゆ帴銆?- 绠＄悊绔拰鐢ㄦ埛绔殑涓婚涓€鑷存€ф槑鏄炬彁楂橈紝鍚庣画鍙互缁х画鍩轰簬缁熶竴璁捐绯荤粺鍋氭ā鍧楁繁鍖栥€?
-## 2026-05-26 23:13:49 +08:00 | v0.0.21 | 閲嶆瀯鍓嶇涓诲簲鐢ㄥ苟淇鍓嶇鍙涔辩爜
-### 浠诲姟鍐呭
-- 缁х画鎸夋柊鐨勫墠绔噸鏋勬柟妗堟帹杩涢樁娈?B锛屼紭鍏堟妸璧勬枡搴撱€侀槄璇诲櫒銆佺瑪璁伴〉閲嶆柊鎺ュ洖缁熶竴宸ヤ綔鍖哄３灞傘€?- 淇褰撳墠鍓嶇鍙鐨勪贡鐮侀棶棰橈紝鍖呮嫭婧愮爜涓枃鏂囨鎹熷潖鍜屾帴鍙ｈ繑鍥炲巻鍙茶剰鏁版嵁涓殑涓€涓查棶鍙锋樉绀恒€?### 瀹屾垚缁撴灉
-- 閲嶅啓鐢ㄦ埛绔富搴旂敤澹冲眰鍜岃矾鐢便€?- 璧勬枡搴撴帴鍥炴悳绱€侀檮浠朵笂浼犮€佽祫鏂欏垱寤恒€佺紪杈戙€佹敹钘忋€佽瘎鍒嗗拰闃呰鍏ュ彛銆?- 闃呰鍣ㄦ帴鍥炵湡瀹為槄璇荤姸鎬併€侀〉鐮佽繘搴︺€佷功绛惧拰鎵规敞銆?- 绗旇椤垫帴鍥炲瘜鏂囨湰缂栬緫銆佸叧鑱旇祫鏂欍€佺増鏈巻鍙层€佹仮澶嶇増鏈拰鍒犻櫎鍔ㄤ綔銆?- 閲嶅啓瀵屾枃鏈紪杈戝櫒涓?PDF 闃呰鍣ㄧ粍浠躲€?- 閲嶅啓绠＄悊绔３灞傦紝淇濈暀绠＄悊鍛樼櫥褰曞拰瀹℃牳閾捐矾銆?- 瀵规帴鍙ｅ巻鍙茶剰鏁版嵁涓殑 `????` 鍋氬墠绔睍绀哄厹搴曘€?### 楠岃瘉缁撴灉
+### 后续影响
+- 当前关键文档已经恢复为可读中文，不再影响后续开发和交接。
+- 管理端和用户端的主题一致性明显提高，后续可以继续基于统一设计系统做模块深化。
+
+## 2026-05-26 23:13:49 +08:00 | v0.0.21 | 重构前端主应用并修正前端可见乱码
+### 任务内容
+- 继续按新的前端重构方案推进阶段 B，优先把资料库、阅读器、笔记页重新接回统一工作区壳层。
+- 修正当前前端可见的乱码问题，包括源码中文文案损坏和接口返回历史脏数据中的一串问号显示。
+### 完成结果
+- 重写用户端主应用壳层和路由。
+- 资料库接回搜索、附件上传、资料创建、编辑、收藏、评分和阅读入口。
+- 阅读器接回真实阅读状态、页码进度、书签和批注。
+- 笔记页接回富文本编辑、关联资料、版本历史、恢复版本和删除动作。
+- 重写富文本编辑器与 PDF 阅读器组件。
+- 重写管理端壳层，保留管理员登录和审核链路。
+- 对接口历史脏数据中的 `????` 做前端展示兜底。
+### 验证结果
 - `npm run typecheck`
 - `npm run build:user`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
-- 鍓嶇涓荤晫闈粠鈥滃３灞傚崰浣嶁€濇帹杩涘埌鈥滃３灞?+ 鐪熷疄璧勬枡/闃呰/绗旇閾捐矾骞跺瓨鈥濈殑闃舵銆?
-## 2026-05-26 21:02:26 +08:00 | v0.0.20 | 鍒涘缓鍓嶅彴娴嬭瘯璐﹀彿 use123
-### 浠诲姟鍐呭
-- 涓哄墠鍙扮敤鎴风鍒涘缓涓€涓彲鐩存帴鐧诲綍鐨勬櫘閫氱敤鎴疯处鍙枫€?### 瀹屾垚缁撴灉
-- 閫氳繃 `POST /api/v1/auth/register` 鎴愬姛鍒涘缓鏈湴娴嬭瘯璐﹀彿锛?  - 鐢ㄦ埛鍚嶏細`use123`
-  - 瀵嗙爜锛歚123123123`
-  - 閭锛歚11111@qq.com`
-  - 鏄剧ず鍚嶏細`use123`
-- 閫氳繃鐧诲綍鎺ュ彛楠岃瘉璇ヨ处鍙峰彲鐢ㄣ€?### 楠岃瘉缁撴灉
+### 后续影响
+- 前端主界面从“壳层占位”推进到“壳层 + 真实资料/阅读/笔记链路并存”的阶段。
+
+## 2026-05-26 21:02:26 +08:00 | v0.0.20 | 创建前台测试账号 use123
+### 任务内容
+- 为前台用户端创建一个可直接登录的普通用户账号。
+### 完成结果
+- 通过 `POST /api/v1/auth/register` 成功创建本地测试账号：
+  - 用户名：`use123`
+  - 密码：`123123123`
+  - 邮箱：`11111@qq.com`
+  - 显示名：`use123`
+- 通过登录接口验证该账号可用。
+### 验证结果
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
-### 鍚庣画褰卞搷
-- 璇ヨ处鍙峰彲鐩存帴鐢ㄤ簬鏈湴鍓嶅彴鑱旇皟鍜屼綋楠岄獙璇併€?
-## 2026-05-26 20:25:26 +08:00 | v0.0.19 | 鍚姩鍓嶇闃舵 A锛岄噸鍋氱敤鎴风涓庣鐞嗙鍏ㄥ眬澹冲眰
-### 浠诲姟鍐呭
-- 寮€濮嬫寜鐓у墠绔噸寤鸿璁℃柟妗堝疄闄呴噸鍋氬墠绔€?- 鐢ㄩ珮璐ㄩ噺鍗犱綅鎵挎帴鏈疄鐜版ā鍧椼€?### 瀹屾垚缁撴灉
-- 閲嶅啓鐢ㄦ埛绔３灞傦細椤堕儴鎼滅储銆佸乏渚у鑸€佷腑閮ㄥ伐浣滃尯銆佸彸渚т笂涓嬫枃闈㈡澘銆?- 閲嶅啓绠＄悊绔３灞傦細姒傝銆佸鏍搞€佽祫鏂欍€佺ぞ鍖恒€佺敤鎴枫€佸浘璋辨ā鏉裤€丄I銆佺郴缁熼厤缃€佸璁℃棩蹇椼€?- 鐢熸垚鏂板３灞傞〉闈㈠揩鐓х敤浜庡鐓с€?### 楠岃瘉缁撴灉
+### 后续影响
+- 该账号可直接用于本地前台联调和体验验证。
+
+## 2026-05-26 20:25:26 +08:00 | v0.0.19 | 启动前端阶段 A，重做用户端与管理端全局壳层
+### 任务内容
+- 开始按照前端重建设计方案实际重做前端。
+- 用高质量占位承接未实现模块。
+### 完成结果
+- 重写用户端壳层：顶部搜索、左侧导航、中部工作区、右侧上下文面板。
+- 重写管理端壳层：概览、审核、资料、社区、用户、图谱模板、AI、系统配置、审计日志。
+- 生成新壳层页面快照用于对照。
+### 验证结果
 - `npm run typecheck`
 - `npm run build:user`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
-- 鍓嶇浠庘€滆鏄庨〉 + 涓存椂琛ㄥ崟椤碘€濊繘鍏ョ粺涓€宸ヤ綔鍖哄３灞傞樁娈点€?
-## 2026-05-26 19:53:45 +08:00 | v0.0.18 | 琛ュ厖鍓嶇瀵规爣浜у搧鍙傝€冧笌缁熶竴椋庢牸绾︽潫
-### 浠诲姟鍐呭
-- 灏嗏€滃弬鑰冨ご閮ㄤ骇鍝佷俊鎭灦鏋勶紝浣嗕繚鎸?StudyMate 鑷繁鐨勭粺涓€椋庢牸鈥濆啓鍏ヨ璁℃柟妗堛€?### 瀹屾垚缁撴灉
-- 鏇存柊 `docs/design/FRONTEND_REBUILD_PLAN.md`銆?- 澧炲姞瀵规爣鍘熷垯銆佹ā鍧楀鏍囩煩闃点€佺粺涓€涓婚瑕佹眰鍜岃惤鍦拌鍒欍€?### 楠岃瘉缁撴灉
-- 鏂囨。妫€鏌ュ畬鎴愩€?### 鍚庣画褰卞搷
-- 鍚庣画鍓嶇瀹炵幇灏嗕互鈥滄ā鍧楀€熼壌 + 鍏ㄥ眬缁熶竴鈥濈殑鏂瑰紡鎺ㄨ繘銆?
-## 2026-05-26 19:41:48 +08:00 | v0.0.17 | 娴忚褰撳墠鍓嶇骞惰緭鍑烘暣浣撻噸寤鸿璁℃柟妗?### 浠诲姟鍐呭
-- 娴忚鐢ㄦ埛绔拰绠＄悊绔綋鍓嶉〉闈€?- 鏍规嵁鏈€缁堥」鐩洰鏍囬噸鏂拌鍒掓暣涓墠绔粨鏋勪笌瀹炴柦椤哄簭銆?### 瀹屾垚缁撴灉
-- 鐢熸垚 `docs/design/FRONTEND_REBUILD_PLAN.md`銆?- 纭褰撳墠鍓嶇闇€瑕佹暣浣撻噸鍋氾紝鑰屼笉鏄户缁ˉ涓佸紡杩唬銆?### 楠岃瘉缁撴灉
-- 鏈湴鐢ㄦ埛绔笌绠＄悊绔〉闈㈠揩鐓у凡鐢熸垚銆?### 鍚庣画褰卞搷
-- 涓哄悗缁墠绔噸鏋勬彁渚涚粺涓€璺嚎鍥俱€?
-## 2026-05-26 19:07:33 +08:00 | v0.0.16 | 缁х画鍔犲帤 v0.4.0锛岃ˉ榻愰槄璇绘壒娉ㄥ洖璺冲拰绗旇鎽樺綍琛旀帴
-### 浠诲姟鍐呭
-- 鍔犲帤闃呰涓庣瑪璁颁箣闂寸殑鍓嶅彴浣撻獙銆?### 瀹屾垚缁撴灉
-- 鎵规敞鏀寔鍥炶烦鍒板搴?PDF 椤点€?- 绗旇椤垫柊澧炶祫鏂欏紩鐢ㄥ崱鐗囥€?- 鏂板闃呰鎽樺綍姹狅紝鍙皢鎵规敞鍐呭鎻掑叆瀵屾枃鏈鏂囥€?### 楠岃瘉缁撴灉
+### 后续影响
+- 前端从“说明页 + 临时表单页”进入统一工作区壳层阶段。
+
+## 2026-05-26 19:53:45 +08:00 | v0.0.18 | 补充前端对标产品参考与统一风格约束
+### 任务内容
+- 将“参考头部产品信息架构，但保持 StudyMate 自己的统一风格”写入设计方案。
+### 完成结果
+- 更新 `docs/design/FRONTEND_REBUILD_PLAN.md`。
+- 增加对标原则、模块对标矩阵、统一主题要求和落地规则。
+### 验证结果
+- 文档检查完成。
+### 后续影响
+- 后续前端实现将以“模块借鉴 + 全局统一”的方式推进。
+
+## 2026-05-26 19:41:48 +08:00 | v0.0.17 | 浏览当前前端并输出整体重建设计方案
+### 任务内容
+- 浏览用户端和管理端当前页面。
+- 根据最终项目目标重新规划整个前端结构与实施顺序。
+### 完成结果
+- 生成 `docs/design/FRONTEND_REBUILD_PLAN.md`。
+- 确认当前前端需要整体重做，而不是继续补丁式迭代。
+### 验证结果
+- 本地用户端与管理端页面快照已生成。
+### 后续影响
+- 为后续前端重构提供统一路线图。
+
+## 2026-05-26 19:07:33 +08:00 | v0.0.16 | 继续加厚 v0.4.0，补齐阅读批注回跳和笔记摘录衔接
+### 任务内容
+- 加厚阅读与笔记之间的前台体验。
+### 完成结果
+- 批注支持回跳到对应 PDF 页。
+- 笔记页新增资料引用卡片。
+- 新增阅读摘录池，可将批注内容插入富文本正文。
+### 验证结果
 - `npm run typecheck`
 - `npm run build:user`
-### 鍚庣画褰卞搷
-- 闃呰鍒扮瑪璁扮殑閾捐矾鏇村畬鏁淬€佹洿椤烘墜銆?
-## 2026-05-26 18:50:09 +08:00 | v0.0.15 | 鍔犲帤 v0.4.0 瀵屾枃鏈紪杈戜笌 PDF 浜や簰锛屽苟浼樺寲鍚庡彴鏋勫缓浣撶Н
-### 浠诲姟鍐呭
-- 寮曞叆鏇村儚鏍风殑瀵屾枃鏈紪杈戝櫒鍜?PDF 闃呰浜や簰銆?- 澶勭悊绠＄悊绔瀯寤哄寘浣撳亸澶х殑璀﹀憡銆?### 瀹屾垚缁撴灉
-- 鎺ュ叆 Tiptap 瀵屾枃鏈紪杈戝櫒銆?- 鎺ュ叆 react-pdf 闃呰鍣紝鏀寔缈婚〉銆佺缉鏀俱€佽烦椤靛拰閫変腑鏂囨湰鎽樺綍銆?- 鐢ㄦ埛绔仛鍒嗗寘浼樺寲銆?- 绠＄悊绔Щ闄よ繍琛屾椂 Element Plus 渚濊禆锛岄檷浣庝富鍖呬綋绉€?### 楠岃瘉缁撴灉
+### 后续影响
+- 阅读到笔记的链路更完整、更顺手。
+
+## 2026-05-26 18:50:09 +08:00 | v0.0.15 | 加厚 v0.4.0 富文本编辑与 PDF 交互，并优化后台构建体积
+### 任务内容
+- 引入更像样的富文本编辑器和 PDF 阅读交互。
+- 处理管理端构建包体偏大的警告。
+### 完成结果
+- 接入 Tiptap 富文本编辑器。
+- 接入 react-pdf 阅读器，支持翻页、缩放、跳页和选中文本摘录。
+- 用户端做分包优化。
+- 管理端移除运行时 Element Plus 依赖，降低主包体积。
+### 验证结果
 - `npm run typecheck`
 - `npm run build:user`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
-- 闃呰涓庣瑪璁颁綋楠屼粠鈥滆兘鐢ㄢ€濇帹杩涘埌鏇村儚鐪熷疄浜у搧銆?
-## 2026-05-26 13:48:29 +08:00 | v0.0.14 | 瀹炵幇 v0.4.0 闃呰绗旇鐗堢涓€鏉′笟鍔￠棴鐜?### 浠诲姟鍐呭
-- 鎵撻€氳祫鏂欓槄璇汇€侀槄璇昏繘搴︺€佹壒娉ㄤ笌璧勬枡鍏宠仈绗旇鐨勭涓€鏉′富閾捐矾銆?### 瀹屾垚缁撴灉
-- 鍚庣鏂板 `note` 鍜?`reader` 鐩稿叧鑳藉姏銆?- 鍓嶅彴鐢ㄦ埛绔帴鍥為槄璇婚〉涓庣瑪璁伴〉銆?- 鏀寔闃呰杩涘害銆佷功绛俱€佹壒娉ㄣ€佺瑪璁扮増鏈巻鍙插拰鐗堟湰鎭㈠銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 阅读与笔记体验从“能用”推进到更像真实产品。
+
+## 2026-05-26 13:48:29 +08:00 | v0.0.14 | 实现 v0.4.0 阅读笔记版第一条业务闭环
+### 任务内容
+- 打通资料阅读、阅读进度、批注与资料关联笔记的第一条主链路。
+### 完成结果
+- 后端新增 `note` 和 `reader` 相关能力。
+- 前台用户端接回阅读页与笔记页。
+- 支持阅读进度、书签、批注、笔记版本历史和版本恢复。
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
 - `npm run build:user`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
-- `v0.4.0` 寮€濮嬪叿澶囩湡瀹炲彲鐢ㄧ殑闃呰娌夋穩璺緞銆?
-## 2026-05-26 13:29:58 +08:00 | v0.0.13 | 绠＄悊绔鍙ｈ皟鏁村埌 8002
-### 浠诲姟鍐呭
-- 灏嗗悗鍙扮鐞嗙榛樿绔彛浠庢棫鍊艰皟鏁村埌 `8002`銆?### 瀹屾垚缁撴灉
-- 绠＄悊绔粯璁ょ鍙ｆ敼涓?`8002`锛屽苟琛ラ綈鏂囨。璇存槑銆?### 楠岃瘉缁撴灉
+### 后续影响
+- `v0.4.0` 开始具备真实可用的阅读沉淀路径。
+
+## 2026-05-26 13:29:58 +08:00 | v0.0.13 | 管理端端口调整到 8002
+### 任务内容
+- 将后台管理端默认端口从旧值调整到 `8002`。
+### 完成结果
+- 管理端默认端口改为 `8002`，并补齐文档说明。
+### 验证结果
 - `npm run typecheck`
-### 鍚庣画褰卞搷
-- 褰撳墠鏈湴榛樿绔彛涓猴細鐢ㄦ埛绔?`8001`銆佺鐞嗙 `8002`銆佸悗绔?`8023`銆?
-## 2026-05-26 13:18:47 +08:00 | v0.0.12 | 璋冩暣鐢ㄦ埛绔笌鍚庣榛樿绔彛
-### 浠诲姟鍐呭
-- 灏嗙敤鎴风鏀逛负 `8001`锛屽悗绔敼涓?`8023`銆?### 瀹屾垚缁撴灉
-- 鐢ㄦ埛绔惎鍔ㄧ鍙ｈ皟鏁翠负 `8001`銆?- 鍚庣榛樿鍚姩绔彛璋冩暣涓?`8023`銆?- 鍚屾鏇存柊浠ｇ悊銆丆ORS 鍜屽紑鍙戣鏄庛€?### 楠岃瘉缁撴灉
+### 后续影响
+- 当前本地默认端口为：用户端 `8001`、管理端 `8002`、后端 `8023`。
+
+## 2026-05-26 13:18:47 +08:00 | v0.0.12 | 调整用户端与后端默认端口
+### 任务内容
+- 将用户端改为 `8001`，后端改为 `8023`。
+### 完成结果
+- 用户端启动端口调整为 `8001`。
+- 后端默认启动端口调整为 `8023`。
+- 同步更新代理、CORS 和开发说明。
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
-### 鍚庣画褰卞搷
-- 鍓嶅悗绔湰鍦拌仈璋冪鍙ｇ粺涓€绋冲畾涓嬫潵銆?
-## 2026-05-26 12:55:21 +08:00 | v0.0.11 | 淇 Go 妯″潡浠ｇ悊鎶ラ敊
-### 浠诲姟鍐呭
-- 澶勭悊 GoLand 鍜屽懡浠よ涓?`goproxy.io` 瀵艰嚧鐨勪緷璧栨媺鍙栧け璐ラ棶棰樸€?### 瀹屾垚缁撴灉
-- 纭鏍瑰洜鏄?`GOPROXY=https://goproxy.io` 鍥炴簮澶辫触銆?- 楠岃瘉 `https://goproxy.cn,direct` 涓?`https://proxy.golang.org,direct` 鍙敤銆?- 鏇存柊鐢ㄦ埛绾?`GOPROXY` 骞惰ˉ鍏呮枃妗ｈ鏄庛€?### 楠岃瘉缁撴灉
+### 后续影响
+- 前后端本地联调端口统一稳定下来。
+
+## 2026-05-26 12:55:21 +08:00 | v0.0.11 | 修复 Go 模块代理报错
+### 任务内容
+- 处理 GoLand 和命令行中 `goproxy.io` 导致的依赖拉取失败问题。
+### 完成结果
+- 确认根因是 `GOPROXY=https://goproxy.io` 回源失败。
+- 验证 `https://goproxy.cn,direct` 与 `https://proxy.golang.org,direct` 可用。
+- 更新用户级 `GOPROXY` 并补充文档说明。
+### 验证结果
 - `go list -m -json all`
-### 鍚庣画褰卞搷
-- 鍚庣画 Go 渚濊禆鎷夊彇鍜?IDE 绱㈠紩鎭㈠姝ｅ父銆?
-## 2026-05-26 11:36:40 +08:00 | v0.0.10 | 瀹炵幇 v0.3.0 绀惧尯璧勬枡鐗堢涓€鏉￠棴鐜?### 浠诲姟鍐呭
-- 鎵撻€氳祫鏂欏簱銆佺ぞ鍖哄彂甯栧拰鍚庡彴瀹℃牳鐨勭涓€鏉′富閾捐矾銆?### 瀹屾垚缁撴灉
-- 绀惧尯鏀寔鍙戝笘銆佽鎯呫€佷竴绾ц瘎璁恒€佺偣璧炪€佹敹钘忋€?- 璧勬枡搴撴敮鎸佽祫鏂欏垱寤恒€佽鎯呫€佹敹钘忋€佽瘎鍒嗐€?- 鍚庡彴鏀寔寰呭鏍稿笘瀛愬拰璧勬枡鐨勯€氳繃銆侀┏鍥炪€佷笅鏋躲€?### 楠岃瘉缁撴灉
+### 后续影响
+- 后续 Go 依赖拉取和 IDE 索引恢复正常。
+
+## 2026-05-26 11:36:40 +08:00 | v0.0.10 | 实现 v0.3.0 社区资料版第一条闭环
+### 任务内容
+- 打通资料库、社区发帖和后台审核的第一条主链路。
+### 完成结果
+- 社区支持发帖、详情、一级评论、点赞、收藏。
+- 资料库支持资料创建、详情、收藏、评分。
+- 后台支持待审核帖子和资料的通过、驳回、下架。
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
 - `npm run build:user`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
-- 椤圭洰浠庘€滃熀纭€骞冲彴鈥濇帹杩涘埌鈥滃唴瀹瑰钩鍙扳€濄€?
-## 2026-05-26 09:18:12 +08:00 | v0.0.9 | 鎸夌増鏈鍒掔户缁帹杩涘钩鍙板熀纭€鑳藉姏
-### 浠诲姟鍐呭
-- 鎸?`v0.2.0` 瑙勫垝瀹炵幇璐﹀彿銆佹枃浠躲€佽祫鏂欎笌鍚庡彴鍩虹鑳藉姏銆?### 瀹屾垚缁撴灉
-- 瀹屾垚鐢ㄦ埛娉ㄥ唽銆佺櫥褰曘€佸埛鏂般€侀€€鍑恒€佷釜浜鸿祫鏂欒鍙栦笌鏇存柊銆?- 瀹屾垚鏂囦欢涓婁紶銆?- 瀹屾垚绠＄悊鍛樼櫥褰曚笌绠＄悊鍛樿祫鏂欒鍙栥€?- 榛樿鏈湴寮€鍙戞暟鎹簱鑳藉姏宸插湪鍚庣画鐗堟湰缁熶竴鏀舵暃涓?MySQL銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 项目从“基础平台”推进到“内容平台”。
+
+## 2026-05-26 09:18:12 +08:00 | v0.0.9 | 按版本规划继续推进平台基础能力
+### 任务内容
+- 按 `v0.2.0` 规划实现账号、文件、资料与后台基础能力。
+### 完成结果
+- 完成用户注册、登录、刷新、退出、个人资料读取与更新。
+- 完成文件上传。
+- 完成管理员登录与管理员资料读取。
+- 默认本地开发数据库能力已在后续版本统一收敛为 MySQL。
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
 - `npm run build:user`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
-- 骞冲彴鍩虹灞傚畬鎴愶紝鍚庣画鍙户缁帴璧勬枡搴撲笌绀惧尯闂幆銆?
-## 2026-05-26 00:58:30 +08:00 | v0.0.8 | 鐢熸垚鏈潵鐗堟湰瑙勫垝鏂囨。
-### 浠诲姟鍐呭
-- 鏍规嵁鏈€缁堥」鐩洰鏍囪鍒掓湭鏉ュ紑鍙戦樁娈碉紝骞朵负鍚勯樁娈电敓鎴愮増鏈鏄庛€?### 瀹屾垚缁撴灉
-- 鐢熸垚 `docs/planning/VERSION_PLAN.md`銆?- 鐢熸垚 `v0.1.0` 鍒?`v1.0.0` 鐨勯樁娈电増鏈鏄庢枃妗ｃ€?### 楠岃瘉缁撴灉
-- 鏂囨。妫€鏌ュ畬鎴愩€?### 鍚庣画褰卞搷
-- 鍚庣画寮€鍙戝拰鎷嗕换鍔℃湁浜嗙ǔ瀹氱増鏈富绾裤€?
-## 2026-05-26 00:53:17 +08:00 | v0.0.7 | 楠岃瘉椤圭洰涓昏瑷€鍒囨崲鍒颁腑鏂?### 浠诲姟鍐呭
-- 纭椤圭洰鏂囨。銆佹爣棰樺拰璇存槑榛樿浣跨敤涓枃銆?### 瀹屾垚缁撴灉
-- 楠岃瘉 README銆佸紑鍙戣鏄庛€佽鍒掓枃妗ｅ拰鍓嶅悗鍙版爣棰樺凡鍒囧埌涓枃涓昏瑷€銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 平台基础层完成，后续可继续接资料库与社区闭环。
+
+## 2026-05-26 00:58:30 +08:00 | v0.0.8 | 生成未来版本规划文档
+### 任务内容
+- 根据最终项目目标规划未来开发阶段，并为各阶段生成版本说明。
+### 完成结果
+- 生成 `docs/planning/VERSION_PLAN.md`。
+- 生成 `v0.1.0` 到 `v1.0.0` 的阶段版本说明文档。
+### 验证结果
+- 文档检查完成。
+### 后续影响
+- 后续开发和拆任务有了稳定版本主线。
+
+## 2026-05-26 00:53:17 +08:00 | v0.0.7 | 验证项目主语言切换到中文
+### 任务内容
+- 确认项目文档、标题和说明默认使用中文。
+### 完成结果
+- 验证 README、开发说明、规划文档和前后台标题已切到中文主语言。
+### 验证结果
 - `npm run typecheck`
 - `go test ./...`
-### 鍚庣画褰卞搷
-- 椤圭洰鍚庣画鏂囨。銆佹棩蹇楀拰 UI 鏂囨榛樿鐢ㄦ眽璇€?
-## 2026-05-26 00:51:42 +08:00 | v0.0.6 | 纭珛椤圭洰涓昏璇█涓烘眽璇?### 浠诲姟鍐呭
-- 灏嗛」鐩富璇█姝ｅ紡纭珛涓烘眽璇€?### 瀹屾垚缁撴灉
-- 鏂囨。銆佹棩蹇椼€佽鏄庡拰鍓嶅悗鍙版爣棰橀粯璁ゆ敼涓轰腑鏂囥€?- 淇濈暀浠ｇ爜鏍囪瘑绗︺€佸寘鍚嶃€佸懡浠ゃ€丄PI 璺緞绛夊伐绋嬬害瀹氱殑鑻辨枃鍐欐硶銆?### 楠岃瘉缁撴灉
-- 鏂囨。妫€鏌ュ畬鎴愩€?### 鍚庣画褰卞搷
-- 鍚庣画鎵€鏈夎鏄庣被鍐呭缁熶竴鏀圭敤涓枃銆?
-## 2026-05-26 00:46:30 +08:00 | v0.0.5 | 鍚姩鏈湴寮€鍙戞湇鍔″苟琛ュ厖寮€鍙戣鏄?### 浠诲姟鍐呭
-- 鍚姩鏈湴寮€鍙戞湇鍔″苟瀹屾垚鏈€灏忓紑鍙戣鏄庛€?### 瀹屾垚缁撴灉
-- 鍚姩鍚庣涓庡墠鍚庡彴鏈湴寮€鍙戞湇鍔°€?- 璁板綍绔彛鍗犵敤鎯呭喌骞惰皟鏁翠复鏃剁鍙ｃ€?- 琛ュ厖 `docs/DEVELOPMENT.md`銆?### 楠岃瘉缁撴灉
-- 鍚庣 `/health`
-- 鐢ㄦ埛绔?HTTP 200
-- 绠＄悊绔?HTTP 200
-### 鍚庣画褰卞搷
-- 鏈湴寮€鍙戦摼璺畬鏁磋窇閫氥€?
-## 2026-05-26 00:43:41 +08:00 | v0.0.4 | 楠岃瘉鍩虹宸ョ▼鍙紪璇戝彲杩愯
-### 浠诲姟鍐呭
-- 楠岃瘉 Go 涓庡墠绔熀纭€宸ョ▼鍙紪璇戙€?### 瀹屾垚缁撴灉
-- 瀹屾垚 `go mod tidy`銆?- 瀹屾垚鍓嶅悗鍙颁緷璧栧畨瑁呫€?- 瀹屾垚鍓嶅悗鍙扮被鍨嬫鏌ュ拰鏋勫缓楠岃瘉銆?### 楠岃瘉缁撴灉
+### 后续影响
+- 项目后续文档、日志和 UI 文案默认用汉语。
+
+## 2026-05-26 00:51:42 +08:00 | v0.0.6 | 确立项目主要语言为汉语
+### 任务内容
+- 将项目主语言正式确立为汉语。
+### 完成结果
+- 文档、日志、说明和前后台标题默认改为中文。
+- 保留代码标识符、包名、命令、API 路径等工程约定的英文写法。
+### 验证结果
+- 文档检查完成。
+### 后续影响
+- 后续所有说明类内容统一改用中文。
+
+## 2026-05-26 00:46:30 +08:00 | v0.0.5 | 启动本地开发服务并补充开发说明
+### 任务内容
+- 启动本地开发服务并完成最小开发说明。
+### 完成结果
+- 启动后端与前后台本地开发服务。
+- 记录端口占用情况并调整临时端口。
+- 补充 `docs/DEVELOPMENT.md`。
+### 验证结果
+- 后端 `/health`
+- 用户端 HTTP 200
+- 管理端 HTTP 200
+### 后续影响
+- 本地开发链路完整跑通。
+
+## 2026-05-26 00:43:41 +08:00 | v0.0.4 | 验证基础工程可编译可运行
+### 任务内容
+- 验证 Go 与前端基础工程可编译。
+### 完成结果
+- 完成 `go mod tidy`。
+- 完成前后台依赖安装。
+- 完成前后台类型检查和构建验证。
+### 验证结果
 - `go test ./...`
 - `npm run typecheck`
 - `npm run build:user`
 - `npm run build:admin`
-### 鍚庣画褰卞搷
-- Phase 0 鐨勫熀纭€宸ョ▼搴曞骇宸茬粡鍙繍琛屻€?
-## 2026-05-26 00:34:12 +08:00 | v0.0.3 | 琛ラ綈閰嶇疆銆佸叆鍙ｃ€佸叡浜寘鍜岄」鐩枃妗?### 浠诲姟鍐呭
-- 涓?monorepo 琛ラ綈鍩虹閰嶇疆銆佸簲鐢ㄥ叆鍙ｃ€佸叡浜寘鍜岄」鐩枃妗ｃ€?### 瀹屾垚缁撴灉
-- 瀹屽杽 `.gitignore`銆乣.env.example`銆乣package.json`銆乣README.md`銆?- 鍒濆鍖?Go 妯″潡鍜屽悗绔仴搴锋鏌ュ叆鍙ｃ€?- 鍒濆鍖?React/Vite 鐢ㄦ埛绔拰 Vue/Vite 绠＄悊绔鏋躲€?- 鍒濆鍖栧叡浜寘鍗犱綅涓?`docs` 鐩綍銆?### 楠岃瘉缁撴灉
-- 浠ｇ爜缁撴瀯妫€鏌ュ畬鎴愩€?### 鍚庣画褰卞搷
-- 椤圭洰鍏峰缁х画鎵╁睍鍚庣 API 鍜屽弻鍓嶇 UI 鐨勫熀纭€銆?
-## 2026-05-26 00:31:33 +08:00 | v0.0.2 | 鍒濆鍖?monorepo 宸ョ▼楠ㄦ灦
-### 浠诲姟鍐呭
-- 鏍规嵁瑙勫垝鍒濆鍖?StudyMate monorepo 鐩綍缁撴瀯銆?### 瀹屾垚缁撴灉
-- 鍒涘缓 `backend`銆乣frontend-user`銆乣frontend-admin`銆乣packages`銆乣docs`銆乣storage` 绛夌洰褰曘€?- 棰勭暀妯″潡鍒嗗眰涓庡叡浜寘缁撴瀯銆?### 楠岃瘉缁撴灉
-- 鐩綍妫€鏌ュ畬鎴愩€?### 鍚庣画褰卞搷
-- 椤圭洰杩涘叆 Phase 0 宸ョ▼鍒濆鍖栭樁娈点€?
-## 2026-05-26 00:30:33 +08:00 | v0.0.1 | 鍒涘缓鍏ㄥ眬椤圭洰璁板綍鏂囦欢
-### 浠诲姟鍐呭
-- 鏍规嵁闇€姹傚垱寤哄叏灞€ log 鏂囦欢锛屽苟绾﹀畾鎸夌増鏈拰鏃堕棿鍊掑簭鍐欏叆銆?### 瀹屾垚缁撴灉
-- 鏂板缓 `PROJECT_LOG.md`銆?- 纭珛椤圭洰璁板綍鏍煎紡銆?### 楠岃瘉缁撴灉
-- 鏂囦欢鍒涘缓瀹屾垚銆?### 鍚庣画褰卞搷
-- 鍚庣画姣忎竴姝ラ噸瑕佸伐浣滈兘鍙互杩芥函鍒板搴旂増鏈褰曘€?
-## 2026-06-01 22:50:00 +08:00 | v0.0.76 | 鏀跺彛 Review/AI銆丼earch/Admin/Share
+### 后续影响
+- Phase 0 的基础工程底座已经可运行。
 
-### 浠诲姟鍐呭
-- 鎸?D 闃舵瑕佹眰琛ラ綈澶嶄範璋冨害杈圭晫銆佸悗绔悳绱€佸垎浜摼鎺ュ拰鍚庡彴娌荤悊妯″潡銆?- 淇濇寔 SM-2 浣滀负 v1 榛樿璋冨害绠楁硶锛屼絾璁╄皟搴﹀櫒鍏峰鍙浛鎹㈡帴鍙ｃ€?- 灏嗘悳绱㈠拰鍚庡彴鍗犱綅椤垫帴鍒扮湡瀹?API锛岄伩鍏?v1 鍙戝竷鏃朵粛渚濊禆娴忚鍣ㄧ鍏ㄩ噺杩囨护鎴栭潤鎬佸崰浣嶃€?
-### 瀹屾垚缁撴灉
-- `backend/internal/modules/card/service` 鏂板 `Scheduler` 鎺ュ彛涓?`SM2Scheduler` 榛樿瀹炵幇锛宍ReviewCard` 閫氳繃鎺ュ彛璁＄畻涓嬩竴娆″埌鏈熸椂闂淬€?- 鏂板 `backend/internal/modules/search`锛屾敞鍐?`GET /api/v1/search?q=&types=&limit=`锛屾敮鎸佸叕寮€璧勬枡/绀惧尯涓庣櫥褰曞悗鐨勭鏈?note/graph/card 鍒嗙粍缁撴灉銆?- 鏂板 `backend/internal/modules/share` 涓?`004_share_links.sql`锛屾敮鎸?share link 鍒涘缓銆佸垪琛ㄣ€佹挙閿€鍜屽叕寮€ token 鍙瑙ｆ瀽锛涚敤鎴风鏂板 `/share/:token` 椤甸潰銆?- 鍚庡彴鏂板 `/api/v1/admin/users`銆乣/reports`銆乣/tags`銆乣/ai/tasks`銆乣/ai/usage`銆乣/audit-logs`銆乣/files`锛岀鐞嗙鎸夋ā鍧楄鍙栫湡瀹炴不鐞嗘暟鎹€?- 鐢ㄦ埛绔悳绱㈤〉鏀逛负娑堣垂鍚庣 grouped payload锛汚PI barrel 澧炲姞 search/share 鍩熸ā鍧椼€?
-### 楠岃瘉缁撴灉
-- `cd backend; go test ./...` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `npm --workspace frontend-admin run typecheck` 閫氳繃銆?- `npm run ci` 閫氳繃锛氳鐩?lint/docs/typecheck銆佺敤鎴风鍜屽悗鍙版瀯寤恒€佸墠鍚庡彴 Vitest銆乬raph-core 娴嬭瘯銆丳laywright E2E銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ャ€?
-### 鍚庣画褰卞搷
-- E 闃舵鍙互鍦ㄥ凡鏈夋悳绱€佸垎浜拰鍚庡彴娌荤悊鎺ュ彛涓婅ˉ鍙戝竷娓呭崟銆佸洖婊氭楠ゃ€佽鐩栫巼姹囨€汇€乻ecret scan 鍜屾湰鍦?`v1.0.0` 鏍囩銆?
-## 2026-06-01 23:20:00 +08:00 | v1.0.0-rc | 鍙戝竷涓庡洖婊氭敹鍙?
-### 浠诲姟鍐呭
-- 鎸?E 闃舵瑕佹眰琛ラ綈 release checklist銆乪nv var matrix銆乵igration order銆乨emo data steps銆乺ollback steps 鍜?known non-blockers銆?- 灏?`CHANGELOG.md` 鏍囪涓?`v1.0.0 - 2026-06-01`銆?- 鍑嗗鏈€缁堥獙璇侊細瀹屾暣 CI銆佽鐩栫巼姹囨€汇€乻ecret scan銆乨iff review銆乺elease smoke flow 鍜屾湰鍦?tag銆?
-### 瀹屾垚缁撴灉
-- `docs/planning/versions/v1.0.0-release.md` 宸叉垚涓?v1 鍙戝竷/鍥炴粴涓绘枃妗ｃ€?- README銆佸紑鍙戣鏄庛€佺増鏈鍒掋€佽矾绾垮浘銆佸彉鏇磋褰曞拰椤圭洰鏃ュ織宸插悓姝ュ彂甯冮棬绂併€?
-### 楠岃瘉缁撴灉
-- `npm run ci` 閫氳繃锛歭int/docs/typecheck銆佸墠鍚庡彴鏋勫缓銆佸墠鍚庡彴 Vitest銆乬raph-core 娴嬭瘯銆丳laywright public shell銆佸悗绔?`go test ./...` 鍜屾渶缁堟枃妗ｅ悓姝ュ潎閫氳繃銆?- `npm run test:coverage` 閫氳繃锛歠rontend-user statements 52.3%锛宖rontend-admin statements 30.13%锛実raph-core line 97.55%锛宐ackend `go test ./... -cover` 瀹屾垚銆傚墠鍚庡彴鎬讳綋瑕嗙洊鐜囧皻鏈揪鍒?80%锛屼綔涓?v1 宸茬煡瑕嗙洊鐜囩己鍙ｈ褰曪紝鍚庣画浠ラ噸鐐瑰彉鏇村寘閫愭琛ラ綈銆?- Secret scan 瀹屾垚锛氬懡涓」涓哄彂甯冩枃妗ｄ腑鐨勬壂鎻忕ず渚?env 鍚嶇О銆佹祴璇曠敤 `"secret"` 瀛楃涓层€乼oken 鍙橀噺鍚嶅拰 CSS 绫诲悕锛屾病鏈夊彂鐜扮湡瀹炵敓浜у瘑閽ャ€?- `git diff --check` 閫氳繃锛況elease smoke flow 鐢辨湰杞?CI 涓殑鏋勫缓銆丳laywright public shell 鍜屽悗绔祴璇曡鐩栥€?
-### 鍚庣画褰卞搷
-- 鏈樁娈靛畬鎴愬悗 `master` 鍙繘鍏ユ湰鍦?`v1.0.0` 鏍囩锛涢櫎闈炵敤鎴锋槑纭壒鍑嗭紝涓嶆帹閫?commit 鎴?tag 鍒拌繙绔€?
-## 2026-06-05 20:05:00 +08:00 | v1.1-graph-productization | 鍥捐氨宸ヤ綔鍖轰骇鍝佸寲琛ュ己
+## 2026-05-26 00:34:12 +08:00 | v0.0.3 | 补齐配置、入口、共享包和项目文档
+### 任务内容
+- 为 monorepo 补齐基础配置、应用入口、共享包和项目文档。
+### 完成结果
+- 完善 `.gitignore`、`.env.example`、`package.json`、`README.md`。
+- 初始化 Go 模块和后端健康检查入口。
+- 初始化 React/Vite 用户端和 Vue/Vite 管理端骨架。
+- 初始化共享包占位与 `docs` 目录。
+### 验证结果
+- 代码结构检查完成。
+### 后续影响
+- 项目具备继续扩展后端 API 和双前端 UI 的基础。
 
-### 浠诲姟鍐呭
-- 鏍规嵁 Project Graph 瀵规爣璁″垝缁х画鎺ㄨ繘 StudyMate 鍥捐氨宸ヤ綔鍖猴紝涓嶉噸鍐欑幇鏈夊己 MVP銆?- 浼樺厛琛ラ綈鎵╁睍鑺傜偣 metadata 缂栬緫銆佸彲瑙ｉ噴 history label銆丣SON 瀵煎叆鏉ユ簮鏍￠獙銆佸悗绔?error 绾х粨鏋勬姢鏍忓拰 200 鑺傜偣 smoke 淇濆瓨璺緞銆?
-### 瀹屾垚缁撴灉
-- 鐢ㄦ埛绔浘璋辨墿灞曡妭鐐瑰凡鏀寔 URL銆佸浘鐗囥€佸叕寮忓拰 PDF 閿氱偣鐨勭粨鏋勫寲 `metadata.content` 缂栬緫锛屽悓鏃朵繚鐣欓€氱敤鏍囬銆佹弿杩般€佹潵婧愩€侀鑹层€佸己璋冨拰灏哄缂栬緫銆?- 鐢ㄦ埛绔?history 鐘舵€佹柊澧?`lastLabel` 鍜屽甫 label 鐨?past/future 璁板綍锛屽鍏ャ€佹挙閿€銆侀噸鍋氬拰淇濆瓨鐘舵€佸叿澶囧彲瑙ｉ噴鍘嗗彶璇箟銆?- 鐢ㄦ埛绔?`.smtg` JSON 瀵煎叆浼氭牎楠?schemaVersion銆侀噸澶?ID銆侀潪娉曞昂瀵搞€佹偓鎸傝竟鍜屾棤鏁堟潵婧?target锛涙棤鏁堟潵婧?target 鏍规嵁褰撳墠鍥捐氨宸叉湁鏉ユ簮鍙婂凡鍔犺浇璧勬枡/绗旇鍒ゆ柇銆?- 鍚庣 `BatchSave` 鍜屽鍏?AI 鑽夌钀藉簱鍓嶄細鎷掔粷 error 绾у浘璋辩粨鏋勯棶棰橈紝warning/info 绾ф不鐞嗘彁绀轰粛鍏佽淇濆瓨銆?- 鍥捐氨 controller 缁х画鎷嗗嚭 autosave/beforeunload銆佸彸閿彍鍗曞叧闂拰 stage 娴嬮噺鐢熷懡鍛ㄦ湡 hook锛岄檷浣庡ぇ鍨?controller 鐨勮亴璐ｅ瘑搴︺€?- `e2e/v1-graph-workspace.spec.ts` 鐨?200 鑺傜偣 smoke 澧炲姞鎵嬪姩淇濆瓨骞舵柇瑷€淇濆瓨鐘舵€併€?- 缁х画鎶婂浘璋卞伐浣滃尯 header銆佹潵婧?rail 鍜?toolbar 鎷嗗埌 `GraphWorkspaceShell` 绾鍥剧粍浠讹紝toolbar 涓嶅啀閫氳繃娲惧彂閿洏浜嬩欢瑙﹀彂鎾ら攢/閲嶅仛锛岃€屾槸澶嶇敤鍛藉悕 controller 鍔ㄤ綔銆?- 鏂板 `GraphWorkspaceShell.test.tsx`锛岃鐩栦繚瀛樼姸鎬?aria-label銆乼oolbar aria-label銆佽妭鐐圭被鍨嬪垏鎹㈠拰鎼滅储瀹氫綅瑙﹀彂銆?
-### 楠岃瘉缁撴灉
-- `npm --workspace frontend-user run test -- GraphWorkspacePage graphHistory graphNodeMetadata graphFileImportExport` 閫氳繃銆?- `npm --workspace frontend-user run test -- GraphWorkspaceShell GraphWorkspacePage` 閫氳繃銆?- `npm --workspace frontend-user run typecheck` 閫氳繃銆?- `cd backend && go test ./internal/modules/graph/...` 閫氳繃銆?
-### 鍚庣画褰卞搷
-- 鍚庣画鏈€鍊煎緱缁х画鎺ㄨ繘鐨勬槸鎶婂浘璋辨暟鎹姞杞姐€佺敾甯冧氦浜掑拰 JSX view 瀹屾暣鎷嗘垚瀹瑰櫒 hook + 绾?view锛涜ˉ榻?PNG/SVG/JSON 澶у浘瀵煎嚭澶辫触璺緞锛涘啀鍋氫簨浠惰妭娴佸拰杈硅矾寰勭紦瀛樼瓑鏈夎瘉鎹殑鎬ц兘浼樺寲銆?
-### 鎵ц璁板綍锛欶E-02 鍥捐氨 CanvasLayout
+## 2026-05-26 00:31:33 +08:00 | v0.0.2 | 初始化 monorepo 工程骨架
+### 任务内容
+- 根据规划初始化 StudyMate monorepo 目录结构。
+### 完成结果
+- 创建 `backend`、`frontend-user`、`frontend-admin`、`packages`、`docs`、`storage` 等目录。
+- 预留模块分层与共享包结构。
+### 验证结果
+- 目录检查完成。
+### 后续影响
+- 项目进入 Phase 0 工程初始化阶段。
 
-- 鎵ц鏃ユ湡锛?026-07-02
-- 浠ｇ爜鍩虹嚎锛歚master@7b1e8f3a1e77dded69538d075758dc9529b31564`
-- 瀹為檯鍙樻洿锛?  - 鏂板 `GraphWorkspaceCanvasChrome.tsx` 涓?`GraphWorkspaceOverviewPanel.tsx`銆?  - 鏂板 `graph-canvas.css`锛屽疄鐜板灞忎笁鍒椼€佷腑灏忓睆瑕嗙洊寮?Dock銆佹墜鏈鸿繎浼煎叏灞忔娊灞夈€?  - 璧勬簮鍖烘敼涓哄浘璋?/ 鏉ユ簮 / 妯℃澘 Tab锛涙鏌ュ櫒鏀逛负姒傝 / 灞炴€?/ 鏉ユ簮 / 鍘嗗彶 / 瀵煎叆 / 鍐茬獊 Tab銆?  - 鍒犻櫎鐢诲竷椤堕儴浜у搧璇存槑锛屼繚鐣欏浘璋辨爣棰樸€佷繚瀛樼姸鎬佸拰楂橀鎿嶄綔銆?  - 鏃㈡湁 GraphDocument銆佷繚瀛樸€佺増鏈€佸揩鐓с€佸鍏ュ鍑恒€佹潵婧?relation銆?09 鍐茬獊璇箟淇濇寔涓嶅彉銆?- 宸叉墽琛岄獙璇侊細
-  - 鏀瑰姩 TS / TSX 鐨?TypeScript transpile 璇硶妫€鏌ャ€?  - 瀹屾暣 npm 渚濊禆瀹夎鏃犳硶鍦ㄥ綋鍓嶇幆澧冪绾垮畬鎴愶細缂哄皯 `zustand@5.0.13` 缂撳瓨锛屽畬鏁?typecheck / Vitest / build / Playwright 寰呮湰鏈烘垨 CI 澶嶆牳銆?- 涓嬩竴寤鸿浠诲姟锛?  - FE-03锛氶槄璇汇€佺瑪璁颁笌澶嶄範宸ヤ綔鍖轰綋楠屽榻愶紱鎴栧湪鏂?Inspector 涓户缁?WB-032 鐨勮妭鐐圭骇浜哄伐鍐茬獊鍚堝苟銆?
-## UI-04 浜у搧绾?UI 鏀跺彛
+## 2026-05-26 00:30:33 +08:00 | v0.0.1 | 创建全局项目记录文件
+### 任务内容
+- 根据需求创建全局 log 文件，并约定按版本和时间倒序写入。
+### 完成结果
+- 新建 `PROJECT_LOG.md`。
+- 确立项目记录格式。
+### 验证结果
+- 文件创建完成。
+### 后续影响
+- 后续每一步重要工作都可以追溯到对应版本记录。
 
-- 鏍规嵁瀹為檯杩愯鎴浘瀹屾垚鍥捐氨鍜岀鐞嗙甯冨眬瀹¤銆?- 鍥捐氨璋冩暣涓虹敾甯冧紭鍏堬細鍒濆涓嶅睍寮€璧勬簮/妫€鏌ュ櫒锛岄€変腑鑺傜偣鍜屽啿绐佸彂鐢熸椂鎸夐渶鎵撳紑銆?- 鐢ㄦ埛绔?Standard / Studio / Canvas / Focus 缁熶竴涓哄悓涓€瑙嗚绯荤粺锛屽苟娓呯悊寮€鍙戞湡鍗犱綅鏂囨銆?- 绠＄悊绔崌绾т负娌荤悊宸ヤ綔鍙帮細鍙壂鎻忚〃鏍笺€佹悳绱€佸鏍歌鎿嶄綔涓庤褰?Inspector銆?
-### 鎵ц璁板綍锛歎I-04 鍏ㄧ珯浜у搧鐣岄潰閲嶆瀯
+## 2026-06-01 22:50:00 +08:00 | v0.0.76 | 收口 Review/AI、Search/Admin/Share
 
-- 鎵ц鏃ユ湡锛?026-07-03
-- 浠ｇ爜鍩虹嚎锛歚master@7b1e8f3a1e77dded69538d075758dc9529b31564`
-- 瑙﹀彂鍘熷洜锛氭牴鎹疄闄呰繍琛屾埅鍥惧鏍革紝鍥捐氨椤甸潰榛樿璧勬簮鏍忎笌妫€鏌ュ櫒鍚屾椂灞曞紑锛岀敾甯冪┖闂翠笉瓒筹紱绠＄悊绔敤鎴锋不鐞嗘寜璁板綍绾靛悜鍫嗗彔锛屼俊鎭瘑搴︿笌鍙壂鎻忔€т笉瓒炽€?- 鏈疆鑼冨洿锛?  - 鐢ㄦ埛绔叏璺敱缁熶竴涓轰换鍔′紭鍏堢殑 Standard / Studio / Canvas / Focus 甯冨眬浣撶郴锛?  - 鍥捐氨鏀逛负榛樿鍏ㄧ敾甯冿紝璧勬簮 Drawer 涓?Inspector 鎸夐渶鎵撳紑锛岃妭鐐归€変腑鎴栫増鏈啿绐佹椂鑷姩瀹氫綅鐩稿簲 Inspector锛?  - 宸ヤ綔鍙般€佽祫鏂欏簱銆佺ぞ鍖恒€佹悳绱€丄I銆佽缃€佺櫥褰曘€佸垎浜€侀槄璇汇€佺瑪璁般€佸涔犻噸鏂版敹鍙ｅ唴瀹瑰瘑搴︺€佹搷浣滃眰绾т笌鍝嶅簲寮忓竷灞€锛?  - 绠＄悊绔噸鏋勪负杩愯惀娌荤悊宸ヤ綔鍙帮紝鎻愪緵姒傝鎸囨爣銆佸鏍歌〃鏍笺€佹不鐞嗚褰曡〃鏍笺€佹悳绱笌璇︽儏 Inspector銆?- 淇濇姢杈圭晫锛氫笉鏀瑰彉 API銆佹潈闄愩€丟raphDocument銆佸浘璋辩増鏈€佸揩鐓с€佹潵婧愬叧鑱斻€佸鍏ュ鍑哄拰 `409 graph_version_conflict` 濂戠害銆?- 楠岃瘉缁撴灉锛?  - 鍓嶅彴鍏ㄩ噺 TS/TSX 涓庡悗鍙?Vue script 閫氳繃 TypeScript transpile 璇硶妫€鏌ワ紱
-  - 鏂囨。鍚屾涓庡墠绔枃浠舵牸寮忔鏌ラ€氳繃锛?  - `npm ci` 鍦ㄤ氦浠樼幆澧冩湭瀹屾垚渚濊禆鏍戞渶缁堥摼鎺ワ紝瀵艰嚧瀹屾暣 tsc/Vitest/Vite/Playwright 鐣欏緟鏈満鎴?CI 鎵ц銆?
-### 鎵ц璁板綍锛歎I-04 鍏ㄧ珯浜у搧鐣岄潰閲嶆瀯
+### 任务内容
+- 按 D 阶段要求补齐复习调度边界、后端搜索、分享链接和后台治理模块。
+- 保持 SM-2 作为 v1 默认调度算法，但让调度器具备可替换接口。
+- 将搜索和后台占位页接到真实 API，避免 v1 发布时仍依赖浏览器端全量过滤或静态占位。
 
-- 鎵ц鏃ユ湡锛?026-07-03
-- 浠ｇ爜鍩虹嚎锛歚master@7b1e8f3a1e77dded69538d075758dc9529b31564`
-- 瑙﹀彂鍘熷洜锛氭牴鎹疄闄呰繍琛屾埅鍥惧鏍革紝鍥捐氨椤甸潰榛樿璧勬簮鏍忎笌妫€鏌ュ櫒鍚屾椂灞曞紑锛岀敾甯冪┖闂翠笉瓒筹紱绠＄悊绔敤鎴锋不鐞嗘寜璁板綍绾靛悜鍫嗗彔锛屼俊鎭瘑搴︿笌鍙壂鎻忔€т笉瓒炽€?- 鏈疆鑼冨洿锛?  - 鐢ㄦ埛绔叏璺敱缁熶竴涓轰换鍔′紭鍏堢殑 Standard / Studio / Canvas / Focus 甯冨眬浣撶郴锛?  - 鍥捐氨鏀逛负榛樿鍏ㄧ敾甯冿紝璧勬簮 Drawer 涓?Inspector 鎸夐渶鎵撳紑锛岃妭鐐归€変腑鎴栫増鏈啿绐佹椂鑷姩瀹氫綅鐩稿簲 Inspector锛?  - 宸ヤ綔鍙般€佽祫鏂欏簱銆佺ぞ鍖恒€佹悳绱€丄I銆佽缃€佺櫥褰曘€佸垎浜€侀槄璇汇€佺瑪璁般€佸涔犻噸鏂版敹鍙ｅ唴瀹瑰瘑搴︺€佹搷浣滃眰绾т笌鍝嶅簲寮忓竷灞€锛?  - 绠＄悊绔噸鏋勪负杩愯惀娌荤悊宸ヤ綔鍙帮紝鎻愪緵姒傝鎸囨爣銆佸鏍歌〃鏍笺€佹不鐞嗚褰曡〃鏍笺€佹悳绱笌璇︽儏 Inspector銆?- 淇濇姢杈圭晫锛氫笉鏀瑰彉 API銆佹潈闄愩€丟raphDocument銆佸浘璋辩増鏈€佸揩鐓с€佹潵婧愬叧鑱斻€佸鍏ュ鍑哄拰 `409 graph_version_conflict` 濂戠害銆?- 楠岃瘉缁撴灉锛?  - 鍓嶅彴鍏ㄩ噺 TS/TSX 涓庡悗鍙?Vue script 閫氳繃 TypeScript transpile 璇硶妫€鏌ワ紱
-  - 鏂囨。鍚屾涓庡墠绔枃浠舵牸寮忔鏌ラ€氳繃锛?  - `npm ci` 鍦ㄤ氦浠樼幆澧冩湭瀹屾垚渚濊禆鏍戞渶缁堥摼鎺ワ紝瀵艰嚧瀹屾暣 tsc/Vitest/Vite/Playwright 鐣欏緟鏈満鎴?CI 鎵ц銆?## 2026-07-09 06:02:00 +08:00 | v1.1.0-alpha.121 | 鏀跺彛 DEV-010 宸ョ▼鍙鐜版€у熀绾夸笌瀹¤鍏ュ彛
-### 浠诲姟鍐呭
+### 完成结果
+- `backend/internal/modules/card/service` 新增 `Scheduler` 接口与 `SM2Scheduler` 默认实现，`ReviewCard` 通过接口计算下一次到期时间。
+- 新增 `backend/internal/modules/search`，注册 `GET /api/v1/search?q=&types=&limit=`，支持公开资料/社区与登录后的私有 note/graph/card 分组结果。
+- 新增 `backend/internal/modules/share` 与 `004_share_links.sql`，支持 share link 创建、列表、撤销和公开 token 只读解析；用户端新增 `/share/:token` 页面。
+- 后台新增 `/api/v1/admin/users`、`/reports`、`/tags`、`/ai/tasks`、`/ai/usage`、`/audit-logs`、`/files`，管理端按模块读取真实治理数据。
+- 用户端搜索页改为消费后端 grouped payload；API barrel 增加 search/share 域模块。
 
-- 鎸夆€滃厛鎶婂叏灞€楠ㄦ灦琛ラ綈鈥濈殑鑺傚锛岀户缁粠 `CODEX_BACKLOG.md` 閫夋嫨瑕嗙洊闈㈡洿骞裤€佷絾涓嶆繁鎸栧崟涓€浜у搧鍔熻兘鐨?`DEV-010`锛屼紭鍏堟敹鍙ｅ伐绋嬪彲澶嶇幇鎬ц€屼笉鏄啀鎵╂柊涓氬姟妯″潡銆?- 鏈疆鐩爣鏄妸宸ュ叿閾剧増鏈害鏉熴€乥ootstrap 鍏ュ彛銆佷緷璧栧璁″叆鍙ｅ拰 `@studymate/graph-core` 鐨?TypeScript 娴嬭瘯杩愯鏂瑰紡鐪熸娌夊埌浠撳簱鏍圭害鏉熼噷锛岃€屼笉鏄户缁彧鍋滅暀鍦ㄦ枃妗ｆ弿杩板眰銆?### 瀹為檯鍙樻洿
+### 验证结果
+- `cd backend; go test ./...` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `npm --workspace frontend-admin run typecheck` 通过。
+- `npm run ci` 通过：覆盖 lint/docs/typecheck、用户端和后台构建、前后台 Vitest、graph-core 测试、Playwright E2E、后端 `go test ./...` 和最终文档同步。
 
-- 鏂板 `scripts/workspace-repro.test.mjs`锛屽厛鐢?RED 鏂瑰紡閿佸畾鍥涚被缂哄彛锛氭牴 `package.json` 缂哄皯 `packageManager` / `engines` / `bootstrap` / `verify:runtimes` / `verify:deps`銆乣ci` 鏈墠缃繍琛屾椂鏍￠獙銆乣backend/go.mod` 涓庢枃妗ｆ湭鏀跺彛銆佷互鍙?`@studymate/graph-core` 浠嶉殣寮忎緷璧?`node --test` 鐩存帴璺?`.ts`銆?- 鏂板 `scripts/verify-runtime-baseline.mjs`锛岀粺涓€鏍￠獙鏍?workspace manifest銆乣backend/go.mod`銆佸紑鍙戞枃妗ｃ€佸綋鍓?Node/npm/Go 鐗堟湰涓?`graph-core` 娴嬭瘯鍛戒护锛屼綔涓?`npm run verify:runtimes` 鐨勫疄鐜般€?- 鏂板 `scripts/run-dependency-audits.mjs`锛屾妸 `npm audit --registry=https://registry.npmjs.org/ --audit-level=high` 涓?`go run golang.org/x/vuln/cmd/govulncheck@latest ./...` 鏀跺彛鎴愬崟涓€ `npm run verify:deps` 鍏ュ彛锛岀粫寮€ `npmmirror` 缂哄け audit API 鐨勮€侀棶棰樸€?- 鏇存柊鏍?`package.json`锛氭柊澧?`packageManager: npm@11.6.2`銆乣engines.node >=24 <25`銆乣engines.npm >=11 <12`锛岃ˉ涓?`bootstrap`銆乣verify:runtimes`銆乣verify:deps`锛屽苟璁?`ci` 鍦ㄥ叏閾捐矾鍓嶅厛璺戣繍琛屾椂鍩虹嚎鏍￠獙銆?- 鏇存柊 `packages/graph-core/package.json`锛屽皢娴嬭瘯鍛戒护鏀逛负鏄惧紡 `node --experimental-strip-types --test test/*.test.ts` 涓庤鐩栫巼鍛戒护 `node --experimental-strip-types --experimental-test-coverage --test test/*.test.ts`锛岄伩鍏嶄笉鍚?Node 鐗堟湰瀵?`.ts` 娴嬭瘯鎵ц鑳藉姏鐨勯殣寮忓樊寮傘€?- 鏇存柊 `docs/DEVELOPMENT.md`銆乣README.md` 涓?`.github/workflows/ci.yml`锛屾妸 bootstrap / runtime baseline / dependency audit 鍏ュ彛鍚屾杩涘紑鍙戞枃妗ｃ€佸懡浠ゆ竻鍗曞拰 CI 娴佺▼銆?### 楠岃瘉缁撴灉
+### 后续影响
+- E 阶段可以在已有搜索、分享和后台治理接口上补发布清单、回滚步骤、覆盖率汇总、secret scan 和本地 `v1.0.0` 标签。
 
-- RED锛歚node --test scripts/workspace-repro.test.mjs`
-- GREEN锛歚node --test scripts/workspace-repro.test.mjs`
+## 2026-06-01 23:20:00 +08:00 | v1.0.0-rc | 发布与回滚收口
+
+### 任务内容
+- 按 E 阶段要求补齐 release checklist、env var matrix、migration order、demo data steps、rollback steps 和 known non-blockers。
+- 将 `CHANGELOG.md` 标记为 `v1.0.0 - 2026-06-01`。
+- 准备最终验证：完整 CI、覆盖率汇总、secret scan、diff review、release smoke flow 和本地 tag。
+
+### 完成结果
+- `docs/planning/versions/v1.0.0-release.md` 已成为 v1 发布/回滚主文档。
+- README、开发说明、版本计划、路线图、变更记录和项目日志已同步发布门禁。
+
+### 验证结果
+- `npm run ci` 通过：lint/docs/typecheck、前后台构建、前后台 Vitest、graph-core 测试、Playwright public shell、后端 `go test ./...` 和最终文档同步均通过。
+- `npm run test:coverage` 通过：frontend-user statements 52.3%，frontend-admin statements 30.13%，graph-core line 97.55%，backend `go test ./... -cover` 完成。前后台总体覆盖率尚未达到 80%，作为 v1 已知覆盖率缺口记录，后续以重点变更包逐步补齐。
+- Secret scan 完成：命中项为发布文档中的扫描示例/env 名称、测试用 `"secret"` 字符串、token 变量名和 CSS 类名，没有发现真实生产密钥。
+- `git diff --check` 通过；release smoke flow 由本轮 CI 中的构建、Playwright public shell 和后端测试覆盖。
+
+### 后续影响
+- 本阶段完成后 `master` 可进入本地 `v1.0.0` 标签；除非用户明确批准，不推送 commit 或 tag 到远端。
+
+## 2026-06-05 20:05:00 +08:00 | v1.1-graph-productization | 图谱工作区产品化补强
+
+### 任务内容
+- 根据 Project Graph 对标计划继续推进 StudyMate 图谱工作区，不重写现有强 MVP。
+- 优先补齐扩展节点 metadata 编辑、可解释 history label、JSON 导入来源校验、后端 error 级结构护栏和 200 节点 smoke 保存路径。
+
+### 完成结果
+- 用户端图谱扩展节点已支持 URL、图片、公式和 PDF 锚点的结构化 `metadata.content` 编辑，同时保留通用标题、描述、来源、颜色、强调和尺寸编辑。
+- 用户端 history 状态新增 `lastLabel` 和带 label 的 past/future 记录，导入、撤销、重做和保存状态具备可解释历史语义。
+- 用户端 `.smtg` JSON 导入会校验 schemaVersion、重复 ID、非法尺寸、悬挂边和无效来源 target；无效来源 target 根据当前图谱已有来源及已加载资料/笔记判断。
+- 后端 `BatchSave` 和导入/AI 草稿落库前会拒绝 error 级图谱结构问题，warning/info 级治理提示仍允许保存。
+- 图谱 controller 继续拆出 autosave/beforeunload、右键菜单关闭和 stage 测量生命周期 hook，降低大型 controller 的职责密度。
+- `e2e/v1-graph-workspace.spec.ts` 的 200 节点 smoke 增加手动保存并断言保存状态。
+- 继续把图谱工作区 header、来源 rail 和 toolbar 拆到 `GraphWorkspaceShell` 纯视图组件，toolbar 不再通过派发键盘事件触发撤销/重做，而是复用命名 controller 动作。
+- 新增 `GraphWorkspaceShell.test.tsx`，覆盖保存状态 aria-label、toolbar aria-label、节点类型切换和搜索定位触发。
+
+### 验证结果
+- `npm --workspace frontend-user run test -- GraphWorkspacePage graphHistory graphNodeMetadata graphFileImportExport` 通过。
+- `npm --workspace frontend-user run test -- GraphWorkspaceShell GraphWorkspacePage` 通过。
+- `npm --workspace frontend-user run typecheck` 通过。
+- `cd backend && go test ./internal/modules/graph/...` 通过。
+
+### 后续影响
+- 后续最值得继续推进的是把图谱数据加载、画布交互和 JSX view 完整拆成容器 hook + 纯 view；补齐 PNG/SVG/JSON 大图导出失败路径；再做事件节流和边路径缓存等有证据的性能优化。
+
+### 执行记录：FE-02 图谱 CanvasLayout
+
+- 执行日期：2026-07-02
+- 代码基线：`master@7b1e8f3a1e77dded69538d075758dc9529b31564`
+- 实际变更：
+  - 新增 `GraphWorkspaceCanvasChrome.tsx` 与 `GraphWorkspaceOverviewPanel.tsx`。
+  - 新增 `graph-canvas.css`，实现宽屏三列、中小屏覆盖式 Dock、手机近似全屏抽屉。
+  - 资源区改为图谱 / 来源 / 模板 Tab；检查器改为概览 / 属性 / 来源 / 历史 / 导入 / 冲突 Tab。
+  - 删除画布顶部产品说明，保留图谱标题、保存状态和高频操作。
+  - 既有 GraphDocument、保存、版本、快照、导入导出、来源 relation、409 冲突语义保持不变。
+- 已执行验证：
+  - 改动 TS / TSX 的 TypeScript transpile 语法检查。
+  - 完整 npm 依赖安装无法在当前环境离线完成：缺少 `zustand@5.0.13` 缓存，完整 typecheck / Vitest / build / Playwright 待本机或 CI 复核。
+- 下一建议任务：
+  - FE-03：阅读、笔记与复习工作区体验对齐；或在新 Inspector 中继续 WB-032 的节点级人工冲突合并。
+
+## UI-04 产品级 UI 收口
+
+- 根据实际运行截图完成图谱和管理端布局审计。
+- 图谱调整为画布优先：初始不展开资源/检查器，选中节点和冲突发生时按需打开。
+- 用户端 Standard / Studio / Canvas / Focus 统一为同一视觉系统，并清理开发期占位文案。
+- 管理端升级为治理工作台：可扫描表格、搜索、审核行操作与记录 Inspector。
+
+### 执行记录：UI-04 全站产品界面重构
+
+- 执行日期：2026-07-03
+- 代码基线：`master@7b1e8f3a1e77dded69538d075758dc9529b31564`
+- 触发原因：根据实际运行截图复核，图谱页面默认资源栏与检查器同时展开，画布空间不足；管理端用户治理按记录纵向堆叠，信息密度与可扫描性不足。
+- 本轮范围：
+  - 用户端全路由统一为任务优先的 Standard / Studio / Canvas / Focus 布局体系；
+  - 图谱改为默认全画布，资源 Drawer 与 Inspector 按需打开，节点选中或版本冲突时自动定位相应 Inspector；
+  - 工作台、资料库、社区、搜索、AI、设置、登录、分享、阅读、笔记、复习重新收口内容密度、操作层级与响应式布局；
+  - 管理端重构为运营治理工作台，提供概览指标、审核表格、治理记录表格、搜索与详情 Inspector。
+- 保护边界：不改变 API、权限、GraphDocument、图谱版本、快照、来源关联、导入导出和 `409 graph_version_conflict` 契约。
+- 验证结果：
+  - 前台全量 TS/TSX 与后台 Vue script 通过 TypeScript transpile 语法检查；
+  - 文档同步与前端文件格式检查通过；
+  - `npm ci` 在交付环境未完成依赖树最终链接，导致完整 tsc/Vitest/Vite/Playwright 留待本机或 CI 执行。
+
+### 执行记录：UI-04 全站产品界面重构
+
+- 执行日期：2026-07-03
+- 代码基线：`master@7b1e8f3a1e77dded69538d075758dc9529b31564`
+- 触发原因：根据实际运行截图复核，图谱页面默认资源栏与检查器同时展开，画布空间不足；管理端用户治理按记录纵向堆叠，信息密度与可扫描性不足。
+- 本轮范围：
+  - 用户端全路由统一为任务优先的 Standard / Studio / Canvas / Focus 布局体系；
+  - 图谱改为默认全画布，资源 Drawer 与 Inspector 按需打开，节点选中或版本冲突时自动定位相应 Inspector；
+  - 工作台、资料库、社区、搜索、AI、设置、登录、分享、阅读、笔记、复习重新收口内容密度、操作层级与响应式布局；
+  - 管理端重构为运营治理工作台，提供概览指标、审核表格、治理记录表格、搜索与详情 Inspector。
+- 保护边界：不改变 API、权限、GraphDocument、图谱版本、快照、来源关联、导入导出和 `409 graph_version_conflict` 契约。
+- 验证结果：
+  - 前台全量 TS/TSX 与后台 Vue script 通过 TypeScript transpile 语法检查；
+  - 文档同步与前端文件格式检查通过；
+  - `npm ci` 在交付环境未完成依赖树最终链接，导致完整 tsc/Vitest/Vite/Playwright 留待本机或 CI 执行。
+## 2026-07-09 06:02:00 +08:00 | v1.1.0-alpha.121 | 收口 DEV-010 工程可复现性基线与审计入口
+### 任务内容
+
+- 按“先把全局骨架补齐”的节奏，继续从 `CODEX_BACKLOG.md` 选择覆盖面更广、但不深挖单一产品功能的 `DEV-010`，优先收口工程可复现性而不是再扩新业务模块。
+- 本轮目标是把工具链版本约束、bootstrap 入口、依赖审计入口和 `@studymate/graph-core` 的 TypeScript 测试运行方式真正沉到仓库根约束里，而不是继续只停留在文档描述层。
+### 实际变更
+
+- 新增 `scripts/workspace-repro.test.mjs`，先用 RED 方式锁定四类缺口：根 `package.json` 缺少 `packageManager` / `engines` / `bootstrap` / `verify:runtimes` / `verify:deps`、`ci` 未前置运行时校验、`backend/go.mod` 与文档未收口、以及 `@studymate/graph-core` 仍隐式依赖 `node --test` 直接跑 `.ts`。
+- 新增 `scripts/verify-runtime-baseline.mjs`，统一校验根 workspace manifest、`backend/go.mod`、开发文档、当前 Node/npm/Go 版本与 `graph-core` 测试命令，作为 `npm run verify:runtimes` 的实现。
+- 新增 `scripts/run-dependency-audits.mjs`，把 `npm audit --registry=https://registry.npmjs.org/ --audit-level=high` 与 `go run golang.org/x/vuln/cmd/govulncheck@latest ./...` 收口成单一 `npm run verify:deps` 入口，绕开 `npmmirror` 缺失 audit API 的老问题。
+- 更新根 `package.json`：新增 `packageManager: npm@11.6.2`、`engines.node >=24 <25`、`engines.npm >=11 <12`，补上 `bootstrap`、`verify:runtimes`、`verify:deps`，并让 `ci` 在全链路前先跑运行时基线校验。
+- 更新 `packages/graph-core/package.json`，将测试命令改为显式 `node --experimental-strip-types --test test/*.test.ts` 与覆盖率命令 `node --experimental-strip-types --experimental-test-coverage --test test/*.test.ts`，避免不同 Node 版本对 `.ts` 测试执行能力的隐式差异。
+- 更新 `docs/DEVELOPMENT.md`、`README.md` 与 `.github/workflows/ci.yml`，把 bootstrap / runtime baseline / dependency audit 入口同步进开发文档、命令清单和 CI 流程。
+### 验证结果
+
+- RED：`node --test scripts/workspace-repro.test.mjs`
+- GREEN：`node --test scripts/workspace-repro.test.mjs`
 - `npm run verify:runtimes`
 - `npm --workspace @studymate/graph-core run test`
 - `npm --workspace @studymate/graph-core run test:coverage`
 - `npm run bootstrap`
 - `npm run verify:docs`
 - `npm run verify:deps`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 褰撳墠浠撳簱宸茬粡鏈夋槑纭€佸彲鎵ц銆佸彲澶嶆牳鐨勮繍琛屾椂鍩虹嚎锛屼笉鍐嶄緷璧栤€淩EADME 閲屽啓浜?Node 24 / Go 1.26鈥濊繖绉嶇函鏂囨。绾︽潫锛涘悗缁柊鏈哄櫒鎺ユ墜鏃跺彲浠ュ厛璺?`npm run bootstrap` 鍜?`npm run verify:runtimes`锛岃€屼笉鏄潬浜哄伐姣斿鐜銆?- `npm run verify:deps` 鐜板湪宸茬粡鑳界ǔ瀹氱粰鍑虹湡瀹炲璁＄粨鏋滐紝浣嗗畠涔熸毚闇蹭簡涓嬩竴鎵归渶瑕佸鐞嗙殑瀹夊叏鍊猴細npm 渚?`esbuild`銆乣glob`銆乣undici`銆乣vite` 楂樺嵄鍛婅锛屼互鍙?Go 渚?`govulncheck` 鍛戒腑鐨勬爣鍑嗗簱銆乣golang.org/x/net` 鍜?`quic-go` 婕忔礊锛涜繖鏇撮€傚悎浣滀负鍚庣画鍗曠嫭鐨勫畨鍏ㄦ敹鍙ｅ伐浣滃寘锛岃€屼笉鏄户缁贩鍦ㄥ伐鍏烽摼鍏ュ彛鏀跺彛閲屻€?## 2026-07-09 06:55:00 +08:00 | v1.1.0-alpha.123 | 鏀跺彛 SEC-011 榛樿 secret scan 闂ㄧ
-### 浠诲姟鍐呭
+- 当前仓库已经有明确、可执行、可复核的运行时基线，不再依赖“README 里写了 Node 24 / Go 1.26”这种纯文档约束；后续新机器接手时可以先跑 `npm run bootstrap` 和 `npm run verify:runtimes`，而不是靠人工比对环境。
+- `npm run verify:deps` 现在已经能稳定给出真实审计结果，但它也暴露了下一批需要处理的安全债：npm 侧 `esbuild`、`glob`、`undici`、`vite` 高危告警，以及 Go 侧 `govulncheck` 命中的标准库、`golang.org/x/net` 和 `quic-go` 漏洞；这更适合作为后续单独的安全收口工作包，而不是继续混在工具链入口收口里。
+## 2026-07-09 06:55:00 +08:00 | v1.1.0-alpha.123 | 收口 SEC-011 默认 secret scan 门禁
+### 任务内容
 
-- 鍦?`SEC-010` 宸叉妸渚濊禆瀹夊叏鍩虹嚎绾冲叆榛樿 CI 涔嬪悗锛岀户缁€夋嫨涓€涓鐩栭潰骞裤€佷絾涓嶆繁鍏ュ崟涓骇鍝佹ā鍧楃殑 P0 鏀跺彛鐐癸紝鎶?release checklist 閲屽彛澶寸害瀹氱殑 secret scan 鍙樻垚浠撳簱鍐呭彲鎵ц銆佸彲鍥炲綊鐨勯粯璁ら棬绂併€?- 鏈疆鐩爣涓嶆槸鎵╁睍涓氬姟鑳藉姏锛岃€屾槸琛ラ綈榛樿 `verify:secrets` 鑴氭湰銆佽鎶ュ彲鎺х殑鎵弿瑙勫垯銆丆I 鎺ョ嚎锛屼互鍙婁笌涔嬮厤濂楃殑宸ョ▼鏂囨。鍚屾銆?
-### 瀹為檯鍙樻洿
+- 在 `SEC-010` 已把依赖安全基线纳入默认 CI 之后，继续选择一个覆盖面广、但不深入单个产品模块的 P0 收口点，把 release checklist 里口头约定的 secret scan 变成仓库内可执行、可回归的默认门禁。
+- 本轮目标不是扩展业务能力，而是补齐默认 `verify:secrets` 脚本、误报可控的扫描规则、CI 接线，以及与之配套的工程文档同步。
 
-- 鏂板 `scripts/secret-scan-baseline.test.mjs`锛屽厛浠?RED 閿佸畾鍥涚被缂哄彛锛氫粨搴撶己灏?`verify:secrets` 鍛戒护銆乣ci` 鏈樉寮忔墽琛?secret scan銆丟itHub Actions 娌℃湁 secret scan 姝ラ锛屼互鍙?README / 寮€鍙戣鏄?/ release checklist 浠嶆妸 secret scan 璁版垚鎵嬪伐鍔ㄤ綔銆?- 鏂板 `scripts/verify-secret-scan.mjs`锛屾妸浠撳簱绾?secret scan 鏀跺彛涓哄崟涓€鍏ュ彛锛涘綋鍓嶄細鎵弿鏂囨湰鏂囦欢骞惰瘑鍒閽ュ潡銆佸父瑙?Token 鏍煎紡銆丏SN 鍐呰仈鍑嵁锛屼互鍙?`apiKey` / `secret` / `token` / `password` 涓€绫荤‖缂栫爜璧嬪€硷紝鍚屾椂璺宠繃 `node_modules`銆乣dist`銆乣coverage`銆侀攣鏂囦欢鍜屽父瑙佷簩杩涘埗璧勬簮銆?- 鎵弿鍣ㄤ负 `.env.example`銆佸紑鍙戞枃妗ｅ拰 release checklist 閲岀殑 placeholder 绀轰緥鍊煎缓绔嬩簡鍐呯疆蹇界暐瑙勫垯锛屽苟鏀寔閫氳繃 `secret-scan: allow` 瀵逛釜鍒祴璇曟牱渚嬪仛鏈€灏忚寖鍥磋眮鍏嶏紝閬垮厤鎶?`change-me-in-local-env`銆乣<secret-manager-value>`銆乣<local-password>` 绛夋紨绀哄€艰鍒ゆ垚鐪熷疄娉勬紡銆?- 鏇存柊鏍?`package.json`銆乣.github/workflows/ci.yml`銆乣README.md`銆乣docs/DEVELOPMENT.md`銆乣docs/planning/VERSION_PLAN.md`銆乣docs/planning/ROADMAP.md`銆乣docs/planning/versions/v1.0.0-release.md`銆乣docs/engineering/CODEX_PROJECT_CONTEXT.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛岀粺涓€鎶?release 璇存槑涓殑 secret scan 鏀跺彛涓?`npm run verify:secrets`锛屽苟娓呯悊鈥淐I 浠嶇己渚濊禆瀹¤鈥濊繖绫昏繃鏈熻〃杩般€?
-### 楠岃瘉缁撴灉
+### 实际变更
 
-- RED锛歚node --test scripts/secret-scan-baseline.test.mjs`
-- GREEN锛歚node --test scripts/secret-scan-baseline.test.mjs`
+- 新增 `scripts/secret-scan-baseline.test.mjs`，先以 RED 锁定四类缺口：仓库缺少 `verify:secrets` 命令、`ci` 未显式执行 secret scan、GitHub Actions 没有 secret scan 步骤，以及 README / 开发说明 / release checklist 仍把 secret scan 记成手工动作。
+- 新增 `scripts/verify-secret-scan.mjs`，把仓库级 secret scan 收口为单一入口；当前会扫描文本文件并识别私钥块、常见 Token 格式、DSN 内联凭据，以及 `apiKey` / `secret` / `token` / `password` 一类硬编码赋值，同时跳过 `node_modules`、`dist`、`coverage`、锁文件和常见二进制资源。
+- 扫描器为 `.env.example`、开发文档和 release checklist 里的 placeholder 示例值建立了内置忽略规则，并支持通过 `secret-scan: allow` 对个别测试样例做最小范围豁免，避免把 `change-me-in-local-env`、`<secret-manager-value>`、`<local-password>` 等演示值误判成真实泄漏。
+- 更新根 `package.json`、`.github/workflows/ci.yml`、`README.md`、`docs/DEVELOPMENT.md`、`docs/planning/VERSION_PLAN.md`、`docs/planning/ROADMAP.md`、`docs/planning/versions/v1.0.0-release.md`、`docs/engineering/CODEX_PROJECT_CONTEXT.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，统一把 release 说明中的 secret scan 收口为 `npm run verify:secrets`，并清理“CI 仍缺依赖审计”这类过期表述。
+
+### 验证结果
+
+- RED：`node --test scripts/secret-scan-baseline.test.mjs`
+- GREEN：`node --test scripts/secret-scan-baseline.test.mjs`
 - `npm run verify:secrets`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 榛樿 CI 鐜板湪涓嶅啀鍙湪 release checklist 閲屸€滄彁閱掕鍋?secret scan鈥濓紝鑰屾槸浼氱洿鎺ユ墽琛?`npm run verify:secrets`锛涘悗缁嫢鏈変汉鎶婄閽ャ€佸凡鐭?Token 鏍煎紡鎴栨槑鏄剧殑纭紪鐮佸瘑閽ヨ祴鍊兼彁浜よ繘浠撳簱锛屼細鍏堝湪鏈湴鍜?CI 琚嫤涓嬨€?- 褰撳墠鍓╀綑鐨勫伐绋嬬骇 P0 璐ㄩ噺闂ㄧ涓昏鏀舵暃涓鸿鐩栫巼纭棬妲涗笌瑕嗙洊鐜囨眹鎬绘不鐞嗭紱secret scan 杩欐潯绾垮凡缁忎粠鈥滄墜宸ョ害瀹氣€濊浆鎴愨€滈粯璁ゅ彲鎵ц鍩虹嚎鈥濄€?## 2026-07-09 08:27:53 +08:00 | v1.1.0-alpha.138 | 鎺ㄨ繘 FE-041 鍏变韩 IconButton 涓庨鏋舵帴绾?### 浠诲姟鍐呭
+- 默认 CI 现在不再只在 release checklist 里“提醒要做 secret scan”，而是会直接执行 `npm run verify:secrets`；后续若有人把私钥、已知 Token 格式或明显的硬编码密钥赋值提交进仓库，会先在本地和 CI 被拦下。
+- 当前剩余的工程级 P0 质量门禁主要收敛为覆盖率硬门槛与覆盖率汇总治理；secret scan 这条线已经从“手工约定”转成“默认可执行基线”。
+## 2026-07-09 08:27:53 +08:00 | v1.1.0-alpha.138 | 推进 FE-041 共享 IconButton 与骨架接线
+### 任务内容
 
-- 缁х画娌库€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀鍋氭繁鍗曠偣鈥濈殑鑺傚鎺ㄨ繘 `FE-041`锛屼粠涓婁竴杞殑鍏变韩 `DataState / Drawer / Inspector` 鍐嶅悜鍓嶈蛋涓€姝ワ紝浼樺厛鏀跺彛瑕嗙洊闈㈠緢骞跨殑 `icon-button` 璇箟銆?- 鏈疆鐩爣鏄湪涓嶉噸鍐欓〉闈笟鍔＄殑鍓嶆彁涓嬶紝鎶婂叡浜?`IconButton` 钀藉埌 `@studymate/ui`锛屽苟鍏堟帴鍒伴《鏍忎笌鍥捐氨宸ヤ綔鍖鸿繖浜涢鏋剁骇涓昏矾寰勪笂銆?### 瀹為檯鍙樻洿
+- 继续沿“先补全局骨架、再做深单点”的节奏推进 `FE-041`，从上一轮的共享 `DataState / Drawer / Inspector` 再向前走一步，优先收口覆盖面很广的 `icon-button` 语义。
+- 本轮目标是在不重写页面业务的前提下，把共享 `IconButton` 落到 `@studymate/ui`，并先接到顶栏与图谱工作区这些骨架级主路径上。
+### 实际变更
 
-- 鏂板 `packages/ui/src/IconButton.tsx`锛屾妸 `icon-button` / `active` class 璇箟鏀跺彛涓哄叡浜?primitive锛屽苟榛樿灏嗗瓧绗︿覆 `title` 閫忎紶涓?`aria-label`锛岄伩鍏嶅浘鏍囨寜閽彧闈?hover 鏂囨鏆撮湶璇箟銆?- 鏇存柊 `packages/ui/src/index.ts` 涓?`packages/ui/src/Drawer.tsx`锛岃鍏变韩鍖呯洿鎺ュ鍑哄苟澶嶇敤 `IconButton`锛屽叡浜眰寮€濮嬪嚭鐜扮粍浠剁骇缁勫悎鍏崇郴銆?- 鏂板 `frontend-user/src/design-system/primitives/IconButton.tsx` 涓庡搴旀祴璇曪紝鐢ㄦ埛绔?now 鍙部鐢?design-system 鍏ュ彛娑堣垂鍏变韩瀹炵幇锛岃€屼笉蹇呯洿鎺ユ暎钀藉紩鐢ㄥ寘鍐呰矾寰勩€?- 鏇存柊 `frontend-user/src/app/chrome/CommandBar.tsx`銆乣modules/graph/components/GraphWorkspaceCanvasChrome.tsx`銆乣GraphWorkspaceShell.tsx`锛屾妸椤舵爮鎻愰啋/鐧诲嚭銆佸浘璋辫祫婧愪笌妫€鏌ュ櫒寮€鍏炽€佸浘璋卞伐鍏锋爮楂橀鍥炬爣鍔ㄤ綔缁熶竴鎺ュ埌鍏变韩 `IconButton`銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 鐨勭幇鐘舵帹杩涘埌鈥滃叡浜浘鏍囨寜閽凡琚涓鏋朵富璺緞鐪熷疄娑堣垂鈥濄€?### 楠岃瘉缁撴灉
+- 新增 `packages/ui/src/IconButton.tsx`，把 `icon-button` / `active` class 语义收口为共享 primitive，并默认将字符串 `title` 透传为 `aria-label`，避免图标按钮只靠 hover 文案暴露语义。
+- 更新 `packages/ui/src/index.ts` 与 `packages/ui/src/Drawer.tsx`，让共享包直接导出并复用 `IconButton`，共享层开始出现组件级组合关系。
+- 新增 `frontend-user/src/design-system/primitives/IconButton.tsx` 与对应测试，用户端 now 可沿用 design-system 入口消费共享实现，而不必直接散落引用包内路径。
+- 更新 `frontend-user/src/app/chrome/CommandBar.tsx`、`modules/graph/components/GraphWorkspaceCanvasChrome.tsx`、`GraphWorkspaceShell.tsx`，把顶栏提醒/登出、图谱资源与检查器开关、图谱工具栏高频图标动作统一接到共享 `IconButton`。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 的现状推进到“共享图标按钮已被多个骨架主路径真实消费”。
+### 验证结果
 
-- RED锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- RED锛歚npm --workspace frontend-user run test -- src/design-system/primitives/IconButton.test.tsx`
-- GREEN锛歚npx vitest run packages/ui/src/index.test.ts packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/IconButton.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/index.test.ts packages/ui/src/reactPrimitives.test.tsx`
 - `npm --workspace frontend-user run test -- src/design-system/primitives/IconButton.test.tsx src/design-system/primitives/Drawer.test.tsx src/app/layouts/AppShell.test.tsx src/modules/graph/components/GraphWorkspaceCanvasChrome.test.tsx src/modules/graph/components/GraphWorkspaceShell.test.tsx`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `@studymate/ui` 鐜板湪宸茬粡涓嶅彧鏄湪鍏变韩鈥滃鍣ㄧ粍浠垛€濆拰鈥滅姸鎬佽涔夆€濓紝涔熷紑濮嬫壙鎺ユ渶甯歌鐨勫姩浣滃瀷 primitive锛涘悗缁户缁敹鍙ｆ櫘閫氭寜閽€佸璇濇鍜?page-level actions 鏃讹紝璺緞浼氭槑鏄炬洿椤恒€?- 杩欒疆浠嶇劧鍙厛鎺ヤ簡椤舵爮鍜屽浘璋卞伐浣滃尯楠ㄦ灦锛岄槄璇汇€佺瑪璁般€佸涔犻〉闈㈤噷杩樺瓨鍦ㄨ嫢骞茬洿鎺ュ啓姝荤殑 `icon-button`锛涜繖浜涙洿閫傚悎缁х画娌垮悓涓€鍏变韩鍑哄彛閫愭鏇挎崲锛岃€屼笉鏄噸鏂拌璁′竴濂楁柊鎸夐挳浣撶郴銆?
-## 2026-07-09 08:20:50 +08:00 | v1.1.0-alpha.137 | 鎺ㄨ繘 FE-041 鍏变韩鍩虹缁勪欢濂戠害绗竴鎵硅惤鍦?### 浠诲姟鍐呭
+- `@studymate/ui` 现在已经不只是在共享“容器组件”和“状态语义”，也开始承接最常见的动作型 primitive；后续继续收口普通按钮、对话框和 page-level actions 时，路径会明显更顺。
+- 这轮仍然只先接了顶栏和图谱工作区骨架，阅读、笔记、复习页面里还存在若干直接写死的 `icon-button`；这些更适合继续沿同一共享出口逐步替换，而不是重新设计一套新按钮体系。
 
-- 鎸夋柊鐨勫揩閫熷師鍨嬭妭濂忕户缁部 `CODEX_BACKLOG.md` 鎺ㄨ繘 `FE-041`锛屼粠鈥滃叡浜?token / 鏂囨 helper鈥濆啀寰€鍓嶈蛋涓€灏忔锛屽厛鏀跺彛宸茬粡绋冲畾瀛樺湪浜庣敤鎴风鐨?`DataState`銆乣Drawer`銆乣Inspector` 涓変釜鍩虹 primitive銆?- 鏈疆鐩爣鏄湪涓嶆敼鍔ㄩ〉闈㈣皟鐢ㄩ潰鐨勫墠鎻愪笅锛岃 `@studymate/ui` 鐪熸寮€濮嬫壙鎺ョ粍浠剁骇濂戠害锛屽苟閫氳繃 RED/GREEN 鎶婂叡浜寘涓庣敤鎴风鍏煎灞傞兘閿佽繘鍥炲綊閲屻€?### 瀹為檯鍙樻洿
+## 2026-07-09 08:20:50 +08:00 | v1.1.0-alpha.137 | 推进 FE-041 共享基础组件契约第一批落地
+### 任务内容
 
-- 鏂板 `packages/ui/src/DataStateView.tsx`銆乣packages/ui/src/Drawer.tsx`銆乣packages/ui/src/Inspector.tsx`锛屾妸 `DataState`銆乣Drawer`銆乣Inspector` 鐨勬渶灏?React primitive 瀹炵幇娌夊埌鍏变韩鍖咃紝骞朵繚鐣欐棦鏈?`ds-*` class 璇箟銆?- 鏇存柊 `packages/ui/src/index.ts`锛岃 `@studymate/ui` 鐩存帴瀵煎嚭杩欎笁涓粍浠朵笌瀵瑰簲 props 绫诲瀷锛屼娇鍏变韩 UI 鍖呬笉鍐嶅彧鏆撮湶 token 鍜岀姸鎬?helper銆?- 鏂板 `packages/ui/src/reactPrimitives.test.tsx`锛屽厛鐢?RED 閿佸畾鍏变韩缁勪欢缂哄け瀵煎嚭锛屽啀鍦?GREEN 楠岃瘉 `DataState`銆乣Drawer`銆乣Inspector` 鐨勫熀纭€鍙闂€т笌鍏抽棴浜や簰銆?- 鏇存柊 `frontend-user/src/design-system/primitives/DataState.tsx`銆乣Drawer.tsx`銆乣Inspector.tsx`锛屽皢鐢ㄦ埛绔湰鍦板疄鐜版敹鍙ｄ负鍏煎杞彂灞傦紝淇濇寔鏃㈡湁 import 璺緞鍜屾祴璇曞叆鍙ｄ笉鍙樸€?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 浠庘€滃叡浜姸鎬佸绾﹁捣姝モ€濇帹杩涘埌鈥滅涓€鎵瑰熀纭€缁勪欢濂戠害宸茶惤鍦扳€濄€?### 楠岃瘉缁撴灉
+- 按新的快速原型节奏继续沿 `CODEX_BACKLOG.md` 推进 `FE-041`，从“共享 token / 文案 helper”再往前走一小步，先收口已经稳定存在于用户端的 `DataState`、`Drawer`、`Inspector` 三个基础 primitive。
+- 本轮目标是在不改动页面调用面的前提下，让 `@studymate/ui` 真正开始承接组件级契约，并通过 RED/GREEN 把共享包与用户端兼容层都锁进回归里。
+### 实际变更
 
-- RED锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- GREEN锛歚npx vitest run packages/ui/src/index.test.ts packages/ui/src/reactPrimitives.test.tsx`
+- 新增 `packages/ui/src/DataStateView.tsx`、`packages/ui/src/Drawer.tsx`、`packages/ui/src/Inspector.tsx`，把 `DataState`、`Drawer`、`Inspector` 的最小 React primitive 实现沉到共享包，并保留既有 `ds-*` class 语义。
+- 更新 `packages/ui/src/index.ts`，让 `@studymate/ui` 直接导出这三个组件与对应 props 类型，使共享 UI 包不再只暴露 token 和状态 helper。
+- 新增 `packages/ui/src/reactPrimitives.test.tsx`，先用 RED 锁定共享组件缺失导出，再在 GREEN 验证 `DataState`、`Drawer`、`Inspector` 的基础可访问性与关闭交互。
+- 更新 `frontend-user/src/design-system/primitives/DataState.tsx`、`Drawer.tsx`、`Inspector.tsx`，将用户端本地实现收口为兼容转发层，保持既有 import 路径和测试入口不变。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 从“共享状态契约起步”推进到“第一批基础组件契约已落地”。
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/index.test.ts packages/ui/src/reactPrimitives.test.tsx`
 - `npm --workspace frontend-user run test -- src/design-system/primitives/DataState.test.tsx src/design-system/primitives/Drawer.test.tsx src/design-system/primitives/Inspector.test.tsx`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `@studymate/ui` 鐜板湪宸茬粡涓嶅彧鏄?token 鍜岀姸鎬佹枃妗堝鍣紝鑰屾槸寮€濮嬫壙鎺ョ湡瀹炲叡浜?primitive锛涘悗缁户缁粺涓€ Button銆両nput銆丆onfirmDialog銆丆ommandBar 绛夌粍浠舵椂锛屽彲浠ユ部鐫€鍚屼竴鏉″叡浜嚭鍙ｇ户缁墿灞曘€?- 杩欎竴杞粛鐒跺彧瀹屾垚浜嗙涓€鎵规渶绋冲畾鐨勫熀纭€鏋勪欢锛岀鐞嗙涔熻繕娌℃湁鐩存帴娑堣垂杩欏眰缁勪欢鍑哄彛锛沗FE-041` 鍚庣画鏇村€煎緱缁х画鎺ㄨ繘鐨勬槸鏇村 primitives 鐨勬敹鍙ｏ紝鑰屼笉鏄噸鏂板湪椤甸潰灞傚鍒跺熀纭€鏋勪欢銆?
-## 2026-07-09 08:08:00 +08:00 | v1.1.0-alpha.135 | 鏀跺彛宸ヤ綔鍖哄竷灞€棰勮涓庡鍑虹姸鎬?smoke
-### 浠诲姟鍐呭
+- `@studymate/ui` 现在已经不只是 token 和状态文案容器，而是开始承接真实共享 primitive；后续继续统一 Button、Input、ConfirmDialog、CommandBar 等组件时，可以沿着同一条共享出口继续扩展。
+- 这一轮仍然只完成了第一批最稳定的基础构件，管理端也还没有直接消费这层组件出口；`FE-041` 后续更值得继续推进的是更多 primitives 的收口，而不是重新在页面层复制基础构件。
 
-- 缁х画娌?`verify:graph-conflicts` 杩欐潯鍥哄畾鍏ュ彛鎺ㄨ繘 `WB-032/WB-034` 鐨勬渶灏忓閲忔敹鍙ｏ紝鎶婂浘璋卞伐浣滃尯 Playwright smoke 浠庘€滄闈?绐勫睆 + 鐪熷疄鐗堟湰鍐茬獊璺緞鈥濆啀琛ュ埌鈥滃竷灞€棰勮 API + 瀵煎嚭鐘舵€佲€濄€?- 鏈疆浠嶇劧涓嶆墿寮犲浘璋变笟鍔¤寖鍥达紝鍙ˉ鐪熷疄宸ヤ綔鍖洪噷宸茬粡瀛樺湪鐨勫竷灞€棰勮涓庡鍑哄弽棣堣矾寰勶紝璁╁浐瀹氬洖褰掑叆鍙ｆ洿鎺ヨ繎鐢ㄦ埛瀹為檯鎿嶄綔闂幆銆?
-### 瀹為檯鍙樻洿
+## 2026-07-09 08:08:00 +08:00 | v1.1.0-alpha.135 | 收口工作区布局预览与导出状态 smoke
+### 任务内容
 
-- 鏇存柊 `scripts/graph-conflict-regression-baseline.test.mjs`锛屽厛鐢?RED 閿佸畾鏂扮己鍙ｏ細褰撳墠 `e2e/v1-graph-workspace.spec.ts` 灏氭湭瑕嗙洊 `layouts/preview` 涓庝笁绉嶅鍑虹姸鎬佹枃妗堬紝鍥炲綊鐭╅樀鏂囨。涔熻繕娌℃湁鎶娾€滃竷灞€棰勮 / 瀵煎嚭鐘舵€佲€濈撼鍏?E2E 鎻忚堪銆?- 鏇存柊 `e2e/v1-graph-workspace.spec.ts`锛屾柊澧炲浘璋卞伐浣滃尯甯冨眬棰勮涓庡鍑虹姸鎬?smoke锛氬湪鐪熷疄宸ヤ綔鍖洪噷閫夋嫨涓や釜鑺傜偣锛岃皟鐢?`/api/v1/graphs/graph-1/layouts/preview` 鐢熸垚鏉ユ簮娉抽亾锛屾柇瑷€璇锋眰浣撱€佹吵閬撳垎缁勬覆鏌擄紝浠ュ強 `瀵煎嚭 StudyMate JSON / SVG / PNG` 涓夌鐘舵€佹彁绀洪兘鑳藉湪椤甸潰涓婂彲瑙併€?- 鏇存柊 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`銆乣README.md`銆乣docs/DEVELOPMENT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛岀粺涓€鎶婂浘璋卞伐浣滃尯鍥哄畾 E2E 鍥炲綊鎻忚堪鎺ㄨ繘鍒扳€滄闈?绐勫睆 smoke + 甯冨眬棰勮 + 瀵煎嚭鐘舵€?+ 鐪熷疄 `graph_version_conflict` 璺緞鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `verify:graph-conflicts` 这条固定入口推进 `WB-032/WB-034` 的最小增量收口，把图谱工作区 Playwright smoke 从“桌面/窄屏 + 真实版本冲突路径”再补到“布局预览 API + 导出状态”。
+- 本轮仍然不扩张图谱业务范围，只补真实工作区里已经存在的布局预览与导出反馈路径，让固定回归入口更接近用户实际操作闭环。
 
-- RED锛歚node --test scripts/graph-conflict-regression-baseline.test.mjs`
-- GREEN锛歚node --test scripts/graph-conflict-regression-baseline.test.mjs`
+### 实际变更
+
+- 更新 `scripts/graph-conflict-regression-baseline.test.mjs`，先用 RED 锁定新缺口：当前 `e2e/v1-graph-workspace.spec.ts` 尚未覆盖 `layouts/preview` 与三种导出状态文案，回归矩阵文档也还没有把“布局预览 / 导出状态”纳入 E2E 描述。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增图谱工作区布局预览与导出状态 smoke：在真实工作区里选择两个节点，调用 `/api/v1/graphs/graph-1/layouts/preview` 生成来源泳道，断言请求体、泳道分组渲染，以及 `导出 StudyMate JSON / SVG / PNG` 三种状态提示都能在页面上可见。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`、`README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，统一把图谱工作区固定 E2E 回归描述推进到“桌面/窄屏 smoke + 布局预览 + 导出状态 + 真实 `graph_version_conflict` 路径”。
+
+### 验证结果
+
+- RED：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- GREEN：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
 - `npm run test:graph:conflicts:e2e`
 - `npm run verify:graph-conflicts`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `verify:graph-conflicts` 鐜板湪涓嶅彧瑕嗙洊鍥捐氨宸ヤ綔鍖虹殑鍔犺浇/淇濆瓨/瀵煎叆/鍘嗗彶涓庣増鏈啿绐佽矾寰勶紝涔熷紑濮嬪浐瀹氶獙璇佸竷灞€棰勮 API 鍜屼笁绉嶅鍑虹姸鎬佹彁绀猴紝鍚庣画缁х画琛?`WB-034` 鏃舵湁浜嗘洿璐磋繎鐪熷疄鎿嶄綔鐨?smoke 鍩哄骇銆?- 褰撳墠浠嶆湭瑕嗙洊鏇村畬鏁寸殑妗岄潰/绐勫睆缁勫悎鐭╅樀鍜屾潈闄愯矾寰勶紱鍚庣画搴旂户缁部杩欐潯鍥哄畾鍏ュ彛鎵╁睍锛岃€屼笉鏄噸鏂板垎鏁ｆ垚涓存椂鍛戒护銆?
-## 2026-07-09 08:28:00 +08:00 | v1.1.0-alpha.136 | 鏀跺彛宸ヤ綔鍖烘潈闄愯矾寰?smoke
-### 浠诲姟鍐呭
+- `verify:graph-conflicts` 现在不只覆盖图谱工作区的加载/保存/导入/历史与版本冲突路径，也开始固定验证布局预览 API 和三种导出状态提示，后续继续补 `WB-034` 时有了更贴近真实操作的 smoke 基座。
+- 当前仍未覆盖更完整的桌面/窄屏组合矩阵和权限路径；后续应继续沿这条固定入口扩展，而不是重新分散成临时命令。
 
-- 缁х画娌?`verify:graph-conflicts` 杩欐潯鍥哄畾鍏ュ彛鎺ㄨ繘 `WB-032/WB-034` 鐨勬渶灏忓閲忔敹鍙ｏ紝鎶婂浘璋卞伐浣滃尯鍥炲綊浠庘€滃啿绐併€佸竷灞€銆佸鍑衡€濆啀琛ュ埌鈥滄潈闄愯矾寰勨€濄€?- 鏈疆浠嶇劧涓嶆墿寮犲浘璋卞姛鑳斤紝鍙妸宸叉湁鍚庣 `forbidden` 鏉冮檺璇箟鎺ヨ繘椤电骇涓庣湡瀹炲伐浣滃尯 smoke锛屾墿澶у師鍨嬬殑鍏ㄥ眬鍙潬鎬ц鐩栭潰銆?
-### 瀹為檯鍙樻洿
+## 2026-07-09 08:28:00 +08:00 | v1.1.0-alpha.136 | 收口工作区权限路径 smoke
+### 任务内容
 
-- 鏇存柊 `scripts/graph-conflict-regression-baseline.test.mjs`锛屽厛鐢?RED 閿佸畾鏂扮己鍙ｏ細褰撳墠 `e2e/v1-graph-workspace.spec.ts` 灏氭湭瑕嗙洊 `forbidden` 鏉冮檺璺緞锛屽浐瀹氬洖褰掔煩闃佃櫧鐒舵彁鍒版潈闄愬叏鐭╅樀锛屼絾杩樻病鏈夌湡姝ｈ惤鍒?smoke銆?- 鏇存柊 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`锛岃ˉ椤电骇鍥炲綊锛氬垏鎹㈠埌鏃犳潈闄愬浘璋卞け璐ユ椂锛屽簲鏄剧ず鈥滃彧鑳借闂嚜宸辩殑鍥捐氨鈥濓紝骞朵繚鎸佸綋鍓嶅浘璋辩户缁彲鐢ㄣ€?- 鏇存柊 `e2e/v1-graph-workspace.spec.ts`锛屾柊澧炵湡瀹炲伐浣滃尯鏉冮檺璺緞 smoke锛氬綋璧勬簮闈㈡澘閲屽垏鍒拌繑鍥?`403 forbidden` 鐨勫浘璋辨椂锛岄〉闈㈤渶瑕佺粰鍑洪敊璇彁绀猴紝鍚屾椂淇濇寔褰撳墠鍥捐氨鏍囬銆佽妭鐐逛笌鐘舵€佹爮涓嶈鐮村潖銆?- 鏇存柊 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`銆乣README.md`銆乣docs/DEVELOPMENT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛岀粺涓€鎶婂浘璋卞伐浣滃尯鍥哄畾鍥炲綊鎻忚堪鎺ㄨ繘鍒扳€滃竷灞€棰勮/瀵煎嚭鐘舵€?+ 鏉冮檺璺緞 + 鐪熷疄鍐茬獊澶勭悊鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `verify:graph-conflicts` 这条固定入口推进 `WB-032/WB-034` 的最小增量收口，把图谱工作区回归从“冲突、布局、导出”再补到“权限路径”。
+- 本轮仍然不扩张图谱功能，只把已有后端 `forbidden` 权限语义接进页级与真实工作区 smoke，扩大原型的全局可靠性覆盖面。
 
-- RED锛歚node --test scripts/graph-conflict-regression-baseline.test.mjs`
-- GREEN锛歚node --test scripts/graph-conflict-regression-baseline.test.mjs`
+### 实际变更
+
+- 更新 `scripts/graph-conflict-regression-baseline.test.mjs`，先用 RED 锁定新缺口：当前 `e2e/v1-graph-workspace.spec.ts` 尚未覆盖 `forbidden` 权限路径，固定回归矩阵虽然提到权限全矩阵，但还没有真正落到 smoke。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补页级回归：切换到无权限图谱失败时，应显示“只能访问自己的图谱”，并保持当前图谱继续可用。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增真实工作区权限路径 smoke：当资源面板里切到返回 `403 forbidden` 的图谱时，页面需要给出错误提示，同时保持当前图谱标题、节点与状态栏不被破坏。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`、`README.md`、`docs/DEVELOPMENT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，统一把图谱工作区固定回归描述推进到“布局预览/导出状态 + 权限路径 + 真实冲突处理”。
+
+### 验证结果
+
+- RED：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
+- GREEN：`node --test scripts/graph-conflict-regression-baseline.test.mjs`
 - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
 - `npm run test:graph:conflicts:e2e`
 - `npm run verify:graph-conflicts`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `verify:graph-conflicts` 鐜板湪闄や簡鍐茬獊銆佸竷灞€鍜屽鍑轰箣澶栵紝涔熷紑濮嬪浐瀹氶獙璇佸浘璋卞伐浣滃尯鐨勬潈闄愬け璐ヨ矾寰勶紝涓哄悗缁?`WB-034` 缁х画琛ユ潈闄愬垎鏀煩闃垫彁渚涗簡绋冲畾鍩哄骇銆?- 褰撳墠浠嶆湭瑕嗙洊鏇村畬鏁寸殑鏉冮檺缁勫悎锛屾瘮濡傚垱寤?淇濆瓨/鎭㈠/瀵煎嚭鍦ㄤ笉鍚屾潈闄愯鑹蹭笅鐨勬洿澶氬垎鏀紱鍚庣画浠嶅簲娌胯繖鏉″浐瀹氬叆鍙ｆ墿灞曪紝鑰屼笉鏄噸鏂板垎鏁ｆ垚涓存椂鍛戒护銆?## 2026-07-09 08:41:12 +08:00 | v1.1.0-alpha.139 | 鎺ㄨ繘 FE-041 鍏变韩 Button 鍥捐氨鎺ョ嚎
-### 浠诲姟鍐呭
+- `verify:graph-conflicts` 现在除了冲突、布局和导出之外，也开始固定验证图谱工作区的权限失败路径，为后续 `WB-034` 继续补权限分支矩阵提供了稳定基座。
+- 当前仍未覆盖更完整的权限组合，比如创建/保存/恢复/导出在不同权限角色下的更多分支；后续仍应沿这条固定入口扩展，而不是重新分散成临时命令。
+## 2026-07-09 08:41:12 +08:00 | v1.1.0-alpha.139 | 推进 FE-041 共享 Button 图谱接线
+### 任务内容
 
-- 娌跨潃 `FE-041` 宸茬粡钀藉湴鐨勫叡浜?`DataState / Drawer / Inspector / IconButton` 缁х画寰€鍓嶆帹杩涗竴灏忔锛岃繖涓€杞仛鐒︽渶甯歌鐨勬櫘閫氬姩浣滄寜閽紝鑰屼笉鏄户缁彧鍋滅暀鍦ㄥ浘鏍囨寜閽眰銆?- 鏈疆鐩爣鏄湪涓嶉噸鍐欏浘璋变笟鍔＄殑鍓嶆彁涓嬶紝鎶?`primary-button` / `secondary-button` / `ghost-button` 鐨勫熀纭€璇箟鍏堟敹鍙ｅ埌鍏变韩 `Button`锛屽苟浼樺厛鎺ュ埌鍥捐氨宸ヤ綔鍖鸿繖鏉＄湡瀹炰富璺緞涓娿€?
-### 瀹為檯鍙樻洿
+- 沿着 `FE-041` 已经落地的共享 `DataState / Drawer / Inspector / IconButton` 继续往前推进一小步，这一轮聚焦最常见的普通动作按钮，而不是继续只停留在图标按钮层。
+- 本轮目标是在不重写图谱业务的前提下，把 `primary-button` / `secondary-button` / `ghost-button` 的基础语义先收口到共享 `Button`，并优先接到图谱工作区这条真实主路径上。
 
-- 鏂板 `packages/ui/src/Button.tsx`锛岀粺涓€鎻愪緵 `primary`銆乣secondary`銆乣ghost` 涓夌鍙樹綋锛屽苟鏀跺彛 `active`銆乣danger`銆侀粯璁?`type="button"` 绛夊熀纭€琛屼负銆?- 鏇存柊 `packages/ui/src/index.ts`锛岃 `@studymate/ui` 姝ｅ紡瀵煎嚭 `Button`銆乣ButtonProps` 涓?`ButtonVariant`銆?- 鏂板 `frontend-user/src/design-system/primitives/Button.tsx` 涓庡吋瀹瑰鍑猴紝璁╃敤鎴风椤甸潰灞傜户缁部鐢ㄦ湰鍦?design-system 璺緞娑堣垂鍏变韩瀹炵幇銆?- 鏇存柊 `frontend-user/src/design-system/primitives/index.ts`锛屾妸鍏变韩 `Button` 绾冲叆缁熶竴 primitive 鍑哄彛銆?- 鏇存柊 `frontend-user/src/modules/graph/components/GraphWorkspaceCanvasChrome.tsx`銆乣GraphWorkspaceShell.tsx`銆乣GraphWorkspaceImportPanel.tsx`銆乣GraphWorkspaceStageChrome.tsx`锛屾妸鍥捐氨宸ヤ綔鍖洪噷鐨勬柊寤恒€佷繚瀛樸€佸鍏ャ€佹牎楠屻€佸啿绐佸鐞嗙瓑鏅€氬姩浣滄寜閽帴鍒板叡浜?`Button`锛屽悓鏃朵繚鐣欑幇鏈夐〉闈㈣涔変笌鍙闂€с€?- 鏂板 `frontend-user/src/design-system/primitives/Button.test.tsx`锛屽苟鎵╁睍 `packages/ui/src/reactPrimitives.test.tsx`锛岀敤 RED/GREEN 閿佸畾鍏变韩瀵煎嚭銆佹寜閽彉浣撱€乣active`/`danger` 鐘舵€併€佺偣鍑昏涓轰笌榛樿鎸夐挳绫诲瀷銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 鐜扮姸鎺ㄨ繘鍒扳€滄櫘閫氬姩浣滄寜閽篃宸插紑濮嬭蛋鍏变韩 primitive 鍑哄彛鈥濄€?
-### 楠岃瘉缁撴灉
+### 实际变更
 
-- RED锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
-- RED锛歚npm --workspace frontend-user run test -- src/design-system/primitives/Button.test.tsx`
-- GREEN锛歚npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- 新增 `packages/ui/src/Button.tsx`，统一提供 `primary`、`secondary`、`ghost` 三种变体，并收口 `active`、`danger`、默认 `type="button"` 等基础行为。
+- 更新 `packages/ui/src/index.ts`，让 `@studymate/ui` 正式导出 `Button`、`ButtonProps` 与 `ButtonVariant`。
+- 新增 `frontend-user/src/design-system/primitives/Button.tsx` 与兼容导出，让用户端页面层继续沿用本地 design-system 路径消费共享实现。
+- 更新 `frontend-user/src/design-system/primitives/index.ts`，把共享 `Button` 纳入统一 primitive 出口。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceCanvasChrome.tsx`、`GraphWorkspaceShell.tsx`、`GraphWorkspaceImportPanel.tsx`、`GraphWorkspaceStageChrome.tsx`，把图谱工作区里的新建、保存、导入、校验、冲突处理等普通动作按钮接到共享 `Button`，同时保留现有页面语义与可访问性。
+- 新增 `frontend-user/src/design-system/primitives/Button.test.tsx`，并扩展 `packages/ui/src/reactPrimitives.test.tsx`，用 RED/GREEN 锁定共享导出、按钮变体、`active`/`danger` 状态、点击行为与默认按钮类型。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 现状推进到“普通动作按钮也已开始走共享 primitive 出口”。
+
+### 验证结果
+
+- RED：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/design-system/primitives/Button.test.tsx`
+- GREEN：`npx vitest run packages/ui/src/reactPrimitives.test.tsx`
 - `npm --workspace frontend-user run test -- src/design-system/primitives/Button.test.tsx src/modules/graph/components/GraphWorkspaceCanvasChrome.test.tsx src/modules/graph/components/GraphWorkspaceShell.test.tsx src/modules/graph/components/GraphWorkspaceImportPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
 - `npm run typecheck`
 - `npm run build:user`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `@studymate/ui` 鐜板湪涓嶅啀鍙壙鎺ョ姸鎬佺粍浠跺拰鍥炬爣鎸夐挳锛屼篃寮€濮嬫壙鎺ユ櫘閫氬姩浣滄寜閽繖绫绘洿楂橀鐨勪氦浜?primitive锛涘悗缁户缁敹鍙?Input銆丼elect銆乀ag銆丆onfirmDialog銆丆ommandBar 鏃讹紝鍙互娌跨潃鍚屼竴鏉″彉浣撹涔夌户缁墿灞曘€?- 杩欎竴杞粛鐒跺彧鍏堟帴浜嗗浘璋卞伐浣滃尯锛岄槄璇汇€佺瑪璁般€佸涔犱笌绠＄悊绔噷鏁ｈ惤鐨勬櫘閫氭寜閽繕娌℃湁缁熶竴杩佸叆鍏变韩鍑哄彛锛沗FE-041` 涓嬩竴姝ユ洿閫傚悎缁х画鎸夌湡瀹為〉闈富璺緞閫愭鏇挎崲锛岃€屼笉鏄噸鏂拌璁′竴濂楁柊鎸夐挳浣撶郴銆?## 2026-07-09 10:33:52 +08:00 | v1.1.0-alpha.143 | 鎺ㄨ繘 FE-041 绠＄悊绔鏍稿姩浣滄帴鍏ョ‘璁ゅ眰
-### 浠诲姟鍐呭
+- `@studymate/ui` 现在不再只承接状态组件和图标按钮，也开始承接普通动作按钮这类更高频的交互 primitive；后续继续收口 Input、Select、Tag、ConfirmDialog、CommandBar 时，可以沿着同一条变体语义继续扩展。
+- 这一轮仍然只先接了图谱工作区，阅读、笔记、复习与管理端里散落的普通按钮还没有统一迁入共享出口；`FE-041` 下一步更适合继续按真实页面主路径逐段替换，而不是重新设计一套新按钮体系。
+## 2026-07-09 10:33:52 +08:00 | v1.1.0-alpha.143 | 推进 FE-041 管理端审核动作接入确认层
+### 任务内容
 
-- 缁х画娌?`FE-041` 鐨勫叡浜氦浜掕涔夋敹鍙ｏ紝涓嶅洖澶存繁鎸栧崟涓€鍥捐氨鑳藉姏锛岃€屾槸鎶婄‘璁ゆ祦绋嬫帹杩涘埌鍚庡彴娌荤悊杩欐潯鐪熷疄楂橀涓昏矾寰勩€?- 鏈疆鐩爣鏄绠＄悊绔鏍搁槦鍒楅噷鐨勨€滈€氳繃 / 椹冲洖 / 闅愯棌鈥濆厛杩涘叆纭灞傦紝鍐嶆墽琛屽師鏈夊鏍稿姩浣滐紝褰㈡垚璺ㄥ墠鍚庡彴鏇翠竴鑷寸殑 destructive/action 澶勭悊鑺傚銆?
-### 瀹為檯鍙樻洿
+- 继续沿 `FE-041` 的共享交互语义收口，不回头深挖单一图谱能力，而是把确认流程推进到后台治理这条真实高频主路径。
+- 本轮目标是让管理端审核队列里的“通过 / 驳回 / 隐藏”先进入确认层，再执行原有审核动作，形成跨前后台更一致的 destructive/action 处理节奏。
 
-- 鏂板 `frontend-admin/src/components/admin/AdminConfirmDialog.vue`锛屾彁渚?Vue 渚у彲澶嶇敤鐨勫悗鍙扮‘璁ゅ眰锛岀粺涓€鎵挎帴鏍囬銆佽鏄庛€佸彇娑?纭銆佸嵄闄╁姩浣溿€佺‘璁や腑绂佺敤鍜岄敊璇彁绀恒€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛屾妸瀹℃牳闃熷垪閲岀殑鈥滈€氳繃 / 椹冲洖 / 闅愯棌鈥濅粠鐩存帴鎵ц鏀逛负鍏堟墦寮€纭灞傦紱鍙栨秷鏃朵笉鍙戣姹傦紝纭鍚庢墠璋冪敤 `/api/v1/admin/moderation/.../:action`銆?- 鏇存柊 `frontend-admin/src/components/admin/admin.css`锛岃ˉ榻愬悗鍙扮‘璁ゅ眰鐨勯伄缃┿€侀潰鏉裤€佸嵄闄╃‘璁ゆ寜閽拰閿欒鎻愮ず鏍峰紡锛屽苟椤烘墜鍘绘帀鐧诲綍椤甸噸澶嶆彁绀烘枃妗堛€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.test.ts`锛屾柊澧?RED/GREEN 椤甸潰绾у洖褰掞紝閿佸畾鈥滈┏鍥炲姩浣滃厛纭銆佸彇娑堜笉瑙﹀彂璇锋眰銆佺‘璁ゅ悗鎼哄甫鍚庡彴 token 鍙戣捣 POST鈥濈殑濂戠害銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 鐨勫綋鍓嶈竟鐣屾帹杩涘埌鈥滅鐞嗙瀹℃牳鍔ㄤ綔涔熷凡杩涘叆纭灞傗€濄€?
-### 楠岃瘉缁撴灉
+### 实际变更
 
-- RED锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- 新增 `frontend-admin/src/components/admin/AdminConfirmDialog.vue`，提供 Vue 侧可复用的后台确认层，统一承接标题、说明、取消/确认、危险动作、确认中禁用和错误提示。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，把审核队列里的“通过 / 驳回 / 隐藏”从直接执行改为先打开确认层；取消时不发请求，确认后才调用 `/api/v1/admin/moderation/.../:action`。
+- 更新 `frontend-admin/src/components/admin/admin.css`，补齐后台确认层的遮罩、面板、危险确认按钮和错误提示样式，并顺手去掉登录页重复提示文案。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，新增 RED/GREEN 页面级回归，锁定“驳回动作先确认、取消不触发请求、确认后携带后台 token 发起 POST”的契约。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 的当前边界推进到“管理端审核动作也已进入确认层”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts src/api/client.test.ts`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 绠＄悊绔鏍稿姩浣滅幇鍦ㄥ凡缁忓紑濮嬫部鐢ㄦ埛绔?`ConfirmDialog` 鐨勫悓涓€濂楃‘璁よ涔夋敹鍙ｏ紝鍚庣画缁х画鎺ㄨ繘鍚庡彴娌荤悊閲岀殑涓嬫灦銆佹仮澶嶃€侀噸璇曠瓑鍔ㄤ綔鏃讹紝鍙互鐩存帴娌胯繖灞傛ā寮忔墿灞曘€?- 褰撳墠纭鐘舵€佷粛鎸傚湪 `AdminWorkspaceView.vue` 鍗曞伐浣滃彴缁勪欢鍐咃紱鍚庣画鑻ユ帹杩?`ADM-010 / ADM-011`锛屾洿閫傚悎鎶婅繖绫绘不鐞嗗姩浣滀笌纭鐘舵€佷竴璧蜂笅娌夊埌妯″潡椤垫垨 feature 杈圭晫銆?## 2026-07-09 11:10:00 +08:00 | v1.1.0-alpha.146 | 鎺ㄨ繘 ADM-010 绠＄悊绔櫥褰曡鍥句笌宸茬櫥褰曞３灞傛娊绂?### 浠诲姟鍐呭
+- 管理端审核动作现在已经开始沿用户端 `ConfirmDialog` 的同一套确认语义收口，后续继续推进后台治理里的下架、恢复、重试等动作时，可以直接沿这层模式扩展。
+- 当前确认状态仍挂在 `AdminWorkspaceView.vue` 单工作台组件内；后续若推进 `ADM-010 / ADM-011`，更适合把这类治理动作与确认状态一起下沉到模块页或 feature 边界。
+## 2026-07-09 11:10:00 +08:00 | v1.1.0-alpha.146 | 推进 ADM-010 管理端登录视图与已登录壳层抽离
+### 任务内容
 
-- 鍦?`ADM-010` 宸插畬鎴?URL 鐘舵€佸拰棣栨壒妯″潡瑙嗗浘鎷嗗垎鐨勫熀纭€涓婏紝缁х画鍋氫竴涓皬鑰岀ǔ瀹氱殑鍚庡彴鍒嗗眰鏀跺彛锛岄伩鍏?`AdminWorkspaceView.vue` 鍚屾椂鎸佹湁鐧诲綍椤甸潰銆佷晶鏍忋€侀《閮ㄧ姸鎬佹潯銆佹爣棰樺尯鍜屾ā鍧楀唴瀹广€?- 鏈疆鐩爣涓嶆槸鍒囧埌鐪熸鐨?Vue Router page锛岃€屾槸鍏堟妸鈥滅櫥褰曟€佽鍥锯€濆拰鈥滃凡鐧诲綍澹冲眰鈥濅粠宸ヤ綔鍙板崗璋冨櫒涓墺绂诲嚭鏉ワ紝璁╁悗鍙板崟椤靛伐浣滃彴缁х画寰€鍙淮鎶ょ殑澶氬眰缁撴瀯杩囨浮銆?
-### 瀹為檯鍙樻洿
+- 在 `ADM-010` 已完成 URL 状态和首批模块视图拆分的基础上，继续做一个小而稳定的后台分层收口，避免 `AdminWorkspaceView.vue` 同时持有登录页面、侧栏、顶部状态条、标题区和模块内容。
+- 本轮目标不是切到真正的 Vue Router page，而是先把“登录态视图”和“已登录壳层”从工作台协调器中剥离出来，让后台单页工作台继续往可维护的多层结构过渡。
 
-- 鏂板 `frontend-admin/src/components/admin/AdminLoginPanel.vue`锛屾壙鎺ュ悗鍙扮櫥褰曞搧鐗屽尯銆佽〃鍗曡緭鍏ャ€侀敊璇彁绀哄拰鎻愪氦浜や簰銆?- 鏂板 `frontend-admin/src/components/admin/AdminShellFrame.vue`锛屾壙鎺ュ悗鍙颁晶鏍忓鑸€侀《閮ㄧ姸鎬佹潯銆侀〉闈㈡爣棰樺尯銆侀€氱煡鍖哄拰榛樿鍐呭鎻掓Ы銆?- 鏂板 `frontend-admin/src/components/admin/AdminLoginPanel.test.ts` 涓?`AdminShellFrame.test.ts`锛屽厛浠?RED 澶嶇幇缁勪欢缂哄け锛屽啀鍦?GREEN 閿佸畾鐧诲綍杈撳叆鏇存柊/鎻愪氦濂戠害锛屼互鍙婂３灞傚鑸€佸埛鏂般€侀€€鍑轰簨浠惰竟鐣屻€?- 閲嶅啓 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃瀹冭繘涓€姝ュ洖鍒?session銆乁RL銆佸鏍哥‘璁ゅ眰鍜屾暟鎹姞杞藉崗璋冨櫒瑙掕壊锛涙枃浠惰妯′粠 536 琛岄檷鍒?497 琛屻€?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ADM-010` 鐨勬渶鏂拌竟鐣屾帹杩涘埌鈥滅櫥褰曡鍥?+ 宸茬櫥褰曞３灞?+ 妯″潡瑙嗗浘鈥濄€?
-### 楠岃瘉缁撴灉
+### 实际变更
 
-- RED锛歚npm --workspace frontend-admin run test -- src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts`
+- 新增 `frontend-admin/src/components/admin/AdminLoginPanel.vue`，承接后台登录品牌区、表单输入、错误提示和提交交互。
+- 新增 `frontend-admin/src/components/admin/AdminShellFrame.vue`，承接后台侧栏导航、顶部状态条、页面标题区、通知区和默认内容插槽。
+- 新增 `frontend-admin/src/components/admin/AdminLoginPanel.test.ts` 与 `AdminShellFrame.test.ts`，先以 RED 复现组件缺失，再在 GREEN 锁定登录输入更新/提交契约，以及壳层导航、刷新、退出事件边界。
+- 重写 `frontend-admin/src/views/AdminWorkspaceView.vue`，让它进一步回到 session、URL、审核确认层和数据加载协调器角色；文件规模从 536 行降到 497 行。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-010` 的最新边界推进到“登录视图 + 已登录壳层 + 模块视图”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/components/admin/AdminLoginPanel.test.ts src/components/admin/AdminShellFrame.test.ts`
 - `npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts src/api/client.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍚庡彴宸ヤ綔鍙扮幇鍦ㄥ凡缁忓叿澶囨洿娓呮櫚鐨勪笁灞傜粨鏋勶細鐧诲綍瑙嗗浘銆佸凡鐧诲綍澹冲眰鍜屾ā鍧楄鍥撅紱鍚庣画缁х画鎷?users / materials / ai / audit 鏃讹紝涓嶉渶瑕佸啀鎶婅繖浜涘３灞傜粨鏋勯噸澶嶅啓鍥?`AdminWorkspaceView.vue`銆?- 褰撳墠鏁版嵁鍔犺浇鍜屾不鐞嗗姩浣滀粛闆嗕腑鍦ㄥ崗璋冨櫒灞傦紱鍚庣画鑻ョ户缁帹杩?`ADM-010 / ADM-011`锛屾洿閫傚悎鎶婃ā鍧楀唴鏁版嵁杈圭晫銆佸姩浣滅姸鎬佸拰瀹¤璇箟缁х画娌夊埌 page / feature 绾у埆銆?
-## 2026-07-09 11:02:00 +08:00 | v1.1.0-alpha.145 | 鎺ㄨ繘 ADM-010 绠＄悊绔鎵规ā鍧楄鍥炬媶鍒?### 浠诲姟鍐呭
+- 后台工作台现在已经具备更清晰的三层结构：登录视图、已登录壳层和模块视图；后续继续拆 users / materials / ai / audit 时，不需要再把这些壳层结构重复写回 `AdminWorkspaceView.vue`。
+- 当前数据加载和治理动作仍集中在协调器层；后续若继续推进 `ADM-010 / ADM-011`，更适合把模块内数据边界、动作状态和审计语义继续沉到 page / feature 级别。
 
-- 鍦?`ADM-010` 宸插畬鎴?URL 璺敱璧锋鐨勫熀纭€涓婏紝缁х画鍋氫竴涓渶灏忋€佸彲娴嬭瘯鐨勫悗鍙版ā鍧楀寲鏀跺彛锛岄伩鍏?`AdminWorkspaceView.vue` 鍐嶇户缁惛绾?dashboard銆乵oderation 鍜屾不鐞嗗垪琛ㄧ殑鏁村潡妯℃澘銆?- 鏈疆鐩爣涓嶆槸涓€娆℃€у畬鎴愮湡姝ｇ殑 Vue Router page 鎷嗗垎锛岃€屾槸鍏堟妸鏈€楂橀鐨勪笁鍧楀睍绀哄眰鎶芥垚鐙珛妯″潡瑙嗗浘锛岃鍚庡彴宸ヤ綔鍙板紑濮嬪洖鍒扳€渟ession / URL / 纭灞傚３缁勪欢鈥濈殑鑱岃矗銆?
-### 瀹為檯鍙樻洿
+## 2026-07-09 11:02:00 +08:00 | v1.1.0-alpha.145 | 推进 ADM-010 管理端首批模块视图拆分
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/modules/AdminDashboardModule.vue`銆乣frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`frontend-admin/src/views/modules/AdminGovernanceModule.vue`锛屽垎鍒壙鎺ユ瑙堟寚鏍囧崱銆佸鏍搁槦鍒楄〃鏍煎拰娌荤悊璁板綍/鎽樿/璇︽儏灞曠ず銆?- 鏂板 `frontend-admin/src/views/modules/AdminDashboardModule.test.ts`銆乣frontend-admin/src/views/modules/AdminModerationModule.test.ts` 涓?`frontend-admin/src/views/modules/AdminGovernanceModule.test.ts`锛屽厛浠?RED 澶嶇幇鈥滄ā鍧楁枃浠朵笉瀛樺湪鈥濈殑缂哄彛锛屽啀鍦?GREEN 閿佸畾妯″潡娓叉煋銆佹煡璇㈣緭鍏ュ拰浜嬩欢鍙戝皠濂戠害銆?- 閲嶅啓 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃宸ヤ綔鍙颁富瑙嗗浘鏀逛负缁勫悎 session銆乁RL銆佸鏍哥‘璁ゅ眰涓庢ā鍧楀垏鎹紝涓嶅啀缁х画鍐呰仈 dashboard / moderation / governance 鐨勫畬鏁撮〉闈㈢粨鏋勩€?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ADM-010` 浠庘€滃彧鏈?URL 鐘舵€佲€濇帹杩涘埌鈥淯RL + 棣栨壒妯″潡瑙嗗浘鎷嗗垎鈥濄€?
-### 楠岃瘉缁撴灉
+- 在 `ADM-010` 已完成 URL 路由起步的基础上，继续做一个最小、可测试的后台模块化收口，避免 `AdminWorkspaceView.vue` 再继续吸纳 dashboard、moderation 和治理列表的整块模板。
+- 本轮目标不是一次性完成真正的 Vue Router page 拆分，而是先把最高频的三块展示层抽成独立模块视图，让后台工作台开始回到“session / URL / 确认层壳组件”的职责。
 
-- RED锛歚npm --workspace frontend-admin run test -- src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+### 实际变更
+
+- 新增 `frontend-admin/src/views/modules/AdminDashboardModule.vue`、`frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`，分别承接概览指标卡、审核队列表格和治理记录/摘要/详情展示。
+- 新增 `frontend-admin/src/views/modules/AdminDashboardModule.test.ts`、`frontend-admin/src/views/modules/AdminModerationModule.test.ts` 与 `frontend-admin/src/views/modules/AdminGovernanceModule.test.ts`，先以 RED 复现“模块文件不存在”的缺口，再在 GREEN 锁定模块渲染、查询输入和事件发射契约。
+- 重写 `frontend-admin/src/views/AdminWorkspaceView.vue`，让工作台主视图改为组合 session、URL、审核确认层与模块切换，不再继续内联 dashboard / moderation / governance 的完整页面结构。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-010` 从“只有 URL 状态”推进到“URL + 首批模块视图拆分”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
 - `npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts src/api/client.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍚庡彴宸ヤ綔鍙扮幇鍦ㄥ凡缁忎笉鍐嶅彧鏈?URL 璺敱鑳藉姏锛屼篃寮€濮嬪叿澶囬鎵规ā鍧楃骇瑙嗗浘杈圭晫锛涘悗缁户缁媶 users / materials / ai / audit 鏃讹紝鍙互娌?`src/views/modules/` 杩欏眰妯″紡缁х画鎺ㄨ繘锛岃€屼笉鏄妸鏁撮〉妯℃澘缁х画鍫嗗洖 `AdminWorkspaceView.vue`銆?- 褰撳墠鏁版嵁鍔犺浇鍜屾不鐞嗗姩浣滀粛闆嗕腑鍦ㄥ３缁勪欢閲岋紱鍚庣画鑻ョ户缁帹杩?`ADM-010 / ADM-011`锛屾洿閫傚悎鎶婃ā鍧楁暟鎹竟鐣屻€佸姩浣滅姸鎬佸拰瀹¤璇箟涓€璧蜂笅娌夊埌 page / feature 绾у埆銆?
-## 2026-07-09 10:47:30 +08:00 | v1.1.0-alpha.144 | 鎺ㄨ繘 ADM-010 绠＄悊绔?URL 璺敱璧锋
-### 浠诲姟鍐呭
+- 后台工作台现在已经不再只有 URL 路由能力，也开始具备首批模块级视图边界；后续继续拆 users / materials / ai / audit 时，可以沿 `src/views/modules/` 这层模式继续推进，而不是把整页模板继续堆回 `AdminWorkspaceView.vue`。
+- 当前数据加载和治理动作仍集中在壳组件里；后续若继续推进 `ADM-010 / ADM-011`，更适合把模块数据边界、动作状态和审计语义一起下沉到 page / feature 级别。
 
-- 閬靛惊鈥滃厛鎶婃暣浣撳伐浣滃彴鍋氬畬鏁达紝鍐嶉€愭娣卞叆鈥濈殑鍘熷瀷鑺傚锛屼紭鍏堟帹杩涚鐞嗙鐨勫彲鍒锋柊銆佸彲鐩磋揪銆佸彲鍥為€€鑳藉姏锛岃€屼笉鏄户缁彧鍦ㄥ崟涓不鐞嗗姩浣滀笂鎵撹ˉ涓併€?- 鏈疆鐩爣鏄鍚庡彴妯″潡鍒囨崲鎷ユ湁鐪熷疄 `/admin/...` URL锛屽苟璁╅粯璁ゅ叆鍙ｃ€佸鑸垏鎹㈠拰娴忚鍣ㄥ墠杩?鍚庨€€閮借兘鍥炲埌姝ｇ‘妯″潡銆?
-### 瀹為檯鍙樻洿
+## 2026-07-09 10:47:30 +08:00 | v1.1.0-alpha.144 | 推进 ADM-010 管理端 URL 路由起步
+### 任务内容
 
-- 鏇存柊 `frontend-admin/src/router/index.ts`锛屾妸鍘熷厛鍙繚瀛?route key 鐨勬枃浠跺崌绾т负鍚庡彴妯″潡璺緞鏄犲皠灞傦紝鎻愪緵 `/admin/dashboard`銆乣/admin/moderation`銆乣/admin/users`銆乣/admin/audit` 绛夎矾寰勭殑瑙ｆ瀽銆佺敓鎴愬拰榛樿褰掍竴鍖栥€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃绠＄悊绔伐浣滃彴鎸夋祻瑙堝櫒璺緞鍐冲畾鍒濆妯″潡锛屽苟鍦ㄥ鑸垏鎹€佹牴璺緞褰掍竴鍖栥€佹祻瑙堝櫒 `popstate`銆佷細璇濆け鏁堝拰鎵嬪姩閫€鍑烘椂鍚屾 URL 涓庡伐浣滃彴鐘舵€併€?- 鏇存柊 `frontend-admin/src/App.test.ts` 涓?`frontend-admin/src/views/AdminWorkspaceView.test.ts`锛屽厛鐢?RED 閿佸畾鈥滄牴璺緞涓嶄細褰掍竴鍖栤€濆拰鈥滃垏鎹㈡ā鍧椾笉鏀瑰湴鍧€鈥濈殑缂哄彛锛屽啀鐢?GREEN 鍥哄畾鏈€灏?URL 璺敱濂戠害锛涘悓鏃惰ˉ浜嗘祴璇曢棿 URL 鐘舵€侀殧绂伙紝閬垮厤鍘嗗彶璺緞涓叉壈銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ADM-010` 浠庣函寰呭仛鎺ㄨ繘鍒扳€淯RL 璺敱璧锋宸茶惤鍦帮紝浣嗗皻鏈媶鎴愮嫭绔嬫ā鍧楅〉鈥濄€?
-### 楠岃瘉缁撴灉
+- 遵循“先把整体工作台做完整，再逐段深入”的原型节奏，优先推进管理端的可刷新、可直达、可回退能力，而不是继续只在单个治理动作上打补丁。
+- 本轮目标是让后台模块切换拥有真实 `/admin/...` URL，并让默认入口、导航切换和浏览器前进/后退都能回到正确模块。
 
-- RED锛歚npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts`
+### 实际变更
+
+- 更新 `frontend-admin/src/router/index.ts`，把原先只保存 route key 的文件升级为后台模块路径映射层，提供 `/admin/dashboard`、`/admin/moderation`、`/admin/users`、`/admin/audit` 等路径的解析、生成和默认归一化。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让管理端工作台按浏览器路径决定初始模块，并在导航切换、根路径归一化、浏览器 `popstate`、会话失效和手动退出时同步 URL 与工作台状态。
+- 更新 `frontend-admin/src/App.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，先用 RED 锁定“根路径不会归一化”和“切换模块不改地址”的缺口，再用 GREEN 固定最小 URL 路由契约；同时补了测试间 URL 状态隔离，避免历史路径串扰。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-010` 从纯待做推进到“URL 路由起步已落地，但尚未拆成独立模块页”。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm --workspace frontend-admin run test -- src/App.test.ts src/views/AdminWorkspaceView.test.ts src/api/client.test.ts`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 绠＄悊绔幇鍦ㄥ凡缁忓叿澶囩湡瀹?URL 宸ヤ綔鍙扮殑鏈€灏忓舰鎬侊紝鍚庣画琛ュ悗鍙版不鐞嗗姩浣溿€佹ā鍧楁媶椤靛拰瀹¤娴佹椂锛屽彲浠ョ洿鎺ユ部 `/admin/...` 璺緞缁х画鎵╁睍銆?- 褰撳墠椤甸潰浠嶉泦涓湪 `AdminWorkspaceView.vue` 鍐呴儴鍒囨崲锛涘悗缁帹杩?`ADM-010 / ADM-011` 鏃讹紝鏇撮€傚悎鎶?users銆乵oderation銆乤i銆乤udit 绛夋ā鍧楅€愭鎷嗗埌鐙珛椤甸潰鍜?feature 杈圭晫銆?## 2026-07-09 12:25:00 +08:00 | v1.1.0-alpha.150 | 鎺ㄨ繘 ADM-011 鐢ㄦ埛娌荤悊鍔ㄤ綔璧锋
-### 浠诲姟鍐呭
+- 管理端现在已经具备真实 URL 工作台的最小形态，后续补后台治理动作、模块拆页和审计流时，可以直接沿 `/admin/...` 路径继续扩展。
+- 当前页面仍集中在 `AdminWorkspaceView.vue` 内部切换；后续推进 `ADM-010 / ADM-011` 时，更适合把 users、moderation、ai、audit 等模块逐段拆到独立页面和 feature 边界。
+## 2026-07-09 12:25:00 +08:00 | v1.1.0-alpha.150 | 推进 ADM-011 用户治理动作起步
+### 任务内容
 
-- 缁х画娌?`ADM-011` 鍋氣€滃厛鎶婂悗鍙版不鐞嗕富璺緞琛ラ綈鈥濈殑灏忔鎺ㄨ繘锛岃繖涓€杞粠 AI 浠诲姟娌荤悊缁х画鎵╁埌鐢ㄦ埛娌荤悊锛屼笉鍥炲ご娣辨寲宸叉湁涓炬姤 / 璧勬枡 / AI 瀛愬煙銆?- 鏈疆鐩爣鏄妸鐢ㄦ埛娌荤悊鍒楄〃浠庡彧璇绘帹杩涘埌鏈€灏忓彲鎵ц娌荤悊锛氭椿璺冪敤鎴峰彲绂佺敤锛屽凡绂佺敤鐢ㄦ埛鍙仮澶嶏紝骞惰琚鐢ㄨ处鍙峰湪璁よ瘉閾捐矾閲岀湡瀹炲け鏁堬紝鑰屼笉鏄彧鍋滅暀鍦ㄥ悗鍙板睍绀虹姸鎬併€?
-### 瀹為檯鍙樻洿
+- 继续沿 `ADM-011` 做“先把后台治理主路径补齐”的小步推进，这一轮从 AI 任务治理继续扩到用户治理，不回头深挖已有举报 / 资料 / AI 子域。
+- 本轮目标是把用户治理列表从只读推进到最小可执行治理：活跃用户可禁用，已禁用用户可恢复，并让被禁用账号在认证链路里真实失效，而不是只停留在后台展示状态。
 
-- 鏂板 `backend/internal/modules/admin/service/user_actions_test.go`锛屽厛鐢?RED 閿佸畾涓変釜缂哄彛锛歚HandleUser(...)` 灏氫笉瀛樺湪銆佺敤鎴锋不鐞嗚繕娌℃湁 `disable / activate` 鍔ㄤ綔銆佸悗鍙颁篃杩樹笉浼氫负杩欎簺鍔ㄤ綔鍐欏叆瀹¤鏃ュ織銆?- 鏂板 `backend/internal/modules/auth/service/status_guard_test.go`锛屽厛鐢?RED 閿佸畾琚鐢ㄧ敤鎴蜂粛鍙?`Login(...)` / `Refresh(...)` 鐨勮璇佺己鍙ｏ紝閬垮厤鍙妸鐢ㄦ埛鐘舵€佸仛鎴愨€滃悗鍙板垪琛ㄥ瓧娈碘€濄€?- 鏇存柊 `backend/internal/modules/admin/service/service.go`銆乣handler/handler.go` 涓?`router/router.go`锛岃ˉ榻?`HandleUser(...)`銆乣/api/v1/admin/users/:id/disable` 涓?`/api/v1/admin/users/:id/activate`锛涘綋鍓嶅師鍨嬭涔夋槸 `active <-> disabled`锛屽苟鍦ㄥ悓涓€浜嬪姟鍐呭啓鍏?`admin.handle.user` 瀹¤浜嬩欢锛屽悓鏃朵繚鎶ょ鐞嗗憳璐﹀彿涓嶅湪杩欐潯棣栧垏鐗囬噷琚洿鎺ョ鐢ㄣ€?- 鏇存柊 `backend/internal/modules/user/model/user.go` 涓?`backend/internal/modules/auth/service/service.go`锛岃鐢ㄦ埛妯″瀷鏄惧紡鎵挎帴 `status` 瀛楁锛屽苟鍦ㄧ櫥褰?/ 鍒锋柊闃舵瀵?`disabled` 璐﹀彿杩斿洖 `user_disabled`锛岃绂佺敤鍔ㄤ綔瀵圭湡瀹炰細璇濈敓鍛藉懆鏈熷紑濮嬬敓鏁堛€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue` 涓?`frontend-admin/src/views/AdminWorkspaceView.test.ts`锛岃鐢ㄦ埛娌荤悊妯″潡鎸夎褰曠姸鎬佹樉绀衡€滅鐢ㄧ敤鎴?/ 鎭㈠鐢ㄦ埛鈥濓紝鍏堣繘鍏ョ‘璁ゅ眰锛屽啀鎻愪氦 `/api/v1/admin/users/:id/:action`銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ADM-011` 浠庘€滀妇鎶?+ 璧勬枡 + AI鈥濅笁娈靛垏鐗囨帹杩涘埌鈥滀妇鎶?+ 璧勬枡 + AI + 鐢ㄦ埛鈥濆洓娈电湡瀹炴不鐞嗗垏鐗囥€?
-### 楠岃瘉缁撴灉
+### 实际变更
 
-- RED锛歚go test ./internal/modules/admin/service ./internal/modules/auth/service`
-- RED锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚go test ./internal/modules/admin/service ./internal/modules/auth/service`
+- 新增 `backend/internal/modules/admin/service/user_actions_test.go`，先用 RED 锁定三个缺口：`HandleUser(...)` 尚不存在、用户治理还没有 `disable / activate` 动作、后台也还不会为这些动作写入审计日志。
+- 新增 `backend/internal/modules/auth/service/status_guard_test.go`，先用 RED 锁定被禁用用户仍可 `Login(...)` / `Refresh(...)` 的认证缺口，避免只把用户状态做成“后台列表字段”。
+- 更新 `backend/internal/modules/admin/service/service.go`、`handler/handler.go` 与 `router/router.go`，补齐 `HandleUser(...)`、`/api/v1/admin/users/:id/disable` 与 `/api/v1/admin/users/:id/activate`；当前原型语义是 `active <-> disabled`，并在同一事务内写入 `admin.handle.user` 审计事件，同时保护管理员账号不在这条首切片里被直接禁用。
+- 更新 `backend/internal/modules/user/model/user.go` 与 `backend/internal/modules/auth/service/service.go`，让用户模型显式承接 `status` 字段，并在登录 / 刷新阶段对 `disabled` 账号返回 `user_disabled`，让禁用动作对真实会话生命周期开始生效。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，让用户治理模块按记录状态显示“禁用用户 / 恢复用户”，先进入确认层，再提交 `/api/v1/admin/users/:id/:action`。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-011` 从“举报 + 资料 + AI”三段切片推进到“举报 + 资料 + AI + 用户”四段真实治理切片。
+
+### 验证结果
+
+- RED：`go test ./internal/modules/admin/service ./internal/modules/auth/service`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`go test ./internal/modules/admin/service ./internal/modules/auth/service`
 - `go test ./internal/modules/admin/... ./internal/modules/auth/...`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍚庡彴鈥滅敤鎴锋不鐞嗏€濈幇鍦ㄥ凡缁忎粠鍙璁板綍鎺ㄨ繘鍒版渶灏忓彲鎵ц鍔ㄤ綔锛屼笖绂佺敤鐘舵€佸紑濮嬭繘鍏ヨ璇侀摼璺紝涓嶅啀鍙槸杩愯惀瑙嗗浘閲岀殑灞曠ず瀛楁锛涘悗缁户缁ˉ浼氳瘽鍗虫椂澶辨晥銆佹洿澶氭潈闄愯竟鐣屽拰瀹¤鏌ヨ鏃讹紝浼氭瘮鐜板湪鏇撮『銆?- 褰撳墠鐢ㄦ埛娌荤悊浠嶅厛鏀跺彛鍦ㄢ€滅鐢?/ 鎭㈠ + login/refresh 鎷掔粷鈥濊繖涓€灞傦紝灏氭湭瀵瑰凡绛惧彂 access token 鍋氬嵆鏃舵嫤鎴紱鍚庣画鑻ョ户缁帹杩?`ADM-010 / ADM-011`锛屾洿閫傚悎鎶婅祫鏂欍€佺敤鎴枫€丄I銆佸璁″姩浣滅户缁線 page / feature 灞備笅娌夛紝骞跺啀鍐冲畾鏄惁琛ヤ腑闂翠欢绾х姸鎬佹牎楠屻€?## 2026-07-09 12:45:00 +08:00 | v1.1.0-alpha.151 | 鎺ㄨ繘 ADM-011 鍥捐氨妯℃澘娌荤悊璧锋
-### 浠诲姟鍐呭
+- 后台“用户治理”现在已经从只读记录推进到最小可执行动作，且禁用状态开始进入认证链路，不再只是运营视图里的展示字段；后续继续补会话即时失效、更多权限边界和审计查询时，会比现在更顺。
+- 当前用户治理仍先收口在“禁用 / 恢复 + login/refresh 拒绝”这一层，尚未对已签发 access token 做即时拦截；后续若继续推进 `ADM-010 / ADM-011`，更适合把资料、用户、AI、审计动作继续往 page / feature 层下沉，并再决定是否补中间件级状态校验。
+## 2026-07-09 12:45:00 +08:00 | v1.1.0-alpha.151 | 推进 ADM-011 图谱模板治理起步
+### 任务内容
 
-- 缁х画娌?`ADM-011` 鍋氣€滃厛鎶婂悗鍙版不鐞嗕富璺緞琛ラ綈鈥濈殑灏忔鎺ㄨ繘锛岃繖涓€杞粠鐢ㄦ埛娌荤悊缁х画鎵╁埌鍥捐氨妯℃澘娌荤悊锛屼笉鍥炲ご娣辨寲宸叉湁涓炬姤 / 璧勬枡 / AI / 鐢ㄦ埛瀛愬煙銆?- 鏈疆鐩爣鏄妸鍚庡彴 `graph` 妯″潡浠庢爣绛惧崰浣嶅垪琛ㄦ帹杩涘埌鐪熷疄妯℃澘娌荤悊锛氳鍙栫郴缁熸ā鏉跨洰褰曘€佹帴鍏?`diagram_templates` 鐘舵€佽鐩栵紝骞惰鍚庡彴 `publish / unpublish` 鐩存帴褰卞搷鐢ㄦ埛绔ā鏉垮彲瑙佹€с€?### 瀹為檯鍙樻洿
+- 继续沿 `ADM-011` 做“先把后台治理主路径补齐”的小步推进，这一轮从用户治理继续扩到图谱模板治理，不回头深挖已有举报 / 资料 / AI / 用户子域。
+- 本轮目标是把后台 `graph` 模块从标签占位列表推进到真实模板治理：读取系统模板目录、接入 `diagram_templates` 状态覆盖，并让后台 `publish / unpublish` 直接影响用户端模板可见性。
+### 实际变更
 
-- 鏂板 `backend/internal/modules/admin/service/diagram_templates_test.go` 涓?`backend/internal/modules/graph/service/diagram_templates_test.go`锛屽厛鐢?RED 閿佸畾涓変釜缂哄彛锛氬悗鍙拌繕娌℃湁妯℃澘娌荤悊鏈嶅姟銆佸悗鍙?`graph` 妯″潡浠嶅湪璇诲彇 `/api/v1/admin/tags`銆佺敤鎴风 `/api/v1/diagram/templates` 杩樹笉浼氭寜鍚庡彴鍙戝竷鐘舵€佽繃婊ゃ€?- 鏂板 `backend/internal/modules/graph/dto/template_catalog.go` 涓?`backend/internal/modules/graph/repository/diagram_templates.go`锛屾妸绯荤粺鍥捐氨妯℃澘鐩綍鏀跺彛鎴愬叡浜?catalog锛屽苟缁?`diagram_templates` 琛ㄨˉ涓婅鍐欑姸鎬佽鐩栫殑 repository 鑳藉姏銆?- 鏇存柊 `backend/internal/modules/admin/service/service.go`銆乣handler/handler.go` 涓?`router/router.go`锛岃ˉ榻?`/api/v1/admin/diagram-templates`銆乣/api/v1/admin/diagram-templates/:id/publish` 涓?`/api/v1/admin/diagram-templates/:id/unpublish`锛涘悗鍙扮幇鍦ㄤ細鎶婄郴缁熸ā鏉跨洰褰曚笌鎸佷箙鍖栫姸鎬佸悎骞舵垚鐪熷疄娌荤悊鍒楄〃锛屽苟涓?`publish / unpublish` 鍐欏叆 `admin.handle.diagram_template` 瀹¤浜嬩欢銆?- 鏇存柊 `backend/internal/modules/graph/service/service.go`锛岃鐢ㄦ埛绔?`/api/v1/diagram/templates` 鍙繑鍥炲凡鍙戝竷妯℃澘锛涜鍚庡彴涓嬫灦鐨勬ā鏉夸細鐩存帴浠庣敤鎴风妯℃澘鍒楄〃闅愯棌銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue` 涓?`frontend-admin/src/views/AdminWorkspaceView.test.ts`锛屾妸鍚庡彴 `graph` 妯″潡浠?`/api/v1/admin/tags` 鍒囧埌鐪熷疄 `/api/v1/admin/diagram-templates`锛屽苟鍔犲叆妯℃澘 `publish / unpublish` 鐨勭‘璁ゆ祦銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_PROJECT_CONTEXT.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ADM-011` 浠庘€滀妇鎶?+ 璧勬枡 + AI + 鐢ㄦ埛鈥濆洓娈靛垏鐗囨帹杩涘埌鈥滀妇鎶?+ 璧勬枡 + AI + 鐢ㄦ埛 + 鍥捐氨妯℃澘鈥濅簲娈电湡瀹炴不鐞嗗垏鐗囥€?### 楠岃瘉缁撴灉
+- 新增 `backend/internal/modules/admin/service/diagram_templates_test.go` 与 `backend/internal/modules/graph/service/diagram_templates_test.go`，先用 RED 锁定三个缺口：后台还没有模板治理服务、后台 `graph` 模块仍在读取 `/api/v1/admin/tags`、用户端 `/api/v1/diagram/templates` 还不会按后台发布状态过滤。
+- 新增 `backend/internal/modules/graph/dto/template_catalog.go` 与 `backend/internal/modules/graph/repository/diagram_templates.go`，把系统图谱模板目录收口成共享 catalog，并给 `diagram_templates` 表补上读写状态覆盖的 repository 能力。
+- 更新 `backend/internal/modules/admin/service/service.go`、`handler/handler.go` 与 `router/router.go`，补齐 `/api/v1/admin/diagram-templates`、`/api/v1/admin/diagram-templates/:id/publish` 与 `/api/v1/admin/diagram-templates/:id/unpublish`；后台现在会把系统模板目录与持久化状态合并成真实治理列表，并为 `publish / unpublish` 写入 `admin.handle.diagram_template` 审计事件。
+- 更新 `backend/internal/modules/graph/service/service.go`，让用户端 `/api/v1/diagram/templates` 只返回已发布模板；被后台下架的模板会直接从用户端模板列表隐藏。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，把后台 `graph` 模块从 `/api/v1/admin/tags` 切到真实 `/api/v1/admin/diagram-templates`，并加入模板 `publish / unpublish` 的确认流。
+- 同步更新 `docs/engineering/CODEX_PROJECT_CONTEXT.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把 `ADM-011` 从“举报 + 资料 + AI + 用户”四段切片推进到“举报 + 资料 + AI + 用户 + 图谱模板”五段真实治理切片。
+### 验证结果
 
-- RED锛歚go test ./internal/modules/admin/service ./internal/modules/graph/service`
-- RED锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚go test ./internal/modules/admin/service ./internal/modules/graph/service`
+- RED：`go test ./internal/modules/admin/service ./internal/modules/graph/service`
+- RED：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`go test ./internal/modules/admin/service ./internal/modules/graph/service`
 - `go test ./internal/modules/admin/... ./internal/modules/graph/...`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍚庡彴鈥滃浘璋辨ā鏉挎不鐞嗏€濈幇鍦ㄥ凡缁忎粠鏍囩鍗犱綅椤垫帹杩涘埌鏈€灏忓彲鎵ц妯″潡锛屽苟涓斿彂甯冪姸鎬佸紑濮嬬湡瀹炲奖鍝嶇敤鎴风妯℃澘鍒楄〃锛涘悗缁户缁ˉ妯℃澘澶囨敞銆佺増鏈€佺敤鎴疯嚜瀹氫箟妯℃澘鍜?preview 璧勪骇娌荤悊鏃讹紝浼氭瘮鐜板湪鏇撮『銆?- 褰撳墠妯℃澘娌荤悊鍔ㄤ綔浠嶉泦涓湪 `AdminWorkspaceView.vue` 鍗忚皟锛涘悗缁嫢缁х画鎺ㄨ繘 `ADM-010 / ADM-011`锛屾洿閫傚悎鎶婃ā鏉裤€佽祫鏂欍€佺敤鎴枫€丄I銆佸璁＄瓑鍔ㄤ綔缁х画寰€ page / feature 灞備笅娌夈€?## 2026-07-09 12:45:00 +08:00 | v1.1.0-alpha.151 | 鎺ㄨ繘 ADM-011 鐢ㄦ埛浼氳瘽鍗虫椂澶辨晥涓庢潈闄愯竟鐣岃ˉ寮?### 浠诲姟鍐呭
+- 后台“图谱模板治理”现在已经从标签占位页推进到最小可执行模块，并且发布状态开始真实影响用户端模板列表；后续继续补模板备注、版本、用户自定义模板和 preview 资产治理时，会比现在更顺。
+- 当前模板治理动作仍集中在 `AdminWorkspaceView.vue` 协调；后续若继续推进 `ADM-010 / ADM-011`，更适合把模板、资料、用户、AI、审计等动作继续往 page / feature 层下沉。
+## 2026-07-09 12:45:00 +08:00 | v1.1.0-alpha.151 | 推进 ADM-011 用户会话即时失效与权限边界补强
+### 任务内容
 
-- 鍦?`ADM-011` 宸插畬鎴愮敤鎴?`disable / activate` 鏈€灏忔不鐞嗗垏鐗囩殑鍩虹涓婏紝缁х画琛ョ湡姝ｄ細褰卞搷杩愯涓細璇濈殑瀹夊叏杈圭晫锛屼笉璁┾€滃凡绂佺敤璐﹀彿鎷挎棫 token 缁х画璁块棶鈥濇垚涓洪粯璁よ涓恒€?- 鏈疆鐩爣鏄敹鍙ｄ袱鏉℃渶灏忎絾楂樹环鍊肩殑閾捐矾锛氱鐢ㄧ敤鎴锋椂鎾ら攢浠嶆湁鏁堢殑 refresh token锛涘彈淇濇姢璇锋眰涓嶅啀鍙俊浠?JWT claim锛岃€屾槸鎸夋暟鎹簱涓殑褰撳墠鐢ㄦ埛鐘舵€佸拰瑙掕壊鍋氭牎楠屻€?
-### 瀹為檯鍙樻洿
+- 在 `ADM-011` 已完成用户 `disable / activate` 最小治理切片的基础上，继续补真正会影响运行中会话的安全边界，不让“已禁用账号拿旧 token 继续访问”成为默认行为。
+- 本轮目标是收口两条最小但高价值的链路：禁用用户时撤销仍有效的 refresh token；受保护请求不再只信任 JWT claim，而是按数据库中的当前用户状态和角色做校验。
 
-- 鏇存柊 `backend/internal/modules/admin/service/user_actions_test.go`锛屾柊澧?RED/GREEN 鍥炲綊锛岄攣瀹氱鐢ㄧ敤鎴峰悗蹇呴』鎾ら攢鍏朵粛鏈夋晥鐨?`refresh_tokens`锛岄伩鍏嶅悗鍙版不鐞嗗彧鏀圭敤鎴风姸鎬併€佷笉褰卞搷鍚庣画 refresh銆?- 鏂板 `backend/internal/middleware/auth_test.go`锛屽厛鐢?RED 澶嶇幇涓や釜鐪熷疄缂哄彛锛氳绂佺敤鐢ㄦ埛浠嶅彲鎷挎棫 access token 璁块棶鍙椾繚鎶ゆ帴鍙ｏ紝浠ュ強鏁版嵁搴撹鑹插凡闄嶇骇鏃舵棫 JWT claim 浠嶅彲鑳戒繚鐣欑鐞嗗憳鏉冮檺銆?- 鏇存柊 `backend/internal/modules/admin/service/service.go`锛岃 `HandleUser(..., "disable")` 鍦ㄥ悓涓€浜嬪姟閲屽悓姝ユ挙閿€璇ョ敤鎴锋墍鏈夊皻鏈挙閿€鐨?refresh token锛岀‘淇濈鐢ㄥ姩浣滀細绔嬪埢褰卞搷鍚庣画 refresh銆?- 鏇存柊 `backend/internal/middleware/auth.go`锛岃璁よ瘉涓棿浠跺湪姣忔鍙椾繚鎶よ姹傞噷鎸?`claims.UserID` 鍥炴煡褰撳墠鐢ㄦ埛锛屽苟浠ユ暟鎹簱涓殑 `status / role / username` 涓哄噯鍐欏叆涓婁笅鏂囷紱琚鐢ㄨ处鍙蜂細鍦ㄤ腑闂翠欢灞傜洿鎺ヨ繑鍥?`user_disabled`锛岃鑹插彉鏇村悗鐨勬棫 token 涔熶笉鍐嶄繚鐣欐棫鏉冮檺銆?- 鏇存柊 `backend/internal/app/server.go` 涓?`backend/internal/modules/admin/router/router.go`锛屾妸鏂扮殑 `authGuard` 缁熶竴鎺ュ埌鏅€氬彈淇濇姢璺敱涓庡悗鍙版不鐞嗚矾鐢憋紝閬垮厤鍚庡彴鍜屽墠鍙板嚭鐜颁笉鍚屾鐨勬潈闄愯竟鐣屻€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`銆乣docs/engineering/CODEX_EXECUTION_ROADMAP.md` 涓?`docs/engineering/CODEX_PROJECT_CONTEXT.md`锛屾妸 `ADM-011` 鐨勭敤鎴锋不鐞嗙姸鎬佷粠鈥渓ogin/refresh 鎷掔粷鈥濇帹杩涘埌鈥滅鐢ㄥ嵆鎾ら攢 refresh + 璇锋眰鏃跺嵆鏃舵寜鐪熷疄鐢ㄦ埛鐘舵€?瑙掕壊鏍￠獙鈥濄€?
-### 楠岃瘉缁撴灉
+### 实际变更
 
-- RED锛歚go test ./internal/modules/admin/service -run 'TestHandleUserDisableRevokesActiveRefreshTokens|TestHandleUserDisablesActiveUserAndWritesAuditLog|TestHandleUserActivatesDisabledUser|TestHandleUserRejectsProtectedAdminAccount'`
-- RED锛歚go test ./internal/middleware -run 'TestAuthenticateRejectsDisabledUser|TestAuthenticateUsesCurrentRoleFromDatabase'`
-- GREEN锛歚go test ./internal/modules/admin/service -run 'TestHandleUserDisableRevokesActiveRefreshTokens|TestHandleUserDisablesActiveUserAndWritesAuditLog|TestHandleUserActivatesDisabledUser|TestHandleUserRejectsProtectedAdminAccount'`
-- GREEN锛歚go test ./internal/middleware -run 'TestAuthenticateRejectsDisabledUser|TestAuthenticateUsesCurrentRoleFromDatabase'`
+- 更新 `backend/internal/modules/admin/service/user_actions_test.go`，新增 RED/GREEN 回归，锁定禁用用户后必须撤销其仍有效的 `refresh_tokens`，避免后台治理只改用户状态、不影响后续 refresh。
+- 新增 `backend/internal/middleware/auth_test.go`，先用 RED 复现两个真实缺口：被禁用用户仍可拿旧 access token 访问受保护接口，以及数据库角色已降级时旧 JWT claim 仍可能保留管理员权限。
+- 更新 `backend/internal/modules/admin/service/service.go`，让 `HandleUser(..., "disable")` 在同一事务里同步撤销该用户所有尚未撤销的 refresh token，确保禁用动作会立刻影响后续 refresh。
+- 更新 `backend/internal/middleware/auth.go`，让认证中间件在每次受保护请求里按 `claims.UserID` 回查当前用户，并以数据库中的 `status / role / username` 为准写入上下文；被禁用账号会在中间件层直接返回 `user_disabled`，角色变更后的旧 token 也不再保留旧权限。
+- 更新 `backend/internal/app/server.go` 与 `backend/internal/modules/admin/router/router.go`，把新的 `authGuard` 统一接到普通受保护路由与后台治理路由，避免后台和前台出现不同步的权限边界。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`、`docs/engineering/CODEX_EXECUTION_ROADMAP.md` 与 `docs/engineering/CODEX_PROJECT_CONTEXT.md`，把 `ADM-011` 的用户治理状态从“login/refresh 拒绝”推进到“禁用即撤销 refresh + 请求时即时按真实用户状态/角色校验”。
+
+### 验证结果
+
+- RED：`go test ./internal/modules/admin/service -run 'TestHandleUserDisableRevokesActiveRefreshTokens|TestHandleUserDisablesActiveUserAndWritesAuditLog|TestHandleUserActivatesDisabledUser|TestHandleUserRejectsProtectedAdminAccount'`
+- RED：`go test ./internal/middleware -run 'TestAuthenticateRejectsDisabledUser|TestAuthenticateUsesCurrentRoleFromDatabase'`
+- GREEN：`go test ./internal/modules/admin/service -run 'TestHandleUserDisableRevokesActiveRefreshTokens|TestHandleUserDisablesActiveUserAndWritesAuditLog|TestHandleUserActivatesDisabledUser|TestHandleUserRejectsProtectedAdminAccount'`
+- GREEN：`go test ./internal/middleware -run 'TestAuthenticateRejectsDisabledUser|TestAuthenticateUsesCurrentRoleFromDatabase'`
 - `go test ./internal/modules/auth/service -run 'TestLoginRejectsDisabledUser|TestRefreshRejectsDisabledUser'`
 - `go test ./...`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鍚庡彴鐢ㄦ埛娌荤悊鐜板湪涓嶅啀鍙奖鍝嶁€滀笅娆＄櫥褰?/ 涓嬫 refresh鈥濓紱绂佺敤鐢ㄦ埛鍚庯紝鐜版湁 refresh token 浼氳鎾ら攢锛岃繍琛屼腑鐨勫彈淇濇姢璇锋眰涔熶細鍦ㄤ腑闂翠欢灞傛寜鐪熷疄鐢ㄦ埛鐘舵€佷笌瑙掕壊閲嶆柊鏍￠獙銆?- 褰撳墠鍓嶅悗鍙板叡浜細璇濆眰浠嶄富瑕佸洿缁?`401 refresh/replay/fail-logout`锛涘浜庤姹傞樁娈电洿鎺ユ敹鍒扮殑 `403 user_disabled`锛屽墠绔繕娌℃湁缁熶竴娓?session 骞舵彁绀衡€滆处鍙峰凡琚鐢ㄢ€濈殑琚姩鐧诲嚭璇箟锛屽悗缁洿閫傚悎娌?`API-011 / ADM-011` 鑱斿姩鏀跺彛銆?## 2026-07-09 13:24:15 +08:00 | v1.1.0-alpha.153 | 鎺ㄨ繘 SE-020 鎼滅储鐪熷疄鍛戒腑鏁颁笌棣栨壒杩斿洖鏁板垎绂?### 浠诲姟鍐呭
+- 后台用户治理现在不再只影响“下次登录 / 下次 refresh”；禁用用户后，现有 refresh token 会被撤销，运行中的受保护请求也会在中间件层按真实用户状态与角色重新校验。
+- 当前前后台共享会话层仍主要围绕 `401 refresh/replay/fail-logout`；对于请求阶段直接收到的 `403 user_disabled`，前端还没有统一清 session 并提示“账号已被禁用”的被动登出语义，后续更适合沿 `API-011 / ADM-011` 联动收口。
+## 2026-07-09 13:24:15 +08:00 | v1.1.0-alpha.153 | 推进 SE-020 搜索真实命中数与首批返回数分离
+### 任务内容
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘鎼滅储浜у搧鍖栵紝浣嗗厛鏀跺彛鏈€灏忓畨鍏ㄥ垏鐗囷紝涓嶇洿鎺ヤ竴鍙ｆ皵寮曞叆 cursor 鎴栭噸鍋氭悳绱㈤〉銆?- 鏈疆鐩爣鏄妸 `/api/v1/search` 鐨勨€滅湡瀹炲懡涓€绘暟鈥濅笌鈥滃綋鍓嶉鎵硅繑鍥炴壒娆♀€濇樉寮忔媶寮€锛岄伩鍏嶇敤鎴风鎶婂綋鍓嶆壒娆″垎椤佃鍒や负鏈嶅姟绔湡鍒嗛〉锛屼篃涓哄悗缁?`SE-020` 鐨?cursor/offset 濂戠害棰勭暀鎺ュ彛璇箟銆?
-### 瀹為檯鍙樻洿
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进搜索产品化，但先收口最小安全切片，不直接一口气引入 cursor 或重做搜索页。
+- 本轮目标是把 `/api/v1/search` 的“真实命中总数”与“当前首批返回批次”显式拆开，避免用户端把当前批次分页误判为服务端真分页，也为后续 `SE-020` 的 cursor/offset 契约预留接口语义。
 
-- 鏇存柊 `backend/internal/modules/search/dto/search.go`銆乣service/service.go`銆乣service/indexer.go` 涓庣浉鍏虫祴璇曪細鎼滅储 grouped payload 鐜板凡绋冲畾杩斿洖 `count`銆乣returnedCount` 涓?`results[]`锛屽叾涓?`count` 琛ㄧず鐪熷疄鍛戒腑鎬绘暟锛宍returnedCount` 琛ㄧず杩欐璇锋眰瀹為檯杩斿洖鐨勯鎵规暟閲忥紝`total` 涔熷悓姝ユ敼涓烘墍鏈夊垎缁勭湡瀹炲懡涓€绘暟涔嬪拰銆?- 鏂板 / 鏇存柊 `backend/internal/modules/search/service/indexer_test.go`銆乣service_test.go` 涓?`handler_test.go`锛屽厛鐢?RED 閿佸畾鈥滅湡瀹炲懡涓暟澶т簬杩斿洖鎵规鏁扳€濇椂鐨勮涓猴紝鍐嶅湪 GREEN 閿佸畾 `SE-020` 杩欎竴灏忔鐨勫悗绔绾︺€?- fallback indexer 涓嶅啀鎶?`url` 涓?`source` 閫氳繃 SQL `CONCAT(...)` 鎷艰繘鏌ヨ缁撴灉锛岃€屾槸鍦?Go 灞傜粺涓€鏋勯€狅紝鍑忓皯鏁版嵁搴撴柟瑷€鑰﹀悎锛屼篃璁?sqlite 娴嬭瘯鐜鍙互鐩存帴楠岃瘉鐪熷疄鍛戒腑缁熻銆?- 鏇存柊 `frontend-user/src/api/types.ts`銆乣src/api/searchShare.test.ts`銆乣src/modules/search/SearchWorkspacePage.tsx` 涓?`SearchWorkspacePage.test.tsx`锛岃鐢ㄦ埛绔悳绱㈤〉缁х画淇濈暀褰撳墠鎵规鍐呭垎椤碉紝浣嗗綋鐪熷疄鍛戒腑鏁板ぇ浜庨鎵硅繑鍥炴暟鏃讹紝浼氭槑纭樉绀衡€滃綋鍓嶄粎灞曠ず棣栨壒 X / Y 鏉＄粨鏋溿€傗€濄€?- 閲嶅啓 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`锛屽苟鍚屾鏇存柊 `README.md`銆乣docs/engineering/CODEX_BACKLOG.md` 涓?`docs/engineering/CODEX_EXECUTION_ROADMAP.md`锛屾妸杩欐鍒囩墖鏍囪涓?`SE-020` 宸插惎鍔ㄤ絾灏氭湭瀹屾垚鏈嶅姟绔湡鍒嗛〉銆?
-### 楠岃瘉缁撴灉
+### 实际变更
+
+- 更新 `backend/internal/modules/search/dto/search.go`、`service/service.go`、`service/indexer.go` 与相关测试：搜索 grouped payload 现已稳定返回 `count`、`returnedCount` 与 `results[]`，其中 `count` 表示真实命中总数，`returnedCount` 表示这次请求实际返回的首批数量，`total` 也同步改为所有分组真实命中总数之和。
+- 新增 / 更新 `backend/internal/modules/search/service/indexer_test.go`、`service_test.go` 与 `handler_test.go`，先用 RED 锁定“真实命中数大于返回批次数”时的行为，再在 GREEN 锁定 `SE-020` 这一小步的后端契约。
+- fallback indexer 不再把 `url` 与 `source` 通过 SQL `CONCAT(...)` 拼进查询结果，而是在 Go 层统一构造，减少数据库方言耦合，也让 sqlite 测试环境可以直接验证真实命中统计。
+- 更新 `frontend-user/src/api/types.ts`、`src/api/searchShare.test.ts`、`src/modules/search/SearchWorkspacePage.tsx` 与 `SearchWorkspacePage.test.tsx`，让用户端搜索页继续保留当前批次内分页，但当真实命中数大于首批返回数时，会明确显示“当前仅展示首批 X / Y 条结果。”。
+- 重写 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`，并同步更新 `README.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `docs/engineering/CODEX_EXECUTION_ROADMAP.md`，把这次切片标记为 `SE-020` 已启动但尚未完成服务端真分页。
+
+### 验证结果
 
 - `go test ./internal/modules/search/...`
 - `npm --workspace frontend-user run test -- src/api/searchShare.test.ts src/modules/search/SearchWorkspacePage.test.tsx`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鎼滅储濂戠害鐜板湪缁堜簬鎶娾€滅湡瀹炲懡涓€绘暟鈥濆拰鈥滃綋鍓嶉鎵硅繑鍥炴暟缁勨€濆垎寮€琛ㄨ揪锛屽墠绔笉鍐嶉渶瑕佹妸 `count === results.length` 浣滀负闅愬惈鍓嶆彁锛涜繖涓哄悗缁ˉ `cursor / nextCursor / sort / duration` 鐣欏嚭浜嗘槑纭墿灞曚綅銆?- 鏈疆浠嶆湭瀹屾垚璺ㄦ壒娆℃湇鍔＄鍒嗛〉銆佹悳绱㈣€楁椂鏆撮湶銆佺┖缁撴灉寤鸿鍜屽紓姝ョ储寮曡兘鍔涳紱涓嬩竴姝ユ洿閫傚悎缁х画娌?`SE-020 / WB-043 / WB-044` 鎺ㄨ繘锛岃€屼笉鏄湪鎼滅储椤电户缁爢鏇村灞€閮?UI 閫昏緫銆?## 2026-07-13 03:47:23 +08:00 | v1.1.0-alpha.164 | 鎺ㄨ繘 FE-040 绠＄悊绔?conflict 椤甸潰鐘舵€佹帴绾?### 浠诲姟鍐呭
+- 搜索契约现在终于把“真实命中总数”和“当前首批返回数组”分开表达，前端不再需要把 `count === results.length` 作为隐含前提；这为后续补 `cursor / nextCursor / sort / duration` 留出了明确扩展位。
+- 本轮仍未完成跨批次服务端分页、搜索耗时暴露、空结果建议和异步索引能力；下一步更适合继续沿 `SE-020 / WB-043 / WB-044` 推进，而不是在搜索页继续堆更多局部 UI 逻辑。
+## 2026-07-13 03:47:23 +08:00 | v1.1.0-alpha.164 | 推进 FE-040 管理端 conflict 页面状态接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-040`锛岃繖娆′笉鎵╂柊娌荤悊鑳藉姏锛岃€屾槸琛ョ鐞嗙鐪熷疄 `conflict` 椤甸潰鐘舵€佸叆鍙ｃ€?- 鐩爣鏄绠＄悊绔不鐞嗗姩浣滃湪鍛戒腑鍚庣 `409` 鐘舵€佽縼绉诲啿绐佹椂锛屼笉鍐嶉€€鍖栨垚娉涘寲閿欒鎴?stale锛岃€屾槸鏄庣‘杩涘叆鍏变韩 `DataState` 鐨?`conflict` 璇箟锛屽苟淇濈暀鎿嶄綔鑰呭綋鍓嶆煡鐪嬬殑璁板綍涓婁笅鏂囥€?
-### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新治理能力，而是补管理端真实 `conflict` 页面状态入口。
+- 目标是让管理端治理动作在命中后端 `409` 状态迁移冲突时，不再退化成泛化错误或 stale，而是明确进入共享 `DataState` 的 `conflict` 语义，并保留操作者当前查看的记录上下文。
 
-- 鍏堝湪 `frontend-admin/src/views/modules/AdminGovernanceModule.test.ts` 涓?`frontend-admin/src/views/AdminWorkspaceView.test.ts` 琛?RED锛屽鐜扳€淎I 浠诲姟閲嶈瘯鍛戒腑 `409 invalid_ai_task_transition` 鍚庝粛鍙樉绀?stale锛屼笖鐜版湁娌荤悊琛ㄦ牸涓嶄細鎸?conflict 璇箟淇濈暀鈥濈殑缂哄彛銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛屼负璧勬枡娌荤悊銆佷妇鎶ユ不鐞嗐€佺敤鎴锋不鐞嗐€丄I 浠诲姟娌荤悊涓庡浘璋辨ā鏉挎不鐞嗗姩浣滅粺涓€琛ヤ笂 `409 -> conflict` 鐘舵€佹槧灏勶紱鏂扮殑娌荤悊鍔ㄤ綔寮€濮嬪墠浼氭竻鎺夋棫鐨?conflict 鏍囪锛屽姩浣滃け璐ュ懡涓?`409` 鏃跺垯鎶婄姸鎬佸洖鍐欏埌鍏变韩椤甸潰鐘舵€佸崗璁€?- 鏇存柊 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`锛岃娌荤悊妯″潡鍦?`conflict` 鏃跺拰 `stale` 涓€鏍峰悓鏃舵覆鏌撳叡浜姸鎬佷笌鐜版湁琛ㄦ牸锛岀‘淇濇搷浣滆€呰繕鑳界湅鍒板啿绐佸彂鐢熷墠鐨勮褰曡鎯呬笌鍙拷婧笂涓嬫枃銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-040` 鐨勭鐞嗙鐘舵€佽鐩栬鏄庢帹杩涘埌 `loading / error / empty / stale / unauthorized / conflict` 鍏€侀棴鍚堬紝骞惰ˉ鐧昏杩欐鎵ц璁板綍銆?
-### 楠岃瘉缁撴灉
+### 实际变更
 
-- RED锛歚npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
-- GREEN锛歚npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- 先在 `frontend-admin/src/views/modules/AdminGovernanceModule.test.ts` 与 `frontend-admin/src/views/AdminWorkspaceView.test.ts` 补 RED，复现“AI 任务重试命中 `409 invalid_ai_task_transition` 后仍只显示 stale，且现有治理表格不会按 conflict 语义保留”的缺口。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，为资料治理、举报治理、用户治理、AI 任务治理与图谱模板治理动作统一补上 `409 -> conflict` 状态映射；新的治理动作开始前会清掉旧的 conflict 标记，动作失败命中 `409` 时则把状态回写到共享页面状态协议。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`，让治理模块在 `conflict` 时和 `stale` 一样同时渲染共享状态与现有表格，确保操作者还能看到冲突发生前的记录详情与可追溯上下文。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-040` 的管理端状态覆盖说明推进到 `loading / error / empty / stale / unauthorized / conflict` 六态闭合，并补登记这次执行记录。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
+- GREEN：`npm --workspace frontend-admin run test -- src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminDataState.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鍦ㄧ鐞嗙宸茬粡鎶婂叚绫诲叡浜〉闈㈢姸鎬侀兘鎺ュ埌浜嗙湡瀹炲叆鍙ｏ紝鍚庣画鍙互鏇翠笓娉ㄥ湴鎶婂悓鏍风殑鍗忚閾哄埌鐢ㄦ埛绔垪琛ㄩ〉銆佸伐浣滃尯鍜岃法绔叡浜〉闈紝鑰屼笉鏄户缁仠鐣欏湪绠＄悊绔敹鍙ｃ€?- 褰撳墠 `conflict` 涓昏瑕嗙洊娌荤悊鍔ㄤ綔绫?`409`锛涘悗缁鏋滃悗绔ˉ鏇村璇诲彇鍨嬫垨鎵归噺娌荤悊鍨嬪啿绐佸叆鍙ｏ紝寤鸿缁х画娌垮悓涓€鍗忚鎵╁睍锛岄伩鍏嶉噸鏂板洖閫€鎴愭硾鍖?`error` 鎴?`stale`銆?## 2026-07-13 04:03:30 +08:00 | v1.1.0-alpha.165 | 鎺ㄨ繘 FE-040 鐢ㄦ埛绔悳绱?璧勬枡搴撻〉闈㈢姸鎬佹帴绾?### 浠诲姟鍐呭
+- `FE-040` 在管理端已经把六类共享页面状态都接到了真实入口，后续可以更专注地把同样的协议铺到用户端列表页、工作区和跨端共享页面，而不是继续停留在管理端收口。
+- 当前 `conflict` 主要覆盖治理动作类 `409`；后续如果后端补更多读取型或批量治理型冲突入口，建议继续沿同一协议扩展，避免重新回退成泛化 `error` 或 `stale`。
+## 2026-07-13 04:03:30 +08:00 | v1.1.0-alpha.165 | 推进 FE-040 用户端搜索/资料库页面状态接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-040`锛岃繖娆℃妸鍏变韩椤甸潰鐘舵€佷粠绠＄悊绔户缁帹杩涘埌鐢ㄦ埛绔湡瀹炲垪琛ㄩ〉銆?- 鐩爣鏄 `SearchWorkspacePage` 涓?`MaterialsPage` 涓嶅啀鍋滅暀鍦ㄨ嚜鎷?message / placeholder锛岃€屾槸鐪熸杩涘叆鍏变韩 `DataState` 鍗忚锛屽厛琛ラ綈鐢ㄦ埛绔渶甯歌鐨?`loading / error / empty / stale` 鍏ュ彛銆?
-### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次把共享页面状态从管理端继续推进到用户端真实列表页。
+- 目标是让 `SearchWorkspacePage` 与 `MaterialsPage` 不再停留在自拼 message / placeholder，而是真正进入共享 `DataState` 协议，先补齐用户端最常见的 `loading / error / empty / stale` 入口。
 
-- 鍏堝湪 `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx` 涓?`frontend-user/src/pages/MaterialsPage.test.tsx` 琛?RED锛屽鐜扳€滄悳绱㈤〉鍜岃祫鏂欏簱椤佃繕娌℃湁鍏变韩鐘舵€侀鏋讹紝璧勬枡搴撳埛鏂板け璐ユ椂涔熶笉浼氫繚鐣欐棫鍒楄〃骞舵爣璁?stale鈥濈殑缂哄彛銆?- 鏇存柊 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`锛屾妸鏃犲叧閿瘝銆佽姹傝繘琛屼腑銆佹悳绱㈠け璐ャ€佺瓫閫夋棤鍛戒腑杩欏洓绉嶇湡瀹炶矾寰勭粺涓€鎺ュ埌鍏变韩 `DataState`锛涙悳绱㈤〉鍦ㄦ棤鏈夋晥缁撴灉鏃朵笉鍐嶇户缁覆鏌撴暣椤甸浂缁撴灉鍒嗙粍鍗＄墖銆?- 閲嶅啓 `frontend-user/src/pages/MaterialsPage.tsx` 鐨勫姞杞界姸鎬佺紪鎺掞紝鎷嗗紑鈥滈〉闈㈠悓姝ョ姸鎬佲€濆拰鈥滄搷浣滅粨鏋滄彁绀衡€濓細棣栨鍚屾璧?`loading`锛岄娆″け璐ヨ蛋 `error`锛岃祫鏂欏簱涓虹┖鎴栫瓫閫夋棤鍛戒腑璧?`empty`锛屾敹钘?/ 璇勫垎 / 鏇存柊 / 鏂板缓鍚庣殑浜屾鍚屾澶辫触鍒欎繚鐣欐棫鍒楄〃骞舵樉寮忚繘鍏?`stale`銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-040` 鐨勫綋鍓嶈惤鐐规墿灞曞埌鈥滅鐞嗙鍏€?+ 鐢ㄦ埛绔悳绱?璧勬枡搴撻鎵圭湡瀹炵姸鎬佸叆鍙ｂ€濓紝骞剁櫥璁拌繖涓€杞墽琛岃褰曘€?
-### 楠岃瘉缁撴灉
+### 实际变更
 
-- RED锛歚npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx src/pages/MaterialsPage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx src/pages/MaterialsPage.test.tsx`
+- 先在 `frontend-user/src/modules/search/SearchWorkspacePage.test.tsx` 与 `frontend-user/src/pages/MaterialsPage.test.tsx` 补 RED，复现“搜索页和资料库页还没有共享状态骨架，资料库刷新失败时也不会保留旧列表并标记 stale”的缺口。
+- 更新 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`，把无关键词、请求进行中、搜索失败、筛选无命中这四种真实路径统一接到共享 `DataState`；搜索页在无有效结果时不再继续渲染整页零结果分组卡片。
+- 重写 `frontend-user/src/pages/MaterialsPage.tsx` 的加载状态编排，拆开“页面同步状态”和“操作结果提示”：首次同步走 `loading`，首次失败走 `error`，资料库为空或筛选无命中走 `empty`，收藏 / 评分 / 更新 / 新建后的二次同步失败则保留旧列表并显式进入 `stale`。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-040` 的当前落点扩展到“管理端六态 + 用户端搜索/资料库首批真实状态入口”，并登记这一轮执行记录。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx src/pages/MaterialsPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx src/pages/MaterialsPage.test.tsx`
 - `npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 涓嶅啀鍙湪绠＄悊绔棴鐜紝鐢ㄦ埛绔湡瀹炲垪琛ㄩ〉涔熷紑濮嬪叡鐢ㄥ悓涓€濂楅〉闈㈢姸鎬佽涔夛紱鍚庣画鍙互娌块槄璇汇€佺瑪璁般€佸涔犲拰鏇村璺ㄧ鍒楄〃缁х画鎵╃姸鎬佽惤鐐癸紝鑰屼笉鏄噸鏂板啓鏁ｈ惤鐨勭┖鎬?閿欐€佹枃妗堛€?- 褰撳墠杩欒疆浼樺厛琛ョ殑鏄?`loading / error / empty / stale`锛沗unauthorized / conflict` 鍦ㄧ敤鎴风杩樻病鏈夊ぇ闈㈢Н鐪熷疄鍏ュ彛锛屽悗缁洿閫傚悎缁撳悎鍙椾繚鎶ゅ伐浣滃尯鍜屽甫鍒锋柊/鍐茬獊鍐崇瓥鐨勯〉闈㈢户缁帹杩涖€?## 2026-07-13 04:47:20 +08:00 | v1.1.0-alpha.169 | 鎺ㄨ繘 FE-040 鐢ㄦ埛绔ぞ鍖洪〉椤甸潰鐘舵€佹帴绾?### 浠诲姟鍐呭
+- `FE-040` 不再只在管理端闭环，用户端真实列表页也开始共用同一套页面状态语义；后续可以沿阅读、笔记、复习和更多跨端列表继续扩状态落点，而不是重新写散落的空态/错态文案。
+- 当前这轮优先补的是 `loading / error / empty / stale`；`unauthorized / conflict` 在用户端还没有大面积真实入口，后续更适合结合受保护工作区和带刷新/冲突决策的页面继续推进。
+## 2026-07-13 04:47:20 +08:00 | v1.1.0-alpha.169 | 推进 FE-040 用户端社区页页面状态接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-040`锛岃繖娆″厛鏀跺彛鐢ㄦ埛绔?`CommunityPage` 鐨勭湡瀹為〉闈㈢姸鎬佸叆鍙ｃ€?- 鐩爣鏄绀惧尯椤典笉鍐嶆妸棣栧睆澶辫触鎴栧埛鏂板け璐ラ潤榛樹吉瑁呮垚鈥滅ぞ鍖鸿繕娌℃湁鍏紑鍒嗕韩鈥濈殑绌烘€侊紝鑰屾槸鏄庣‘杩涘叆鍏变韩 `error / stale`锛屽苟鍦ㄥ埛鏂板け璐ユ椂淇濈暀鐜版湁鍔ㄦ€佸垪琛ㄣ€?
-### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次先收口用户端 `CommunityPage` 的真实页面状态入口。
+- 目标是让社区页不再把首屏失败或刷新失败静默伪装成“社区还没有公开分享”的空态，而是明确进入共享 `error / stale`，并在刷新失败时保留现有动态列表。
 
-- 鏂板 `frontend-user/src/pages/CommunityPage.test.tsx`锛屽厛浠?RED 閿佸畾涓変釜缂哄彛锛氱ぞ鍖洪〉棣栧睆娌℃湁鍏变韩 `loading`锛涢灞忚鍙栧け璐ラ潤榛橀€€鍖栨垚绌烘€侊紱宸叉湁鍔ㄦ€佸垪琛ㄦ椂鍒锋柊澶辫触涔熸病鏈夊叡浜?`stale` 涓斾笉浼氫繚鐣欐棫鍐呭銆?- 鏇存柊 `frontend-user/src/pages/CommunityPage.tsx`锛屾柊澧?`CommunityFeedState` 涓?`loadPosts({ preserveExisting })`锛屾妸绀惧尯鍔ㄦ€佸尯鎺ュ埌鍏变韩 `loading / error / empty / stale` 椤甸潰鐘舵€佸崗璁€?- 绀惧尯鍔ㄦ€佸尯鐜板湪琛ヤ簡鐪熷疄鐨勨€滃埛鏂扮ぞ鍖哄姩鎬?/ 閲嶆柊鍔犺浇鈥濆叆鍙ｏ紱褰撳凡鏈夊垪琛ㄣ€佸啀娆″埛鏂板け璐ユ椂锛屼細娓叉煋鈥滅ぞ鍖哄姩鎬侀渶瑕佸埛鏂扳€濈殑鍏变韩 `stale` 鐘舵€侊紝鍚屾椂缁х画淇濈暀鏃у姩鎬佸垪琛紝涓嶅啀鎶婄敤鎴锋墦鍥炶瀵兼€х殑绌烘€併€?
-### 楠岃瘉缁撴灉
+### 实际变更
 
-- RED锛歚npm --workspace frontend-user run test -- src/pages/CommunityPage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/pages/CommunityPage.test.tsx src/pages/AiPage.test.tsx src/pages/DashboardPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- 新增 `frontend-user/src/pages/CommunityPage.test.tsx`，先以 RED 锁定三个缺口：社区页首屏没有共享 `loading`；首屏读取失败静默退化成空态；已有动态列表时刷新失败也没有共享 `stale` 且不会保留旧内容。
+- 更新 `frontend-user/src/pages/CommunityPage.tsx`，新增 `CommunityFeedState` 与 `loadPosts({ preserveExisting })`，把社区动态区接到共享 `loading / error / empty / stale` 页面状态协议。
+- 社区动态区现在补了真实的“刷新社区动态 / 重新加载”入口；当已有列表、再次刷新失败时，会渲染“社区动态需要刷新”的共享 `stale` 状态，同时继续保留旧动态列表，不再把用户打回误导性的空态。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/CommunityPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/CommunityPage.test.tsx src/pages/AiPage.test.tsx src/pages/DashboardPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鐜板湪宸茬粡缁х画鎺ㄨ繘鍒扮ぞ鍖烘祻瑙堣繖鏉″叕鍏卞叆鍙ｏ紝鐢ㄦ埛绔墿浣欌€滃け璐ラ潤榛樺洖绌烘€佲€濈殑椤甸潰鍙堝皯浜嗕竴鍧椼€?- 璁剧疆椤典粛淇濈暀 profile 璇诲彇澶辫触鏃堕潤榛樻棤鍙嶉鐨勮矾寰勶紱鍚庣画鏇撮€傚悎缁х画娌?`SettingsPage` 琛ュ叡浜?`loading / error`锛岃繘涓€姝ユ敹鍙ｇ敤鎴风鍏ㄥ眬鐘舵€佽涔夈€?
-## 2026-07-13 04:43:40 +08:00 | v1.1.0-alpha.168 | 鎺ㄨ繘 FE-040 鐢ㄦ埛绔?AI 宸ヤ綔鍙伴〉闈㈢姸鎬佹帴绾?### 浠诲姟鍐呭
+- `FE-040` 现在已经继续推进到社区浏览这条公共入口，用户端剩余“失败静默回空态”的页面又少了一块。
+- 设置页仍保留 profile 读取失败时静默无反馈的路径；后续更适合继续沿 `SettingsPage` 补共享 `loading / error`，进一步收口用户端全局状态语义。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-040`锛岃繖娆′笉鍥炲埌鏇存繁鐨勫浘璋卞唴鏍革紝鑰屾槸鍏堟敹鍙ｇ敤鎴风 `AiPage` 鐨勭湡瀹為〉闈㈢姸鎬佸叆鍙ｃ€?- 鐩爣鏄 AI 宸ヤ綔鍙板湪棣栧睆鑷妇澶辫触鏃舵槑纭繘鍏ュ叡浜?`error`锛屽苟鍦ㄧ‘璁ゅ崱鐗囪崏绋?/ 鍥捐氨鍙樻洿鍚庡埛鏂板け璐ユ椂杩涘叆鍏变韩 `stale`锛屽悓鏃朵繚鐣欑幇鏈夎崏绋垮拰浠诲姟涓婁笅鏂囷紝閬垮厤鎶婄敤鎴风洿鎺ユ墦鍥炵┖鐧藉伐浣滃彴銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 04:43:40 +08:00 | v1.1.0-alpha.168 | 推进 FE-040 用户端 AI 工作台页面状态接线
+### 任务内容
 
-- 鍦?`frontend-user/src/pages/AiPage.test.tsx` 鍏堣ˉ RED锛屽鐜颁袱澶勭湡瀹炵己鍙ｏ細AI 宸ヤ綔鍙伴灞忓け璐ュ彧鏈夊眬閮?message锛屾病鏈夊叡浜?`error`锛涚‘璁ゅ崱鐗囪崏绋垮悗濡傛灉閲嶆柊鍚屾澶辫触锛屼篃娌℃湁鍏变韩 `stale` 鎻愮ず涓庘€滀繚鐣欐棫鑽夌涓婁笅鏂団€濈殑鏂█銆?- 鏇存柊 `frontend-user/src/pages/AiPage.tsx`锛屾柊澧?`AiWorkspaceState` 涓?`loadAiWorkspace({ preserveExisting })`锛屾妸 AI 宸ヤ綔鍙颁富鍏ュ彛鎺ュ埌鍏变韩 `loading / error / stale` 椤甸潰鐘舵€佸崗璁€?- 褰撳墠 AI 宸ヤ綔鍙板湪棣栧睆澶辫触鏃朵細鏄庣‘娓叉煋鈥淎I 宸ヤ綔鍙版殏鏃朵笉鍙敤鈥濈殑鍏变韩 `error` 鐘舵€侊紱褰撳凡鏈夎崏绋?/ 浠诲姟涓婁笅鏂囥€佺‘璁よ崏绋挎垚鍔熷悗鍒锋柊澶辫触鏃讹紝浼氭覆鏌撯€淎I 宸ヤ綔鍙伴渶瑕佸埛鏂扳€濈殑鍏变韩 `stale` 鐘舵€侊紝鍚屾椂缁х画淇濈暀鍘熸湁鑽夌銆佷换鍔″巻鍙插拰鐩爣鍗＄粍 / 鍥捐氨涓婁笅鏂囥€?- 鍗＄墖鑽夌涓庡浘璋卞彉鏇磋崏绋跨殑纭鎴愬姛鍚庨兘浼氫紭鍏堝皾璇曚互 `preserveExisting: true` 鍒锋柊宸ヤ綔鍙帮紱濡傛灉鍒锋柊澶辫触锛屼笉鍐嶆妸鐢ㄦ埛鎵撳洖绌虹櫧椤碉紝涔熶笉鍐嶅彧鐣欎笅瀛ょ珛鐨勬搷浣滅粨鏋?message銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不回到更深的图谱内核，而是先收口用户端 `AiPage` 的真实页面状态入口。
+- 目标是让 AI 工作台在首屏自举失败时明确进入共享 `error`，并在确认卡片草稿 / 图谱变更后刷新失败时进入共享 `stale`，同时保留现有草稿和任务上下文，避免把用户直接打回空白工作台。
 
-- RED锛歚npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx src/pages/DashboardPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+### 实际变更
+
+- 在 `frontend-user/src/pages/AiPage.test.tsx` 先补 RED，复现两处真实缺口：AI 工作台首屏失败只有局部 message，没有共享 `error`；确认卡片草稿后如果重新同步失败，也没有共享 `stale` 提示与“保留旧草稿上下文”的断言。
+- 更新 `frontend-user/src/pages/AiPage.tsx`，新增 `AiWorkspaceState` 与 `loadAiWorkspace({ preserveExisting })`，把 AI 工作台主入口接到共享 `loading / error / stale` 页面状态协议。
+- 当前 AI 工作台在首屏失败时会明确渲染“AI 工作台暂时不可用”的共享 `error` 状态；当已有草稿 / 任务上下文、确认草稿成功后刷新失败时，会渲染“AI 工作台需要刷新”的共享 `stale` 状态，同时继续保留原有草稿、任务历史和目标卡组 / 图谱上下文。
+- 卡片草稿与图谱变更草稿的确认成功后都会优先尝试以 `preserveExisting: true` 刷新工作台；如果刷新失败，不再把用户打回空白页，也不再只留下孤立的操作结果 message。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx src/pages/DashboardPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鐜板湪宸茬粡缁х画鎺ㄨ繘鍒?AI 杈呭姪鐞嗚В杩欐潯涓诲涔犱富璺緞锛岀敤鎴风鍏抽敭宸ヤ綔鍙扮殑鍏变韩椤甸潰鐘舵€佸崗璁洿瀹屾暣浜嗐€?- 绀惧尯椤靛拰璁剧疆椤典粛淇濈暀鏈湴绌烘€?/ 閿欒鎬佺洿鍑鸿矾寰勶紱鍚庣画鏇撮€傚悎缁х画娌胯繖浜涘墿浣欓〉闈㈣ˉ鍏变韩 `error / unauthorized`锛岃繘涓€姝ユ敹鍙ｇ敤鎴风鍏ㄥ眬鐘舵€佽涔夈€?
-## 2026-07-13 04:35:30 +08:00 | v1.1.0-alpha.167 | 鎺ㄨ繘 FE-040 鐢ㄦ埛绔椤甸〉闈㈢姸鎬佹帴绾?### 浠诲姟鍐呭
+- `FE-040` 现在已经继续推进到 AI 辅助理解这条主学习主路径，用户端关键工作台的共享页面状态协议更完整了。
+- 社区页和设置页仍保留本地空态 / 错误态直出路径；后续更适合继续沿这些剩余页面补共享 `error / unauthorized`，进一步收口用户端全局状态语义。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-040`锛岃繖娆′笉鍥炲埌鏇存繁鐨勫浘璋辨垨 AI 缁嗚妭锛岃€屾槸鍏堟敹鍙ｇ敤鎴风棣栭〉 `DashboardPage` 鐨勭湡瀹為〉闈㈢姸鎬佸叆鍙ｃ€?- 鐩爣鏄棣栭〉璧勬枡鍖恒€佺ぞ鍖哄尯鍜屼釜浜虹瑪璁板尯涓嶅啀鎶婂け璐ユ垨鏉冮檺杈圭晫闈欓粯浼鎴愮┖鎬侊紝灏ゅ叾鎶娾€滄湭鐧诲綍鏃朵釜浜虹瑪璁板尯鈥濇帴鎴愮湡瀹炵殑鍏变韩 `unauthorized`銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 04:35:30 +08:00 | v1.1.0-alpha.167 | 推进 FE-040 用户端首页页面状态接线
+### 任务内容
 
-- 鏂板 `frontend-user/src/pages/DashboardPage.test.tsx`锛屽厛浠?RED 閿佸畾涓変釜缂哄彛锛氳祫鏂欏尯棣栧睆娌℃湁鍏变韩 `loading`锛涜祫鏂欏姞杞藉け璐ヤ細闈欓粯閫€鍖栨垚绌烘€侊紱鏈櫥褰曟椂涓汉绗旇鍖轰粛鏄剧ず鈥滆繕娌℃湁涓汉绗旇鈥濓紝娌℃湁鐪熷疄 `unauthorized` 鍥炲綊淇濇姢銆?- 鏇存柊 `frontend-user/src/pages/DashboardPage.tsx`锛屾寜璧勬枡銆佺ぞ鍖恒€佺瑪璁颁笁鍧楁暟鎹簮鍒嗗埆琛ヤ簡 section-level `DataState`锛氳祫鏂欏尯鍜岀ぞ鍖哄尯鐜板湪鍏峰鍏变韩 `loading / error / empty`锛屼釜浜虹瑪璁板尯鐜板湪鍏峰鍏变韩 `unauthorized / loading / error / empty`銆?- 棣栭〉鐨勮祫鏂欏尯涓庣ぞ鍖哄尯澶辫触鏃剁幇鍦ㄩ兘浼氫繚鐣欑嫭绔嬬殑鈥滈噸鏂板姞杞解€濆叆鍙ｏ紝涓嶅啀鍚炴帀鐪熷疄閿欒鍘熷洜锛涗釜浜虹瑪璁板尯鍦ㄦ湭鐧诲綍鏃朵細鏄庣‘鎻愮ず鈥滅櫥褰曞悗鏌ョ湅涓汉绗旇鈥濓紝鑰屼笉鏄户缁妸鏉冮檺杈圭晫浼鎴愮┖鎬併€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不回到更深的图谱或 AI 细节，而是先收口用户端首页 `DashboardPage` 的真实页面状态入口。
+- 目标是让首页资料区、社区区和个人笔记区不再把失败或权限边界静默伪装成空态，尤其把“未登录时个人笔记区”接成真实的共享 `unauthorized`。
 
-- RED锛歚npm --workspace frontend-user run test -- src/pages/DashboardPage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/pages/DashboardPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+### 实际变更
+
+- 新增 `frontend-user/src/pages/DashboardPage.test.tsx`，先以 RED 锁定三个缺口：资料区首屏没有共享 `loading`；资料加载失败会静默退化成空态；未登录时个人笔记区仍显示“还没有个人笔记”，没有真实 `unauthorized` 回归保护。
+- 更新 `frontend-user/src/pages/DashboardPage.tsx`，按资料、社区、笔记三块数据源分别补了 section-level `DataState`：资料区和社区区现在具备共享 `loading / error / empty`，个人笔记区现在具备共享 `unauthorized / loading / error / empty`。
+- 首页的资料区与社区区失败时现在都会保留独立的“重新加载”入口，不再吞掉真实错误原因；个人笔记区在未登录时会明确提示“登录后查看个人笔记”，而不是继续把权限边界伪装成空态。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/DashboardPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/DashboardPage.test.tsx src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鐜板湪宸茬粡浠庣敤鎴风鎼滅储銆佽祫鏂欍€侀槄璇汇€佺瑪璁般€佸涔犵户缁帹杩涘埌浜嗛椤碉紝鐢ㄦ埛绔富宸ヤ綔鍙扮殑鍏变韩椤甸潰鐘舵€佸崗璁洿瀹屾暣浜嗭紝涔熻ˉ涓婁簡鏇撮€氱敤鐨勭敤鎴风 `unauthorized` 鐪熷疄鍏ュ彛銆?- 绀惧尯椤点€佽缃〉鍜?AI 宸ヤ綔鍙颁粛淇濈暀鏈湴绌烘€?閿欒鎬佺洿鍑鸿矾寰勶紱鍚庣画鏇撮€傚悎缁х画娌胯繖浜涘墿浣欓〉闈㈣ˉ鐪熷疄 `error / unauthorized / stale`锛岃繘涓€姝ユ敹鍙ｇ敤鎴风鍏ㄥ眬鐘舵€佽涔夈€?
-## 2026-07-13 04:31:20 +08:00 | v1.1.0-alpha.166 | 鎺ㄨ繘 FE-040 鐢ㄦ埛绔槄璇诲伐浣滃尯椤甸潰鐘舵€佹帴绾?### 浠诲姟鍐呭
+- `FE-040` 现在已经从用户端搜索、资料、阅读、笔记、复习继续推进到了首页，用户端主工作台的共享页面状态协议更完整了，也补上了更通用的用户端 `unauthorized` 真实入口。
+- 社区页、设置页和 AI 工作台仍保留本地空态/错误态直出路径；后续更适合继续沿这些剩余页面补真实 `error / unauthorized / stale`，进一步收口用户端全局状态语义。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-040`锛岃繖娆′笉鎵╂柊鍩燂紝鑰屾槸鎶婄敤鎴风闃呰宸ヤ綔鍖虹殑鐪熷疄澶辫触璺緞鎺ュ埌鍏变韩椤甸潰鐘舵€佸崗璁€?- 鐩爣鏄 `ReaderPage` 鍦ㄩ灞?`getReaderState(...)` 澶辫触鏃舵槑纭繘鍏ュ叡浜?`error`锛屽苟鍦ㄦ壒娉ㄤ繚瀛樺悗鐨勯槄璇讳笂涓嬫枃鍒锋柊澶辫触鏃惰繘鍏ュ叡浜?`stale`锛屽悓鏃朵繚鐣欏綋鍓?PDF 涓庨〉鐮佷笂涓嬫枃锛岄伩鍏嶇敤鎴峰垰鎿嶄綔瀹屾垚灏辫鎵撳洖绌虹櫧闃呰鍖恒€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 04:31:20 +08:00 | v1.1.0-alpha.166 | 推进 FE-040 用户端阅读工作区页面状态接线
+### 任务内容
 
-- 鍏堝湪 `frontend-user/src/pages/ReaderPage.test.tsx` 琛?RED锛屽鐜颁袱澶勭湡瀹炵己鍙ｏ細闃呰涓婁笅鏂囬灞忚嚜涓惧け璐ユ病鏈夊叡浜?`error` 鍥炲綊淇濇姢锛涙壒娉ㄤ繚瀛樻垚鍔熷悗濡傛灉閲嶆柊鍚屾澶辫触锛屼篃娌℃湁鍏变韩 `stale` 鎻愮ず涓庘€滀繚鐣欐棫鍐呭鈥濈殑鏂█銆?- 鏇存柊 `frontend-user/src/pages/ReaderPage.tsx`锛屾柊澧?`ReaderWorkspaceState` 涓?`refreshReaderState(material, { preserveExisting })`锛屾妸闃呰宸ヤ綔鍖轰富鑸炲彴鍜屽彸渚ф鏌ュ櫒涓€璧锋帴鍒板叡浜?`loading / error / stale` 椤甸潰鐘舵€佸崗璁€?- 褰撳墠闃呰椤靛湪棣栧睆澶辫触鏃朵細鏄庣‘娓叉煋鈥滈槄璇诲唴瀹规殏鏃朵笉鍙敤鈥濈殑鍏变韩 `error` 鐘舵€侊紱褰撳凡鏈夐槄璇讳笂涓嬫枃銆佹壒娉ㄥ垱寤烘垚鍔熷悗鍒锋柊澶辫触鏃讹紝浼氭覆鏌撯€滈槄璇讳笂涓嬫枃闇€瑕佸埛鏂扳€濈殑鍏变韩 `stale` 鐘舵€侊紝鍚屾椂缁х画淇濈暀褰撳墠 PDF銆侀〉鐮佷笌鎵规敞涓婁笅鏂囥€?- 鎵规敞鍒犻櫎浠嶄繚鎸佷弗鏍煎埛鏂拌矾寰勶紝涓嶆妸鈥滃垹闄ゅ凡鎻愪氦浣嗗埛鏂板け璐モ€濈殑鍦烘櫙璇覆鏌撴垚鍙户缁紪杈戠殑鏃ф壒娉紝閬垮厤闃呰涓婁笅鏂囪涔夋贩娣嗐€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-040`，这次不扩新域，而是把用户端阅读工作区的真实失败路径接到共享页面状态协议。
+- 目标是让 `ReaderPage` 在首屏 `getReaderState(...)` 失败时明确进入共享 `error`，并在批注保存后的阅读上下文刷新失败时进入共享 `stale`，同时保留当前 PDF 与页码上下文，避免用户刚操作完成就被打回空白阅读区。
 
-- RED锛歚npm --workspace frontend-user run test -- src/pages/ReaderPage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+### 实际变更
+
+- 先在 `frontend-user/src/pages/ReaderPage.test.tsx` 补 RED，复现两处真实缺口：阅读上下文首屏自举失败没有共享 `error` 回归保护；批注保存成功后如果重新同步失败，也没有共享 `stale` 提示与“保留旧内容”的断言。
+- 更新 `frontend-user/src/pages/ReaderPage.tsx`，新增 `ReaderWorkspaceState` 与 `refreshReaderState(material, { preserveExisting })`，把阅读工作区主舞台和右侧检查器一起接到共享 `loading / error / stale` 页面状态协议。
+- 当前阅读页在首屏失败时会明确渲染“阅读内容暂时不可用”的共享 `error` 状态；当已有阅读上下文、批注创建成功后刷新失败时，会渲染“阅读上下文需要刷新”的共享 `stale` 状态，同时继续保留当前 PDF、页码与批注上下文。
+- 批注删除仍保持严格刷新路径，不把“删除已提交但刷新失败”的场景误渲染成可继续编辑的旧批注，避免阅读上下文语义混淆。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/pages/ReaderPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/ReaderPage.test.tsx src/pages/NotesPage.test.tsx src/pages/MaterialsPage.test.tsx src/modules/search/SearchWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-040` 鐜板湪宸茬粡瑕嗙洊鐢ㄦ埛绔悳绱€佽祫鏂欏簱銆侀槄璇汇€佺瑪璁板拰澶嶄範浜旀潯涓诲涔犺矾寰勶紝涓诲伐浣滃尯鐨勫叡浜〉闈㈢姸鎬侀鏋舵洿瀹屾暣浜嗐€?- 闃呰宸ヤ綔鍖烘洿缁嗙矑搴︾殑灞€閮ㄥ埛鏂般€佽祫婧愬垏鎹互鍙婅法椤?`unauthorized / conflict` 鍏ュ彛浠嶆湭闂悎锛涘悗缁洿閫傚悎缁х画娌?`ReaderPage` 妫€鏌ュ櫒閾捐矾鎴栬法绔叡浜垪琛ㄧ户缁ˉ榻愩€?## 2026-07-13 06:41:10 +08:00 | v1.1.0-alpha.186 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?FeatureCard 澶嶅悎鍗＄墖鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-040` 现在已经覆盖用户端搜索、资料库、阅读、笔记和复习五条主学习路径，主工作区的共享页面状态骨架更完整了。
+- 阅读工作区更细粒度的局部刷新、资源切换以及跨页 `unauthorized / conflict` 入口仍未闭合；后续更适合继续沿 `ReaderPage` 检查器链路或跨端共享列表继续补齐。
+## 2026-07-13 06:41:10 +08:00 | v1.1.0-alpha.186 | 推进 FE-041 管理端共享 FeatureCard 复合卡片接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╂不鐞嗘ā鍧楄兘鍔涳紝鑰屾槸缁х画娓呯悊 dashboard 閲屼粛鐒跺唴鑱旂殑 priority/status 澶嶅悎杩愯惀鍗＄墖楠ㄦ灦銆?- 鐩爣鏄ˉ涓€涓?`AdminFeatureCard` Vue 閫傞厤灞傦紝骞舵妸浼樺厛闃熷垪鍗′笌瀹℃牳姒傝鍗″垏鍒板悓涓€濂楀叡浜嚭鍙ｃ€?
-### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全骨架、再深挖单点”方向推进 `FE-041`，这次不扩治理模块能力，而是继续清理 dashboard 里仍然内联的 priority/status 复合运营卡片骨架。
+- 目标是补一个 `AdminFeatureCard` Vue 适配层，并把优先队列卡与审核概览卡切到同一套共享出口。
 
-- 鏂板 `frontend-admin/src/components/admin/AdminFeatureCard.vue` 涓?`AdminFeatureCard.test.ts`锛屾敹鍙ｅ悗鍙板鍚堝崱鐗囩殑 `eyebrow / title / description / actions / body` 濂戠害銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminDashboardModule.vue` 涓?`AdminDashboardModule.test.ts`锛岃浼樺厛闃熷垪鍗″拰瀹℃牳姒傝鍗￠兘閫氳繃鍏变韩 `AdminFeatureCard` 娓叉煋锛屽悓鏃朵繚鐣欐瑙堢粺璁″崱銆佸鏍稿叆鍙ｆ寜閽拰璁℃暟璇箟銆?- 杩欎竴杞篃椤烘墜鎶?dashboard 妯″潡鍜屽搴旀祴璇曚腑鐨勬枃妗堟敹鍙ｅ埌鍙 UTF-8锛屽噺灏戝悗缁户缁帹杩涘叡浜鏋舵椂琚棫缂栫爜鍣０骞叉壈銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙 dashboard 澶嶅悎杩愯惀鍗＄墖涔熷凡杩涘叆鍏变韩 FeatureCard 閫傞厤灞傗€濄€?
-### 楠岃瘉缁撴灉
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminFeatureCard.vue` 与 `AdminFeatureCard.test.ts`，收口后台复合卡片的 `eyebrow / title / description / actions / body` 契约。
+- 更新 `frontend-admin/src/views/modules/AdminDashboardModule.vue` 与 `AdminDashboardModule.test.ts`，让优先队列卡和审核概览卡都通过共享 `AdminFeatureCard` 渲染，同时保留概览统计卡、审核入口按钮和计数语义。
+- 这一轮也顺手把 dashboard 模块和对应测试中的文案收口到可读 UTF-8，减少后续继续推进共享骨架时被旧编码噪声干扰。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端 dashboard 复合运营卡片也已进入共享 FeatureCard 适配层”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminFeatureCard.test.ts src/views/modules/AdminDashboardModule.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3432,16 +6496,25 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栧悗鍙板鑸€侀〉澶淬€侀《閮ㄦ潯銆佹憳瑕佸崱鐗囥€佹爣棰樺尯鍜屾不鐞嗚鎯呭尯锛宒ashboard 鐨?priority/status 澶嶅悎杩愯惀鍗＄墖涔熷紑濮嬭蛋缁熶竴鍏变韩鍑哄彛銆?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙?dashboard 澶嶅悎鍗＄墖鏈€灏忓绾︼紱瀵艰埅鍒嗙粍鏍囬鍜屽悗鍙板垪琛ㄩ噷鐨勫唴瀹规憳瑕佸崟鍏冭繕娌℃湁杩涘叆鍏变韩灞傦紝鍚庣画鏇撮€傚悎缁х画娌?`FE-041 / ADM-010` 寰€鍓嶆帹銆?
-## 2026-07-13 06:37:40 +08:00 | v1.1.0-alpha.185 | 鎺ㄨ繘 FE-041 绠＄悊绔３灞傚叡浜?NavItem 閫傞厤灞傛帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖后台导航、页头、顶部条、摘要卡片、标题区和治理详情区，dashboard 的 priority/status 复合运营卡片也开始走统一共享出口。
+- 这一轮仍然只先收口 dashboard 复合卡片最小契约；导航分组标题和后台列表里的内容摘要单元还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╂不鐞嗘ā鍧楄兘鍔涳紝鑰屾槸缁х画娓呯悊鍚庡彴鍏ㄥ眬澹冲眰閲屼粛鍦ㄥ唴鑱旂殑渚ц竟瀵艰埅鎸夐挳楠ㄦ灦銆?- 鐩爣鏄ˉ涓€涓?`AdminNavItem` Vue 閫傞厤灞傦紝骞舵妸鍚庡彴渚ц竟鏍忛噷鐨勫浘鏍囥€佹爣棰樸€乥adge 鍜岀偣鍑诲垏鎹㈣涓哄垏鍒板悓涓€濂楀叡浜嚭鍙ｃ€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 06:37:40 +08:00 | v1.1.0-alpha.185 | 推进 FE-041 管理端壳层共享 NavItem 适配层接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminNavItem.vue` 涓?`AdminNavItem.test.ts`锛屾敹鍙ｅ悗鍙板鑸」鐨?`active / badge / icon / press` 濂戠害銆?- 鏇存柊 `frontend-admin/src/components/admin/AdminShellFrame.vue` 涓?`AdminShellFrame.test.ts`锛岃渚ц竟瀵艰埅鎸夐挳閫氳繃鍏变韩 `AdminNavItem` 娓叉煋锛屽悓鏃朵繚鐣欑幇鏈夊垎缁勩€佹ā鍧楀垏鎹€佸埛鏂板拰閫€鍑鸿涓恒€?- 杩欎竴杞篃椤烘墜鎶?`AdminShellFrame` 涓庡搴旀祴璇曚腑鐨勬枃妗堟敹鍙ｅ埌鍙 UTF-8锛屽噺灏戝悗缁户缁帹杩涘叡浜鏋舵椂琚棫缂栫爜鍣０骞叉壈銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙渚ц竟瀵艰埅椤逛篃宸茶繘鍏ュ叡浜?NavItem 閫傞厤灞傗€濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全骨架、再深挖单点”方向推进 `FE-041`，这次不扩治理模块能力，而是继续清理后台全局壳层里仍在内联的侧边导航按钮骨架。
+- 目标是补一个 `AdminNavItem` Vue 适配层，并把后台侧边栏里的图标、标题、badge 和点击切换行为切到同一套共享出口。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminNavItem.vue` 与 `AdminNavItem.test.ts`，收口后台导航项的 `active / badge / icon / press` 契约。
+- 更新 `frontend-admin/src/components/admin/AdminShellFrame.vue` 与 `AdminShellFrame.test.ts`，让侧边导航按钮通过共享 `AdminNavItem` 渲染，同时保留现有分组、模块切换、刷新和退出行为。
+- 这一轮也顺手把 `AdminShellFrame` 与对应测试中的文案收口到可读 UTF-8，减少后续继续推进共享骨架时被旧编码噪声干扰。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端侧边导航项也已进入共享 NavItem 适配层”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminNavItem.test.ts src/components/admin/AdminShellFrame.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3449,16 +6522,25 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栧悗鍙伴〉澶淬€侀《閮ㄦ潯銆佹憳瑕佸崱鐗囥€佹暟鎹崱鐗囨爣棰樺尯鍜屾不鐞嗚鎯呭尯锛岃繛渚ц竟瀵艰埅鎸夐挳楠ㄦ灦涔熷紑濮嬭蛋缁熶竴鍏变韩鍑哄彛銆?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｅ鑸」鏈€灏忓绾︼紱瀵艰埅鍒嗙粍鏍囬鍜?dashboard priority/status 澶嶅悎鍗＄墖杩樻病鏈夎繘鍏ュ叡浜眰锛屽悗缁洿閫傚悎缁х画娌?`FE-041 / ADM-010` 寰€鍓嶆帹銆?
-## 2026-07-13 06:34:20 +08:00 | v1.1.0-alpha.184 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?RecordInspector 璇︽儏鍖烘帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖后台页头、顶部条、摘要卡片、数据卡片标题区和治理详情区，连侧边导航按钮骨架也开始走统一共享出口。
+- 这一轮仍然只先收口导航项最小契约；导航分组标题和 dashboard priority/status 复合卡片还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╂不鐞嗗姩浣滐紝鑰屾槸缁х画娓呯悊娌荤悊妯″潡閲屽唴鑱旂殑璁板綍璇︽儏鍖洪鏋躲€?- 鐩爣鏄ˉ涓€涓?`AdminRecordInspector` Vue 閫傞厤灞傦紝骞舵妸娌荤悊璁板綍璇︽儏鍖虹殑鏍囬銆佸瓧娈靛睍绀恒€佺┖鎬佸拰鍔ㄤ綔鍖哄垏鍒板悓涓€濂楀叡浜嚭鍙ｃ€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 06:34:20 +08:00 | v1.1.0-alpha.184 | 推进 FE-041 管理端共享 RecordInspector 详情区接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminRecordInspector.vue` 涓?`AdminRecordInspector.test.ts`锛屾敹鍙ｅ悗鍙拌鎯呭尯鐨?`eyebrow / title / fields / empty / actions` 濂戠害銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 涓?`AdminGovernanceModule.test.ts`锛岃娌荤悊璇︽儏鍖洪€氳繃鍏变韩 `AdminRecordInspector` 娓叉煋锛屽悓鏃朵繚鐣欑幇鏈夋憳瑕佸崱鐗囥€佹悳绱€佺瓫閫夈€佽褰曢€夋嫨涓庢不鐞嗗姩浣滆涓恒€?- `frontend-admin/src/views/AdminWorkspaceView.test.ts` 缁х画閫氳繃宸ヤ綔鍖虹骇鍥炲綊瑕嗙洊鐪熷疄妯″潡鎺ョ嚎锛岀‘淇濊繖杞叡浜鎯呭尯鎶界娌℃湁褰卞搷鍚庡彴娌荤悊涓昏矾寰勩€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙娌荤悊璇︽儏鍖轰篃宸茶繘鍏ュ叡浜?RecordInspector 閫傞厤灞傗€濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全骨架、再深挖单点”方向推进 `FE-041`，这次不扩治理动作，而是继续清理治理模块里内联的记录详情区骨架。
+- 目标是补一个 `AdminRecordInspector` Vue 适配层，并把治理记录详情区的标题、字段展示、空态和动作区切到同一套共享出口。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminRecordInspector.vue` 与 `AdminRecordInspector.test.ts`，收口后台详情区的 `eyebrow / title / fields / empty / actions` 契约。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 与 `AdminGovernanceModule.test.ts`，让治理详情区通过共享 `AdminRecordInspector` 渲染，同时保留现有摘要卡片、搜索、筛选、记录选择与治理动作行为。
+- `frontend-admin/src/views/AdminWorkspaceView.test.ts` 继续通过工作区级回归覆盖真实模块接线，确保这轮共享详情区抽离没有影响后台治理主路径。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端治理详情区也已进入共享 RecordInspector 适配层”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminRecordInspector.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3466,16 +6548,26 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栧悗鍙伴〉澶淬€侀《閮ㄦ潯銆佹憳瑕佸崱鐗囥€佹悳绱㈠伐鍏锋爮銆佺瓫閫変笅鎷夊拰鏁版嵁鍗＄墖鏍囬鍖猴紝娌荤悊璇︽儏鍖虹殑瀛楁灞曠ず涓庡姩浣滃尯楠ㄦ灦涔熷紑濮嬭蛋缁熶竴鍏变韩鍑哄彛銆?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｆ不鐞嗚鎯呭尯鏈€灏忓绾︼紱sidebar 瀵艰埅椤瑰拰 dashboard priority/status 澶嶅悎鍗＄墖杩樻病鏈夎繘鍏ュ叡浜眰锛屽悗缁洿閫傚悎缁х画娌?`FE-041 / ADM-010` 寰€鍓嶆帹銆?
-## 2026-07-13 06:29:10 +08:00 | v1.1.0-alpha.183 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?DataCardHeader 鏍囬鍖烘帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖后台页头、顶部条、摘要卡片、搜索工具栏、筛选下拉和数据卡片标题区，治理详情区的字段展示与动作区骨架也开始走统一共享出口。
+- 这一轮仍然只先收口治理详情区最小契约；sidebar 导航项和 dashboard priority/status 复合卡片还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╂不鐞嗗姩浣滐紝鑰屾槸缁х画娓呯悊瀹℃牳涓庢不鐞嗘ā鍧楅噷閲嶅鍑虹幇鐨勬暟鎹崱鐗囨爣棰樺尯楠ㄦ灦銆?- 鐩爣鏄ˉ涓€涓?`AdminDataCardHeader` Vue 閫傞厤灞傦紝骞舵妸瀹℃牳闃熷垪涓庢不鐞嗚褰曞垪琛ㄧ殑鏍囬銆佽鏄庢枃妗堝垏鍒板悓涓€濂楀叡浜嚭鍙ｃ€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 06:29:10 +08:00 | v1.1.0-alpha.183 | 推进 FE-041 管理端共享 DataCardHeader 标题区接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminDataCardHeader.vue` 涓?`AdminDataCardHeader.test.ts`锛屾敹鍙ｅ悗鍙版暟鎹崱鐗囨爣棰樺尯鐨?`title / description / actions` 濂戠害銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`AdminModerationModule.test.ts`锛岃瀹℃牳妯″潡閫氳繃鍏变韩 `AdminDataCardHeader` 娓叉煋鏍囬鍖猴紝鍚屾椂淇濈暀鐜版湁鎼滅储銆佺瓫閫夈€佸垪琛ㄥ拰鍔ㄤ綔琛屼负銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 涓?`AdminGovernanceModule.test.ts`锛岃娌荤悊璁板綍鍒楄〃涔熼€氳繃鍏变韩 `AdminDataCardHeader` 杈撳嚭鏍囬鍖恒€?- `frontend-admin/src/views/AdminWorkspaceView.test.ts` 缁х画閫氳繃宸ヤ綔鍖虹骇鍥炲綊瑕嗙洊鐪熷疄妯″潡鎺ョ嚎锛岀‘淇濊繖杞叡浜爣棰樺尯鎶界娌℃湁褰卞搷鍚庡彴涓昏矾寰勩€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙鏁版嵁鍗＄墖鏍囬鍖轰篃宸茶繘鍏ュ叡浜?DataCardHeader 閫傞厤灞傗€濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全骨架、再深挖单点”方向推进 `FE-041`，这次不扩治理动作，而是继续清理审核与治理模块里重复出现的数据卡片标题区骨架。
+- 目标是补一个 `AdminDataCardHeader` Vue 适配层，并把审核队列与治理记录列表的标题、说明文案切到同一套共享出口。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminDataCardHeader.vue` 与 `AdminDataCardHeader.test.ts`，收口后台数据卡片标题区的 `title / description / actions` 契约。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminModerationModule.test.ts`，让审核模块通过共享 `AdminDataCardHeader` 渲染标题区，同时保留现有搜索、筛选、列表和动作行为。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 与 `AdminGovernanceModule.test.ts`，让治理记录列表也通过共享 `AdminDataCardHeader` 输出标题区。
+- `frontend-admin/src/views/AdminWorkspaceView.test.ts` 继续通过工作区级回归覆盖真实模块接线，确保这轮共享标题区抽离没有影响后台主路径。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端数据卡片标题区也已进入共享 DataCardHeader 适配层”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminDataCardHeader.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3483,17 +6575,26 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栧悗鍙伴〉澶淬€侀《閮ㄦ潯銆佹憳瑕佸崱鐗囥€佹悳绱㈠伐鍏锋爮鍜岀瓫閫変笅鎷夛紝瀹℃牳涓庢不鐞嗘ā鍧楃殑鏁版嵁鍗＄墖鏍囬鍖轰篃寮€濮嬭蛋缁熶竴鍏变韩鍑哄彛銆?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｆ爣棰樺尯鏈€灏忓绾︼紱璁板綍璇︽儏 inspector銆乸riority/status 澶嶅悎鍗＄墖鍜屽鑸」杩樻病鏈夎繘鍏ュ叡浜眰锛屽悗缁洿閫傚悎缁х画娌?`FE-041 / ADM-010` 寰€鍓嶆帹銆?
-## 2026-07-13 06:24:10 +08:00 | v1.1.0-alpha.182 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?MetricCard 鎽樿鍗＄墖鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖后台页头、顶部条、摘要卡片、搜索工具栏和筛选下拉，审核与治理模块的数据卡片标题区也开始走统一共享出口。
+- 这一轮仍然只先收口标题区最小契约；记录详情 inspector、priority/status 复合卡片和导航项还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍘诲姞鏂扮殑娌荤悊鑳藉姏锛岃€屾槸缁х画娓呯悊鍚庡彴 dashboard 鍜屾不鐞嗘憳瑕佸尯閲岄噸澶嶅嚭鐜扮殑缁熻鍗＄墖楠ㄦ灦銆?- 鐩爣鏄ˉ涓€涓?`AdminMetricCard` Vue 閫傞厤灞傦紝骞舵妸姒傝缁熻鍖轰笌娌荤悊鎽樿鍖哄垏鍒板悓涓€濂楀叡浜憳瑕佸崱鐗囧绾︺€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 06:24:10 +08:00 | v1.1.0-alpha.182 | 推进 FE-041 管理端共享 MetricCard 摘要卡片接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminMetricCard.vue` 涓?`AdminMetricCard.test.ts`锛屾敹鍙ｅ悗鍙版憳瑕佸崱鐗囩殑 label銆乿alue 鍜?helper 璇箟銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminDashboardModule.vue` 涓?`AdminDashboardModule.test.ts`锛屾妸 overview cards 鏀逛负閫氳繃鍏变韩 `AdminMetricCard` 娓叉煋銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 涓?`AdminGovernanceModule.test.ts`锛岃娌荤悊鎽樿鍖轰篃閫氳繃鍏变韩 `AdminMetricCard` 杈撳嚭锛屽悓鏃朵繚鐣欑幇鏈夋悳绱€佺瓫閫夈€佸垪琛ㄤ笌鎿嶄綔琛屼负銆?- 宸ヤ綔鍖虹骇鍥炲綊缁х画閫氳繃 `frontend-admin/src/views/AdminWorkspaceView.test.ts` 楠岃瘉锛岀‘淇濊繖杞叡浜崱鐗囨娊绂绘病鏈夊甫鍋忓悗鍙版ā鍧椾富璺緞銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙鎽樿鍗＄墖涔熷凡杩涘叆鍏变韩 MetricCard 閫傞厤灞傗€濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全骨架、再深挖单点”方向推进 `FE-041`，这次不去加新的治理能力，而是继续清理后台 dashboard 和治理摘要区里重复出现的统计卡片骨架。
+- 目标是补一个 `AdminMetricCard` Vue 适配层，并把概览统计区与治理摘要区切到同一套共享摘要卡片契约。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminMetricCard.vue` 与 `AdminMetricCard.test.ts`，收口后台摘要卡片的 label、value 和 helper 语义。
+- 更新 `frontend-admin/src/views/modules/AdminDashboardModule.vue` 与 `AdminDashboardModule.test.ts`，把 overview cards 改为通过共享 `AdminMetricCard` 渲染。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 与 `AdminGovernanceModule.test.ts`，让治理摘要区也通过共享 `AdminMetricCard` 输出，同时保留现有搜索、筛选、列表与操作行为。
+- 工作区级回归继续通过 `frontend-admin/src/views/AdminWorkspaceView.test.ts` 验证，确保这轮共享卡片抽离没有带偏后台模块主路径。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端摘要卡片也已进入共享 MetricCard 适配层”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminMetricCard.test.ts src/views/modules/AdminDashboardModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3501,16 +6602,25 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栧悗鍙伴〉澶淬€侀《閮ㄦ潯銆佹悳绱㈠伐鍏锋爮鍜岀瓫閫変笅鎷夛紝姒傝缁熻鍖轰笌娌荤悊鎽樿鍖虹殑閲嶅鍗＄墖楠ㄦ灦涔熷紑濮嬭蛋缁熶竴鍏变韩鍑哄彛銆?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｆ憳瑕佸崱鐗囨渶灏忓绾︼紱priority/status 杩欑被澶嶅悎杩愯惀鍗＄墖鍜屽悗鍙板鑸」杩樻病鏈夎繘鍏ュ叡浜眰锛屽悗缁洿閫傚悎缁х画娌?`FE-041 / ADM-010` 寰€鍓嶆帹銆?
-## 2026-07-13 06:18:40 +08:00 | v1.1.0-alpha.181 | 鎺ㄨ繘 FE-041 绠＄悊绔３灞傚叡浜?CommandBar 閫傞厤灞傛帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖后台页头、顶部条、搜索工具栏和筛选下拉，概览统计区与治理摘要区的重复卡片骨架也开始走统一共享出口。
+- 这一轮仍然只先收口摘要卡片最小契约；priority/status 这类复合运营卡片和后台导航项还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╂柊鐨勬不鐞嗗姩浣滐紝鑰屾槸缁х画娓呯悊鍚庡彴鍏ㄥ眬澹冲眰閲屼粛鐒舵墜鍐欑殑椤堕儴鏉￠鏋躲€?- 鐩爣鏄ˉ涓€涓?`AdminCommandBar` Vue 閫傞厤灞傦紝骞舵妸 `AdminShellFrame` 鐨?breadcrumb銆佸悓姝ョ姸鎬佸拰鍒锋柊鍔ㄤ綔鍒囧埌鍚屼竴濂楀叡浜嚭鍙ｃ€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 06:18:40 +08:00 | v1.1.0-alpha.181 | 推进 FE-041 管理端壳层共享 CommandBar 适配层接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminCommandBar.vue` 涓?`AdminCommandBar.test.ts`锛屾敹鍙ｅ悗鍙伴《閮ㄦ潯鐨?breadcrumb銆佺姸鎬佷笌 actions 鎻掓Ы濂戠害銆?- 鏇存柊 `frontend-admin/src/components/admin/AdminShellFrame.vue`锛屾妸澹冲眰椤堕儴鏉′粠鍐呰仈缁撴瀯鏇挎崲涓?`AdminCommandBar`锛屼繚鐣欑幇鏈夆€滆繍钀ヤ腑蹇?/ 褰撳墠妯″潡 / 鏁版嵁宸茶繛鎺ユ垨鍚屾涓?/ 鍒锋柊鏁版嵁鈥濊涔夈€?- 鏇存柊 `frontend-admin/src/components/admin/AdminShellFrame.test.ts`锛岄攣瀹氬悗鍙板３灞傚凡缁忕湡瀹為€氳繃鍏变韩 `AdminCommandBar` 鎺ョ嚎锛岃€屼笉鏄彧鏂板涓€涓绔嬬粍浠躲€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙澹冲眰椤堕儴鏉′篃宸茶繘鍏ュ叡浜?CommandBar 閫傞厤灞傗€濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全骨架、再深挖单点”方向推进 `FE-041`，这次不扩新的治理动作，而是继续清理后台全局壳层里仍然手写的顶部条骨架。
+- 目标是补一个 `AdminCommandBar` Vue 适配层，并把 `AdminShellFrame` 的 breadcrumb、同步状态和刷新动作切到同一套共享出口。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminCommandBar.vue` 与 `AdminCommandBar.test.ts`，收口后台顶部条的 breadcrumb、状态与 actions 插槽契约。
+- 更新 `frontend-admin/src/components/admin/AdminShellFrame.vue`，把壳层顶部条从内联结构替换为 `AdminCommandBar`，保留现有“运营中心 / 当前模块 / 数据已连接或同步中 / 刷新数据”语义。
+- 更新 `frontend-admin/src/components/admin/AdminShellFrame.test.ts`，锁定后台壳层已经真实通过共享 `AdminCommandBar` 接线，而不是只新增一个孤立组件。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端壳层顶部条也已进入共享 CommandBar 适配层”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminCommandBar.test.ts src/components/admin/AdminShellFrame.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3518,16 +6628,26 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栧悗鍙伴〉澶淬€佹悳绱㈠伐鍏锋爮鍜岀姸鎬佺瓫閫夛紝杩炲３灞傞《閮ㄦ潯涔熷紑濮嬭蛋缁熶竴鐨勫叡浜鏋跺嚭鍙ｃ€?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｉ《閮ㄦ潯鏈€灏忓绾︼紱瀵艰埅椤广€乵etric card 鍜屾洿澶嶆潅鐨勫悗鍙板揩鎹峰姩浣滆繕娌℃湁杩涘叆鍏变韩灞傦紝鍚庣画鏇撮€傚悎缁х画娌?`FE-041 / ADM-010` 鎺ㄨ繘銆?
-## 2026-07-13 06:12:30 +08:00 | v1.1.0-alpha.180 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?Select 鐘舵€佺瓫閫夋帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖后台页头、搜索工具栏和状态筛选，连壳层顶部条也开始走统一的共享骨架出口。
+- 这一轮仍然只先收口顶部条最小契约；导航项、metric card 和更复杂的后台快捷动作还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸鎶婂鏍镐笌娌荤悊妯″潡閲屽凡缁忛噸澶嶅嚭鐜扮殑鐘舵€佷笅鎷夌瓫閫夋敹鍥炲叡浜眰銆?- 鐩爣鏄ˉ涓€涓?`AdminSelect` Vue 閫傞厤灞傦紝骞舵妸瀹℃牳闃熷垪銆佹不鐞嗚褰曞垪琛ㄥ拰 `AdminWorkspaceView` 鐨勬湰鍦版淳鐢熺瓫閫変竴璧锋帴鍒板悓涓€濂楀叡浜绾︺€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 06:12:30 +08:00 | v1.1.0-alpha.180 | 推进 FE-041 管理端共享 Select 状态筛选接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/AdminSelect.vue` 涓?`AdminSelect.test.ts`锛屾敹鍙ｇ鐞嗙鍏变韩涓嬫媺鐨?`ds-select`銆乣aria-invalid` 鍜?`update:modelValue` 璇箟銆?- 鏇存柊 `frontend-admin/src/components/admin/AdminSearchToolbar.vue`銆乣admin.css`锛岀粰鍚庡彴鍏变韩鎼滅储宸ュ叿鏍忚ˉ涓?`filters` 鎻掓Ы鍜岀瓫閫変綅鏍峰紡銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue`銆乣AdminGovernanceModule.vue` 鍙婂搴旀祴璇曪紝璁╁鏍镐笌娌荤悊妯″潡缁熶竴閫氳繃鍏变韩 `AdminSelect` 鏆撮湶鐘舵€佺瓫閫夈€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue` 涓?`AdminWorkspaceView.test.ts`锛屾柊澧炲鏍?娌荤悊鏈湴 `statusFilter`銆佹淳鐢熺姸鎬侀€夐」銆佸垏鎹㈣鍥炬椂鐨勭瓫閫夐噸缃紝浠ュ強涓ゆ潯宸ヤ綔鍖虹骇鐘舵€佺瓫閫夊洖褰掋€?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙鍏变韩 `AdminSelect` 宸叉帴鍏ュ鏍?娌荤悊鐘舵€佺瓫閫夛紝骞舵湁宸ヤ綔鍖虹骇鍥炲綊淇濇姢鈥濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台治理域能力，而是把审核与治理模块里已经重复出现的状态下拉筛选收回共享层。
+- 目标是补一个 `AdminSelect` Vue 适配层，并把审核队列、治理记录列表和 `AdminWorkspaceView` 的本地派生筛选一起接到同一套共享契约。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminSelect.vue` 与 `AdminSelect.test.ts`，收口管理端共享下拉的 `ds-select`、`aria-invalid` 和 `update:modelValue` 语义。
+- 更新 `frontend-admin/src/components/admin/AdminSearchToolbar.vue`、`admin.css`，给后台共享搜索工具栏补上 `filters` 插槽和筛选位样式。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue`、`AdminGovernanceModule.vue` 及对应测试，让审核与治理模块统一通过共享 `AdminSelect` 暴露状态筛选。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue` 与 `AdminWorkspaceView.test.ts`，新增审核/治理本地 `statusFilter`、派生状态选项、切换视图时的筛选重置，以及两条工作区级状态筛选回归。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端共享 `AdminSelect` 已接入审核/治理状态筛选，并有工作区级回归保护”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminSelect.test.ts src/components/admin/AdminSearchToolbar.test.ts src/components/admin/AdminPageHeader.test.ts src/components/admin/AdminShellFrame.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3535,15 +6655,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙仠鐣欏湪鍚庡彴鎼滅储妗嗗拰椤靛ご楠ㄦ灦锛屽鏍?娌荤悊妯″潡鐨勯珮棰戠姸鎬佺瓫閫変篃寮€濮嬭蛋缁熶竴鐨勫叡浜?`Select` 涓庡伐鍏锋爮鍑哄彛銆?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｅ墠绔湰鍦扮瓫閫夛紱鏇村鏉傜殑缁勫悎绛涢€夈€佸悗绔垎椤?绛涢€夊弬鏁板拰 URL 鐘舵€佸悓姝ヨ繕娌℃湁杩涘叆缁熶竴濂戠害锛屽悗缁洿閫傚悎娌?`ADM-010 / WB-041` 缁х画鎺ㄨ繘銆?## 2026-07-13 06:47:22 +08:00 | v1.1.0-alpha.187 | 鎺ㄨ繘 FE-041 绠＄悊绔３灞傚叡浜?NavGroup 閫傞厤灞傛帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在不再只停留在后台搜索框和页头骨架，审核/治理模块的高频状态筛选也开始走统一的共享 `Select` 与工具栏出口。
+- 这一轮仍然只先收口前端本地筛选；更复杂的组合筛选、后端分页/筛选参数和 URL 状态同步还没有进入统一契约，后续更适合沿 `ADM-010 / WB-041` 继续推进。
+## 2026-07-13 06:47:22 +08:00 | v1.1.0-alpha.187 | 推进 FE-041 管理端壳层共享 NavGroup 适配层接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╂柊鐨勬不鐞嗗姩浣滐紝鑰屾槸缁х画娓呯悊鍚庡彴澹冲眰閲屼粛鐒舵墜鍐欑殑瀵艰埅鍒嗙粍楠ㄦ灦銆?- 鐩爣鏄ˉ涓€涓?`AdminNavGroup` Vue 閫傞厤灞傦紝骞舵妸 `AdminShellFrame` 鐨勫垎缁勬爣棰樹笌瀹瑰櫒鍒囧埌缁熶竴鍏变韩鍑哄彛锛岃鍚庡彴瀵艰埅浠庘€滃崟涓寜閽叡浜€濊繘涓€姝ユ帹杩涘埌鈥滃垎缁勯鏋跺叡浜€濄€?
-### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩新的治理动作，而是继续清理后台壳层里仍然手写的导航分组骨架。
+- 目标是补一个 `AdminNavGroup` Vue 适配层，并把 `AdminShellFrame` 的分组标题与容器切到统一共享出口，让后台导航从“单个按钮共享”进一步推进到“分组骨架共享”。
 
-- 鏂板 `frontend-admin/src/components/admin/AdminNavGroup.vue` 涓?`AdminNavGroup.test.ts`锛屾敹鍙ｅ悗鍙板鑸垎缁勭殑 `title + slot` 鏈€灏忓绾︼紝骞惰ˉ涓婂叡浜爣棰樹笌妲戒綅鍐呭鍥炲綊銆?- 鏇存柊 `frontend-admin/src/components/admin/AdminShellFrame.vue` 涓?`AdminShellFrame.test.ts`锛屾妸鍚庡彴渚ц竟瀵艰埅鍒嗙粍鏀逛负閫氳繃鍏变韩 `AdminNavGroup` 娓叉煋锛屽悓鏃朵繚鐣欑幇鏈夊鑸」鍒囨崲銆佸埛鏂版暟鎹拰閫€鍑哄悗鍙拌涓恒€?- 澹冲眰娴嬭瘯鐜板湪浼氬悓鏃堕攣瀹?`AdminCommandBar`銆乣AdminPageHeader`銆乣AdminNavGroup` 涓?`AdminNavItem` 鐨勭湡瀹炴帴绾匡紝閬垮厤杩欑粍鍏变韩閫傞厤灞傚彧鍋滅暀鍦ㄧ粍浠剁洰褰曢噷鏈惤鍒颁富璺緞銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙澹冲眰瀵艰埅鍒嗙粍涔熷凡杩涘叆鍏变韩 NavGroup 閫傞厤灞傗€濄€?
-### 楠岃瘉缁撴灉
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminNavGroup.vue` 与 `AdminNavGroup.test.ts`，收口后台导航分组的 `title + slot` 最小契约，并补上共享标题与槽位内容回归。
+- 更新 `frontend-admin/src/components/admin/AdminShellFrame.vue` 与 `AdminShellFrame.test.ts`，把后台侧边导航分组改为通过共享 `AdminNavGroup` 渲染，同时保留现有导航项切换、刷新数据和退出后台行为。
+- 壳层测试现在会同时锁定 `AdminCommandBar`、`AdminPageHeader`、`AdminNavGroup` 与 `AdminNavItem` 的真实接线，避免这组共享适配层只停留在组件目录里未落到主路径。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端壳层导航分组也已进入共享 NavGroup 适配层”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminNavGroup.test.ts src/components/admin/AdminNavItem.test.ts src/components/admin/AdminShellFrame.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3551,15 +6680,25 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栧悗鍙板鑸」銆侀〉澶淬€侀《閮ㄦ潯鍜屽鍚堝崱鐗囷紝杩炰晶杈瑰鑸垎缁勬爣棰樹笌瀹瑰櫒涔熷紑濮嬭蛋缁熶竴鍏变韩鍑哄彛锛屽悗鍙板３灞傞鏋惰繘涓€姝ユ敹鍙ｃ€?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｅ鑸垎缁勬渶灏忓绾︼紱鏇村鏉傜殑鍒嗙粍鎶樺彔銆佹潈闄愰┍鍔ㄩ殣钘忎互鍙婂垪琛ㄥ唴瀹规憳瑕佸崟鍏冭繕娌℃湁杩涘叆鍏变韩灞傦紝鍚庣画鏇撮€傚悎缁х画娌?`FE-041 / ADM-010` 寰€鍓嶆帹銆?## 2026-07-13 06:57:06 +08:00 | v1.1.0-alpha.188 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?ActionBar 鍔ㄤ綔鍖烘帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖后台导航项、页头、顶部条和复合卡片，连侧边导航分组标题与容器也开始走统一共享出口，后台壳层骨架进一步收口。
+- 这一轮仍然只先收口导航分组最小契约；更复杂的分组折叠、权限驱动隐藏以及列表内容摘要单元还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
+## 2026-07-13 06:57:06 +08:00 | v1.1.0-alpha.188 | 推进 FE-041 管理端共享 ActionBar 动作区接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╂柊鐨勬不鐞嗗煙鑳藉姏锛岃€屾槸缁х画娓呯悊鍚庡彴妯″潡閲屼粛鐒堕噸澶嶆墜鍐欑殑鍔ㄤ綔鎸夐挳缁勭粨鏋勩€?- 鐩爣鏄ˉ涓€涓?`AdminActionBar` Vue 閫傞厤灞傦紝骞舵妸瀹℃牳琛屾搷浣滀笌娌荤悊璇︽儏鍔ㄤ綔閮藉垏鍒扮粺涓€鍏变韩鍑哄彛锛岃鍚庡彴娌荤悊浠庘€滃崟涓寜閽叡浜€濈户缁帹杩涘埌鈥滃姩浣滃尯楠ㄦ灦鍏变韩鈥濄€?
-### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩新的治理域能力，而是继续清理后台模块里仍然重复手写的动作按钮组结构。
+- 目标是补一个 `AdminActionBar` Vue 适配层，并把审核行操作与治理详情动作都切到统一共享出口，让后台治理从“单个按钮共享”继续推进到“动作区骨架共享”。
 
-- 鏂板 `frontend-admin/src/components/admin/AdminActionBar.vue` 涓?`AdminActionBar.test.ts`锛屾敹鍙ｅ悗鍙板姩浣滃尯鐨?`actions / variant / tone / press` 鏈€灏忓绾︼紝骞朵繚鐣欐ā鍧楃骇 `data-*` 閽╁瓙锛岄伩鍏嶆祴璇曞拰椤甸潰琛屼负閫€鍥炲悇鑷淮鎶ゃ€?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`AdminModerationModule.test.ts`锛屾妸瀹℃牳琛屽唴鐨勯€氳繃 / 椹冲洖 / 闅愯棌鎿嶄綔鍒囧埌鍏变韩 `AdminActionBar`锛屽悓鏃朵繚鐣欑姸鎬佺瓫閫夈€佹悳绱㈠拰鍔ㄤ綔浜嬩欢鍥炰紶銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 涓?`AdminGovernanceModule.test.ts`锛屾妸娌荤悊璇︽儏鍖哄姩浣滃垏鍒板叡浜?`AdminActionBar`锛屽悓鏃朵繚鐣欒褰曢€夋嫨銆佽鎯呭睍绀哄拰鍔ㄤ綔瑙﹀彂琛屼负銆?- 杩欎竴姝ヤ篃椤烘墜鎶婂鏍镐笌娌荤悊妯″潡鍙婂搴旀祴璇曟敹鍙ｅ埌鍙 UTF-8锛屽噺灏戝悗缁户缁帹杩涘叡浜鏋舵椂琚棫缂栫爜鍣０鎷栨參銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙瀹℃牳琛屾搷浣滀笌娌荤悊璇︽儏鍔ㄤ綔涔熷凡杩涘叆鍏变韩 ActionBar 閫傞厤灞傗€濄€?
-### 楠岃瘉缁撴灉
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminActionBar.vue` 与 `AdminActionBar.test.ts`，收口后台动作区的 `actions / variant / tone / press` 最小契约，并保留模块级 `data-*` 钩子，避免测试和页面行为退回各自维护。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminModerationModule.test.ts`，把审核行内的通过 / 驳回 / 隐藏操作切到共享 `AdminActionBar`，同时保留状态筛选、搜索和动作事件回传。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 与 `AdminGovernanceModule.test.ts`，把治理详情区动作切到共享 `AdminActionBar`，同时保留记录选择、详情展示和动作触发行为。
+- 这一步也顺手把审核与治理模块及对应测试收口到可读 UTF-8，减少后续继续推进共享骨架时被旧编码噪声拖慢。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端审核行操作与治理详情动作也已进入共享 ActionBar 适配层”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminActionBar.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3567,15 +6706,25 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栧悗鍙伴〉澶淬€侀《閮ㄦ潯銆佸鑸拰鍗＄墖楠ㄦ灦锛屽鏍镐笌娌荤悊妯″潡鐨勫姩浣滄寜閽粍涔熷紑濮嬭蛋缁熶竴鍏变韩鍑哄彛锛屽悗鍙版不鐞嗕富璺緞杩涗竴姝ユ敹鍙ｃ€?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｅ姩浣滃尯鏈€灏忓绾︼紱鎵归噺娌荤悊宸ュ叿鏉°€佹潈闄愰┍鍔ㄧ鐢ㄦ€佸拰鏇村鏉傜殑寮傛鍙嶉杩樻病鏈夎繘鍏ュ叡浜眰锛屽悗缁洿閫傚悎缁х画娌?`FE-041 / ADM-010` 寰€鍓嶆帹銆?## 2026-07-13 07:05:32 +08:00 | v1.1.0-alpha.189 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?Tag 鐘舵€佹爣绛炬帴绾?### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖后台页头、顶部条、导航和卡片骨架，审核与治理模块的动作按钮组也开始走统一共享出口，后台治理主路径进一步收口。
+- 这一轮仍然只先收口动作区最小契约；批量治理工具条、权限驱动禁用态和更复杂的异步反馈还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
+## 2026-07-13 07:05:32 +08:00 | v1.1.0-alpha.189 | 推进 FE-041 管理端共享 Tag 状态标签接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╂柊鐨勬不鐞嗚兘鍔涳紝鑰屾槸缁х画娓呯悊鍚庡彴妯″潡閲岄噸澶嶆墜鍐欑殑绫诲瀷/鐘舵€?badge 缁撴瀯銆?- 鐩爣鏄ˉ涓€涓?`AdminTag` Vue 閫傞厤灞傦紝骞舵妸瀹℃牳鍒楄〃涓庢不鐞嗚褰曢噷鐨勭姸鎬佹爣绛惧垏鍒扮粺涓€鍏变韩鍑哄彛锛岃鍚庡彴鐘舵€佽涔変笉鍐嶅垎鏁ｅ湪鍚勬ā鍧楁ā鏉块噷鍚勮嚜缁存姢銆?
-### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩新的治理能力，而是继续清理后台模块里重复手写的类型/状态 badge 结构。
+- 目标是补一个 `AdminTag` Vue 适配层，并把审核列表与治理记录里的状态标签切到统一共享出口，让后台状态语义不再分散在各模块模板里各自维护。
 
-- 鏂板 `frontend-admin/src/components/admin/AdminTag.vue` 涓?`AdminTag.test.ts`锛屾敹鍙ｅ悗鍙版爣绛剧殑 `label / tone` 鏈€灏忓绾︼紝璁?`neutral/status` 涓ょ鏍囩璇箟閫氳繃鍚屼竴灞?Vue 閫傞厤缁勪欢鏆撮湶銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`AdminModerationModule.test.ts`锛屾妸瀹℃牳琛ㄤ腑鐨勫唴瀹圭被鍨嬩笌鐘舵€佹爣绛惧垏鍒板叡浜?`AdminTag`锛屽悓鏃朵繚鐣欐悳绱€佺瓫閫夊拰鍔ㄤ綔鍖鸿涓恒€?- 鏇存柊 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 涓?`AdminGovernanceModule.test.ts`锛屾妸娌荤悊琛ㄤ腑鐨勭姸鎬佸垪鍒囧埌鍏变韩 `AdminTag`锛屽悓鏃朵繚鐣欒褰曢€夋嫨銆佽鎯呭睍绀哄拰鍔ㄤ綔瑙﹀彂琛屼负銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.test.ts`锛屾妸宸ヤ綔鍖虹骇瀵艰埅鍒囨崲鏂█瀵归綈鍒板綋鍓嶅３灞傜湡瀹炰娇鐢ㄧ殑 `data-admin-nav-item-view` 閽╁瓙锛岄伩鍏嶅洖褰掓祴璇曠户缁緷璧栨棫瀵艰埅鏍囪銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙瀹℃牳绫诲瀷/鐘舵€佹爣绛句笌娌荤悊璁板綍鐘舵€佹爣绛句篃宸茶繘鍏ュ叡浜?AdminTag 閫傞厤灞傗€濄€?
-### 楠岃瘉缁撴灉
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminTag.vue` 与 `AdminTag.test.ts`，收口后台标签的 `label / tone` 最小契约，让 `neutral/status` 两种标签语义通过同一层 Vue 适配组件暴露。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminModerationModule.test.ts`，把审核表中的内容类型与状态标签切到共享 `AdminTag`，同时保留搜索、筛选和动作区行为。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue` 与 `AdminGovernanceModule.test.ts`，把治理表中的状态列切到共享 `AdminTag`，同时保留记录选择、详情展示和动作触发行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，把工作区级导航切换断言对齐到当前壳层真实使用的 `data-admin-nav-item-view` 钩子，避免回归测试继续依赖旧导航标记。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端审核类型/状态标签与治理记录状态标签也已进入共享 AdminTag 适配层”。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminTag.test.ts src/views/modules/AdminModerationModule.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3583,16 +6732,23 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栨寜閽€侀〉澶淬€佸鑸€佸崱鐗囧拰鍔ㄤ綔鍖猴紝瀹℃牳涓庢不鐞嗘ā鍧楃殑鐘舵€佹爣绛捐涔変篃寮€濮嬭蛋缁熶竴鍏变韩鍑哄彛锛屽悗鍙板垪琛ㄨ涔夎繘涓€姝ユ敹鍙ｃ€?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｆ爣绛炬渶灏忓绾︼紱瑙掕壊銆佹潵婧愩€佹壒閲忕瓫閫?chip 鍜屾洿缁嗙矑搴︾殑鐘舵€佽壊闃惰繕娌℃湁杩涘叆鍏变韩灞傦紝鍚庣画鏇撮€傚悎缁х画娌?`FE-041 / ADM-010` 寰€鍓嶆帹銆?## 2026-07-13 07:10:40 +08:00 | v1.1.0-alpha.190 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?ContentCell 鍐呭鎽樿鍗曞厓鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖按钮、页头、导航、卡片和动作区，审核与治理模块的状态标签语义也开始走统一共享出口，后台列表语义进一步收口。
+- 这一轮仍然只先收口标签最小契约；角色、来源、批量筛选 chip 和更细粒度的状态色阶还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
+## 2026-07-13 07:10:40 +08:00 | v1.1.0-alpha.190 | 推进 FE-041 管理端共享 ContentCell 内容摘要单元接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏灞€楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╂柊鐨勬不鐞嗚兘鍔涳紝鑰屾槸缁х画娓呯悊鍚庡彴瀹℃牳鍒楄〃閲屼粛鐒跺唴鑱旀墜鍐欑殑鏍囬+鎽樿鍐呭鍗曞厓銆?- 鐩爣鏄ˉ涓€涓?`AdminContentCell` Vue 閫傞厤灞傦紝骞舵妸瀹℃牳鍒楄〃閲岀殑鍐呭鎽樿鍖哄垏鍒扮粺涓€鍏变韩鍑哄彛锛岃鍚庡彴鍒楄〃鍗曞厓寮€濮嬩粠鎸夐挳銆佹爣绛俱€佸姩浣滃尯涔嬪缁х画寰€鍐呭楠ㄦ灦鏀跺彛銆?
-### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩新的治理能力，而是继续清理后台审核列表里仍然内联手写的标题+摘要内容单元。
+- 目标是补一个 `AdminContentCell` Vue 适配层，并把审核列表里的内容摘要区切到统一共享出口，让后台列表单元开始从按钮、标签、动作区之外继续往内容骨架收口。
 
-- 鏂板 `frontend-admin/src/components/admin/AdminContentCell.vue` 涓?`AdminContentCell.test.ts`锛屾敹鍙ｅ悗鍙板垪琛ㄥ唴瀹规憳瑕佸崟鍏冪殑 `title / summary` 鏈€灏忓绾︺€?- 鏇存柊 `frontend-admin/src/views/modules/AdminModerationModule.vue` 涓?`AdminModerationModule.test.ts`锛屾妸瀹℃牳鍒楄〃閲岀殑鏍囬+鎽樿鍗曞厓鍒囧埌鍏变韩 `AdminContentCell`锛屽悓鏃朵繚鐣欐爣绛俱€佺瓫閫夈€佸姩浣滃尯鍜岀姸鎬佽涔夈€?- 杩欎竴姝ユ病鏈夌户缁墿澶ф不鐞嗘ā鍧楃粨鏋勶紝鑰屾槸鍏堟妸鍚庡彴鍒楄〃閲岄珮棰戝嚭鐜扮殑鍐呭鎽樿妯″紡浠庢ā鍧楁ā鏉夸腑鎷垮嚭鏉ワ紝浣滀负鍚庣画璧勬枡娌荤悊銆佷妇鎶ュ垪琛ㄧ瓑鍒楄〃鍖栧叆鍙ｇ殑鍏变韩璧风偣銆?
-### 楠岃瘉缁撴灉
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminContentCell.vue` 与 `AdminContentCell.test.ts`，收口后台列表内容摘要单元的 `title / summary` 最小契约。
+- 更新 `frontend-admin/src/views/modules/AdminModerationModule.vue` 与 `AdminModerationModule.test.ts`，把审核列表里的标题+摘要单元切到共享 `AdminContentCell`，同时保留标签、筛选、动作区和状态语义。
+- 这一步没有继续扩大治理模块结构，而是先把后台列表里高频出现的内容摘要模式从模块模板中拿出来，作为后续资料治理、举报列表等列表化入口的共享起点。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminContentCell.test.ts src/views/modules/AdminModerationModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3600,32 +6756,46 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪涓嶅啀鍙鐩栨寜閽€佹爣绛俱€侀〉澶淬€佸鑸拰鍔ㄤ綔鍖猴紝瀹℃牳鍒楄〃閲岀殑鍐呭鎽樿鍗曞厓涔熷紑濮嬭蛋缁熶竴鍏变韩鍑哄彛锛屽悗鍙板垪琛ㄩ鏋剁户缁線鍙鐢ㄦ柟鍚戞敹鍙ｃ€?- 杩欎竴杞粛鐒跺彧鍏堟敹鍙ｅ唴瀹规憳瑕佹渶灏忓绾︼紱鏇村鏉傜殑鍒楄〃琛屽竷灞€銆佹壒閲忔不鐞嗗伐鍏锋潯鍜屾不鐞嗚鎯呭唴鐨勫瘜鍐呭鎽樿杩樻病鏈夎繘鍏ュ叡浜眰锛屽悗缁洿閫傚悎缁х画娌?`FE-041 / ADM-010` 寰€鍓嶆帹銆?## 2026-07-13 07:57:47 +08:00 | v1.1.0-alpha.198 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜?ConfirmStack 纭寮瑰眰楠ㄦ灦鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在不再只覆盖按钮、标签、页头、导航和动作区，审核列表里的内容摘要单元也开始走统一共享出口，后台列表骨架继续往可复用方向收口。
+- 这一轮仍然只先收口内容摘要最小契约；更复杂的列表行布局、批量治理工具条和治理详情内的富内容摘要还没有进入共享层，后续更适合继续沿 `FE-041 / ADM-010` 往前推。
+## 2026-07-13 07:57:47 +08:00 | v1.1.0-alpha.198 | 推进 FE-041 管理端共享 ConfirmStack 确认弹层骨架接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画娓呯悊 `AdminWorkspaceView.vue` 閲岄噸澶嶅爢鍙犵殑浜旂粍娌荤悊纭寮瑰眰妯℃澘銆?- 鐩爣鏄ˉ涓€涓?`AdminConfirmStack` Vue 閫傞厤灞傦紝骞舵妸瀹℃牳銆佷妇鎶ャ€佺敤鎴枫€丄I 浠诲姟銆佸浘璋辨ā鏉胯繖浜旀潯鐪熷疄娌荤悊纭娴佸垏鍒扮粺涓€寮瑰眰鍑哄彛锛岃鍚庡彴楂橀闄╂搷浣滅殑纭灞備笉鍐嶅湪宸ヤ綔鍙版ā鏉块噷閲嶅缁存姢銆?
-### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理 `AdminWorkspaceView.vue` 里重复堆叠的五组治理确认弹层模板。
+- 目标是补一个 `AdminConfirmStack` Vue 适配层，并把审核、举报、用户、AI 任务、图谱模板这五条真实治理确认流切到统一弹层出口，让后台高风险操作的确认层不再在工作台模板里重复维护。
 
-- 鏂板 `frontend-admin/src/components/admin/AdminConfirmStack.vue` 涓?`AdminConfirmStack.test.ts`锛屾敹鍙ｅ悗鍙扮‘璁ゅ脊灞傜殑鍏变韩瀹夸富楠ㄦ灦锛屽苟缁熶竴鎵挎帴 keyed confirm/cancel 浜嬩欢鍥炰紶銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛屾妸浜旂粍鍐呰仈 `AdminConfirmDialog` 妯℃澘鏇挎崲涓哄叡浜?`AdminConfirmStack`锛屽悓鏃朵繚鐣欑幇鏈夊鏍搞€佷妇鎶ャ€佺敤鎴枫€丄I 浠诲姟銆佸浘璋辨ā鏉跨‘璁ゆ祦鐨勬爣棰樸€佽鏄庛€佸嵄闄╂€佸拰鎻愪氦娴佺▼銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.test.ts`锛岃ˉ涓婂伐浣滃彴鍦ㄧ湡瀹炲鏍哥‘璁よ矾寰勯噷宸茬粡閫氳繃鍏变韩纭寮瑰眰楠ㄦ灦娓叉煋鐨勬柇瑷€銆?
-### 楠岃瘉缁撴灉
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/AdminConfirmStack.vue` 与 `AdminConfirmStack.test.ts`，收口后台确认弹层的共享宿主骨架，并统一承接 keyed confirm/cancel 事件回传。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，把五组内联 `AdminConfirmDialog` 模板替换为共享 `AdminConfirmStack`，同时保留现有审核、举报、用户、AI 任务、图谱模板确认流的标题、说明、危险态和提交流程。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.test.ts`，补上工作台在真实审核确认路径里已经通过共享确认弹层骨架渲染的断言。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/AdminConfirmStack.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画娌垮悗鍙版不鐞嗙‘璁ら鏋跺悜涓婃敹鍙ｏ紝浜旀潯鐪熷疄楂橀闄╂不鐞嗙‘璁ゆ祦寮€濮嬪叡浜粺涓€鐨勫脊灞傚嚭鍙ｃ€?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗙‘璁ゅ脊灞傚涓婚鏋讹紱鏇磋繘涓€姝ョ殑纭鏂囨绛栫暐銆佹潈闄愰┍鍔ㄧ鐢ㄦ€佸拰鎵归噺娌荤悊纭妯″瀷杩樻病鏈夌粺涓€锛屽悗缁€傚悎缁х画娌胯繖鏉¤矾寰勬帹杩涖€?
-## 2026-07-13 08:04:57 +08:00 | v1.1.0-alpha.199 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜湰鍦扮瓫閫?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续沿后台治理确认骨架向上收口，五条真实高风险治理确认流开始共享统一的弹层出口。
+- 这次仍然只先收口了确认弹层宿主骨架；更进一步的确认文案策略、权限驱动禁用态和批量治理确认模型还没有统一，后续适合继续沿这条路径推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画娓呯悊 `AdminWorkspaceView.vue` 閲屽鏍稿垪琛ㄥ拰娌荤悊鍒楄〃鍚勮嚜缁存姢鐨勬湰鍦扮姸鎬佺瓫閫夈€佸叧閿瘝绛涢€変笌鐘舵€侀€夐」鐢熸垚閫昏緫銆?- 鐩爣鏄ˉ涓€灞傚叡浜函鍑芥暟 helper锛屽苟鎶婂鏍稿垪琛ㄤ笌娌荤悊鍒楄〃鐨勬湰鍦扮瓫閫夎鍒欏垏鍒扮粺涓€鍑哄彛锛岃鍚庡彴鍒楄〃椤电殑鏌ヨ涓庣姸鎬佺瓫閫変笉鍐嶅湪宸ヤ綔鍙伴噷骞宠缁存姢涓ゅ瀹炵幇銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 08:04:57 +08:00 | v1.1.0-alpha.199 | 推进 FE-041 管理端共享本地筛选 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminModuleFilters.ts` 涓?`adminModuleFilters.test.ts`锛屾敹鍙ｅ悗鍙版湰鍦扮瓫閫変笌鐘舵€侀€夐」鐢熸垚鐨勫叡浜函鍑芥暟锛屽苟閿佸畾鐘舵€佸幓閲嶃€佺瓫閫夊拰鍏抽敭璇嶅尮閰嶈涓恒€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛屾妸瀹℃牳鍒楄〃涓庢不鐞嗗垪琛ㄧ殑鏈湴绛涢€夐€昏緫鍒囧埌鍏变韩 helper锛岀粺涓€鐘舵€佽繃婊ゃ€佸叧閿瘝杩囨护涓庣姸鎬佷笅鎷夐€夐」鏉ユ簮銆?- 淇濈暀鐜版湁妯″潡椤甸潰涓?URL / 浼氳瘽 / 娌荤悊鍔ㄤ綔琛屼负涓嶅彉锛屽彧鍑忓皯宸ヤ綔鍙板ぇ鏂囦欢閲岀殑閲嶅绛涢€夊疄鐜般€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理 `AdminWorkspaceView.vue` 里审核列表和治理列表各自维护的本地状态筛选、关键词筛选与状态选项生成逻辑。
+- 目标是补一层共享纯函数 helper，并把审核列表与治理列表的本地筛选规则切到统一出口，让后台列表页的查询与状态筛选不再在工作台里平行维护两套实现。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminModuleFilters.ts` 与 `adminModuleFilters.test.ts`，收口后台本地筛选与状态选项生成的共享纯函数，并锁定状态去重、筛选和关键词匹配行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，把审核列表与治理列表的本地筛选逻辑切到共享 helper，统一状态过滤、关键词过滤与状态下拉选项来源。
+- 保留现有模块页面与 URL / 会话 / 治理动作行为不变，只减少工作台大文件里的重复筛选实现。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminModuleFilters.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3633,17 +6803,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜?UI 楠ㄦ灦寰€鍏变韩椤甸潰閫昏緫鏀跺彛锛屽悗鍙板鏍稿垪琛ㄤ笌娌荤悊鍒楄〃寮€濮嬪鐢ㄧ粺涓€鐨勬湰鍦扮瓫閫?helper銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗙瓫閫?helper锛涘悗缁洿閫傚悎缁х画鎶婃不鐞嗗垪瀹氫箟銆佸瓧娈垫枃妗堟槧灏勫拰鍔ㄤ綔鍏冩暟鎹篃鎻愬埌缁熶竴閰嶇疆灞傦紝鑰屼笉鏄户缁暀鍦?`AdminWorkspaceView.vue` 閲屽垎鏁ｇ淮鎶ゃ€?
-## 2026-07-13 08:15:30 +08:00 | v1.1.0-alpha.200 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜不鐞嗚褰?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享 UI 骨架往共享页面逻辑收口，后台审核列表与治理列表开始复用统一的本地筛选 helper。
+- 这次仍然只先收口了筛选 helper；后续更适合继续把治理列定义、字段文案映射和动作元数据也提到统一配置层，而不是继续留在 `AdminWorkspaceView.vue` 里分散维护。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画娓呯悊娌荤悊璁板綍鍦?`AdminGovernanceModule.vue`銆乣AdminRecordRow.vue` 鍜?`AdminWorkspaceView.vue` 閲屽垎鏁ｇ淮鎶ょ殑瀛楁鏍煎紡鍖栥€佸瓧娈垫爣绛俱€佽褰曟爣棰樺拰鍒楅『搴忛€昏緫銆?- 鐩爣鏄ˉ涓€灞傚叡浜不鐞嗚褰?helper锛屽苟鎶婃不鐞嗘ā鍧椼€佽褰曡鍜屽伐浣滃彴閲岀殑璁板綍璇箟鍒囧埌缁熶竴鍑哄彛锛岃鍚庡彴娌荤悊璁板綍鐨勫睍绀鸿鍒欎笉鍐嶅湪澶氫釜缁勪欢閲岄噸澶嶇淮鎶ゃ€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 08:15:30 +08:00 | v1.1.0-alpha.200 | 推进 FE-041 管理端共享治理记录 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/components/admin/governanceRecord.ts` 涓?`governanceRecord.test.ts`锛屾敹鍙ｆ不鐞嗚褰曠殑鍗曞厓鏍兼牸寮忓寲銆佸瓧娈垫爣绛俱€佽褰曟爣棰樺拰鍒楅『搴忚鍒欍€?- 鏇存柊 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`锛屾敼涓哄鐢ㄥ叡浜不鐞嗚褰?helper 娓叉煋璇︽儏瀛楁銆佹憳瑕佸崱銆佽〃澶存爣棰樺拰閫変腑璁板綍鏍囬銆?- 鏇存柊 `frontend-admin/src/components/admin/AdminRecordRow.vue` 涓?`frontend-admin/src/views/AdminWorkspaceView.vue`锛屾妸娌荤悊璁板綍琛屽睍绀恒€佸伐浣滃彴绛涢€夋枃鏈嫾鎺ュ拰鍒楅『搴忚绠楀垏鍒板悓涓€灞?helper锛屽噺灏戝伐浣滃彴涓庡垪琛ㄧ粍浠剁殑閲嶅璁板綍璇箟瀹炵幇銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理治理记录在 `AdminGovernanceModule.vue`、`AdminRecordRow.vue` 和 `AdminWorkspaceView.vue` 里分散维护的字段格式化、字段标签、记录标题和列顺序逻辑。
+- 目标是补一层共享治理记录 helper，并把治理模块、记录行和工作台里的记录语义切到统一出口，让后台治理记录的展示规则不再在多个组件里重复维护。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/components/admin/governanceRecord.ts` 与 `governanceRecord.test.ts`，收口治理记录的单元格格式化、字段标签、记录标题和列顺序规则。
+- 更新 `frontend-admin/src/views/modules/AdminGovernanceModule.vue`，改为复用共享治理记录 helper 渲染详情字段、摘要卡、表头标题和选中记录标题。
+- 更新 `frontend-admin/src/components/admin/AdminRecordRow.vue` 与 `frontend-admin/src/views/AdminWorkspaceView.vue`，把治理记录行展示、工作台筛选文本拼接和列顺序计算切到同一层 helper，减少工作台与列表组件的重复记录语义实现。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/components/admin/governanceRecord.test.ts src/components/admin/AdminRecordRow.test.ts src/views/modules/AdminGovernanceModule.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3651,285 +6828,411 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜?UI 楠ㄦ灦鍜岄〉闈?helper 寰€鍏变韩娌荤悊璁板綍璇箟鎺ㄨ繘锛屾不鐞嗘ā鍧椼€佽褰曡鍜屽伐浣滃彴寮€濮嬪鐢ㄧ粺涓€鐨勮褰曞睍绀哄绾︺€?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗚褰?helper锛涘悗缁洿閫傚悎缁х画鎶?`governanceConfig`銆佹不鐞嗗姩浣滃厓鏁版嵁鍜岃祫鏂欒褰曞埌瀹℃牳椤圭殑鏄犲皠涔熸彁鍒扮粺涓€閰嶇疆灞傦紝鑰屼笉鏄户缁暀鍦?`AdminWorkspaceView.vue` 閲屽垎鏁ｇ淮鎶ゃ€?
-## 2026-07-13 08:22:01 +08:00 | v1.1.0-alpha.201 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜不鐞嗛厤缃?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享 UI 骨架和页面 helper 往共享治理记录语义推进，治理模块、记录行和工作台开始复用统一的记录展示契约。
+- 这次仍然只先收口了记录 helper；后续更适合继续把 `governanceConfig`、治理动作元数据和资料记录到审核项的映射也提到统一配置层，而不是继续留在 `AdminWorkspaceView.vue` 里分散维护。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鍒囧幓鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画娓呯悊 `AdminWorkspaceView.vue` 閲屽垎鏁ｇ淮鎶ょ殑娌荤悊妯″潡閰嶇疆銆佽祫鏂欐不鐞嗚褰曞埌瀹℃牳椤圭殑鏄犲皠锛屼互鍙婃不鐞嗘ā鍧楁弿杩?绌烘€佹潵婧愩€?- 鐩爣鏄ˉ涓€灞傚叡浜不鐞嗛厤缃?helper锛屽苟鎶婂伐浣滃彴閲岀湡瀹炰娇鐢ㄧ殑娌荤悊妯″潡 endpoint銆佺┖鎬佹枃妗堛€佹弿杩版枃妗堝拰璧勬枡娌荤悊鏄犲皠鍒囧埌缁熶竴鍑哄彛锛岃宸ヤ綔鍙扮户缁洖鍒扳€滃崗璋冨櫒鈥濊鑹层€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 08:22:01 +08:00 | v1.1.0-alpha.201 | 推进 FE-041 管理端共享治理配置 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminGovernanceConfig.ts` 涓?`adminGovernanceConfig.test.ts`锛屾敹鍙ｆ不鐞嗘ā鍧楅厤缃€佹不鐞嗗姩浣滃厓鏁版嵁鍒ゆ柇銆佹不鐞嗘ā鍧楃被鍨嬪畧鍗紝浠ュ強璧勬枡娌荤悊璁板綍鍒板鏍搁」鐨勬ˉ鎺ユ槧灏勩€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃娌荤悊妯″潡鍔犺浇銆佸伐浣滃彴鎻忚堪鏂囨銆佹不鐞嗘ā鍧楃┖鎬佹潵婧愬拰璧勬枡娌荤悊鍔ㄤ綔鏄犲皠鍒囧埌鍏变韩娌荤悊閰嶇疆 helper銆?- 杩欐淇濈暀浜嗙幇鏈夋不鐞嗗姩浣滄祦銆乁RL 鐘舵€佸拰浼氳瘽琛屼负涓嶅彉锛屽彧鎶婂伐浣滃彴涓凡缁忕ǔ瀹氱殑娌荤悊閰嶇疆璇箟缁х画鎻愬埌鍏变韩灞傘€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不切去新的后台域能力，而是继续清理 `AdminWorkspaceView.vue` 里分散维护的治理模块配置、资料治理记录到审核项的映射，以及治理模块描述/空态来源。
+- 目标是补一层共享治理配置 helper，并把工作台里真实使用的治理模块 endpoint、空态文案、描述文案和资料治理映射切到统一出口，让工作台继续回到“协调器”角色。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminGovernanceConfig.ts` 与 `adminGovernanceConfig.test.ts`，收口治理模块配置、治理动作元数据判断、治理模块类型守卫，以及资料治理记录到审核项的桥接映射。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让治理模块加载、工作台描述文案、治理模块空态来源和资料治理动作映射切到共享治理配置 helper。
+- 这次保留了现有治理动作流、URL 状态和会话行为不变，只把工作台中已经稳定的治理配置语义继续提到共享层。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminGovernanceConfig.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜褰曡涔夋帹杩涘埌鍏变韩娌荤悊閰嶇疆璇箟锛屽伐浣滃彴寮€濮嬪鐢ㄧ粺涓€鐨勬ā鍧楅厤缃拰璧勬枡娌荤悊妗ユ帴瑙勫垯銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗘不鐞嗛厤缃?helper锛涘伐浣滃彴閲岄拡瀵瑰悇娌荤悊鍩熺殑鍔ㄤ綔瑙﹀彂鍒嗗彂鍜岄儴鍒嗗巻鍙插唴鑱旈厤缃粛鏈畬鍏ㄦ娊绂伙紝鍚庣画閫傚悎缁х画娌胯繖鏉¤矾寰勬帹杩涖€?
-## 2026-07-13 08:28:40 +08:00 | v1.1.0-alpha.202 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜不鐞嗗姩浣滃垎鍙?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享记录语义推进到共享治理配置语义，工作台开始复用统一的模块配置和资料治理桥接规则。
+- 这次仍然只先收口了治理配置 helper；工作台里针对各治理域的动作触发分发和部分历史内联配置仍未完全抽离，后续适合继续沿这条路径推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鑳藉姏锛岃€屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屽垎鏁ｇ淮鎶ょ殑娌荤悊鍔ㄤ綔鍒ゅ畾涓庣‘璁ゆ祦鍒嗗彂閫昏緫銆?- 鐩爣鏄ˉ榻愬叡浜不鐞嗗姩浣滃垎鍙?helper锛屽苟璁╁伐浣滃彴鐩存帴澶嶇敤缁熶竴鐨?view-to-action dispatch 缁撴灉锛屽噺灏戦〉闈㈠眰瀵?`community / materials / users / ai / graph` 浜旂粍娌荤悊鍔ㄤ綔鐨勯噸澶嶅垎鏀淮鎶ゃ€?### 瀹為檯鍙樻洿
+## 2026-07-13 08:28:40 +08:00 | v1.1.0-alpha.202 | 推进 FE-041 管理端共享治理动作分发 helper 接线
+### 任务内容
 
-- 鏇存柊 `frontend-admin/src/views/adminGovernanceConfig.ts` 涓?`adminGovernanceConfig.test.ts`锛屾柊澧?`GovernanceActionPayload`銆乣GovernanceActionDispatch` 鍜?`resolveGovernanceActionDispatch(...)`锛屾妸鍏变韩娌荤悊鍔ㄤ綔鍒嗗彂瑙勫垯娌夊埌缁熶竴 helper锛屽苟琛ヤ笂绀惧尯涓炬姤銆佽祫鏂欐不鐞嗗拰鏃犳晥璧勬枡璁板綍鐨勫洖褰掔敤渚嬨€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃娌荤悊鍔ㄤ綔鎸夐挳鍏冩暟鎹洿鎺ュ鐢?`getGovernanceActions(...)`锛屽苟鎶?`requestGovernanceAction(...)` 鏀逛负娑堣垂鍏变韩 dispatch 缁撴灉锛屽啀鎸?`report / moderation / user / aiTask / template / invalid / noop` 涓冪被鍑哄彛杩涘叆鏃㈡湁纭娴併€?- 椤烘墜娓呯悊 `AdminWorkspaceView.vue` 閲屽凡缁忎笉鍙揪鐨勭姸鎬佺瓫閫夊垎鏀拰鏈啀浣跨敤鐨勮祫鏂欐槧灏勫嚱鏁帮紝杩涗竴姝ユ妸宸ヤ綔鍙版敹鍥炲埌鈥滃崗璋冨櫒鈥濊亴璐ｃ€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理能力，而是继续收口 `AdminWorkspaceView.vue` 里分散维护的治理动作判定与确认流分发逻辑。
+- 目标是补齐共享治理动作分发 helper，并让工作台直接复用统一的 view-to-action dispatch 结果，减少页面层对 `community / materials / users / ai / graph` 五组治理动作的重复分支维护。
+### 实际变更
+
+- 更新 `frontend-admin/src/views/adminGovernanceConfig.ts` 与 `adminGovernanceConfig.test.ts`，新增 `GovernanceActionPayload`、`GovernanceActionDispatch` 和 `resolveGovernanceActionDispatch(...)`，把共享治理动作分发规则沉到统一 helper，并补上社区举报、资料治理和无效资料记录的回归用例。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让治理动作按钮元数据直接复用 `getGovernanceActions(...)`，并把 `requestGovernanceAction(...)` 改为消费共享 dispatch 结果，再按 `report / moderation / user / aiTask / template / invalid / noop` 七类出口进入既有确认流。
+- 顺手清理 `AdminWorkspaceView.vue` 里已经不可达的状态筛选分支和未再使用的资料映射函数，进一步把工作台收回到“协调器”职责。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminGovernanceConfig.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜不鐞嗛厤缃帹杩涘埌鍏变韩娌荤悊鍔ㄤ綔鍒嗗彂锛屽伐浣滃彴閲屽洿缁曚簲涓不鐞嗗煙鐨勫姩浣滆Е鍙戝垎鏀紑濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛鍔ㄤ綔鍒嗗彂 helper锛涙洿杩涗竴姝ョ殑娌荤悊璇︽儏鏂囨銆佸姩浣滅‘璁ゅ厓鏁版嵁褰掍竴鍜?page/feature 绾ф媶鍒嗕粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 08:36:45 +08:00 | v1.1.0-alpha.203 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜不鐞嗙‘璁ゆ枃妗?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享治理配置推进到共享治理动作分发，工作台里围绕五个治理域的动作触发分支开始复用统一出口。
+- 这次仍然只先收口动作分发 helper；更进一步的治理详情文案、动作确认元数据归一和 page/feature 级拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鑳藉姏锛岃€屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屼簲缁勬不鐞嗙‘璁ゅ脊灞傜殑鏍囬銆佽鏄庡拰鎸夐挳鏂囨鍏冩暟鎹€?- 鐩爣鏄ˉ涓€灞傚叡浜不鐞嗙‘璁ゆ枃妗?helper锛屽苟璁╁伐浣滃彴鐨勭‘璁ゅ脊灞傜洿鎺ュ鐢ㄧ粺涓€ copy 鐢熸垚閫昏緫锛屽噺灏戦〉闈㈠眰瀵?moderation銆乺eport銆乽ser銆丄I task銆乼emplate 浜旀潯纭娴佺殑閲嶅鏂囨缁存姢銆?### 瀹為檯鍙樻洿
+## 2026-07-13 08:36:45 +08:00 | v1.1.0-alpha.203 | 推进 FE-041 管理端共享治理确认文案 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminActionConfirmCopy.ts` 涓?`adminActionConfirmCopy.test.ts`锛屾敹鍙ｆ不鐞嗙‘璁ゆ枃妗堢殑绾嚱鏁?helper锛屽苟閿佸畾 moderation銆乺eport銆乽ser銆丄I task銆乼emplate 浜旂被纭 copy 鐨勬爣棰樸€佽鏄庛€佹寜閽枃妗堝拰鍗遍櫓鎬併€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `AdminConfirmStack` 鎵€娑堣垂鐨?dialog metadata 鐩存帴鏀逛负璇诲彇鍏变韩 `getModerationConfirmCopy(...)`銆乣getReportConfirmCopy(...)`銆乣getUserConfirmCopy(...)`銆乣getAITaskConfirmCopy(...)`銆乣getTemplateConfirmCopy(...)` 杈撳嚭銆?- 鏈疆涓嶆敼娌荤悊鍔ㄤ綔鎻愪氦娴佺▼銆丄PI 璺緞銆佺‘璁や氦浜掑崗璁拰 URL/session 琛屼负锛屽彧鎶婂凡绋冲畾鐨勭‘璁ゆ枃妗堣涔変粠宸ヤ綔鍙拌鍥句腑缁х画涓嬫矇鍒板叡浜?helper 灞傘€?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理能力，而是继续收口 `AdminWorkspaceView.vue` 里五组治理确认弹层的标题、说明和按钮文案元数据。
+- 目标是补一层共享治理确认文案 helper，并让工作台的确认弹层直接复用统一 copy 生成逻辑，减少页面层对 moderation、report、user、AI task、template 五条确认流的重复文案维护。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminActionConfirmCopy.ts` 与 `adminActionConfirmCopy.test.ts`，收口治理确认文案的纯函数 helper，并锁定 moderation、report、user、AI task、template 五类确认 copy 的标题、说明、按钮文案和危险态。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `AdminConfirmStack` 所消费的 dialog metadata 直接改为读取共享 `getModerationConfirmCopy(...)`、`getReportConfirmCopy(...)`、`getUserConfirmCopy(...)`、`getAITaskConfirmCopy(...)`、`getTemplateConfirmCopy(...)` 输出。
+- 本轮不改治理动作提交流程、API 路径、确认交互协议和 URL/session 行为，只把已稳定的确认文案语义从工作台视图中继续下沉到共享 helper 层。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminActionConfirmCopy.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜不鐞嗗姩浣滃垎鍙戞帹杩涘埌鍏变韩娌荤悊纭鏂囨锛屽悗鍙版不鐞嗙‘璁ゆ祦寮€濮嬪鐢ㄧ粺涓€鐨?copy 鐢熸垚鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛纭鏂囨 helper锛涙洿杩涗竴姝ョ殑娌荤悊璇︽儏瀛楁璇存槑銆佸姩浣滃彲瑙佹€у厓鏁版嵁鍜屾ā鍧楃骇 page/feature 鎷嗗垎浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 18:19:40 +08:00 | v1.1.0-alpha.204 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜鑸厓鏁版嵁 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享治理动作分发推进到共享治理确认文案，后台治理确认流开始复用统一的 copy 生成出口。
+- 这次仍然只先收口确认文案 helper；更进一步的治理详情字段说明、动作可见性元数据和模块级 page/feature 拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屽唴鑱旂殑瀵艰埅椤广€佸垎缁勯『搴忋€侀《閮ㄦ弿杩版枃妗堜笌璁℃暟瀛楁鍏冩暟鎹€?- 鐩爣鏄ˉ涓€灞傚叡浜鑸厓鏁版嵁 helper锛屽苟璁╁伐浣滃彴鐩存帴澶嶇敤缁熶竴鐨?nav item / group / description / count label 鐢熸垚閫昏緫锛屽噺灏戦〉闈㈠眰瀵规ā鍧楅鏋跺厓鏁版嵁鐨勯噸澶嶇淮鎶ゃ€?### 瀹為檯鍙樻洿
+## 2026-07-13 18:19:40 +08:00 | v1.1.0-alpha.204 | 推进 FE-041 管理端共享导航元数据 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminViewMeta.ts` 涓?`adminViewMeta.test.ts`锛屾敹鍙ｅ悗鍙板鑸浘鏍囥€佸垎缁勩€佸窘鏍囥€侀《閮ㄦ弿杩板拰鏁伴噺鏂囨鐨勫叡浜?helper锛屽苟閿佸畾鍒嗙粍椤哄簭銆佸鏍稿窘鏍囧拰涓嶅悓瑙嗗浘鐨勬弿杩?璁℃暟杈撳嚭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `navItems`銆乣navGroups`銆乣activeDescription` 涓?`activeCountLabel` 鐩存帴娑堣垂鍏变韩 `buildAdminNavItems(...)`銆乣groupAdminNavItems(...)`銆乣getAdminViewDescription(...)` 涓?`getAdminActiveCountLabel(...)`銆?- 鏈疆涓嶆敼 URL 璺敱銆佹不鐞嗗姩浣溿€佷細璇濇祦鍜屾ā鍧楀唴瀹瑰睍绀猴紝鍙妸宸茬粡绋冲畾鐨勫伐浣滃彴椤堕儴鍏冩暟鎹户缁粠瑙嗗浘灞備笅娌夊埌鍏变韩 helper銆?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里内联的导航项、分组顺序、顶部描述文案与计数字段元数据。
+- 目标是补一层共享导航元数据 helper，并让工作台直接复用统一的 nav item / group / description / count label 生成逻辑，减少页面层对模块骨架元数据的重复维护。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminViewMeta.ts` 与 `adminViewMeta.test.ts`，收口后台导航图标、分组、徽标、顶部描述和数量文案的共享 helper，并锁定分组顺序、审核徽标和不同视图的描述/计数输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `navItems`、`navGroups`、`activeDescription` 与 `activeCountLabel` 直接消费共享 `buildAdminNavItems(...)`、`groupAdminNavItems(...)`、`getAdminViewDescription(...)` 与 `getAdminActiveCountLabel(...)`。
+- 本轮不改 URL 路由、治理动作、会话流和模块内容展示，只把已经稳定的工作台顶部元数据继续从视图层下沉到共享 helper。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminViewMeta.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜不鐞嗙‘璁ゆ枃妗堟帹杩涘埌鍏变韩瀵艰埅鍏冩暟鎹紝宸ヤ綔鍙伴《閮ㄩ鏋跺紑濮嬪鐢ㄧ粺涓€鐨勫鑸€佸垎缁勫拰瑙嗗浘鎻忚堪鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛瀵艰埅鍏冩暟鎹?helper锛涙洿杩涗竴姝ョ殑娌荤悊璇︽儏瀛楁璇存槑銆佹ā鍧楃骇 feature 杈圭晫鍜岀‘璁?鍔ㄤ綔鐘舵€佹祦鎷嗗垎浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 18:27:10 +08:00 | v1.1.0-alpha.205 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜‘璁ょ姸鎬?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享治理确认文案推进到共享导航元数据，工作台顶部骨架开始复用统一的导航、分组和视图描述出口。
+- 这次仍然只先收口导航元数据 helper；更进一步的治理详情字段说明、模块级 feature 边界和确认/动作状态流拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?keyed confirm dialog 鍒嗗彂鍜岄噸澶嶇‘璁ょ姸鎬侀噸缃€昏緫銆?- 鐩爣鏄ˉ涓€灞傚叡浜‘璁ょ姸鎬?helper锛屽苟璁╁伐浣滃彴鐩存帴澶嶇敤缁熶竴鐨?confirm key 绫诲瀷銆乲eyed handler 璺敱鍜屽叏閲?reset 鍏ュ彛锛屽噺灏戦〉闈㈠眰鍦?`handleConfirmDialogCancel / handleConfirmDialogConfirm / switchView / logout / session 娓呯┖` 涓婄殑閲嶅鍒嗘敮銆?### 瀹為檯鍙樻洿
+## 2026-07-13 18:27:10 +08:00 | v1.1.0-alpha.205 | 推进 FE-041 管理端共享确认状态 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminConfirmDialogState.ts` 涓?`adminConfirmDialogState.test.ts`锛屾敹鍙ｅ悗鍙扮‘璁ゅ脊灞傜殑鍏变韩 `ConfirmDialogKey`銆乲eyed handler 璺敱鍜屽叏閲忕姸鎬?reset helper锛屽苟閿佸畾 key 椤哄簭涓?handler 鍒嗗彂琛屼负銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 confirm dialog 鐨?cancel/confirm 鍒嗗彂鏀逛负娑堣垂鍏变韩 `runAdminConfirmDialogHandler(...)`锛屽悓鏃舵妸纭鐘舵€佹竻鐞嗗悎骞跺埌 `clearPendingConfirmState()` 骞跺鐢ㄥ埌 `switchView`銆乣logout` 鍜屽悗鍙颁細璇濆け鏁堟竻绌鸿矾寰勩€?- 鏈疆涓嶆敼娌荤悊鍔ㄤ綔 API銆佺‘璁ゆ枃妗堛€佹ā鍧楄矾鐢卞拰鍔犺浇琛屼负锛屽彧鎶婂凡绋冲畾鐨勭‘璁ょ姸鎬佸垎鍙戜笌 reset 璇箟缁х画浠庡伐浣滃彴瑙嗗浘灞備笅娌夊埌鍏变韩 helper銆?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里 keyed confirm dialog 分发和重复确认状态重置逻辑。
+- 目标是补一层共享确认状态 helper，并让工作台直接复用统一的 confirm key 类型、keyed handler 路由和全量 reset 入口，减少页面层在 `handleConfirmDialogCancel / handleConfirmDialogConfirm / switchView / logout / session 清空` 上的重复分支。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminConfirmDialogState.ts` 与 `adminConfirmDialogState.test.ts`，收口后台确认弹层的共享 `ConfirmDialogKey`、keyed handler 路由和全量状态 reset helper，并锁定 key 顺序与 handler 分发行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 confirm dialog 的 cancel/confirm 分发改为消费共享 `runAdminConfirmDialogHandler(...)`，同时把确认状态清理合并到 `clearPendingConfirmState()` 并复用到 `switchView`、`logout` 和后台会话失效清空路径。
+- 本轮不改治理动作 API、确认文案、模块路由和加载行为，只把已稳定的确认状态分发与 reset 语义继续从工作台视图层下沉到共享 helper。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminConfirmDialogState.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜鑸厓鏁版嵁鎺ㄨ繘鍒板叡浜‘璁ょ姸鎬侊紝宸ヤ綔鍙伴噷鐨?confirm key 鍒嗗彂鍜屾壒閲忔竻鐞嗗紑濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛纭鐘舵€?helper锛涙洿杩涗竴姝ョ殑娌荤悊璇︽儏瀛楁璇存槑銆佹ā鍧楃骇 feature 杈圭晫鍜岄〉闈㈢骇鏁版嵁鍗忚皟閫昏緫鎷嗗垎浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 18:35:05 +08:00 | v1.1.0-alpha.206 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜伐浣滃彴鐘舵€?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享导航元数据推进到共享确认状态，工作台里的 confirm key 分发和批量清理开始复用统一出口。
+- 这次仍然只先收口确认状态 helper；更进一步的治理详情字段说明、模块级 feature 边界和页面级数据协调逻辑拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?query/filter銆佹暟鎹尯鍜岀‘璁ゅ尯鐨勯噸澶?reset 閫昏緫銆?- 鐩爣鏄ˉ涓€灞傚叡浜伐浣滃彴鐘舵€?helper锛屽苟璁?`popstate`銆乣switchView`銆乣logout` 鍜屼細璇濆け鏁堟竻绌鸿矾寰勭洿鎺ュ鐢ㄧ粺涓€鐨?workspace reset key 璺敱锛屽噺灏戦〉闈㈠眰鍒嗘暎缁存姢鐨勬竻鐞嗗垎鏀€?### 瀹為檯鍙樻洿
+## 2026-07-13 18:35:05 +08:00 | v1.1.0-alpha.206 | 推进 FE-041 管理端共享工作台状态 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceState.ts` 涓?`adminWorkspaceState.test.ts`锛屾敹鍙ｅ悗鍙板伐浣滃彴 `queries / filters / moderationData / governanceData / confirmState` 浜旂被 reset key 鐨勫叡浜?helper锛屽苟閿佸畾榛樿椤哄簭涓庢寜瀛愰泦娓呯悊鐨勮涓恒€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `handleAdminPopstate`銆乣switchView`銆乣logout` 鍜屽悗鍙颁細璇濆け鏁堟竻绌鸿矾寰勬敼涓烘秷璐瑰叡浜?`resetAdminWorkspaceState(...)`锛屽悓鏃舵妸 query/filter 娓呯悊涔熷苟鍏ョ粺涓€ workspace reset 鍏ュ彛銆?- 鏈疆涓嶆敼娌荤悊鍔ㄤ綔銆佹ā鍧楀姞杞姐€佷細璇濆崗璁拰 URL 璺敱锛屽彧鎶婂凡绋冲畾鐨勫伐浣滃彴灞€閮ㄧ姸鎬侀噸缃涔夌户缁粠椤甸潰灞備笅娌夊埌鍏变韩 helper銆?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里 query/filter、数据区和确认区的重复 reset 逻辑。
+- 目标是补一层共享工作台状态 helper，并让 `popstate`、`switchView`、`logout` 和会话失效清空路径直接复用统一的 workspace reset key 路由，减少页面层分散维护的清理分支。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceState.ts` 与 `adminWorkspaceState.test.ts`，收口后台工作台 `queries / filters / moderationData / governanceData / confirmState` 五类 reset key 的共享 helper，并锁定默认顺序与按子集清理的行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `handleAdminPopstate`、`switchView`、`logout` 和后台会话失效清空路径改为消费共享 `resetAdminWorkspaceState(...)`，同时把 query/filter 清理也并入统一 workspace reset 入口。
+- 本轮不改治理动作、模块加载、会话协议和 URL 路由，只把已稳定的工作台局部状态重置语义继续从页面层下沉到共享 helper。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceState.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜‘璁ょ姸鎬佹帹杩涘埌鍏变韩宸ヤ綔鍙扮姸鎬侊紝宸ヤ綔鍙伴噷鐨?query/filter/鏁版嵁鍖?reset 閫昏緫寮€濮嬪鐢ㄧ粺涓€鐨?workspace key 璺敱銆?- 杩欐浠嶇劧鍙厛鏀跺彛宸ヤ綔鍙扮姸鎬?helper锛涙洿杩涗竴姝ョ殑妯″潡绾?feature 杈圭晫鍜岄〉闈㈢骇鏁版嵁鍗忚皟鍣ㄦ媶鍒嗕粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 19:12:10 +08:00 | v1.1.0-alpha.207 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜不鐞嗘彁浜ゅ厓鏁版嵁 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享确认状态推进到共享工作台状态，工作台里的 query/filter/数据区/reset 逻辑开始复用统一的 workspace key 路由。
+- 这次仍然只先收口工作台状态 helper；更进一步的模块级 feature 边界和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?`report / user / aiTask / template` 鍥涚粍娌荤悊鎻愪氦鐨?endpoint銆佺己鍙傛姤閿欍€佹垚鍔?notice 鍜?fallback 閿欒鍏冩暟鎹€?- 鐩爣鏄ˉ涓€灞傚叡浜不鐞嗘彁浜ゅ厓鏁版嵁 helper锛屽苟璁╁伐浣滃彴鐩存帴澶嶇敤缁熶竴鐨?mutation meta 鐢熸垚閫昏緫锛屽噺灏戦〉闈㈠眰鍦ㄥ洓缁勬不鐞嗘彁浜ゅ嚱鏁颁笂鐨勯噸澶嶅瓧绗︿覆鍜?reload 璇箟缁存姢銆?### 瀹為檯鍙樻洿
+## 2026-07-13 19:12:10 +08:00 | v1.1.0-alpha.207 | 推进 FE-041 管理端共享治理提交元数据 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminGovernanceMutationMeta.ts` 涓?`adminGovernanceMutationMeta.test.ts`锛屾敹鍙?`report / user / aiTask / template` 鍥涚被娌荤悊鎻愪氦鐨勮矾寰勫墠缂€銆佺己鍙傛彁绀恒€佹垚鍔?notice 妯℃澘銆乫allback 閿欒鍜?reload view 鍏冩暟鎹紝骞堕攣瀹?`ready / invalid` 涓ょ被杈撳嚭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛屾柊澧為€氱敤 `applyGovernanceRecordAction(...)`锛岃鍥涚粍娌荤悊鎻愪氦澶嶇敤缁熶竴鐨?mutation meta锛岃€屼笉鏄户缁悇鑷唴鑱旂淮鎶?`id / path / notice / error / reload` 璇箟銆?- 鏈疆涓嶆敼 moderation 瀹℃牳鎻愪氦閾捐矾锛屼笉鏀规不鐞嗗姩浣滅‘璁ゃ€乁RL 璺敱鎴栨ā鍧楀姞杞藉崗璁紝鍙妸宸茬ǔ瀹氱殑娌荤悊鎻愪氦鍏冩暟鎹户缁粠宸ヤ綔鍙拌鍥惧眰涓嬫矇鍒板叡浜?helper銆?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `report / user / aiTask / template` 四组治理提交的 endpoint、缺参报错、成功 notice 和 fallback 错误元数据。
+- 目标是补一层共享治理提交元数据 helper，并让工作台直接复用统一的 mutation meta 生成逻辑，减少页面层在四组治理提交函数上的重复字符串和 reload 语义维护。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminGovernanceMutationMeta.ts` 与 `adminGovernanceMutationMeta.test.ts`，收口 `report / user / aiTask / template` 四类治理提交的路径前缀、缺参提示、成功 notice 模板、fallback 错误和 reload view 元数据，并锁定 `ready / invalid` 两类输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，新增通用 `applyGovernanceRecordAction(...)`，让四组治理提交复用统一的 mutation meta，而不是继续各自内联维护 `id / path / notice / error / reload` 语义。
+- 本轮不改 moderation 审核提交链路，不改治理动作确认、URL 路由或模块加载协议，只把已稳定的治理提交元数据继续从工作台视图层下沉到共享 helper。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminGovernanceMutationMeta.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜伐浣滃彴鐘舵€佹帹杩涘埌鍏变韩娌荤悊鎻愪氦鍏冩暟鎹紝鍥涚粍娌荤悊鎻愪氦鍑芥暟寮€濮嬪鐢ㄧ粺涓€鐨?mutation meta 鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛娌荤悊鎻愪氦鍏冩暟鎹?helper锛涙洿杩涗竴姝ョ殑 moderation 瀹℃牳閾捐矾鏀跺彛鍜岄〉闈㈢骇鏁版嵁鍗忚皟鍣ㄦ媶鍒嗕粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 19:19:40 +08:00 | v1.1.0-alpha.208 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜姞杞藉厓鏁版嵁 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享工作台状态推进到共享治理提交元数据，四组治理提交函数开始复用统一的 mutation meta 出口。
+- 这次仍然只先收口治理提交元数据 helper；更进一步的 moderation 审核链路收口和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?`dashboard / moderation / governance` 涓夌被瑙嗗浘鐨勫姞杞藉垎鏀€乬overnance rows 淇濈暀鍒ゆ柇鍜?AI summary 鐗逛緥銆?- 鐩爣鏄ˉ涓€灞傚叡浜姞杞藉厓鏁版嵁 helper锛屽苟璁╁伐浣滃彴鐩存帴澶嶇敤缁熶竴鐨?load plan銆乻ummary endpoint 鍜?preserveRows 鍒ゆ柇閫昏緫锛屽噺灏戦〉闈㈠眰瀵硅鍥惧姞杞借鍒掔殑閲嶅鍒嗘敮缁存姢銆?### 瀹為檯鍙樻洿
+## 2026-07-13 19:19:40 +08:00 | v1.1.0-alpha.208 | 推进 FE-041 管理端共享加载元数据 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminViewLoadMeta.ts` 涓?`adminViewLoadMeta.test.ts`锛屾敹鍙ｅ悗鍙拌鍥惧姞杞借鍒掋€丄I summary endpoint 鍜?governance rows 淇濈暀鍒ゆ柇锛屽苟閿佸畾 `dashboard / moderation / governance` 涓夌被 load plan 杈撳嚭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `loadActiveView(...)` 涓?`loadGovernance(...)` 鏀逛负鐩存帴娑堣垂鍏变韩 `resolveAdminViewLoadPlan(...)` 鍜?`shouldPreserveGovernanceRows(...)`锛屼笉鍐嶅湪宸ヤ綔鍙伴噷閲嶅鍐呰仈杩欎簺鍒嗘敮銆?- 鏈疆涓嶆敼妯″潡璇锋眰璺緞銆佹不鐞嗗姩浣溿€佷細璇濆崗璁拰 URL 璺敱锛屽彧鎶婂凡绋冲畾鐨勫姞杞藉崗璋冨厓鏁版嵁缁х画浠庡伐浣滃彴瑙嗗浘灞備笅娌夊埌鍏变韩 helper銆?### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `dashboard / moderation / governance` 三类视图的加载分支、governance rows 保留判断和 AI summary 特例。
+- 目标是补一层共享加载元数据 helper，并让工作台直接复用统一的 load plan、summary endpoint 和 preserveRows 判断逻辑，减少页面层对视图加载计划的重复分支维护。
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminViewLoadMeta.ts` 与 `adminViewLoadMeta.test.ts`，收口后台视图加载计划、AI summary endpoint 和 governance rows 保留判断，并锁定 `dashboard / moderation / governance` 三类 load plan 输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `loadActiveView(...)` 与 `loadGovernance(...)` 改为直接消费共享 `resolveAdminViewLoadPlan(...)` 和 `shouldPreserveGovernanceRows(...)`，不再在工作台里重复内联这些分支。
+- 本轮不改模块请求路径、治理动作、会话协议和 URL 路由，只把已稳定的加载协调元数据继续从工作台视图层下沉到共享 helper。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminViewLoadMeta.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜不鐞嗘彁浜ゅ厓鏁版嵁鎺ㄨ繘鍒板叡浜姞杞藉厓鏁版嵁锛屽伐浣滃彴閲岀殑瑙嗗浘鍔犺浇璁″垝鍜?AI summary 鐗逛緥寮€濮嬪鐢ㄧ粺涓€鐨?load plan 鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛鍔犺浇鍏冩暟鎹?helper锛涙洿杩涗竴姝ョ殑妯″潡绾?feature 杈圭晫鍜岄〉闈㈢骇鏁版嵁鍗忚皟鍣ㄦ媶鍒嗕粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 20:25:10 +08:00 | v1.1.0-alpha.209 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜〉闈㈢姸鎬?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享治理提交元数据推进到共享加载元数据，工作台里的视图加载计划和 AI summary 特例开始复用统一的 load plan 出口。
+- 这次仍然只先收口加载元数据 helper；更进一步的模块级 feature 边界和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屽鏍搁槦鍒椾笌娌荤悊妯″潡鍚勮嚜缁存姢鐨?`loading / unauthorized / stale / conflict / error` 椤甸潰鐘舵€佸垽瀹氬垎鏀€?- 鐩爣鏄ˉ涓€灞傚叡浜〉闈㈢姸鎬?helper锛屽苟璁╁伐浣滃彴鐨勫鏍告€佷笌娌荤悊鎬侀兘鐩存帴澶嶇敤缁熶竴鐨勬暟鎹姸鎬佸垽瀹氬嚭鍙ｏ紝鍑忓皯椤甸潰灞傜户缁唴鑱旂淮鎶ょ姸鎬佹枃妗堝拰鍒嗘敮銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 20:25:10 +08:00 | v1.1.0-alpha.209 | 推进 FE-041 管理端共享页面状态 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminViewDataState.ts` 涓?`adminViewDataState.test.ts`锛屾敹鍙ｇ鐞嗙瀹℃牳/娌荤悊鏁版嵁鍖虹殑椤甸潰鐘舵€佸垽瀹氱函鍑芥暟锛屽苟閿佸畾 `loading / unauthorized / stale / conflict / error` 浜旂被杈撳嚭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `moderationDataState` 涓?`governanceDataState` 鏀逛负鐩存帴娑堣垂鍏变韩 `resolveModerationDataState(...)`銆乣resolveGovernanceDataState(...)`锛屼笉鍐嶅湪宸ヤ綔鍙伴噷骞宠缁存姢涓ゅ鐘舵€佸垎鏀€?- 鏈疆涓嶆敼璇锋眰璺緞銆佹不鐞嗗姩浣溿€佷細璇濆崗璁拰 URL 璺敱锛屽彧鎶婂凡绋冲畾鐨勯〉闈㈢姸鎬佽涔夌户缁粠宸ヤ綔鍙拌鍥惧眰涓嬫矇鍒板叡浜?helper銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里审核队列与治理模块各自维护的 `loading / unauthorized / stale / conflict / error` 页面状态判定分支。
+- 目标是补一层共享页面状态 helper，并让工作台的审核态与治理态都直接复用统一的数据状态判定出口，减少页面层继续内联维护状态文案和分支。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminViewDataState.ts` 与 `adminViewDataState.test.ts`，收口管理端审核/治理数据区的页面状态判定纯函数，并锁定 `loading / unauthorized / stale / conflict / error` 五类输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `moderationDataState` 与 `governanceDataState` 改为直接消费共享 `resolveModerationDataState(...)`、`resolveGovernanceDataState(...)`，不再在工作台里平行维护两套状态分支。
+- 本轮不改请求路径、治理动作、会话协议和 URL 路由，只把已稳定的页面状态语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminViewDataState.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜姞杞藉厓鏁版嵁鎺ㄨ繘鍒板叡浜〉闈㈢姸鎬佸垽瀹氾紝绠＄悊绔鏍稿拰娌荤悊鏁版嵁鍖哄紑濮嬪鐢ㄧ粺涓€鐨?`DataState` 鍒嗘敮鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛椤甸潰鐘舵€?helper锛涙洿杩涗竴姝ョ殑鍔犺浇澶辫触娓呯悊绛栫暐涓庨〉闈㈢骇鏁版嵁鍗忚皟鍣ㄦ媶鍒嗕粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 20:30:20 +08:00 | v1.1.0-alpha.210 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜姞杞借姹?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享加载元数据推进到共享页面状态判定，管理端审核和治理数据区开始复用统一的 `DataState` 分支出口。
+- 这次仍然只先收口页面状态 helper；更进一步的加载失败清理策略与页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屽鏍搁槦鍒楀拰娌荤悊妯″潡鍚勮嚜缁存姢鐨勨€滆鍙栬姹傚け璐ョ姸鎬佺爜骞跺湪 403 鏃舵竻鐞嗘棫鏁版嵁鈥濆垎鏀€?- 鐩爣鏄ˉ涓€灞傚叡浜姞杞借姹?helper锛屽苟璁╁伐浣滃彴鐨勫鏍稿姞杞戒笌娌荤悊鍔犺浇閮藉鐢ㄧ粺涓€鐨勯敊璇姸鎬佹崟鑾峰拰 `forbidden` 娓呯悊鍑哄彛锛屽噺灏戦〉闈㈠眰閲嶅寮傚父鍒嗘敮銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 20:30:20 +08:00 | v1.1.0-alpha.210 | 推进 FE-041 管理端共享加载请求 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminViewLoadRequest.ts` 涓?`adminViewLoadRequest.test.ts`锛屾敹鍙ｇ鐞嗙鍔犺浇璇锋眰鐨勫叡浜墽琛?helper锛屽苟閿佸畾 `success / 403 forbidden / 闈?403 failure` 涓夌被杈撳嚭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `loadModeration()` 涓?`loadGovernance()` 鏀逛负閫氳繃 `runAdminViewLoadRequest(...)` 澶勭悊璇锋眰澶辫触鐘舵€佷笌 403 娓呯悊锛岃€屼笉鏄户缁悇鑷唴鑱?`catch` 鍒嗘敮銆?- 鏈疆涓嶆敼瀹℃牳/娌荤悊璇锋眰璺緞銆佹垚鍔熸彁绀恒€乻ummary 鍔犺浇銆佷細璇濆崗璁拰 URL 璺敱锛屽彧鎶婂凡绋冲畾鐨勫姞杞藉け璐ュ鐞嗚涔夌户缁粠宸ヤ綔鍙拌鍥惧眰涓嬫矇鍒板叡浜?helper銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里审核队列和治理模块各自维护的“读取请求失败状态码并在 403 时清理旧数据”分支。
+- 目标是补一层共享加载请求 helper，并让工作台的审核加载与治理加载都复用统一的错误状态捕获和 `forbidden` 清理出口，减少页面层重复异常分支。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminViewLoadRequest.ts` 与 `adminViewLoadRequest.test.ts`，收口管理端加载请求的共享执行 helper，并锁定 `success / 403 forbidden / 非 403 failure` 三类输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `loadModeration()` 与 `loadGovernance()` 改为通过 `runAdminViewLoadRequest(...)` 处理请求失败状态与 403 清理，而不是继续各自内联 `catch` 分支。
+- 本轮不改审核/治理请求路径、成功提示、summary 加载、会话协议和 URL 路由，只把已稳定的加载失败处理语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminViewLoadRequest.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜〉闈㈢姸鎬佹帹杩涘埌鍏变韩鍔犺浇璇锋眰澶勭悊锛岀鐞嗙瀹℃牳涓庢不鐞嗗姞杞借矾寰勫紑濮嬪鐢ㄧ粺涓€鐨勯敊璇姸鎬佹崟鑾峰拰 forbidden 娓呯悊鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗗姞杞借姹?helper锛涙洿杩涗竴姝ョ殑 overview/profile 鍔犺浇鍗忚皟鍜岄〉闈㈢骇鏁版嵁鍗忚皟鍣ㄦ媶鍒嗕粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 20:34:40 +08:00 | v1.1.0-alpha.211 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜瑙堝崱鐗?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享页面状态推进到共享加载请求处理，管理端审核与治理加载路径开始复用统一的错误状态捕获和 forbidden 清理出口。
+- 这次仍然只先收口了加载请求 helper；更进一步的 overview/profile 加载协调和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?dashboard 姒傝鍗＄墖鐨勬寚鏍囪涔変笌 fallback 瑙勫垯銆?- 鐩爣鏄ˉ涓€灞傚叡浜瑙堝崱鐗?helper锛屽苟璁╁伐浣滃彴鐨?`overviewCards` 鐩存帴澶嶇敤缁熶竴鐨勫崱鐗囨瀯寤洪€昏緫锛屽噺灏戦〉闈㈠眰缁х画鍐呰仈缁存姢姒傝鎸囨爣鏂囨鍜屽€煎洖閫€瑙勫垯銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 20:34:40 +08:00 | v1.1.0-alpha.211 | 推进 FE-041 管理端共享概览卡片 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminOverviewCards.ts` 涓?`adminOverviewCards.test.ts`锛屾敹鍙?dashboard 姒傝鍗＄墖鐨勬爣绛俱€乭elper 鏂囨鍜屽€?fallback 瑙勫垯锛屽苟閿佸畾 overview 鏈夊€间笌 overview 缂哄け涓ょ被杈撳嚭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `overviewCards` 鏀逛负鐩存帴娑堣垂鍏变韩 `buildAdminOverviewCards(...)`锛屼笉鍐嶅湪宸ヤ綔鍙伴噷鍐呰仈鍥涘紶姒傝鍗＄墖鐨勬瀯寤洪€昏緫銆?- 鏈疆涓嶆敼 dashboard 妯℃澘銆乷verview 璇锋眰璺緞銆佸鏍哥粺璁℃潵婧愭垨妯″潡璺敱锛屽彧鎶婂凡绋冲畾鐨勬瑙堝崱鐗囪涔夌户缁粠宸ヤ綔鍙拌鍥惧眰涓嬫矇鍒板叡浜?helper銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里 dashboard 概览卡片的指标语义与 fallback 规则。
+- 目标是补一层共享概览卡片 helper，并让工作台的 `overviewCards` 直接复用统一的卡片构建逻辑，减少页面层继续内联维护概览指标文案和值回退规则。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminOverviewCards.ts` 与 `adminOverviewCards.test.ts`，收口 dashboard 概览卡片的标签、helper 文案和值 fallback 规则，并锁定 overview 有值与 overview 缺失两类输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `overviewCards` 改为直接消费共享 `buildAdminOverviewCards(...)`，不再在工作台里内联四张概览卡片的构建逻辑。
+- 本轮不改 dashboard 模板、overview 请求路径、审核统计来源或模块路由，只把已稳定的概览卡片语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminOverviewCards.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜姞杞借姹傛帹杩涘埌鍏变韩姒傝鎸囨爣璇箟锛宒ashboard 姒傝鍗＄墖寮€濮嬪鐢ㄧ粺涓€鐨?card builder 鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜?overviewCards helper锛涙洿杩涗竴姝ョ殑 dashboard feature 鍏冩暟鎹拰椤甸潰绾у崗璋冨櫒鎷嗗垎浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 20:38:50 +08:00 | v1.1.0-alpha.212 | 鎺ㄨ繘 FE-041 绠＄悊绔不鐞嗘ā鍧楅厤缃?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享加载请求推进到共享概览指标语义，dashboard 概览卡片开始复用统一的 card builder 出口。
+- 这次仍然只先收口了 overviewCards helper；更进一步的 dashboard feature 元数据和页面级协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屾不鐞嗘ā鍧楁弿杩般€佺┖鎬佹枃妗堝拰妯″潡璇锋眰閰嶇疆鐨勯噸澶嶆潵婧愩€?- 鐩爣鏄ˉ涓€涓寜 route 璇诲彇娌荤悊妯″潡閰嶇疆鐨勫叡浜?helper锛屽苟璁╁伐浣滃彴鐩存帴澶嶇敤缁熶竴閰嶇疆鍑哄彛锛屾秷鎺夐〉闈㈤噷閭ｄ唤宸茬粡鍙戠敓杩?`graph` endpoint 婕傜Щ椋庨櫓鐨勬湰鍦伴噸澶嶉厤缃潡銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 20:38:50 +08:00 | v1.1.0-alpha.212 | 推进 FE-041 管理端治理模块配置 helper 接线
+### 任务内容
 
-- 鏇存柊 `frontend-admin/src/views/adminGovernanceConfig.ts` 涓?`adminGovernanceConfig.test.ts`锛屾柊澧?`getGovernanceModuleConfig(...)`锛岀粺涓€杩斿洖娌荤悊妯″潡鐨?endpoint銆乹uery銆乪mpty 鍜?description锛屽苟閿佸畾 governance route / non-governance route 涓ょ被杈撳嚭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `activeDescription`銆乣loadGovernance(...)` 鍜屾不鐞嗘ā鍧楃┖鎬佹枃妗堥兘鏀逛负娑堣垂鍏变韩 `getGovernanceModuleConfig(...)`锛屽苟鍒犻櫎宸ヤ綔鍙伴噷閭ｄ唤鏈啀浣跨敤銆佷笖鏇惧 `graph` 瑙嗗浘鍐欐垚 `/api/v1/admin/tags` 鐨勬湰鍦?`governanceConfig` 閲嶅閰嶇疆銆?- 鏈疆涓嶆敼娌荤悊鍔ㄤ綔鍗忚銆佸垪琛ㄧ瓫閫夈€佷細璇濊涓哄拰璺敱缁撴瀯锛屽彧鎶婂凡绋冲畾鐨勬不鐞嗘ā鍧楅厤缃涔夌户缁粠宸ヤ綔鍙拌鍥惧眰涓嬫矇鍒板叡浜?helper銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里治理模块描述、空态文案和模块请求配置的重复来源。
+- 目标是补一个按 route 读取治理模块配置的共享 helper，并让工作台直接复用统一配置出口，消掉页面里那份已经发生过 `graph` endpoint 漂移风险的本地重复配置块。
+
+### 实际变更
+
+- 更新 `frontend-admin/src/views/adminGovernanceConfig.ts` 与 `adminGovernanceConfig.test.ts`，新增 `getGovernanceModuleConfig(...)`，统一返回治理模块的 endpoint、query、empty 和 description，并锁定 governance route / non-governance route 两类输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `activeDescription`、`loadGovernance(...)` 和治理模块空态文案都改为消费共享 `getGovernanceModuleConfig(...)`，并删除工作台里那份未再使用、且曾对 `graph` 视图写成 `/api/v1/admin/tags` 的本地 `governanceConfig` 重复配置。
+- 本轮不改治理动作协议、列表筛选、会话行为和路由结构，只把已稳定的治理模块配置语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminGovernanceConfig.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜瑙堟寚鏍囨帹杩涘埌鍏变韩娌荤悊妯″潡閰嶇疆锛屽伐浣滃彴閲岀殑娌荤悊鎻忚堪銆佺┖鎬佹枃妗堝拰鍔犺浇閰嶇疆寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗘不鐞嗘ā鍧楅厤缃?helper锛涙洿杩涗竴姝ョ殑 dashboard/overview 鍗忚皟鍜岄〉闈㈢骇鏁版嵁鍗忚皟鍣ㄦ媶鍒嗕粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 20:44:20 +08:00 | v1.1.0-alpha.213 | 鎺ㄨ繘 FE-041 绠＄悊绔叡浜鍙栬姹?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享概览指标推进到共享治理模块配置，工作台里的治理描述、空态文案和加载配置开始复用统一出口。
+- 这次仍然只先收口了治理模块配置 helper；更进一步的 dashboard/overview 协调和页面级数据协调器拆分仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `refreshProfile()` 鍜?`loadOverview()` 杩欎袱鏉′粛鍚勮嚜缁存姢鐨勭畝鍗曡鍙栬姹傞摼璺€?- 鐩爣鏄ˉ涓€涓叡浜鍙?helper锛屽苟璁╁伐浣滃彴鐨勭鐞嗗憳璧勬枡璇诲彇涓庡悗鍙版瑙堣鍙栭兘澶嶇敤缁熶竴鐨勬垚鍔?澶辫触缁撴灉鍑哄彛锛屽噺灏戦〉闈㈠眰缁х画鎵嬪啓 `try/catch + fallback message`銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 20:44:20 +08:00 | v1.1.0-alpha.213 | 推进 FE-041 管理端共享读取请求 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminViewReadRequest.ts` 涓?`adminViewReadRequest.test.ts`锛屾敹鍙ｇ畝鍗曡鍙栬姹傜殑鍏变韩鎵ц helper锛屽苟閿佸畾 `success`銆乣Error.message` 閫忎紶鍜屾湭鐭ラ敊璇?fallback message 涓夌被杈撳嚭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `refreshProfile()` 鍜?`loadOverview()` 鏀逛负閫氳繃 `runAdminViewReadRequest(...)` 澶勭悊璇诲彇缁撴灉锛岃€屼笉鏄户缁悇鑷淮鎶ゅ唴鑱旂殑 `try/catch` 鍒嗘敮銆?- 鏈疆涓嶆敼鐧诲綍鍗忚銆佷細璇濆埛鏂般€乷verview 璇锋眰璺緞鎴?dashboard 妯℃澘锛屽彧鎶婂凡绋冲畾鐨勭畝鍗曡鍙栬涔夌户缁粠宸ヤ綔鍙拌鍥惧眰涓嬫矇鍒板叡浜?helper銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `refreshProfile()` 和 `loadOverview()` 这两条仍各自维护的简单读取请求链路。
+- 目标是补一个共享读取 helper，并让工作台的管理员资料读取与后台概览读取都复用统一的成功/失败结果出口，减少页面层继续手写 `try/catch + fallback message`。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminViewReadRequest.ts` 与 `adminViewReadRequest.test.ts`，收口简单读取请求的共享执行 helper，并锁定 `success`、`Error.message` 透传和未知错误 fallback message 三类输出。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `refreshProfile()` 和 `loadOverview()` 改为通过 `runAdminViewReadRequest(...)` 处理读取结果，而不是继续各自维护内联的 `try/catch` 分支。
+- 本轮不改登录协议、会话刷新、overview 请求路径或 dashboard 模板，只把已稳定的简单读取语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminViewReadRequest.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜不鐞嗘ā鍧楅厤缃帹杩涘埌鍏变韩绠€鍗曡鍙栬姹傦紝宸ヤ綔鍙伴噷鐨?profile/overview 璇诲彇璺緞寮€濮嬪鐢ㄧ粺涓€鐨勬垚鍔?澶辫触缁撴灉鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗚鍙栬姹?helper锛涙洿杩涗竴姝ョ殑 dashboard feature 鍏冩暟鎹拰椤甸潰绾?loading/error/notice 鍗忚皟浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 20:48:40 +08:00 | v1.1.0-alpha.214 | 鎺ㄨ繘 FE-041 绠＄悊绔华琛ㄧ洏鍏冩暟鎹?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享治理模块配置推进到共享简单读取请求，工作台里的 profile/overview 读取路径开始复用统一的成功/失败结果出口。
+- 这次仍然只先收口了读取请求 helper；更进一步的 dashboard feature 元数据和页面级 loading/error/notice 协调仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 dashboard 妯″潡閲屼粛鍐呰仈缁存姢鐨勨€滀紭鍏堥槦鍒?/ 瀹℃牳姒傝 / 瀹℃牳鍘嬪姏鈥濆厓鏁版嵁鍜屾憳瑕佽鍒欍€?- 鐩爣鏄ˉ涓€涓叡浜?dashboard 鍏冩暟鎹?helper锛屽苟璁?`AdminDashboardModule.vue` 鐩存帴澶嶇敤缁熶竴鐨?feature copy 鍜屽鏍告瑙堟憳瑕佸嚭鍙ｏ紝鍑忓皯妯″潡灞傜户缁‖缂栫爜杩愯惀鏂囨鍜屽帇鍔涚姸鎬佽鍒欍€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 20:48:40 +08:00 | v1.1.0-alpha.214 | 推进 FE-041 管理端仪表盘元数据 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminDashboardMeta.ts` 涓?`adminDashboardMeta.test.ts`锛屾敹鍙?dashboard 涓绘搷浣滃崱鐗囨枃妗堛€佸鏍告瑙堝崱鐗囨爣棰橈紝浠ュ強鈥滃緟瀹″笘瀛?/ 寰呭璧勬枡 / 瀹℃牳鍘嬪姏鈥濈殑鎽樿瑙勫垯锛屽苟閿佸畾鏈夊緟澶勭悊鍐呭涓庣┖闃熷垪涓ょ被杈撳嚭銆?- 鏇存柊 `frontend-admin/src/views/modules/AdminDashboardModule.vue`锛岃涓や釜 `AdminFeatureCard` 鐨?copy 鍜屽鏍告瑙堝垪琛ㄩ兘鏀逛负娑堣垂鍏变韩 `adminDashboardModerationFeature`銆乣adminDashboardSummaryFeature` 涓?`buildAdminDashboardSummaryItems(...)`锛屼笉鍐嶅湪妯″潡閲屽唴鑱旂淮鎶ょ浉鍚岃涔夈€?- 鏈疆涓嶆敼 dashboard 甯冨眬銆佷簨浠舵祦鎴?overview 鏁版嵁鏉ユ簮锛屽彧鎶婂凡绋冲畾鐨?dashboard 鍏冩暟鎹涔夌户缁粠妯″潡妯℃澘灞備笅娌夊埌鍏变韩 helper銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 dashboard 模块里仍内联维护的“优先队列 / 审核概览 / 审核压力”元数据和摘要规则。
+- 目标是补一个共享 dashboard 元数据 helper，并让 `AdminDashboardModule.vue` 直接复用统一的 feature copy 和审核概览摘要出口，减少模块层继续硬编码运营文案和压力状态规则。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminDashboardMeta.ts` 与 `adminDashboardMeta.test.ts`，收口 dashboard 主操作卡片文案、审核概览卡片标题，以及“待审帖子 / 待审资料 / 审核压力”的摘要规则，并锁定有待处理内容与空队列两类输出。
+- 更新 `frontend-admin/src/views/modules/AdminDashboardModule.vue`，让两个 `AdminFeatureCard` 的 copy 和审核概览列表都改为消费共享 `adminDashboardModerationFeature`、`adminDashboardSummaryFeature` 与 `buildAdminDashboardSummaryItems(...)`，不再在模块里内联维护相同语义。
+- 本轮不改 dashboard 布局、事件流或 overview 数据来源，只把已稳定的 dashboard 元数据语义继续从模块模板层下沉到共享 helper。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminDashboardMeta.test.ts src/views/modules/AdminDashboardModule.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜畝鍗曡鍙栬姹傛帹杩涘埌鍏变韩 dashboard 鍏冩暟鎹紝浠〃鐩樻ā鍧楀紑濮嬪鐢ㄧ粺涓€鐨?feature copy 鍜屽鏍告瑙堟憳瑕佸嚭鍙ｃ€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?dashboard 鍏冩暟鎹?helper锛涙洿杩涗竴姝ョ殑宸ヤ綔鍙扮骇 loading/error/notice 鍗忚皟浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 20:53:10 +08:00 | v1.1.0-alpha.215 | 鎺ㄨ繘 FE-041 绠＄悊绔姹傞敊璇?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享简单读取请求推进到共享 dashboard 元数据，仪表盘模块开始复用统一的 feature copy 和审核概览摘要出口。
+- 这次仍然只先收口了 dashboard 元数据 helper；更进一步的工作台级 loading/error/notice 协调仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屽弽澶嶅嚭鐜扮殑鈥滀粠璇锋眰閿欒璇诲彇 status / message / fallback鈥濋€昏緫銆?- 鐩爣鏄ˉ涓€涓叡浜姹傞敊璇?helper锛屽苟璁╁伐浣滃彴鐨勭櫥褰曘€佸姞杞藉拰娌荤悊鍔ㄤ綔缁熶竴澶嶇敤鍚屼竴濂楅敊璇姸鎬佷笌鏂囨瑙ｆ瀽鍑哄彛锛屽噺灏戦〉闈㈠眰缁х画淇濈暀鏈湴 `getRequestErrorStatus(...)` 鍜屽澶?`error instanceof Error ? ...` 鍒嗘敮銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 20:53:10 +08:00 | v1.1.0-alpha.215 | 推进 FE-041 管理端请求错误 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminRequestError.ts` 涓?`adminRequestError.test.ts`锛屾敹鍙ｈ姹傞敊璇殑 `status` 璇诲彇鍜?`message / fallbackMessage` 瑙ｆ瀽锛屽苟閿佸畾鏁板瓧鐘舵€併€侀潪鏁板瓧鐘舵€佸拰 fallback message 琛屼负銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岀Щ闄ゆ湰鍦?`getRequestErrorStatus(...)`锛岃鐧诲綍銆佸鏍稿姞杞姐€佹不鐞嗗姞杞姐€佸鏍稿姩浣滃拰娌荤悊鍔ㄤ綔閮芥敼涓烘秷璐瑰叡浜?`getAdminRequestErrorStatus(...)`銆乣getAdminRequestErrorMessage(...)`銆?- 鏈疆涓嶆敼璇锋眰鍗忚銆佺姸鎬佹祦銆佹不鐞嗗姩浣滆涔夋垨璺敱缁撴瀯锛屽彧鎶婂凡绋冲畾鐨勯敊璇В鏋愯涔夌户缁粠宸ヤ綔鍙拌鍥惧眰涓嬫矇鍒板叡浜?helper銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里反复出现的“从请求错误读取 status / message / fallback”逻辑。
+- 目标是补一个共享请求错误 helper，并让工作台的登录、加载和治理动作统一复用同一套错误状态与文案解析出口，减少页面层继续保留本地 `getRequestErrorStatus(...)` 和多处 `error instanceof Error ? ...` 分支。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminRequestError.ts` 与 `adminRequestError.test.ts`，收口请求错误的 `status` 读取和 `message / fallbackMessage` 解析，并锁定数字状态、非数字状态和 fallback message 行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，移除本地 `getRequestErrorStatus(...)`，让登录、审核加载、治理加载、审核动作和治理动作都改为消费共享 `getAdminRequestErrorStatus(...)`、`getAdminRequestErrorMessage(...)`。
+- 本轮不改请求协议、状态流、治理动作语义或路由结构，只把已稳定的错误解析语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminRequestError.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜?dashboard 鍏冩暟鎹帹杩涘埌鍏变韩璇锋眰閿欒瑙ｆ瀽锛屽伐浣滃彴閲岀殑 status/message fallback 閫昏緫寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗚姹傞敊璇?helper锛涙洿杩涗竴姝ョ殑宸ヤ綔鍙扮骇 loading/error/notice 鍗忚皟浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 20:57:20 +08:00 | v1.1.0-alpha.216 | 鎺ㄨ繘 FE-041 绠＄悊绔‘璁ゅ脊灞?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享 dashboard 元数据推进到共享请求错误解析，工作台里的 status/message fallback 逻辑开始复用统一出口。
+- 这次仍然只先收口了请求错误 helper；更进一步的工作台级 loading/error/notice 协调仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲岀‘璁ゅ脊灞傛暟缁勭殑閲嶅缁勮閫昏緫銆?- 鐩爣鏄ˉ涓€涓叡浜‘璁ゅ脊灞?helper锛屽苟璁╁伐浣滃彴閲岀殑 moderation / report / aiTask / template / user 浜旂粍纭寮瑰眰閮藉鐢ㄧ粺涓€鐨勯『搴忋€佸彇娑堟枃妗堛€佺‘璁や腑鐘舵€佸拰閿欒閫忎紶鍑哄彛锛屽噺灏戦〉闈㈠眰缁х画鍐呰仈澶ф dialog metadata 缁勮銆?
-### 瀹為檯鍙樻洿
+## 2026-07-13 20:57:20 +08:00 | v1.1.0-alpha.216 | 推进 FE-041 管理端确认弹层 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminConfirmDialogs.ts` 涓?`adminConfirmDialogs.test.ts`锛屾敹鍙ｇ‘璁ゅ脊灞傛暟缁勭殑鍏变韩缁勮 helper锛屽苟閿佸畾 canonical key 椤哄簭銆侀粯璁ゅ彇娑堟枃妗堛€佺‘璁や腑鐘舵€佸拰閿欒閫忎紶琛屼负銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `confirmDialogs` 鏀逛负鐩存帴娑堣垂鍏变韩 `buildAdminConfirmDialogs(...)`锛屼笉鍐嶅湪宸ヤ綔鍙伴噷鍐呰仈缁存姢浜旂粍 dialog metadata 瀵硅薄銆?- 鏈疆涓嶆敼纭鏂囨銆佺‘璁ゅ姩浣滃崗璁€佸脊灞備氦浜掓垨鎸夐挳璇箟锛屽彧鎶婂凡绋冲畾鐨勫脊灞傜粍瑁呴€昏緫缁х画浠庡伐浣滃彴瑙嗗浘灞備笅娌夊埌鍏变韩 helper銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里确认弹层数组的重复组装逻辑。
+- 目标是补一个共享确认弹层 helper，并让工作台里的 moderation / report / aiTask / template / user 五组确认弹层都复用统一的顺序、取消文案、确认中状态和错误透传出口，减少页面层继续内联大段 dialog metadata 组装。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminConfirmDialogs.ts` 与 `adminConfirmDialogs.test.ts`，收口确认弹层数组的共享组装 helper，并锁定 canonical key 顺序、默认取消文案、确认中状态和错误透传行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `confirmDialogs` 改为直接消费共享 `buildAdminConfirmDialogs(...)`，不再在工作台里内联维护五组 dialog metadata 对象。
+- 本轮不改确认文案、确认动作协议、弹层交互或按钮语义，只把已稳定的弹层组装逻辑继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminConfirmDialogs.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜姹傞敊璇В鏋愭帹杩涘埌鍏变韩纭寮瑰眰缁勮锛屽伐浣滃彴閲岀殑浜旂粍纭寮瑰眰 metadata 寮€濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗙‘璁ゅ脊灞?helper锛涙洿杩涗竴姝ョ殑宸ヤ綔鍙扮骇 loading/error/notice 鍗忚皟浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?
-## 2026-07-13 21:01:10 +08:00 | v1.1.0-alpha.217 | 鎺ㄨ繘 FE-041 绠＄悊绔伐浣滃彴鎻愮ず helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享请求错误解析推进到共享确认弹层组装，工作台里的五组确认弹层 metadata 开始复用统一出口。
+- 这次仍然只先收口了确认弹层 helper；更进一步的工作台级 loading/error/notice 协调仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屽垎鏁ｇ淮鎶ょ殑宸ヤ綔鍙版彁绀烘枃妗堛€?- 鐩爣鏄ˉ涓€涓叡浜伐浣滃彴鎻愮ず helper锛屽苟璁╃櫥褰曟垚鍔熴€佷細璇濆け鏁堛€佸鏍?娌荤悊鍔犺浇鎴愬姛鍜岄€€鍑烘彁绀洪兘澶嶇敤缁熶竴鍑哄彛锛屽噺灏戦〉闈㈠眰缁х画鏁ｈ惤澶氬 notice 瀛楃涓层€?
-### 瀹為檯鍙樻洿
+## 2026-07-13 21:01:10 +08:00 | v1.1.0-alpha.217 | 推进 FE-041 管理端工作台提示 helper 接线
+### 任务内容
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceNotice.ts` 涓?`adminWorkspaceNotice.test.ts`锛屾敹鍙ｅ伐浣滃彴鐧诲綍鎴愬姛銆佷細璇濆け鏁?fallback銆佸鏍?娌荤悊鍔犺浇鎴愬姛鍜岄€€鍑烘彁绀烘枃妗堬紝骞堕攣瀹?prompt 浼樺厛涓庨粯璁?fallback 琛屼负銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃鐧诲綍銆佽嚜涓惧悗鐨?session 娓呯悊銆佸鏍稿姞杞姐€佹不鐞嗗姞杞藉拰閫€鍑鸿矾寰勯兘鏀逛负娑堣垂鍏变韩 `adminWorkspaceNotice` helper锛岃€屼笉鏄户缁唴鑱斿垎鏁ｅ瓧绗︿覆銆?- 鏈疆涓嶆敼璺敱銆佺姸鎬佹祦銆佹不鐞嗗姩浣滃崗璁垨椤甸潰甯冨眬锛屽彧鎶婂凡绋冲畾鐨勫伐浣滃彴鎻愮ず璇箟缁х画浠庡伐浣滃彴瑙嗗浘灞備笅娌夊埌鍏变韩 helper銆?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台域能力，而是继续收口 `AdminWorkspaceView.vue` 里分散维护的工作台提示文案。
+- 目标是补一个共享工作台提示 helper，并让登录成功、会话失效、审核/治理加载成功和退出提示都复用统一出口，减少页面层继续散落多处 notice 字符串。
+
+### 实际变更
+
+- 新增 `frontend-admin/src/views/adminWorkspaceNotice.ts` 与 `adminWorkspaceNotice.test.ts`，收口工作台登录成功、会话失效 fallback、审核/治理加载成功和退出提示文案，并锁定 prompt 优先与默认 fallback 行为。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让登录、自举后的 session 清理、审核加载、治理加载和退出路径都改为消费共享 `adminWorkspaceNotice` helper，而不是继续内联分散字符串。
+- 本轮不改路由、状态流、治理动作协议或页面布局，只把已稳定的工作台提示语义继续从工作台视图层下沉到共享 helper。
+
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceNotice.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
 - `npm run build:admin`
 - `npm run verify:docs`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜‘璁ゅ脊灞傜粍瑁呮帹杩涘埌鍏变韩宸ヤ綔鍙版彁绀鸿涔夛紝鐧诲綍銆佷細璇濆け鏁堛€佸垪琛ㄥ姞杞藉拰閫€鍑烘彁绀哄紑濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛浜嗗伐浣滃彴鎻愮ず helper锛涙洿杩涗竴姝ョ殑宸ヤ綔鍙扮骇 loading/error/notice 鍗忚皟鐘舵€佹湰韬粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?## 2026-07-14 00:27:30 +08:00 | v1.1.0-alpha.231 | 鎺ㄨ繘 FE-041 绠＄悊绔櫥褰曟墽琛?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享确认弹层组装推进到共享工作台提示语义，登录、会话失效、列表加载和退出提示开始复用统一出口。
+- 这次仍然只先收口了工作台提示 helper；更进一步的工作台级 loading/error/notice 协调状态本身仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+## 2026-07-14 00:27:30 +08:00 | v1.1.0-alpha.231 | 推进 FE-041 管理端登录执行 helper 接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?`login()` 杩欐潯浠嶇洿鎺ョ淮鎶?`loading / error / session invalidation 娓呯悊 / 鎴愬姛鎻愮ず` 鐨勫３灞傛墽琛屽彛銆?- 鐩爣鏄ˉ涓€灞傚叡浜?login execution helper锛岃鍚庡彴宸ヤ綔鍙板湪绠＄悊鍛樼櫥褰曟椂涔熷鐢ㄧ粺涓€鎵ц鍑哄彛锛岃€屼笉鏄户缁妸杩欐绋冲畾缂栨帓鐣欏湪缁勪欢灞傘€?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `login()` 这条仍直接维护 `loading / error / session invalidation 清理 / 成功提示` 的壳层执行口。
+- 目标是补一层共享 login execution helper，让后台工作台在管理员登录时也复用统一执行出口，而不是继续把这段稳定编排留在组件层。
+### 实际变更
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceLogin.ts` 涓?`adminWorkspaceLogin.test.ts`锛屾敹鍙ｇ櫥褰曟椂鐨?loading 寮€鍏炽€侀敊璇竻鐞嗐€乻ession invalidation 娓呯悊銆乥ootstrap 璋冨害銆佹垚鍔熸彁绀轰笌澶辫触娑堟伅鍥炲～椤哄簭銆?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `login()` 鏀逛负娑堣垂鍏变韩 `runAdminWorkspaceLogin(...)` helper锛屽悓鏃剁户缁鐢ㄦ棦鏈?`runAdminWorkspaceLoginBootstrap(...)` 澶勭悊鐧诲綍鎴愬姛鍚庣殑 session 鎸佷箙鍖栥€乸rofile 鍒锋柊涓庡綋鍓?view 鍔犺浇銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙鐧诲綍鎵ц涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?### 楠岃瘉缁撴灉
+- 新增 `frontend-admin/src/views/adminWorkspaceLogin.ts` 与 `adminWorkspaceLogin.test.ts`，收口登录时的 loading 开关、错误清理、session invalidation 清理、bootstrap 调度、成功提示与失败消息回填顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `login()` 改为消费共享 `runAdminWorkspaceLogin(...)` helper，同时继续复用既有 `runAdminWorkspaceLoginBootstrap(...)` 处理登录成功后的 session 持久化、profile 刷新与当前 view 加载。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端登录执行也已进入共享 helper 出口”。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLogin.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3937,14 +7240,21 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜?`adminWorkspaceBootstrap` 鎺ㄨ繘鍒板叡浜?`adminWorkspaceLogin` 鎵ц澹冲眰锛岀鐞嗙鐧诲綍鏃剁殑涓存椂鐘舵€佹竻鐞嗕笌鎻愮ず鍚屾涔熷紑濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛鐧诲綍 execution helper锛涙洿杩涗竴姝ョ殑 `loadActiveView(...)` 娣卞眰鍔犺浇鍗忚皟涓庣‘璁ゅ脊灞傛彁浜ゅ叆鍙ｏ紝浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?## 2026-07-14 00:36:20 +08:00 | v1.1.0-alpha.232 | 鎺ㄨ繘 FE-041 绠＄悊绔不鐞嗗姩浣滆姹?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享 `adminWorkspaceBootstrap` 推进到共享 `adminWorkspaceLogin` 执行壳层，管理端登录时的临时状态清理与提示同步也开始复用统一出口。
+- 这次仍然只先收口登录 execution helper；更进一步的 `loadActiveView(...)` 深层加载协调与确认弹层提交入口，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+## 2026-07-14 00:36:20 +08:00 | v1.1.0-alpha.232 | 推进 FE-041 管理端治理动作请求 helper 接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲?`requestGovernanceAction(...)` 杩欐潯浠嶇洿鎺ョ淮鎶?dispatch 鍒嗗彂銆佺‘璁ら敊璇竻鐞嗐€乸ending action 鎵撳紑涓?invalid/noop 鍏滃簳鐨勫３灞傛墽琛屽彛銆?- 鐩爣鏄ˉ涓€灞傚叡浜?governance action request helper锛岃鍚庡彴宸ヤ綔鍙板湪娌荤悊鍔ㄤ綔鐐瑰嚮闃舵涔熷鐢ㄧ粺涓€鎵ц鍑哄彛锛岃€屼笉鏄户缁妸杩欐绋冲畾鍒嗗彂閾剧暀鍦ㄧ粍浠跺眰銆?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里 `requestGovernanceAction(...)` 这条仍直接维护 dispatch 分发、确认错误清理、pending action 打开与 invalid/noop 兜底的壳层执行口。
+- 目标是补一层共享 governance action request helper，让后台工作台在治理动作点击阶段也复用统一执行出口，而不是继续把这段稳定分发链留在组件层。
+### 实际变更
 
-- 鏂板 `frontend-admin/src/views/adminGovernanceActionRequest.ts` 涓?`adminGovernanceActionRequest.test.ts`锛屾敹鍙?`report / moderation / user / aiTask / template / invalid / noop` 涓冪被 dispatch 鐨勭‘璁ら敊璇竻鐞嗐€乸ending action 鎵撳紑銆乵oderation 杞氦涓庨敊璇厹搴曢『搴忋€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `requestGovernanceAction(...)` 鏀逛负鍏堣В鏋?`resolveGovernanceActionDispatch(...)`锛屽啀娑堣垂鍏变韩 `runAdminGovernanceActionRequest(...)` helper锛岃€屼笉鏄户缁湪缁勪欢閲屾墜鍐欐暣娈?switch 鍒嗗彂銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙娌荤悊鍔ㄤ綔璇锋眰鍒嗗彂涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?### 楠岃瘉缁撴灉
+- 新增 `frontend-admin/src/views/adminGovernanceActionRequest.ts` 与 `adminGovernanceActionRequest.test.ts`，收口 `report / moderation / user / aiTask / template / invalid / noop` 七类 dispatch 的确认错误清理、pending action 打开、moderation 转交与错误兜底顺序。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `requestGovernanceAction(...)` 改为先解析 `resolveGovernanceActionDispatch(...)`，再消费共享 `runAdminGovernanceActionRequest(...)` helper，而不是继续在组件里手写整段 switch 分发。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端治理动作请求分发也已进入共享 helper 出口”。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminGovernanceActionRequest.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3952,14 +7262,21 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜?`adminWorkspaceLogin` 鎺ㄨ繘鍒板叡浜?`adminGovernanceActionRequest`锛屽悗鍙版不鐞嗗姩浣滃湪杩涘叆纭寮瑰眰鍓嶇殑鍒嗗彂銆侀敊璇竻鐞嗕笌 invalid/noop 鍏滃簳涔熷紑濮嬪鐢ㄧ粺涓€鍑哄彛銆?- 杩欐浠嶇劧鍙厛鏀跺彛娌荤悊鍔ㄤ綔璇锋眰 execution helper锛涙洿杩涗竴姝ョ殑 `loadModeration()` / `loadGovernance()` 澹冲眰鍔犺浇缂栨帓鎴栫‘璁ゅ脊灞傛彁浜ゅ叆鍙ｏ紝浠嶉€傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?## 2026-07-14 00:47:10 +08:00 | v1.1.0-alpha.233 | 鎺ㄨ繘 SE-020 鎼滅储缁熻淇℃伅閫忎紶涓庢悳绱㈤〉杈圭晫鎻愮ず
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享 `adminWorkspaceLogin` 推进到共享 `adminGovernanceActionRequest`，后台治理动作在进入确认弹层前的分发、错误清理与 invalid/noop 兜底也开始复用统一出口。
+- 这次仍然只先收口治理动作请求 execution helper；更进一步的 `loadModeration()` / `loadGovernance()` 壳层加载编排或确认弹层提交入口，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+## 2026-07-14 00:47:10 +08:00 | v1.1.0-alpha.233 | 推进 SE-020 搜索统计信息透传与搜索页边界提示
+### 任务内容
 
-- 渚濇嵁鏇存柊鍚庣殑鐩爣锛屾妸鏈疆閲嶇偣浠庡崟鐐瑰３灞傛敹鍙ｅ垏鍥炴洿鍋忓熀纭€鍙敤鎬х殑涓荤珯鑳藉姏锛岄€夋嫨缁х画鎺ㄨ繘 `SE-020`锛屽厛琛ユ悳绱㈠搷搴旈噷鐨勭湡瀹炵粺璁′俊鎭€忎紶锛岃€屼笉鏄户缁繁鎸栧崟涓鐞嗙瑙嗗浘 helper銆?- 鐩爣鏄 `/api/v1/search` 鍦ㄧ幇鏈?grouped contract 涓嶅彉鐨勫墠鎻愪笅锛屽厛鏄惧紡閫忓嚭褰掍竴鍖栧悗鐨?`limit` 涓庣湡瀹?`elapsedMs`锛屽苟璁╂悳绱㈤〉鎶婂綋鍓嶉鎵硅竟鐣屽拰鑰楁椂灞曠ず鍑烘潵锛屼负鍚庣画璺ㄦ壒娆℃湇鍔＄鍒嗛〉鐣欐竻鏅板绾︺€?### 瀹為檯鍙樻洿
+- 依据更新后的目标，把本轮重点从单点壳层收口切回更偏基础可用性的主站能力，选择继续推进 `SE-020`，先补搜索响应里的真实统计信息透传，而不是继续深挖单个管理端视图 helper。
+- 目标是让 `/api/v1/search` 在现有 grouped contract 不变的前提下，先显式透出归一化后的 `limit` 与真实 `elapsedMs`，并让搜索页把当前首批边界和耗时展示出来，为后续跨批次服务端分页留清晰契约。
+### 实际变更
 
-- 鏇存柊 `backend/internal/modules/search/dto/search.go` 涓?`backend/internal/modules/search/service/service.go`锛岃鎼滅储鍝嶅簲鏂板 `limit` / `elapsedMs`锛屽苟鍦?service 灞傜粺涓€閫忓嚭褰掍竴鍖栧悗鐨勬壒娆′笂闄愪笌鎼滅储鑰楁椂銆?- 鏇存柊 `frontend-user/src/api/types.ts` 涓?`frontend-user/src/modules/search/SearchWorkspacePage.tsx`锛岃鐢ㄦ埛绔悳绱㈤〉娑堣垂杩欎簺缁熻瀛楁锛屽湪鎴愬姛鎬佹枃妗堥噷鏄庣‘鏄剧ず鈥滄€荤粨鏋滄暟 + 鑰楁椂 + 褰撳墠姣忕粍棣栨壒涓婇檺鈥濄€?- 鏇存柊 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`銆乣README.md` 涓?`docs/engineering/CODEX_BACKLOG.md`锛屽悓姝ユ悳绱㈠搷搴斿瓧娈点€佺粺璁¤涔夊拰褰撳墠鎵规杈圭晫璇存槑銆?### 楠岃瘉缁撴灉
+- 更新 `backend/internal/modules/search/dto/search.go` 与 `backend/internal/modules/search/service/service.go`，让搜索响应新增 `limit` / `elapsedMs`，并在 service 层统一透出归一化后的批次上限与搜索耗时。
+- 更新 `frontend-user/src/api/types.ts` 与 `frontend-user/src/modules/search/SearchWorkspacePage.tsx`，让用户端搜索页消费这些统计字段，在成功态文案里明确显示“总结果数 + 耗时 + 当前每组首批上限”。
+- 更新 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`、`README.md` 与 `docs/engineering/CODEX_BACKLOG.md`，同步搜索响应字段、统计语义和当前批次边界说明。
+### 验证结果
 
 - `cd backend && go test ./internal/modules/search/service ./internal/modules/search/handler`
 - `npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx`
@@ -3967,24 +7284,40 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `SE-020` 鐜板湪浠庘€滅湡瀹炲懡涓暟 / 棣栨壒杩斿洖鏁板垎绂烩€濈户缁帹杩涘埌鈥渓imit / elapsedMs` 閫忎紶涓庢悳绱㈤〉杈圭晫鎻愮ず鈥濓紝鎼滅储缁撴灉椤电殑缁熻淇℃伅鏇存帴杩戠湡瀹炴湇鍔＄濂戠害锛屼篃涓哄悗缁湇鍔＄ cursor / offset 鍒嗛〉鐣欏嚭浜嗘洿绋冲畾鐨勬枃妗堜笌鎺ュ彛浣嶇疆銆?- 杩欐浠嶇劧娌℃湁琛ヨ法鎵规鏈嶅姟绔垎椤碉紱涓嬩竴姝ユ洿閫傚悎缁х画娌?`SE-020` 澧炲姞 cursor/offset 鎴栫瓑浠峰垎椤典护鐗岋紝鑰屼笉鏄湪鍓嶇缁х画鍫嗗眬閮ㄥ垎椤?UI銆?## 2026-07-14 01:00:34 +08:00 | v1.1.0-alpha.234 | 鎺ㄨ繘 SE-020 鎼滅储 offset/nextOffset 璺ㄦ壒娆＄画鍙?### 浠诲姟鍐呭
+- `SE-020` 现在从“真实命中数 / 首批返回数分离”继续推进到“limit / elapsedMs` 透传与搜索页边界提示”，搜索结果页的统计信息更接近真实服务端契约，也为后续服务端 cursor / offset 分页留出了更稳定的文案与接口位置。
+- 这次仍然没有补跨批次服务端分页；下一步更适合继续沿 `SE-020` 增加 cursor/offset 或等价分页令牌，而不是在前端继续堆局部分页 UI。
+## 2026-07-14 01:00:34 +08:00 | v1.1.0-alpha.234 | 推进 SE-020 搜索 offset/nextOffset 跨批次续取
+### 任务内容
 
-- 缁х画娌跨潃 `CODEX_MASTER_PROMPT.md` 鎺ㄨ繘 `SE-020`锛屼絾淇濇寔鈥滃厛鎶婂熀纭€鑳藉姏鍋氶€氾紝鍐嶉€愭缁嗗寲鈥濈殑鑺傚锛岃繖涓€杞笉閲嶅仛鎼滅储椤碉紝鑰屾槸琛ユ渶灏忓彲鐢ㄧ殑璺ㄦ壒娆＄画鍙栧绾︺€?- 鐩爣鏄 `/api/v1/search` 鍦ㄧ幇鏈?grouped contract 涓嬪厛鏀寔 `offset` 璇锋眰涓庢寜缁?`nextOffset` 杩斿洖锛屽苟璁╃敤鎴风鍦ㄢ€滃崟涓€绫诲瀷绛涢€夆€濆満鏅笅鐪熺殑鑳界户缁姞杞戒笅涓€鎵圭粨鏋滐紝鑰屼笉鏄仠鐣欏湪鍙彁绀衡€滃綋鍓嶄粎灞曠ず棣栨壒缁撴灉鈥濄€?### 瀹為檯鍙樻洿
+- 继续沿着 `CODEX_MASTER_PROMPT.md` 推进 `SE-020`，但保持“先把基础能力做通，再逐步细化”的节奏，这一轮不重做搜索页，而是补最小可用的跨批次续取契约。
+- 目标是让 `/api/v1/search` 在现有 grouped contract 下先支持 `offset` 请求与按组 `nextOffset` 返回，并让用户端在“单一类型筛选”场景下真的能继续加载下一批结果，而不是停留在只提示“当前仅展示首批结果”。
+### 实际变更
 
-- 鏇存柊 `backend/internal/modules/search/dto/search.go`銆乣service/service.go`銆乣service/indexer.go` 涓?`handler.go`锛岃鎼滅储鎺ュ彛鏂板 `offset` 鏌ヨ鍙傛暟锛屽苟鍦ㄦ瘡缁?payload 閲岃繑鍥?`nextOffset`锛泂ervice 浼氱粺涓€褰掍竴鍖?`offset`锛宧andler 璐熻矗閫忎紶锛宖allback indexer 浼氬湪鎺掑簭鍚庢寜 offset 鍋氬垏鐗囥€?- 鏇存柊 `backend/internal/modules/search/service/service_test.go`銆乣indexer_test.go`銆乣handler_test.go`锛屽厛琛?RED 鍐嶈ˉ GREEN锛岄攣瀹?`offset` 閫忎紶銆乣nextOffset` 鐢熸垚鍜岀粍鍐呯画鍙栬涔変笉鍥為€€銆?- 鏇存柊 `frontend-user/src/api/search.ts`銆乣src/api/types.ts`銆乣src/api/searchShare.test.ts`銆乣src/modules/search/SearchWorkspacePage.tsx` 涓?`SearchWorkspacePage.test.tsx`锛岃鐢ㄦ埛绔悳绱?API 鏀寔 `offset`锛屾悳绱㈤〉鍦ㄥ崟涓€绫诲瀷绛涢€変笖瀛樺湪 `nextOffset` 鏃朵細鏄剧ず鈥滅户缁姞杞芥洿澶?..鈥濇寜閽紝骞舵妸涓嬩竴鎵圭粨鏋滆拷鍔犲埌褰撳墠缁勯噷銆?- 鏇存柊 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`銆乣docs/engineering/CODEX_BACKLOG.md` 涓?`README.md`锛屾妸 `offset / nextOffset` 濂戠害銆佸崟涓€绫诲瀷缁彇杈圭晫鍜屼粛鏈畬鎴愮殑澶氬垎缁勭湡鍒嗛〉璇存槑鍐欏洖鏂囨。銆?### 楠岃瘉缁撴灉
+- 更新 `backend/internal/modules/search/dto/search.go`、`service/service.go`、`service/indexer.go` 与 `handler.go`，让搜索接口新增 `offset` 查询参数，并在每组 payload 里返回 `nextOffset`；service 会统一归一化 `offset`，handler 负责透传，fallback indexer 会在排序后按 offset 做切片。
+- 更新 `backend/internal/modules/search/service/service_test.go`、`indexer_test.go`、`handler_test.go`，先补 RED 再补 GREEN，锁定 `offset` 透传、`nextOffset` 生成和组内续取语义不回退。
+- 更新 `frontend-user/src/api/search.ts`、`src/api/types.ts`、`src/api/searchShare.test.ts`、`src/modules/search/SearchWorkspacePage.tsx` 与 `SearchWorkspacePage.test.tsx`，让用户端搜索 API 支持 `offset`，搜索页在单一类型筛选且存在 `nextOffset` 时会显示“继续加载更多...”按钮，并把下一批结果追加到当前组里。
+- 更新 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`、`docs/engineering/CODEX_BACKLOG.md` 与 `README.md`，把 `offset / nextOffset` 契约、单一类型续取边界和仍未完成的多分组真分页说明写回文档。
+### 验证结果
 
 - `cd backend && go test ./internal/modules/search/service ./internal/modules/search/handler`
 - `npm --workspace frontend-user run test -- src/api/searchShare.test.ts src/modules/search/SearchWorkspacePage.test.tsx`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `SE-020` 鐜板湪宸茬粡浠庘€滅湡瀹炲懡涓暟 / 棣栨壒杩斿洖鏁板垎绂?+ 缁熻淇℃伅閫忎紶鈥濈户缁帹杩涘埌鈥滃崟涓€绫诲瀷鍙法鎵规缁彇鈥濈殑鏈€灏忓彲鐢ㄩ樁娈碉紝鎼滅储椤电粓浜庤兘鍩轰簬鍚庣濂戠害缁х画鎷夸笅涓€鎵规暟鎹紝鑰屼笉鏄彧鍋氭湰鍦板垎椤垫彁绀恒€?- 杩欎竴姝ヤ粛鐒舵病鏈夋妸鈥滃叏閮ㄧ被鍨嬧€濊鍥惧仛鎴愬畬鏁寸湡鍒嗛〉锛涘悗缁洿閫傚悎缁х画娌?`SE-020 / WB-043 / WB-044` 琛ュ鍒嗙粍鍒嗛〉缂栨帓銆佺粺涓€鎺掑簭鍏冩暟鎹拰鏇村己绱㈠紩瀹炵幇锛岃€屼笉鏄湪鍓嶇缁х画鍫嗗眬閮ㄦ妧宸с€?## 2026-07-14 02:29:10 +08:00 | v1.1.0-alpha.241 | 鎺ㄨ繘 FE-041 绠＄悊绔櫥褰曢潰鏉夸簨浠惰閰?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `SE-020` 现在已经从“真实命中数 / 首批返回数分离 + 统计信息透传”继续推进到“单一类型可跨批次续取”的最小可用阶段，搜索页终于能基于后端契约继续拿下一批数据，而不是只做本地分页提示。
+- 这一步仍然没有把“全部类型”视图做成完整真分页；后续更适合继续沿 `SE-020 / WB-043 / WB-044` 补多分组分页编排、统一排序元数据和更强索引实现，而不是在前端继续堆局部技巧。
+## 2026-07-14 02:29:10 +08:00 | v1.1.0-alpha.241 | 推进 FE-041 管理端登录面板事件装配 helper 接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屼紶缁?`AdminLoginPanel` 鐨勭櫥褰曢潰鏉夸簨浠剁粦瀹氶€昏緫銆?- 鐩爣鏄ˉ涓€灞傚叡浜?`login-panel-events` helper锛岃鍚庡彴鏈櫥褰曞３灞備簨浠剁户缁鐢ㄧ粺涓€鍑哄彛锛岃€屼笉鏄妸杩欏眰妯℃澘绾ф彁浜ゃ€佽处鍙疯緭鍏ュ拰瀵嗙爜杈撳叆缁戝畾缁х画鐣欏湪椤甸潰缁勪欢閲屻€?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里传给 `AdminLoginPanel` 的登录面板事件绑定逻辑。
+- 目标是补一层共享 `login-panel-events` helper，让后台未登录壳层事件继续复用统一出口，而不是把这层模板级提交、账号输入和密码输入绑定继续留在页面组件里。
+### 实际变更
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceLoginPanelEvents.ts` 涓?`adminWorkspaceLoginPanelEvents.test.ts`锛屾敹鍙ｇ櫥褰曢潰鏉?`submit`銆乣update:login-value` 涓?`update:password-value` 涓夋潯浜嬩欢鐨勮浆鍙戣閰嶃€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `AdminLoginPanel` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceLoginPanelEvents` helper锛岄〉闈㈠眰鍙繚鐣?state銆乤ction 涓?helper 鍏ュ弬缁戝畾銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙鐧诲綍闈㈡澘浜嬩欢涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?### 楠岃瘉缁撴灉
+- 新增 `frontend-admin/src/views/adminWorkspaceLoginPanelEvents.ts` 与 `adminWorkspaceLoginPanelEvents.test.ts`，收口登录面板 `submit`、`update:login-value` 与 `update:password-value` 三条事件的转发装配。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `AdminLoginPanel` 改为消费共享 `adminWorkspaceLoginPanelEvents` helper，页面层只保留 state、action 与 helper 入参绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端登录面板事件也已进入共享 helper 出口”。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLoginPanelEvents.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -3992,14 +7325,21 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜櫥褰曢潰鏉?props 瑁呴厤閾炬帹杩涘埌鍏变韩鐧诲綍闈㈡澘浜嬩欢瑁呴厤閾撅紝鍚庡彴宸ヤ綔鍙版湭鐧诲綍瑙嗗浘閲岀殑楂橀浜嬩欢缁戝畾杩涗竴姝ュ彉钖勩€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?`login-panel-events` helper锛涙洿杩涗竴姝ョ殑鐧诲綍 feature adapter锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?## 2026-07-14 02:24:30 +08:00 | v1.1.0-alpha.240 | 鎺ㄨ繘 FE-041 绠＄悊绔櫥褰曢潰鏉?props 瑁呴厤 helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享登录面板 props 装配链推进到共享登录面板事件装配链，后台工作台未登录视图里的高频事件绑定进一步变薄。
+- 这次仍然只先收口了 `login-panel-events` helper；更进一步的登录 feature adapter，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+## 2026-07-14 02:24:30 +08:00 | v1.1.0-alpha.240 | 推进 FE-041 管理端登录面板 props 装配 helper 接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屼紶缁?`AdminLoginPanel` 鐨勭櫥褰曢潰鏉?props 瑁呴厤閫昏緫銆?- 鐩爣鏄ˉ涓€灞傚叡浜?`login-panel-props` helper锛岃鍚庡彴鏈櫥褰曞３灞傝緭鍏ョ户缁鐢ㄧ粺涓€鍑哄彛锛岃€屼笉鏄妸杩欏眰妯℃澘绾ч敊璇€佹彁绀恒€佽緭鍏ュ€煎拰 loading 缁戝畾缁х画鐣欏湪椤甸潰缁勪欢閲屻€?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里传给 `AdminLoginPanel` 的登录面板 props 装配逻辑。
+- 目标是补一层共享 `login-panel-props` helper，让后台未登录壳层输入继续复用统一出口，而不是把这层模板级错误、提示、输入值和 loading 绑定继续留在页面组件里。
+### 实际变更
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceLoginPanelProps.ts` 涓?`adminWorkspaceLoginPanelProps.test.ts`锛屾敹鍙ｇ櫥褰曢潰鏉?`errorMessage`銆乣notice`銆乣loginPrompt`銆乣loginValue`銆乣passwordValue` 涓?`loading` 鐨勮閰嶃€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `AdminLoginPanel` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceLoginPanelProps` helper锛岄〉闈㈠眰鍙繚鐣?state 涓?helper 鍏ュ弬缁戝畾銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙鐧诲綍闈㈡澘 props 涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?### 楠岃瘉缁撴灉
+- 新增 `frontend-admin/src/views/adminWorkspaceLoginPanelProps.ts` 与 `adminWorkspaceLoginPanelProps.test.ts`，收口登录面板 `errorMessage`、`notice`、`loginPrompt`、`loginValue`、`passwordValue` 与 `loading` 的装配。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `AdminLoginPanel` 改为消费共享 `adminWorkspaceLoginPanelProps` helper，页面层只保留 state 与 helper 入参绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端登录面板 props 也已进入共享 helper 出口”。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceLoginPanelProps.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -4007,14 +7347,21 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜３灞備簨浠惰閰嶉摼鎺ㄨ繘鍒板叡浜櫥褰曢潰鏉?props 瑁呴厤閾撅紝鍚庡彴宸ヤ綔鍙版湭鐧诲綍瑙嗗浘閲岀殑楂橀杈撳叆缁戝畾杩涗竴姝ュ彉钖勩€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?`login-panel-props` helper锛涙洿杩涗竴姝ョ殑鐧诲綍闈㈡澘浜嬩欢鎴栨洿瀹屾暣鐨勫３灞?feature adapter锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?## 2026-07-14 02:15:55 +08:00 | v1.1.0-alpha.239 | 鎺ㄨ繘 FE-041 绠＄悊绔３灞備簨浠惰閰?helper 鎺ョ嚎
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享壳层事件装配链推进到共享登录面板 props 装配链，后台工作台未登录视图里的高频输入绑定进一步变薄。
+- 这次仍然只先收口了 `login-panel-props` helper；更进一步的登录面板事件或更完整的壳层 feature adapter，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+## 2026-07-14 02:15:55 +08:00 | v1.1.0-alpha.239 | 推进 FE-041 管理端壳层事件装配 helper 接线
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ュ叏鍏ㄥ眬楠ㄦ灦銆佸啀娣辨寲鍗曠偣鈥濇柟鍚戞帹杩?`FE-041`锛岃繖娆′笉鎵╁紶鏂扮殑鍚庡彴娌荤悊鍩熻兘鍔涳紝鑰屾槸缁х画鏀跺彛 `AdminWorkspaceView.vue` 閲屼紶缁?`AdminShellFrame` 鐨勫３灞備簨浠惰浆鍙戦€昏緫銆?- 鐩爣鏄ˉ涓€灞傚叡浜?`shell-events` helper锛岃鍚庡彴宸ヤ綔鍙板３灞備簨浠剁户缁鐢ㄧ粺涓€鍑哄彛锛岃€屼笉鏄妸杩欏眰妯℃澘绾?`logout / refresh / switch-view` 缁戝畾缁х画鐣欏湪澹冲眰缁勪欢閲屻€?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先补全全局骨架、再深挖单点”方向推进 `FE-041`，这次不扩张新的后台治理域能力，而是继续收口 `AdminWorkspaceView.vue` 里传给 `AdminShellFrame` 的壳层事件转发逻辑。
+- 目标是补一层共享 `shell-events` helper，让后台工作台壳层事件继续复用统一出口，而不是把这层模板级 `logout / refresh / switch-view` 绑定继续留在壳层组件里。
+### 实际变更
 
-- 鏂板 `frontend-admin/src/views/adminWorkspaceShellEvents.ts` 涓?`adminWorkspaceShellEvents.test.ts`锛屾敹鍙?`logout`銆乣refresh` 鍜?`switch-view` 涓夋潯澹冲眰浜嬩欢鐨勮浆鍙戣閰嶃€?- 鏇存柊 `frontend-admin/src/views/AdminWorkspaceView.vue`锛岃 `AdminShellFrame` 鏀逛负娑堣垂鍏变韩 `adminWorkspaceShellEvents` helper锛岄〉闈㈠眰鍙繚鐣?state銆乤ction 涓?helper 鍏ュ弬缁戝畾銆?- 鍚屾鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `FE-041` 褰撳墠杈圭晫鎺ㄨ繘鍒扳€滅鐞嗙澹冲眰浜嬩欢涔熷凡杩涘叆鍏变韩 helper 鍑哄彛鈥濄€?### 楠岃瘉缁撴灉
+- 新增 `frontend-admin/src/views/adminWorkspaceShellEvents.ts` 与 `adminWorkspaceShellEvents.test.ts`，收口 `logout`、`refresh` 和 `switch-view` 三条壳层事件的转发装配。
+- 更新 `frontend-admin/src/views/AdminWorkspaceView.vue`，让 `AdminShellFrame` 改为消费共享 `adminWorkspaceShellEvents` helper，页面层只保留 state、action 与 helper 入参绑定。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `FE-041` 当前边界推进到“管理端壳层事件也已进入共享 helper 出口”。
+### 验证结果
 
 - `npm --workspace frontend-admin run test -- src/views/adminWorkspaceShellEvents.test.ts src/views/AdminWorkspaceView.test.ts`
 - `npm --workspace frontend-admin run typecheck`
@@ -4022,16 +7369,24 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `FE-041` 鐜板湪缁х画浠庡叡浜３灞?props 瑁呴厤閾炬帹杩涘埌鍏变韩澹冲眰浜嬩欢瑁呴厤閾撅紝鍚庡彴宸ヤ綔鍙版ā鏉垮眰閲岀殑楂橀浜嬩欢缁戝畾杩涗竴姝ュ彉钖勩€?- 杩欐浠嶇劧鍙厛鏀跺彛浜?`shell-events` helper锛涙洿杩涗竴姝ョ殑鐧诲綍闈㈡澘 props 鎴栨洿瀹屾暣鐨勫３灞?feature adapter锛屼粛閫傚悎缁х画娌?`ADM-010 / ADM-011` 寰€鍓嶆帹杩涖€?## 2026-07-14 02:50:57 +08:00 | v1.1.0-alpha.242 | 鎺ㄨ繘 LC-010 / ANKI-030 澶嶄範鏉ユ簮鍗＄墖娣遍摼瀹氫綅
-### 浠诲姟鍐呭
+- `FE-041` 现在继续从共享壳层 props 装配链推进到共享壳层事件装配链，后台工作台模板层里的高频事件绑定进一步变薄。
+- 这次仍然只先收口了 `shell-events` helper；更进一步的登录面板 props 或更完整的壳层 feature adapter，仍适合继续沿 `ADM-010 / ADM-011` 往前推进。
+## 2026-07-14 02:50:57 +08:00 | v1.1.0-alpha.242 | 推进 LC-010 / ANKI-030 复习来源卡片深链定位
+### 任务内容
 
-- 缁х画鎸夌収 `CODEX_MASTER_PROMPT.md` 鐨勨€滃厛琛ラ綈涓昏矾寰勫彲鐢ㄦ€э紝鍐嶇户缁繁鎸栧眬閮ㄩ噸鏋勨€濇柟鍚戞帹杩涚敤鎴风涓诲涔犻棴鐜紝杩欎竴杞笉缁х画鍋滅暀鍦ㄥ悗鍙板伐浣滃彴鎶藉３锛岃€屾槸鍥炲埌鏇磋创杩戠湡瀹炲涔犺矾寰勭殑 `LC-010 / ANKI-030`銆?- 鐩爣鏄ˉ榻愬浘璋辨潵婧愬崱鐗囧洖璺冲埌澶嶄範宸ヤ綔鍖哄悗鐨勬渶鍚庝竴娈垫柇閾撅細褰撳浘璋辨潵婧愬弽閾剧敓鎴?`/review?card=<id>` 鏃讹紝澶嶄範宸ヤ綔鍖洪渶瑕佺湡姝ｈ瘑鍒 query锛屼紭鍏堝畾浣嶅搴斿崱鐗囷紝骞舵妸鐢ㄦ埛甯﹀埌鍙户缁涔犳垨鍏堝洖鐪嬪崱鐗囧唴瀹圭殑绋冲畾鍏ュ彛銆?
-### 瀹為檯鍙樻洿
+- 继续按照 `CODEX_MASTER_PROMPT.md` 的“先补齐主路径可用性，再继续深挖局部重构”方向推进用户端主学习闭环，这一轮不继续停留在后台工作台抽壳，而是回到更贴近真实学习路径的 `LC-010 / ANKI-030`。
+- 目标是补齐图谱来源卡片回跳到复习工作区后的最后一段断链：当图谱来源反链生成 `/review?card=<id>` 时，复习工作区需要真正识别该 query，优先定位对应卡片，并把用户带到可继续复习或先回看卡片内容的稳定入口。
 
-- 鏇存柊 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`锛屾柊澧炲 `location.search` 涓?`card` 鍙傛暟鐨勬秷璐归€昏緫锛屽苟琛ュ厖 `prioritizeRequestedQueueItem(...)`锛岃澶嶄範宸ヤ綔鍖哄湪鐩爣鍗＄墖宸蹭綅浜庝粖鏃ラ槦鍒椾腑鏃朵紭鍏堟妸璇ュ崱鐗囬《鍒板綋鍓嶅涔犱綅銆?- 褰撶洰鏍囧崱鐗囦笉鍦ㄤ粖鏃ラ槦鍒椼€佷絾浠嶅瓨鍦ㄤ簬鏌愪釜鐗岀粍涓椂锛屽涔犲伐浣滃尯鐜板湪浼氳嚜鍔ㄥ畾浣嶆墍灞炵墝缁勩€佹墦寮€绠＄悊渚ф爮骞跺垏鍒扳€滃崱鐗団€濋〉绛撅紝鍚屾椂缁欏嚭鈥滃彲鍏堝洖鐪嬪崱鐗囧唴瀹癸紝鍐嶇户缁涔犫€濈殑鍙嶉鏂囨锛涜嫢鏈壘鍒板崱鐗囷紝鍒欐槑纭洖閫€鍒颁粖鏃ュ涔犻槦鍒楀苟鎻愮ず鏈懡涓€?- 鏇存柊 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`锛岃ˉ涓?`/review?card=card-2` 鍦烘櫙鍥炲綊娴嬭瘯锛岄獙璇佹潵婧愬崱鐗囦細浼樺厛鎴愪负褰撳墠澶嶄範鍗＄墖锛屼笖绠＄悊渚ф爮淇濇寔鎵撳紑锛岄伩鍏嶅浘璋辨潵婧愬洖璺冲啀娆￠€€鍖栦负鍙細钀藉埌闃熷垪棣栧崱銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ANKI-030` 涓?`LC-010` 鐘舵€佽皟鏁翠负 `IN_PROGRESS`锛屽苟鍚屾璁板綍鈥滃涔犳潵婧愬崱鐗囨繁閾惧畾浣嶁€濆凡鎵撻€氳繖涓€闃舵鎴愭灉銆?
-### 楠岃瘉缁撴灉
+### 实际变更
+
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，新增对 `location.search` 中 `card` 参数的消费逻辑，并补充 `prioritizeRequestedQueueItem(...)`，让复习工作区在目标卡片已位于今日队列中时优先把该卡片顶到当前复习位。
+- 当目标卡片不在今日队列、但仍存在于某个牌组中时，复习工作区现在会自动定位所属牌组、打开管理侧栏并切到“卡片”页签，同时给出“可先回看卡片内容，再继续复习”的反馈文案；若未找到卡片，则明确回退到今日复习队列并提示未命中。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，补上 `/review?card=card-2` 场景回归测试，验证来源卡片会优先成为当前复习卡片，且管理侧栏保持打开，避免图谱来源回跳再次退化为只会落到队列首卡。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-030` 与 `LC-010` 状态调整为 `IN_PROGRESS`，并同步记录“复习来源卡片深链定位”已打通这一阶段成果。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
@@ -4039,15 +7394,25 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `ANKI-030` 鐜板湪涓嶅啀鍙湁鈥滄潵婧愭煡鐪嬧€濈殑闈欐€佽瘔姹傦紝鍥捐氨鏉ユ簮鍙嶉摼宸茬粡鑳芥妸鐢ㄦ埛绋冲畾甯﹀洖澶嶄範宸ヤ綔鍖洪噷鐨勭洰鏍囧崱鐗囨垨鐩爣鐗岀粍锛屼富瀛︿範闂幆閲岀殑鈥滃浘璋?-> 澶嶄範鈥濋摼璺畬鏁翠簡涓€娈点€?- 杩欎竴姝ヨ繕娌℃湁琛ラ綈鈥滃涔?-> 鏉ユ簮姝ｆ枃/绗旇/鍥捐氨鑺傜偣鈥濈殑鍙嶅悜鍥炶烦锛屼篃杩樻病鏈夊疄鐜版挙閿€涓婁竴娆¤瘎鍒嗐€佽烦杩?鍩嬭棌銆佹殏鍋滃崱鐗囩瓑 Anki 浼氳瘽鑳藉姏锛涗笅涓€姝ユ洿閫傚悎缁х画娌?`ANKI-030 / WB-033 / LC-010` 鎶婃潵婧愬洖鐪嬩笌鍙嶉鍥炲啓琛ュ叏锛岃€屼笉鏄洖鍒伴浂鏁ｉ〉闈㈠井璋冦€?## 2026-07-14 03:00:47 +08:00 | v1.1.0-alpha.243 | 鎺ㄨ繘 LC-010 / ANKI-030 澶嶄範鏉ユ簮宸ヤ綔鍙板洖璺冲叆鍙?### 浠诲姟鍐呭
+- `ANKI-030` 现在不再只有“来源查看”的静态诉求，图谱来源反链已经能把用户稳定带回复习工作区里的目标卡片或目标牌组，主学习闭环里的“图谱 -> 复习”链路完整了一段。
+- 这一步还没有补齐“复习 -> 来源正文/笔记/图谱节点”的反向回跳，也还没有实现撤销上一次评分、跳过/埋藏、暂停卡片等 Anki 会话能力；下一步更适合继续沿 `ANKI-030 / WB-033 / LC-010` 把来源回看与反馈回写补全，而不是回到零散页面微调。
+## 2026-07-14 03:00:47 +08:00 | v1.1.0-alpha.243 | 推进 LC-010 / ANKI-030 复习来源工作台回跳入口
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛鎶婁富瀛︿範璺緞鍋氭垚鍙敤鐗堬紝鍐嶉€愭缁嗗寲鈥濇柟鍚戞帹杩?`LC-010 / ANKI-030`锛岃繖涓€杞笉鍥炲埌鍚庡彴鎶藉３锛岃€屾槸缁х画鎶婂涔犲伐浣滃尯閲岀殑鐪熷疄鏉ユ簮鍥炵湅鍏ュ彛琛ラ綈銆?- 鐩爣鏄鐢ㄦ埛鍦ㄥ涔犲綋鍓嶅崱鐗囨椂锛屼笉鍙煡閬撹繖寮犲崱鈥滄潵鑷摢閲屸€濓紝鑰屾槸鑳界洿鎺ヤ粠澶嶄範鐣岄潰璺冲洖鍙畾浣嶇殑鏉ユ簮宸ヤ綔鍙帮紝鍑忓皯鍦ㄨ祫鏂欍€佺瑪璁般€佸浘璋便€丄I 涓庡涔犱箣闂存潵鍥炴柇閾剧殑鎯呭喌銆?
-### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `LC-010 / ANKI-030`，这一轮不回到后台抽壳，而是继续把复习工作区里的真实来源回看入口补齐。
+- 目标是让用户在复习当前卡片时，不只知道这张卡“来自哪里”，而是能直接从复习界面跳回可定位的来源工作台，减少在资料、笔记、图谱、AI 与复习之间来回断链的情况。
 
-- 鏂板 `frontend-user/src/modules/review/reviewSourceBacklinks.ts`锛屽鐢ㄥ浘璋辨潵婧愬弽閾炬槧灏勮兘鍔涳紝缁熶竴鎶婂涔犲崱鐗囩殑 `sourceType / sourceId` 瑙ｆ瀽鎴愬彲灞曠ず鐨勬潵婧愭憳瑕佷笌鍙洿杈惧伐浣滃彴鐩爣銆?- 鏇存柊 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`锛屼负褰撳墠澶嶄範鍗＄墖鍜屽崱缁勫崱鐗囧垪琛ㄩ兘鎺ュ叆鏉ユ簮鎽樿鍖猴紱褰撴潵婧愭槸绗旇銆佽祫鏂欍€佸崱鐗囩瓑鍙洿鎺ュ畾浣嶇殑绫诲瀷鏃讹紝澶嶄範椤典細鏄剧ず鍥炶烦閾炬帴锛涘綋鏉ユ簮鍍忔壒娉ㄨ繖绫讳粛缂哄皯棰濆涓婁笅鏂囨椂锛屽垯鏄庣‘鎻愮ず鈥滄殏涓嶆敮鎸佺洿杈锯€濓紝閬垮厤鍑虹幇璇鎬у亣閾炬帴銆?- 鏂板 `frontend-user/src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`锛岃鐩?`/review?card=card-1` 鍦烘櫙涓嬪綋鍓嶅崱鐗囦笌绠＄悊渚ф爮鍗＄墖鍒楄〃鐨勬潵婧愬洖璺抽摼鎺ユ覆鏌擄紝閿佸畾杩欐潯澶嶄範鏉ユ簮鍏ュ彛涓嶅啀閫€鍖栥€?- 鏇存柊 `frontend-user/src/styles/studio-workspaces.css`锛岃ˉ鍏呭涔犳潵婧愭憳瑕併€佺揣鍑戞€佹潵婧愭潯鍜屾潵婧愰摼鎺ユ牱寮忥紝璁╂潵婧愬叆鍙ｅ彲瑙佷絾涓嶆尋鍗犱富澶嶄範鍔ㄤ綔鍖哄煙銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ANKI-030 / LC-010` 鐨勮鏄庢帹杩涘埌鈥滃涔犻〉鍐呯殑鏉ユ簮鍥炵湅鍏ュ彛宸叉帴涓娾€濊繖涓€闃舵銆?
-### 楠岃瘉缁撴灉
+### 实际变更
+
+- 新增 `frontend-user/src/modules/review/reviewSourceBacklinks.ts`，复用图谱来源反链映射能力，统一把复习卡片的 `sourceType / sourceId` 解析成可展示的来源摘要与可直达工作台目标。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，为当前复习卡片和卡组卡片列表都接入来源摘要区；当来源是笔记、资料、卡片等可直接定位的类型时，复习页会显示回跳链接；当来源像批注这类仍缺少额外上下文时，则明确提示“暂不支持直达”，避免出现误导性假链接。
+- 新增 `frontend-user/src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`，覆盖 `/review?card=card-1` 场景下当前卡片与管理侧栏卡片列表的来源回跳链接渲染，锁定这条复习来源入口不再退化。
+- 更新 `frontend-user/src/styles/studio-workspaces.css`，补充复习来源摘要、紧凑态来源条和来源链接样式，让来源入口可见但不挤占主复习动作区域。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-030 / LC-010` 的说明推进到“复习页内的来源回看入口已接上”这一阶段。
+
+### 验证结果
 
 - `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
@@ -4055,16 +7420,27 @@
 - `npm run verify:docs`
 - `git diff --check`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `ANKI-030` 鐜板湪涓嶄粎鏀寔鈥滄妸鏉ユ簮鍗＄墖娣遍摼鎷夊洖澶嶄範椤碘€濓紝涔熸敮鎸佷粠澶嶄範椤电户缁洖鍒扮瑪璁般€佽祫鏂欏拰鍗＄墖绛夊彲鐩磋揪鏉ユ簮宸ヤ綔鍙帮紝涓诲涔犻棴鐜噷鐨勨€滃涔?-> 鏉ユ簮鍥炵湅鈥濆張闂悎浜嗕竴娈点€?- 杩欎竴杞粛鏈В鍐虫壒娉?PDF 閿氱偣杩欑被闇€瑕侀澶?`materialId` 涓婁笅鏂囩殑鏉ユ簮鐩磋揪锛屽洜涓哄綋鍓嶅涔犲崱鐗?payload 鍙湁 `sourceType / sourceId`锛涘悗缁鏋滆鎶婅繖绫绘潵婧愪篃鐪熸鎵撻€氾紝鏇撮€傚悎缁х画娌?`ANKI-050 / LC-010` 缁欏崱鐗囪ˉ鍏呮洿瀹屾暣鐨?SourceLink 涓婁笅鏂囧瓧娈碉紝鑰屼笉鏄湪鍓嶇鐚滄祴鏉ユ簮璺緞銆?
-## 2026-07-15 06:12:00 +08:00 | v1.1.0-alpha.244 | 鎺ㄨ繘 ANKI-050 / LC-010 鎵规敞鏉ユ簮鍗＄墖鍥炶烦涓婁笅鏂?### 浠诲姟鍐呭
+- `ANKI-030` 现在不仅支持“把来源卡片深链拉回复习页”，也支持从复习页继续回到笔记、资料和卡片等可直达来源工作台，主学习闭环里的“复习 -> 来源回看”又闭合了一段。
+- 这一轮仍未解决批注/PDF 锚点这类需要额外 `materialId` 上下文的来源直达，因为当前复习卡片 payload 只有 `sourceType / sourceId`；后续如果要把这类来源也真正打通，更适合继续沿 `ANKI-050 / LC-010` 给卡片补充更完整的 SourceLink 上下文字段，而不是在前端猜测来源路径。
 
-- 缁х画鎸夌収 `CODEX_MASTER_PROMPT.md` 鐨勨€滀紭鍏堟妸涓诲涔犺矾寰勫仛鎴愬彲鐢ㄧ増锛屽啀閫愭缁嗗寲鈥濇柟鍚戞帹杩?`ANKI-050 / LC-010`锛岃繖涓€杞笉鎵╂暎鍒版柊鐨勫浘璋辨垨鍚庡彴瀛愬煙锛岃€屾槸鎶婁笂涓€杞槑纭毚闇茬殑鎵规敞鏉ユ簮鍥炶烦缂哄彛鐪熸琛ラ綈銆?- 鐩爣鏄 `reader -> 鎵规敞鐢熸垚鍗＄墖鑽夌 -> 纭鍏?deck -> review 闃熷垪 -> 鍥炶烦 reader 鎵规敞浣嶇疆` 杩欎竴鏉￠摼璺笉鍐嶅湪涓€斾涪澶?`materialId / page / annotationId` 涓婁笅鏂囷紝閬垮厤澶嶄範椤靛彧鑳芥彁绀衡€滆繖鏄壒娉ㄦ潵婧愨€濆嵈鏃犳硶鐪熸瀹氫綅鍥炲師鏂囥€?
-### 瀹為檯鍙樻洿
+## 2026-07-15 06:12:00 +08:00 | v1.1.0-alpha.244 | 推进 ANKI-050 / LC-010 批注来源卡片回跳上下文
+### 任务内容
 
-- 鍚庣涓?`card` 鍩熻ˉ鍏?`sourceMetadata` 閫氳矾锛氭洿鏂?`backend/internal/modules/card/dto/card.go`銆乣backend/internal/modules/card/model/card.go`銆乣backend/internal/modules/card/repository/repository.go`銆乣backend/internal/modules/card/service/service.go`锛岃寤哄崱璇锋眰銆佹寔涔呭寲鍗＄墖涓庝粖鏃ュ涔犻槦鍒楅兘鑳戒繚鐣欏苟杩斿洖鏉ユ簮涓婁笅鏂囥€?- 鏂板 `backend/internal/modules/card/repository/source_metadata.go` 涓?MySQL 杩佺Щ `backend/internal/migrations/mysql/005_card_source_metadata.sql`锛堝強 down migration锛夛紝鎶婂崱鐗囨潵婧愪笂涓嬫枃浠?JSON 鏂囨湰褰㈠紡钀藉簱锛屽吋瀹圭幇鏈?`sourceType / sourceId` 鍗＄墖銆?- 閲嶅啓 `backend/internal/modules/reader/service/card_drafts.go`锛岃鎵规敞鍒跺崱鑽夌榛樿鎼哄甫 `materialId / annotationId / page`锛涘悓鏃舵洿鏂?`backend/internal/modules/ai/service/service.go`锛岃 reader/note 鐢熸垚鐨?AI 鑽夌鍦ㄨ褰曚笌鍥炰紶鏃朵篃涓嶄細涓㈡帀杩欎唤鏉ユ簮 metadata銆?- 鍓嶇鏇存柊 `frontend-user/src/api/types.ts`銆乣frontend-user/src/api/review.ts`銆乣frontend-user/src/app/appShared.tsx`銆乣frontend-user/src/features/ai/aiDrafts.ts` 涓?`frontend-user/src/modules/review/reviewSourceBacklinks.ts`锛岃鑽夌纭銆丄I 鑽夌寤哄崱涓庡涔犻〉鏉ユ簮鍥炶烦閮芥秷璐瑰悓涓€浠?`sourceMetadata`锛屼粠鑰屾妸鎵规敞鏉ユ簮鐪熸鍥炶烦鍒?`/reader/:materialId?page=...&annotation=...`銆?- 琛ュ厖骞舵敹鏁涙祴璇曪細鏂板 `backend/internal/modules/card/service/source_metadata_test.go`銆乣frontend-user/src/features/ai/aiDrafts.test.ts`锛屽苟鎵╁睍 `backend/internal/modules/reader/service/card_drafts_test.go`銆乣frontend-user/src/app/appShared.test.tsx`銆乣frontend-user/src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`锛屽厛澶嶇幇 metadata 涓㈠け锛屽啀楠岃瘉 reader 鎵规敞鍥炶烦宸茬粡鎵撻€氥€?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ANKI-050` 鎺ㄨ繘鍒?`IN_PROGRESS`锛屽苟鍚屾璁板綍 `LC-010` 宸茶ˉ涓娾€滄壒娉ㄦ潵婧愬崱鐗囧洖璺冲埌 reader 鎵规敞浣嶇疆鈥濊繖涓€闃舵銆?
-### 楠岃瘉缁撴灉
+- 继续按照 `CODEX_MASTER_PROMPT.md` 的“优先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-050 / LC-010`，这一轮不扩散到新的图谱或后台子域，而是把上一轮明确暴露的批注来源回跳缺口真正补齐。
+- 目标是让 `reader -> 批注生成卡片草稿 -> 确认入 deck -> review 队列 -> 回跳 reader 批注位置` 这一条链路不再在中途丢失 `materialId / page / annotationId` 上下文，避免复习页只能提示“这是批注来源”却无法真正定位回原文。
+
+### 实际变更
+
+- 后端为 `card` 域补充 `sourceMetadata` 通路：更新 `backend/internal/modules/card/dto/card.go`、`backend/internal/modules/card/model/card.go`、`backend/internal/modules/card/repository/repository.go`、`backend/internal/modules/card/service/service.go`，让建卡请求、持久化卡片与今日复习队列都能保留并返回来源上下文。
+- 新增 `backend/internal/modules/card/repository/source_metadata.go` 与 MySQL 迁移 `backend/internal/migrations/mysql/005_card_source_metadata.sql`（及 down migration），把卡片来源上下文以 JSON 文本形式落库，兼容现有 `sourceType / sourceId` 卡片。
+- 重写 `backend/internal/modules/reader/service/card_drafts.go`，让批注制卡草稿默认携带 `materialId / annotationId / page`；同时更新 `backend/internal/modules/ai/service/service.go`，让 reader/note 生成的 AI 草稿在记录与回传时也不会丢掉这份来源 metadata。
+- 前端更新 `frontend-user/src/api/types.ts`、`frontend-user/src/api/review.ts`、`frontend-user/src/app/appShared.tsx`、`frontend-user/src/features/ai/aiDrafts.ts` 与 `frontend-user/src/modules/review/reviewSourceBacklinks.ts`，让草稿确认、AI 草稿建卡与复习页来源回跳都消费同一份 `sourceMetadata`，从而把批注来源真正回跳到 `/reader/:materialId?page=...&annotation=...`。
+- 补充并收敛测试：新增 `backend/internal/modules/card/service/source_metadata_test.go`、`frontend-user/src/features/ai/aiDrafts.test.ts`，并扩展 `backend/internal/modules/reader/service/card_drafts_test.go`、`frontend-user/src/app/appShared.test.tsx`、`frontend-user/src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`，先复现 metadata 丢失，再验证 reader 批注回跳已经打通。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-050` 推进到 `IN_PROGRESS`，并同步记录 `LC-010` 已补上“批注来源卡片回跳到 reader 批注位置”这一阶段。
+
+### 验证结果
 
 - `go test ./internal/modules/reader/service ./internal/modules/card/service`
 - `go test ./internal/modules/ai/service ./internal/modules/card/... ./internal/modules/reader/...`
@@ -4072,74 +7448,117 @@
 - `npm run typecheck`
 - `npm run build`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `ANKI-050` 鐜板湪宸茬粡涓嶅彧鏄€滃崱鐗囩煡閬撹嚜宸辨潵鑷壒娉ㄢ€濓紝鑰屾槸鑳芥妸鎵规敞鏉ユ簮涓婁笅鏂囩ǔ瀹氱┛杩囪崏绋跨‘璁ゃ€丄I 鑽夌纭銆佸缓鍗′笌澶嶄範鍥炵湅杩欐潯閾捐矾锛屼富瀛︿範闂幆閲岀殑 `reader -> review -> reader` 鍙堥棴鍚堜簡涓€娈点€?- 杩欎竴杞粛鍙ˉ榻愪簡鎵规敞鏉ユ簮锛涘鏋滆鎶?PDF 閿氱偣銆佸浘璋辫妭鐐规潵婧愬拰鏇撮€氱敤鐨?SourceLink 璇箟涔熺粺涓€璧锋潵锛屼笅涓€姝ユ洿閫傚悎缁х画娌?`ANKI-050 / LC-010 / WB-033` 鎵╁睍鍚屼竴濂?`sourceMetadata`/SourceLink 妯″瀷锛岃€屼笉鏄洖鍒板墠绔仛涓€娆℃€ц矾寰勭寽娴嬨€?
-## 2026-07-15 06:18:00 +08:00 | v1.1.0-alpha.245 | 鎺ㄨ繘 ANKI-050 / LC-010 鍥捐氨鏉ユ簮鍗＄墖涓婁笅鏂囬€忎紶
-### 浠诲姟鍐呭
+- `ANKI-050` 现在已经不只是“卡片知道自己来自批注”，而是能把批注来源上下文稳定穿过草稿确认、AI 草稿确认、建卡与复习回看这条链路，主学习闭环里的 `reader -> review -> reader` 又闭合了一段。
+- 这一轮仍只补齐了批注来源；如果要把 PDF 锚点、图谱节点来源和更通用的 SourceLink 语义也统一起来，下一步更适合继续沿 `ANKI-050 / LC-010 / WB-033` 扩展同一套 `sourceMetadata`/SourceLink 模型，而不是回到前端做一次性路径猜测。
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛鎶婁富瀛︿範璺緞鍋氭垚鍙敤鐗堬紝鍐嶉€愭缁嗗寲鈥濇柟鍚戞帹杩?`ANKI-050 / LC-010`锛岃繖涓€杞笉鍙﹁捣鏂扮殑瀛愬煙锛岃€屾槸鎶婁笂涓€杞?reader 鎵规敞鏉ユ簮鑳藉姏缁х画鎵╁睍鍒?`graph -> card -> review` 杩欐潯閾俱€?- 鐩爣鏄伩鍏嶅浘璋辫妭鐐圭敓鎴愬崱鐗囨椂鍐嶆涓㈠け鏉ユ簮涓婁笅鏂囷紝鐗瑰埆鏄?`pdf-anchor` 鍜屾惡甯?reader metadata 鐨勮妭鐐癸紝纭繚瀹冧滑杩涘叆澶嶄範闃熷垪鍚庝粛鐒惰兘璺冲洖 reader 鐨勫師濮嬪畾浣嶄綅缃€?
-### 瀹為檯鍙樻洿
+## 2026-07-15 06:18:00 +08:00 | v1.1.0-alpha.245 | 推进 ANKI-050 / LC-010 图谱来源卡片上下文透传
+### 任务内容
 
-- 鏇存柊 `backend/internal/modules/graph/service/helpers.go`锛屼负 `BuildCardCreateRequests(...)` 琛ヤ笂缁熶竴鐨勬潵婧愯В鏋愪笌 metadata 鎻愬彇閫昏緫锛屼笉鍐嶅彧渚濊禆 `node.Source` 鎴?`metadata.content` 閲屽皯鏁板嚑涓瓧娈点€?- 鏂板鍥捐氨鍗＄墖鏉ユ簮涓婁笅鏂囪В鏋愶細褰撹妭鐐规湰韬凡鏈?`source` 鏃讹紝浼氬悓鏃舵暣鐞嗗搴旂殑 `sourceMetadata`锛涘綋鑺傜偣娌℃湁 `source` 浣嗚妭鐐圭被鍨嬫槸 `pdf-anchor` 涓?metadata 鍚?`pdfAnchor / pdfPage / materialId` 鏃讹紝鐜板湪涔熻兘姝ｇ‘鎺ㄦ柇鎴?`pdf-anchor` 鏉ユ簮锛岃€屼笉鏄敊璇檷绾ф垚 `material`銆?- 杩欎竴灞傝繕浼氭妸 reader/PDF 鍥炶烦鎵€闇€瀛楁瑙勮寖鎴愬崱鐗囧彲娑堣垂鐨?metadata锛屼緥濡?`materialId`銆乣page`銆乣annotationId`銆乣anchorId`锛屼粠鑰屼笌涓婁竴杞ˉ濂界殑 `card/review` SourceLink 閫氳矾鐩存帴瀵规帴銆?- 鎵╁睍 `backend/internal/modules/graph/service/helpers_test.go`锛岃ˉ涓娾€滃浘璋辫妭鐐?reader metadata 涓嶅簲涓㈠け鈥濆拰鈥減df-anchor 鑺傜偣涓嶅簲琚檷绾ф垚 material 鏉ユ簮鈥濈殑 RED/GREEN 鍥炲綊锛涘悓姝ユ墿灞?`frontend-user/src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`锛岃鐩?`pdf-anchor` 鍗＄墖鍦ㄥ涔犻〉閲岀殑 reader 鍥炶烦銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ANKI-050 / LC-010` 鐨勯樁娈垫弿杩版帹杩涘埌鈥滃浘璋辫妭鐐硅浆鍗′篃寮€濮嬩繚鐣?reader/PDF 閿氱偣涓婁笅鏂団€濄€?
-### 楠岃瘉缁撴灉
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-050 / LC-010`，这一轮不另起新的子域，而是把上一轮 reader 批注来源能力继续扩展到 `graph -> card -> review` 这条链。
+- 目标是避免图谱节点生成卡片时再次丢失来源上下文，特别是 `pdf-anchor` 和携带 reader metadata 的节点，确保它们进入复习队列后仍然能跳回 reader 的原始定位位置。
+
+### 实际变更
+
+- 更新 `backend/internal/modules/graph/service/helpers.go`，为 `BuildCardCreateRequests(...)` 补上统一的来源解析与 metadata 提取逻辑，不再只依赖 `node.Source` 或 `metadata.content` 里少数几个字段。
+- 新增图谱卡片来源上下文解析：当节点本身已有 `source` 时，会同时整理对应的 `sourceMetadata`；当节点没有 `source` 但节点类型是 `pdf-anchor` 且 metadata 含 `pdfAnchor / pdfPage / materialId` 时，现在也能正确推断成 `pdf-anchor` 来源，而不是错误降级成 `material`。
+- 这一层还会把 reader/PDF 回跳所需字段规范成卡片可消费的 metadata，例如 `materialId`、`page`、`annotationId`、`anchorId`，从而与上一轮补好的 `card/review` SourceLink 通路直接对接。
+- 扩展 `backend/internal/modules/graph/service/helpers_test.go`，补上“图谱节点 reader metadata 不应丢失”和“pdf-anchor 节点不应被降级成 material 来源”的 RED/GREEN 回归；同步扩展 `frontend-user/src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`，覆盖 `pdf-anchor` 卡片在复习页里的 reader 回跳。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-050 / LC-010` 的阶段描述推进到“图谱节点转卡也开始保留 reader/PDF 锚点上下文”。
+
+### 验证结果
 
 - `go test ./internal/modules/graph/service`
 - `go test ./internal/modules/graph/... ./internal/modules/card/service ./internal/modules/reader/service`
 - `npm test -- --run src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 鐜板湪涓嶅彧鏄?reader 鐩存帴鐢熸垚鐨勫崱鐗囪兘鍥炶烦鍘熸枃锛屽浘璋辫妭鐐瑰啀杞垚澶嶄範鍗℃椂锛屼篃寮€濮嬩繚鐣?reader/PDF 鏉ユ簮涓婁笅鏂囷紝涓诲涔犻棴鐜噷鐨?`reader -> graph -> review -> reader` 鍙堥棴鍚堜簡涓€娈点€?- 杩欎竴杞粛涓昏瑕嗙洊 `pdf-anchor` 涓庡凡鏈?reader metadata 鐨勮妭鐐癸紱濡傛灉瑕佹妸鏇村鍥捐氨鑺傜偣鏉ユ簮銆佺瑪璁板潡妯℃澘鍖栨潵婧愬拰鏇寸粺涓€鐨?SourceLink 鎶借薄缁х画鍋氬帤锛屼笅涓€姝ユ洿閫傚悎缁х画娌?`ANKI-050 / WB-033 / LC-010` 鎶婂崱鐗囨潵婧愯В鏋愪粠 helper 绾ц兘鍔涙帹骞垮埌鏇村畬鏁寸殑 CardNote/SourceLink 濂戠害銆?## 2026-07-15 06:22:47 +08:00 | v1.1.0-alpha.246 | 鎺ㄨ繘 ANKI-050 / LC-010 AI 宸ヤ綔鍙版繁閾惧畾浣?### 浠诲姟鍐呭
+- 现在不只是 reader 直接生成的卡片能回跳原文，图谱节点再转成复习卡时，也开始保留 reader/PDF 来源上下文，主学习闭环里的 `reader -> graph -> review -> reader` 又闭合了一段。
+- 这一轮仍主要覆盖 `pdf-anchor` 与已有 reader metadata 的节点；如果要把更多图谱节点来源、笔记块模板化来源和更统一的 SourceLink 抽象继续做厚，下一步更适合继续沿 `ANKI-050 / WB-033 / LC-010` 把卡片来源解析从 helper 级能力推广到更完整的 CardNote/SourceLink 契约。
+## 2026-07-15 06:22:47 +08:00 | v1.1.0-alpha.246 | 推进 ANKI-050 / LC-010 AI 工作台深链定位
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛鎶婁富瀛︿範璺緞鍋氭垚鍙敤鐗堬紝鍐嶉€愭缁嗗寲鈥濇柟鍚戞帹杩?`ANKI-050 / LC-010`锛岃繖涓€杞笉鎵╂暎鍒版柊鐨勫浘璋辨垨鍚庡彴瀛愬煙锛岃€屾槸鎶婁笂涓€杞凡缁忎骇鍑虹殑 AI 鏉ユ簮娣遍摼鐪熸鎺ュ埌宸ヤ綔鍙拌惤鐐逛笂銆?- 鐩爣鏄鍥捐氨鏉ユ簮鍗＄墖銆佸涔犳潵婧愬叆鍙ｇ瓑鍦烘櫙鐢熸垚鐨?`/ai?draft=<id>` 涓?`/ai?task=<id>` 涓嶅啀鍙妸鐢ㄦ埛甯﹀埌绗肩粺鐨?AI 椤甸潰锛岃€屾槸浼樺厛瀹氫綅鍒扮洰鏍囪崏绋挎垨浠诲姟锛岃鈥滄潵婧愬洖鐪?-> AI 宸ヤ綔鍙扮‘璁?澶嶆煡鈥濊繖娈甸摼璺湡姝ｅ彲鐢ㄣ€?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-050 / LC-010`，这一轮不扩散到新的图谱或后台子域，而是把上一轮已经产出的 AI 来源深链真正接到工作台落点上。
+- 目标是让图谱来源卡片、复习来源入口等场景生成的 `/ai?draft=<id>` 与 `/ai?task=<id>` 不再只把用户带到笼统的 AI 页面，而是优先定位到目标草稿或任务，让“来源回看 -> AI 工作台确认/复查”这段链路真正可用。
+### 实际变更
 
-- 鏇存柊 `frontend-user/src/pages/AiPage.tsx`锛屾帴鍏?`useLocation()` 涓庢煡璇㈠弬鏁拌В鏋愶紝鏂板閫氱敤鐨勭洰鏍囬」浼樺厛鎺掑簭 helper锛岃 AI 鑽夌鍒楄〃鍜屼换鍔″巻鍙查兘鑳芥牴鎹?`draft` / `task` 鏌ヨ鍙傛暟鎶婃寚瀹氶」鎻愬崌鍒伴浣嶃€?- 鍚屼竴椤甸潰鏂板娣遍摼鍙嶉鏂囨锛氬綋鎸囧畾 AI 鑽夌鎴栦换鍔″瓨鍦ㄦ椂锛屽伐浣滃彴浼氭槑纭彁绀哄凡瀹屾垚瀹氫綅锛涜嫢鐩爣涓嶅瓨鍦紝鍒欏洖钀藉埌榛樿宸ヤ綔鍙拌鍥惧苟缁欏嚭鏈懡涓殑璇存槑锛岄伩鍏嶇敤鎴疯浠ヤ负娣遍摼宸茬粡鐢熸晥銆?- 鎵╁睍 `frontend-user/src/pages/AiPage.test.tsx`锛岃ˉ涓?`/ai?draft=draft-card-2` 涓?`/ai?task=task-2` 涓や釜鍥炲綊鍦烘櫙锛岄攣瀹氣€滅洰鏍囪崏绋?浠诲姟搴旇浼樺厛鍛堢幇涓旂粰鍑烘纭彁绀衡€濈殑琛屼负銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ANKI-050 / LC-010` 鐨勯樁娈垫弿杩版帹杩涘埌鈥淎I 宸ヤ綔鍙颁篃鑳芥秷鍖栨潵婧愭繁閾惧苟浼樺厛瀹氫綅鎸囧畾鑽夌/浠诲姟鈥濊繖涓€灞傘€?### 楠岃瘉缁撴灉
+- 更新 `frontend-user/src/pages/AiPage.tsx`，接入 `useLocation()` 与查询参数解析，新增通用的目标项优先排序 helper，让 AI 草稿列表和任务历史都能根据 `draft` / `task` 查询参数把指定项提升到首位。
+- 同一页面新增深链反馈文案：当指定 AI 草稿或任务存在时，工作台会明确提示已完成定位；若目标不存在，则回落到默认工作台视图并给出未命中的说明，避免用户误以为深链已经生效。
+- 扩展 `frontend-user/src/pages/AiPage.test.tsx`，补上 `/ai?draft=draft-card-2` 与 `/ai?task=task-2` 两个回归场景，锁定“目标草稿/任务应被优先呈现且给出正确提示”的行为。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-050 / LC-010` 的阶段描述推进到“AI 工作台也能消化来源深链并优先定位指定草稿/任务”这一层。
+### 验证结果
 
 - `npm test -- --run src/pages/AiPage.test.tsx`
 - `npm run typecheck`
 - `npm run build`
 - `git diff --check`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `ANKI-050` 鐜板湪涓嶄粎鑳芥妸鏉ユ簮涓婁笅鏂囧甫鍒?AI 宸ヤ綔鍙帮紝杩樿兘璁╁伐浣滃彴鐪熸鍚冩帀杩欎簺涓婁笅鏂囧苟鎶婄敤鎴疯惤鍒版寚瀹氳崏绋?浠诲姟涓婏紝涓诲涔犻棴鐜噷鐨?`graph/review -> AI workspace` 鍙堥棴鍚堜簡涓€娈点€?- 杩欎竴杞粛鍙В鍐充簡鈥滆繘鍏?AI 宸ヤ綔鍙版椂鍏堢湅瀵瑰璞♀€濈殑闂锛涘鏋滃悗缁缁х画琛ラ綈鏇寸粺涓€鐨?`SourceLink` 鎶借薄銆佹洿寮虹殑鑽夌鏉ユ簮棰勮锛屾垨鎶?AI 纭缁撴灉缁х画绋冲畾鍥炲啓鍒板浘璋?澶嶄範鍙嶉锛屼笅涓€姝ユ洿閫傚悎缁х画娌?`ANKI-050 / WB-033 / LC-010` 鎵╁睍鍚屼竴鏉′富绾裤€?## 2026-07-15 06:34:40 +08:00 | v1.1.0-alpha.248 | 鎺ㄨ繘 ANKI-050 / LC-010 AI 鑽夌鏉ユ簮绮剧‘鍥炶烦
-### 浠诲姟鍐呭
+- `ANKI-050` 现在不仅能把来源上下文带到 AI 工作台，还能让工作台真正吃掉这些上下文并把用户落到指定草稿/任务上，主学习闭环里的 `graph/review -> AI workspace` 又闭合了一段。
+- 这一轮仍只解决了“进入 AI 工作台时先看对对象”的问题；如果后续要继续补齐更统一的 `SourceLink` 抽象、更强的草稿来源预览，或把 AI 确认结果继续稳定回写到图谱/复习反馈，下一步更适合继续沿 `ANKI-050 / WB-033 / LC-010` 扩展同一条主线。
+## 2026-07-15 06:34:40 +08:00 | v1.1.0-alpha.248 | 推进 ANKI-050 / LC-010 AI 草稿来源精确回跳
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛鎶婁富瀛︿範璺緞鍋氭垚鍙敤鐗堬紝鍐嶉€愭缁嗗寲鈥濇柟鍚戞帹杩?`ANKI-050 / LC-010`锛岃繖涓€杞笉鎵╂暎鍒版柊鐨勯鍩熸ā鍨嬶紝鑰屾槸鏀跺彛 AI 鑽夌纭椤甸噷浠嶇劧鍋忕矖绮掑害鐨勬潵婧愬洖璺炽€?- 鐩爣鏄宸茬粡甯︾潃 `sourceMetadata` 杩涘叆 AI 宸ヤ綔鍙扮殑鎵规敞鍜?PDF 閿氱偣鏉ユ簮锛屼笉鍐嶅彧鍋滅暀鍦ㄢ€滄墦寮€鏉ユ簮宸ヤ綔鍙扳€濈殑瀹芥硾鍏ュ彛锛岃€屾槸鑳戒粠 AI 鑽夌鐩存帴绮剧‘鍥炲埌 reader 鐨勯〉鐮併€佹壒娉ㄦ垨閿氱偣浣嶇疆銆?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-050 / LC-010`，这一轮不扩散到新的领域模型，而是收口 AI 草稿确认页里仍然偏粗粒度的来源回跳。
+- 目标是让已经带着 `sourceMetadata` 进入 AI 工作台的批注和 PDF 锚点来源，不再只停留在“打开来源工作台”的宽泛入口，而是能从 AI 草稿直接精确回到 reader 的页码、批注或锚点位置。
+### 实际变更
 
-- 鏇存柊 `frontend-user/src/features/ai/aiDrafts.ts`锛岃 `buildAiDraftWorkspacePath(...)` 浼樺厛澶嶇敤鐜版湁 `graphSourceBacklinks` 鐨勬潵婧愯В鏋愯鍒欙紝鍐嶅湪 `graph` 绛夊皯鏁?helper 涓嶈鐩栫殑绫诲瀷涓婂洖閫€鍒版棦鏈夌畝鍗曡矾寰勩€?- 杩欐牱涓€鏉ワ紝`annotation` 涓?`pdf-anchor` 绫诲瀷鐨?AI 鑽夌鏉ユ簮閾炬帴鐜板湪浼氫繚鐣?`materialId / page / annotationId / anchorId` 绛変笂涓嬫枃锛岀敓鎴愮簿纭殑 reader 鍥炶烦鍦板潃锛岃€屼笉鏄洿鎺ヤ涪鎴愮┖閾炬帴鎴栧彧鍥炲埌璧勬枡棣栭〉銆?- 鎵╁睍 `frontend-user/src/features/ai/aiDrafts.test.ts` 涓?`frontend-user/src/pages/AiPage.test.tsx`锛岃ˉ涓?annotation / pdf-anchor 鏉ユ簮璺緞涓?AI 椤甸潰鐪熷疄閾炬帴娓叉煋鐨?RED/GREEN 鍥炲綊銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ANKI-050 / LC-010` 鐨勯樁娈垫弿杩版帹杩涘埌鈥淎I 鑽夌纭椤甸噷鐨勬潵婧愬洖璺充篃宸叉帴鍏ョ簿纭?reader 瀹氫綅鈥濄€?### 楠岃瘉缁撴灉
+- 更新 `frontend-user/src/features/ai/aiDrafts.ts`，让 `buildAiDraftWorkspacePath(...)` 优先复用现有 `graphSourceBacklinks` 的来源解析规则，再在 `graph` 等少数 helper 不覆盖的类型上回退到既有简单路径。
+- 这样一来，`annotation` 与 `pdf-anchor` 类型的 AI 草稿来源链接现在会保留 `materialId / page / annotationId / anchorId` 等上下文，生成精确的 reader 回跳地址，而不是直接丢成空链接或只回到资料首页。
+- 扩展 `frontend-user/src/features/ai/aiDrafts.test.ts` 与 `frontend-user/src/pages/AiPage.test.tsx`，补上 annotation / pdf-anchor 来源路径与 AI 页面真实链接渲染的 RED/GREEN 回归。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-050 / LC-010` 的阶段描述推进到“AI 草稿确认页里的来源回跳也已接入精确 reader 定位”。
+### 验证结果
 
-- RED锛歚npm --workspace frontend-user run test -- src/features/ai/aiDrafts.test.ts`
-- RED锛歚npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/features/ai/aiDrafts.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/features/ai/aiDrafts.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/features/ai/aiDrafts.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `ANKI-050` 鐜板湪涓嶄粎鑳芥妸鎵规敞/PDF 涓婁笅鏂囧甫杩涘崱鐗囧拰澶嶄範锛屼篃鑳借 AI 鑽夌纭椤电户缁秷璐硅繖濂椾笂涓嬫枃骞跺洖鍒?reader 绮剧‘浣嶇疆锛屼富瀛︿範闂幆閲岀殑 `reader -> AI workspace -> reader` 鍙堥棴鍚堜簡涓€娈点€?- 杩欎竴杞粛鍙敹鍙ｄ簡 AI 鑽夌鏉ユ簮閾炬帴锛涘鏋滃悗缁缁х画鎶?AI 浠诲姟鍘嗗彶銆佹洿澶氬浘璋辨潵婧愮被鍨嬪拰鏇寸粺涓€鐨?`SourceLink` 濂戠害缁х画鍋氬帤锛屼笅涓€姝ユ洿閫傚悎缁х画娌?`ANKI-050 / WB-033 / LC-010` 鎵╁悓涓€濂楁潵婧愬洖璺虫ā鍨嬶紝鑰屼笉鏄湪鍚勯〉闈㈢户缁爢鐙珛璺緞鍒ゆ柇銆?## 2026-07-15 06:41:01 +08:00 | v1.1.0-alpha.249 | 鎺ㄨ繘 ANKI-050 / LC-010 AI 浠诲姟鍘嗗彶鏉ユ簮绮剧‘鍥炶烦
-### 浠诲姟鍐呭
+- `ANKI-050` 现在不仅能把批注/PDF 上下文带进卡片和复习，也能让 AI 草稿确认页继续消费这套上下文并回到 reader 精确位置，主学习闭环里的 `reader -> AI workspace -> reader` 又闭合了一段。
+- 这一轮仍只收口了 AI 草稿来源链接；如果后续要继续把 AI 任务历史、更多图谱来源类型和更统一的 `SourceLink` 契约继续做厚，下一步更适合继续沿 `ANKI-050 / WB-033 / LC-010` 扩同一套来源回跳模型，而不是在各页面继续堆独立路径判断。
+## 2026-07-15 06:41:01 +08:00 | v1.1.0-alpha.249 | 推进 ANKI-050 / LC-010 AI 任务历史来源精确回跳
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛鎶婁富瀛︿範璺緞鍋氭垚鍙敤鐗堬紝鍐嶉€愭缁嗗寲鈥濇柟鍚戞帹杩?`ANKI-050 / LC-010`锛岃繖涓€杞湪 AI 鑽夌纭椤佃ˉ瀹屼箣鍚庯紝缁х画鎶?AI 浠诲姟鍘嗗彶涔熺撼鍏ュ悓涓€濂楁潵婧愬洖璺充富绾裤€?- 鐩爣鏄伩鍏?AI 浠诲姟鍘嗗彶鍙墿 `sourceType/sourceId` 杩欑绮楃矑搴︿俊鎭紝灏ゅ叾鍦?reader 鎵规敞鐢熸垚鍗＄墖鑽夌杩欑被鍦烘櫙閲岋紝鐢ㄦ埛搴旇兘浠庘€滄渶杩?AI 浠诲姟鈥濈洿鎺ュ洖鍒扮簿纭殑椤电爜涓庢壒娉ㄤ綅缃€?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-050 / LC-010`，这一轮在 AI 草稿确认页补完之后，继续把 AI 任务历史也纳入同一套来源回跳主线。
+- 目标是避免 AI 任务历史只剩 `sourceType/sourceId` 这种粗粒度信息，尤其在 reader 批注生成卡片草稿这类场景里，用户应能从“最近 AI 任务”直接回到精确的页码与批注位置。
+### 实际变更
 
-- 鍚庣琛ラ綈 AI 浠诲姟 `sourceMetadata` 閫氳矾锛氭洿鏂?`backend/internal/modules/ai/model/ai_task.go`銆乣dto/ai.go`銆乣repository/repository.go`銆乣service/service.go`锛屽苟鏂板 `backend/internal/modules/ai/repository/source_metadata.go`锛岃浠诲姟璁板綍鍙互鎸佷箙鍖栧苟杩斿洖鏉ユ簮涓婁笅鏂囥€?- 鏂板 MySQL 杩佺Щ `backend/internal/migrations/mysql/006_ai_task_source_metadata.sql`锛堝強 down migration锛夛紝涓?`ai_tasks` 琛ㄨˉ涓?`source_metadata` 鏂囨湰鍒楋紝鍏煎宸叉湁浠诲姟琛ㄧ粨鏋勩€?- `RecordReaderCardDrafts(...)` 涓?`RecordReaderGraphDrafts(...)` 鐜板湪浼氭妸棣栦釜鍙敤鐨?reader 鏉ユ簮 metadata 鎻愬崌鍒颁换鍔¤褰曞眰锛涜繖鏍?AI 浠诲姟鍘嗗彶閲岀殑 reader 浠诲姟涔熻兘淇濈暀 `materialId / page / annotationId / anchorId`銆?- 鍓嶇鏇存柊 `frontend-user/src/api/types.ts`銆乣frontend-user/src/features/ai/aiDrafts.ts` 涓?`frontend-user/src/pages/AiPage.tsx`锛氭柊澧?`buildAiTaskWorkspacePath(...)`锛屽苟鍦ㄢ€滄渶杩?AI 浠诲姟鈥濆崱鐗囬噷娓叉煋 `鎵撳紑鏉ユ簮宸ヤ綔鍙癭 閾炬帴锛岀洿鎺ュ鐢ㄦ棦鏈?`graphSourceBacklinks` 瑙勫垯鐢熸垚绮剧‘ reader 鍥炶烦鍦板潃銆?- 琛ュ己鍥炲綊锛氭柊澧炲悗绔?`backend/internal/modules/ai/service/source_metadata_test.go`锛屽苟鎵╁睍 `frontend-user/src/features/ai/aiDrafts.test.ts`銆乣frontend-user/src/pages/AiPage.test.tsx`锛岄攣瀹氫换鍔＄骇鏉ユ簮涓婁笅鏂囦笌椤甸潰閾炬帴娓叉煋銆?### 楠岃瘉缁撴灉
+- 后端补齐 AI 任务 `sourceMetadata` 通路：更新 `backend/internal/modules/ai/model/ai_task.go`、`dto/ai.go`、`repository/repository.go`、`service/service.go`，并新增 `backend/internal/modules/ai/repository/source_metadata.go`，让任务记录可以持久化并返回来源上下文。
+- 新增 MySQL 迁移 `backend/internal/migrations/mysql/006_ai_task_source_metadata.sql`（及 down migration），为 `ai_tasks` 表补上 `source_metadata` 文本列，兼容已有任务表结构。
+- `RecordReaderCardDrafts(...)` 与 `RecordReaderGraphDrafts(...)` 现在会把首个可用的 reader 来源 metadata 提升到任务记录层；这样 AI 任务历史里的 reader 任务也能保留 `materialId / page / annotationId / anchorId`。
+- 前端更新 `frontend-user/src/api/types.ts`、`frontend-user/src/features/ai/aiDrafts.ts` 与 `frontend-user/src/pages/AiPage.tsx`：新增 `buildAiTaskWorkspacePath(...)`，并在“最近 AI 任务”卡片里渲染 `打开来源工作台` 链接，直接复用既有 `graphSourceBacklinks` 规则生成精确 reader 回跳地址。
+- 补强回归：新增后端 `backend/internal/modules/ai/service/source_metadata_test.go`，并扩展 `frontend-user/src/features/ai/aiDrafts.test.ts`、`frontend-user/src/pages/AiPage.test.tsx`，锁定任务级来源上下文与页面链接渲染。
+### 验证结果
 
-- RED锛歚go test ./internal/modules/ai/service`
-- RED锛歚npm --workspace frontend-user run test -- src/features/ai/aiDrafts.test.ts`
-- RED锛歚npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
-- GREEN锛歚go test ./internal/modules/ai/service ./internal/modules/ai/handler`
-- GREEN锛歚npm --workspace frontend-user run test -- src/features/ai/aiDrafts.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
+- RED：`go test ./internal/modules/ai/service`
+- RED：`npm --workspace frontend-user run test -- src/features/ai/aiDrafts.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
+- GREEN：`go test ./internal/modules/ai/service ./internal/modules/ai/handler`
+- GREEN：`npm --workspace frontend-user run test -- src/features/ai/aiDrafts.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/pages/AiPage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `ANKI-050` 鐜板湪涓嶄粎瑕嗙洊 AI 鑽夌纭椤碉紝涔熸妸 AI 浠诲姟鍘嗗彶鎷夎繘浜嗗悓涓€濂楁潵婧愬洖璺宠涔夛紝涓诲涔犻棴鐜噷鐨?`reader -> AI task history -> reader` 涔熷紑濮嬪彲鐢ㄤ簡銆?- 杩欎竴杞粛涓昏瑕嗙洊 reader 渚х簿纭潵婧愶紱濡傛灉鍚庣画瑕佺户缁妸鏇村鍥捐氨鏉ユ簮绫诲瀷銆佷换鍔＄粨鏋滃洖璺冲拰鏇寸粺涓€鐨?`SourceLink` 濂戠害缁х画鍋氬帤锛屼笅涓€姝ユ洿閫傚悎缁х画娌?`ANKI-050 / WB-033 / LC-010` 鎵╁睍杩欎竴灞傦紝鑰屼笉鏄湪浠诲姟鍗＄墖閲岀户缁爢涓存椂瀛楁鍒ゆ柇銆?## 2026-07-15 06:29:26 +08:00 | v1.1.0-alpha.247 | 澶嶆牳 FE-010 / FE-020 / FE-030 / UI-04 褰撳墠鐜楠岃瘉
-### 浠诲姟鍐呭
+- `ANKI-050` 现在不仅覆盖 AI 草稿确认页，也把 AI 任务历史拉进了同一套来源回跳语义，主学习闭环里的 `reader -> AI task history -> reader` 也开始可用了。
+- 这一轮仍主要覆盖 reader 侧精确来源；如果后续要继续把更多图谱来源类型、任务结果回跳和更统一的 `SourceLink` 契约继续做厚，下一步更适合继续沿 `ANKI-050 / WB-033 / LC-010` 扩展这一层，而不是在任务卡片里继续堆临时字段判断。
+## 2026-07-15 06:29:26 +08:00 | v1.1.0-alpha.247 | 复核 FE-010 / FE-020 / FE-030 / UI-04 当前环境验证
+### 任务内容
 
-- 鎸?`CODEX_MASTER_PROMPT.md` 鐨勬帴鎵嬫牳楠岃姹傦紝浼樺厛澶嶆牳宸叉敹鍙ｇ殑鍓嶇宸ヤ綔鍖呭湪褰撳墠鐜涓嬫槸鍚︿粛鐒舵垚绔嬶紝閬垮厤鎶婂巻鍙?`DONE` 缁撹寤虹珛鍦ㄨ繃鏈熼獙璇佷笂銆?- 鐩爣涓嶆槸寮€鍚柊鍔熻兘锛岃€屾槸纭澶氬竷灞€澹冲眰銆佸浘璋?CanvasLayout銆侀槄璇?绗旇/澶嶄範宸ヤ綔鍖轰綋楠屽拰鍚庡彴娌荤悊宸ヤ綔鍙拌繖鍑犳潯涓昏矾寰勫湪褰撳墠浠ｇ爜涓嬩緷鏃у彲閫氳繃鏈€灏忛獙璇侀棴鐜€?### 瀹為檯鍙樻洿
+- 按 `CODEX_MASTER_PROMPT.md` 的接手核验要求，优先复核已收口的前端工作包在当前环境下是否仍然成立，避免把历史 `DONE` 结论建立在过期验证上。
+- 目标不是开启新功能，而是确认多布局壳层、图谱 CanvasLayout、阅读/笔记/复习工作区体验和后台治理工作台这几条主路径在当前代码下依旧可通过最小验证闭环。
+### 实际变更
 
-- 澶嶈窇 FE-010 / FE-020 / FE-030 / UI-04 褰撴椂鐨勬渶灏忛獙璇佸懡浠ょ粍锛屽寘鎷墠鍚庡彴绫诲瀷妫€鏌ャ€乂itest銆佺敤鎴风/绠＄悊绔瀯寤猴紝浠ュ強 `user shell`銆乣graph workspace`銆乣review flow`銆乣admin governance` 鍥涙潯 Playwright smoke銆?- 鏇存柊 `e2e/user-shell.spec.ts`锛屾妸棣栭〉 `鎵撳紑璧勬枡搴揱 鏂█鏀逛负鍏煎鍚屽悕 CTA 鍏卞瓨鐨勭ǔ瀹氶€夋嫨鍣紝閬垮厤褰撳墠 dashboard 鍦?section action 涓?empty-state CTA 鍚屾椂鍑虹幇鏃惰Е鍙?strict mode 璇姤銆?- 鏇存柊 `e2e/v1-admin-governance.spec.ts`锛岃鍚庡彴娌荤悊瀵艰埅鐐瑰嚮瀵归綈褰撳墠 `AdminNavItem` 鐨勭湡瀹?`data-admin-nav-item-view` 閽╁瓙锛岃€屼笉鍐嶄緷璧栧凡缁忛€€褰圭殑鏃у睘鎬у悕銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛岃拷鍔犳湰杞鏍歌褰曪紝鏄庣‘杩欐淇殑鏄祴璇曢挬瀛愭紓绉伙紝涓嶆槸浜у搧琛屼负鍥為€€銆?### 楠岃瘉缁撴灉
+- 复跑 FE-010 / FE-020 / FE-030 / UI-04 当时的最小验证命令组，包括前后台类型检查、Vitest、用户端/管理端构建，以及 `user shell`、`graph workspace`、`review flow`、`admin governance` 四条 Playwright smoke。
+- 更新 `e2e/user-shell.spec.ts`，把首页 `打开资料库` 断言改为兼容同名 CTA 共存的稳定选择器，避免当前 dashboard 在 section action 与 empty-state CTA 同时出现时触发 strict mode 误报。
+- 更新 `e2e/v1-admin-governance.spec.ts`，让后台治理导航点击对齐当前 `AdminNavItem` 的真实 `data-admin-nav-item-view` 钩子，而不再依赖已经退役的旧属性名。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，追加本轮复核记录，明确这次修的是测试钩子漂移，不是产品行为回退。
+### 验证结果
 
 - `npm --workspace frontend-user run typecheck`
 - `npm --workspace frontend-admin run typecheck`
@@ -4148,85 +7567,135 @@
 - `npm run build:user`
 - `npm run build:admin`
 - `npx playwright test e2e/user-shell.spec.ts e2e/v1-graph-workspace.spec.ts e2e/v1-review-flow.spec.ts e2e/v1-admin-governance.spec.ts`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- 褰撳墠鐜涓?`FE-010 / FE-020 / FE-030 / UI-04` 鐨勬渶灏忛獙璇侀摼鏉′粛鐒跺彲閫氳繃锛岃鏄庤繖浜涘凡鏀跺彛宸ヤ綔鍖呮病鏈夊洜涓鸿繎鏈熶富璺緞杩唬鑰屽彂鐢熺湡瀹炲洖閫€銆?- 杩欐鏆撮湶鐨勯棶棰樺睘浜庤嚜鍔ㄥ寲閫夋嫨鍣ㄩ殢 UI 璇箟婕旇繘浜х敓鐨勮交寰紓绉伙紱鍚庣画濡傛灉缁х画鎺ㄨ繘棣栭〉 CTA銆佸悗鍙板鑸垨娌荤悊妯″潡楠ㄦ灦锛屽簲璇ュ悓姝ョ淮鎶?Playwright 绋冲畾閽╁瓙锛岄伩鍏嶆妸娴嬭瘯鍣０璇垽鎴愪骇鍝佸洖閫€銆?## 2026-07-15 06:46:36 +08:00 | v1.1.0-alpha.250 | 鎺ㄨ繘 ANKI-030 澶嶄範璺宠繃褰撳墠鍗＄墖
-### 浠诲姟鍐呭
+- 当前环境下 `FE-010 / FE-020 / FE-030 / UI-04` 的最小验证链条仍然可通过，说明这些已收口工作包没有因为近期主路径迭代而发生真实回退。
+- 这次暴露的问题属于自动化选择器随 UI 语义演进产生的轻微漂移；后续如果继续推进首页 CTA、后台导航或治理模块骨架，应该同步维护 Playwright 稳定钩子，避免把测试噪声误判成产品回退。
+## 2026-07-15 06:46:36 +08:00 | v1.1.0-alpha.250 | 推进 ANKI-030 复习跳过当前卡片
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛鎶婁富瀛︿範璺緞鍋氭垚鍙敤鐗堬紝鍐嶉€愭缁嗗寲鈥濇柟鍚戞帹杩?`ANKI-030 / LC-010`锛岃繖涓€杞笉鎵╂暎鍒版柊鐨勮皟搴︽ā鍨嬫垨鍚庡彴鍩燂紝鑰屾槸鍏堣ˉ榻愬涔犱細璇濋噷鏈€杞婚噺銆佹渶鐩存帴褰卞搷鍙敤鎬х殑鎿嶄綔缂哄彛銆?- 鐩爣鏄鐢ㄦ埛鍦ㄥ涔犺繃绋嬩腑閬囧埌鈥滆繖寮犲厛鏀惧悗闈㈠啀鐪嬧€濈殑鍦烘櫙鏃讹紝涓嶅繀閫€鍑哄綋鍓嶄細璇濓紝涔熶笉浼氱牬鍧忓綋鍓嶅緟瀹屾垚闃熷垪鐨勪笂涓嬫枃銆?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-030 / LC-010`，这一轮不扩散到新的调度模型或后台域，而是先补齐复习会话里最轻量、最直接影响可用性的操作缺口。
+- 目标是让用户在复习过程中遇到“这张先放后面再看”的场景时，不必退出当前会话，也不会破坏当前待完成队列的上下文。
+### 实际变更
 
-- 鏇存柊 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`锛屾柊澧?`handleSkipCurrent()`锛屽湪褰撳墠鍗＄墖鍙烦杩囦笖闃熷垪闀垮害澶т簬 1 鏃讹紝鎶婂綋鍓嶅崱鐗囬『寤跺埌鍐呭瓨闃熷垪鏈熬锛屽苟绔嬪嵆鍒囧埌涓嬩竴寮犲崱銆?- 澶嶄範鍗＄墖鎿嶄綔鍖烘柊澧?`璺宠繃褰撳墠鍗＄墖` 鎸夐挳锛屽苟琛ヤ笂 `S` 閿揩鎹疯矾寰勶紱璺宠繃鍚庝細鏄剧ず鈥滃凡璺宠繃褰撳墠鍗＄墖锛岀◢鍚庝細鍥炲埌杩欏紶鍗°€傗€濇彁绀猴紝鍚屾椂淇濇寔寰呭畬鎴愬紶鏁颁笉鍙樸€?- 鎵╁睍 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`锛岀敤 RED/GREEN 鍥炲綊閿佸畾鈥滆烦杩囧綋鍓嶅崱鐗囧悗鍒囧埌涓嬩竴寮犮€佸師鍗＄墖鎺掑埌闃熷熬銆佸緟瀹屾垚璁℃暟涓嶅彉鈥濈殑琛屼负銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ANKI-030 / LC-010` 鐨勯樁娈垫弿杩版帹杩涘埌鈥滃涔犱細璇濆凡鍏峰璺宠繃褰撳墠鍗＄墖涓斾繚鐣欓槦鍒椾笂涓嬫枃鈥濊繖涓€灞傘€?### 楠岃瘉缁撴灉
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，新增 `handleSkipCurrent()`，在当前卡片可跳过且队列长度大于 1 时，把当前卡片顺延到内存队列末尾，并立即切到下一张卡。
+- 复习卡片操作区新增 `跳过当前卡片` 按钮，并补上 `S` 键快捷路径；跳过后会显示“已跳过当前卡片，稍后会回到这张卡。”提示，同时保持待完成张数不变。
+- 扩展 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，用 RED/GREEN 回归锁定“跳过当前卡片后切到下一张、原卡片排到队尾、待完成计数不变”的行为。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-030 / LC-010` 的阶段描述推进到“复习会话已具备跳过当前卡片且保留队列上下文”这一层。
+### 验证结果
 
-- RED锛歚npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `ANKI-030` 鐨勫涔犱細璇濈幇鍦ㄥ凡缁忓叿澶囦竴涓洿鎺ヨ繎鐪熷疄 Anki 浣跨敤涔犳儻鐨勨€滃厛璺宠繃銆佺◢鍚庡洖鏉モ€濆叆鍙ｏ紝涓诲涔犻棴鐜噷鐨勫涔犻樁娈靛彲鐢ㄦ€ф洿瀹屾暣浜嗕竴姝ャ€?- 杩欎竴杞粛鍙鐩栧墠绔唴瀛橀槦鍒楀眰鐨?defer 浣撻獙锛涘悗缁洿閫傚悎缁х画娌?`ANKI-030 / ANKI-020 / LC-010` 琛ユ挙閿€涓婁竴娆¤瘎鍒嗐€佸煁钘?鏆傚仠鍗＄墖锛屼互鍙婁笌鐪熷疄璋冨害鐘舵€佷竴鑷寸殑闃熷垪璇箟锛岃€屼笉鏄妸鏇村浼氳瘽鍒嗘敮缁х画鍫嗚繘椤甸潰鏉′欢鍒ゆ柇閲屻€?## 2026-07-15 06:56:42 +08:00 | v1.1.0-alpha.251 | 鎺ㄨ繘 ANKI-030 澶嶄範鏆傚仠涓庢仮澶嶅崱鐗?### 浠诲姟鍐呭
+- `ANKI-030` 的复习会话现在已经具备一个更接近真实 Anki 使用习惯的“先跳过、稍后回来”入口，主学习闭环里的复习阶段可用性更完整了一步。
+- 这一轮仍只覆盖前端内存队列层的 defer 体验；后续更适合继续沿 `ANKI-030 / ANKI-020 / LC-010` 补撤销上一次评分、埋藏/暂停卡片，以及与真实调度状态一致的队列语义，而不是把更多会话分支继续堆进页面条件判断里。
+## 2026-07-15 06:56:42 +08:00 | v1.1.0-alpha.251 | 推进 ANKI-030 复习暂停与恢复卡片
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛鎶婁富瀛︿範璺緞鍋氭垚鍙敤鐗堬紝鍐嶉€愭缁嗗寲鈥濇柟鍚戞帹杩?`ANKI-030 / LC-010`锛岃繖涓€杞笉鐩存帴涓婃洿閲嶇殑 Note/Card 閲嶆瀯鎴栧畬鏁磋皟搴︽ā鍨嬶紝鑰屾槸鍏堣ˉ榻愬涔犱細璇濋噷鍙︿竴涓珮棰戙€佸彲鐩存帴鎰熺煡鐨勬帶鍒跺姩浣溿€?- 鐩爣鏄鐢ㄦ埛鍦ㄥ涔犺繃绋嬩腑鍙互鎶婂綋鍓嶄笉鎯崇户缁仛鐨勫崱鐗囧厛鏆傚仠鎺夛紝绔嬪嵆浠庝粖鏃ユ椿璺冮槦鍒楃Щ闄わ紝骞朵笖浠嶈兘鍦ㄥ悓涓€宸ヤ綔鍙伴噷鎭㈠鍥炴潵锛屼笉蹇呯寮€澶嶄範涓婁笅鏂囥€?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-030 / LC-010`，这一轮不直接上更重的 Note/Card 重构或完整调度模型，而是先补齐复习会话里另一个高频、可直接感知的控制动作。
+- 目标是让用户在复习过程中可以把当前不想继续做的卡片先暂停掉，立即从今日活跃队列移除，并且仍能在同一工作台里恢复回来，不必离开复习上下文。
+### 实际变更
 
-- 鍚庣琛ラ綈鍗＄墖鐘舵€佹洿鏂伴€氳矾锛氫负 `card` 妯″潡鏂板 `PATCH /api/v1/cards/:id/status` 濂戠害锛屽厑璁稿湪 `active / suspended` 涓ょ鐘舵€侀棿鍒囨崲锛沗TodayQueue(...)` 缁х画鍙媺鍙?`active` 鍗＄墖锛屽洜姝ゆ殏鍋滃悗浼氳嚜鐒剁寮€浠婃棩闃熷垪銆?- 鏇存柊 `backend/internal/modules/card/service/service.go`銆乣handler/handler.go`銆乣router/router.go`銆乣repository/repository.go` 涓?`dto/card.go`锛岃ˉ涓婄姸鎬佹牎楠屻€佹墍鏈夋潈鏍￠獙銆佺姸鎬佹寔涔呭寲涓庡璁℃棩蹇楋紝淇濇寔鍙樻洿浠嶇劧鏀跺彛鍦?card 鍩熷唴閮ㄣ€?- 鏇存柊 `frontend-user/src/api/review.ts` 涓?`frontend-user/src/modules/review/ReviewWorkspacePage.tsx`锛氬涔犲崱鐗囨搷浣滃尯鏂板 `鏆傚仠褰撳墠鍗＄墖` 鎸夐挳鍜?`P` 蹇嵎閿紱鏆傚仠鍚庡綋鍓嶅崱鐗囦細浠庝粖鏃ユ椿璺冮槦鍒楃Щ闄ゃ€佸緟瀹屾垚璁℃暟鍚屾鍑忓皯锛屽苟鎻愮ず鍙湪绠＄悊闈㈡澘鎭㈠銆?- 绠＄悊闈㈡澘涓殑鍗＄墖鍒楄〃鏂板鐘舵€佹爣绛惧拰 `鏆傚仠鍗＄墖 / 鎭㈠鍗＄墖` 鍔ㄤ綔锛涙仮澶嶆椂浼氶噸鏂板悓姝ヤ粖鏃ラ槦鍒楋紝璁╄鏆傚仠鐨勫崱鐗囧洖鍒板綋鍓嶅彲澶嶄範闆嗗悎銆?- 鎵╁睍 `backend/internal/modules/card/service/status_test.go`銆乣backend/internal/modules/card/handler/handler_test.go`銆乣frontend-user/src/api/reviewAi.test.ts` 涓?`frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`锛岀敤 RED/GREEN 鍥炲綊閿佸畾鈥滄殏鍋滃悗绂诲紑浠婃棩娲昏穬闃熷垪銆佹仮澶嶅悗閲嶆柊鍥炲埌闃熷垪鈥濈殑绔埌绔涓恒€?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ANKI-030 / LC-010` 鐨勯樁娈垫弿杩版帹杩涘埌鈥滃涔犱細璇濆凡鍏峰鏆傚仠/鎭㈠鍗＄墖鈥濊繖涓€灞傘€?### 楠岃瘉缁撴灉
+- 后端补齐卡片状态更新通路：为 `card` 模块新增 `PATCH /api/v1/cards/:id/status` 契约，允许在 `active / suspended` 两种状态间切换；`TodayQueue(...)` 继续只拉取 `active` 卡片，因此暂停后会自然离开今日队列。
+- 更新 `backend/internal/modules/card/service/service.go`、`handler/handler.go`、`router/router.go`、`repository/repository.go` 与 `dto/card.go`，补上状态校验、所有权校验、状态持久化与审计日志，保持变更仍然收口在 card 域内部。
+- 更新 `frontend-user/src/api/review.ts` 与 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`：复习卡片操作区新增 `暂停当前卡片` 按钮和 `P` 快捷键；暂停后当前卡片会从今日活跃队列移除、待完成计数同步减少，并提示可在管理面板恢复。
+- 管理面板中的卡片列表新增状态标签和 `暂停卡片 / 恢复卡片` 动作；恢复时会重新同步今日队列，让被暂停的卡片回到当前可复习集合。
+- 扩展 `backend/internal/modules/card/service/status_test.go`、`backend/internal/modules/card/handler/handler_test.go`、`frontend-user/src/api/reviewAi.test.ts` 与 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，用 RED/GREEN 回归锁定“暂停后离开今日活跃队列、恢复后重新回到队列”的端到端行为。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-030 / LC-010` 的阶段描述推进到“复习会话已具备暂停/恢复卡片”这一层。
+### 验证结果
 
-- RED锛歚go test ./internal/modules/card/handler ./internal/modules/card/service`
-- RED锛歚npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
-- RED锛歚npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
-- GREEN锛歚go test ./internal/modules/card/handler ./internal/modules/card/service`
-- GREEN锛歚npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- GREEN：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
 - `go test ./internal/modules/card/...`
 - `npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `ANKI-030` 鐨勫涔犱細璇濈幇鍦ㄤ笉浠呰兘鈥滃厛璺宠繃绋嶅悗鍥炴潵鈥濓紝涔熻兘鐪熸鎶婁竴寮犲崱鍏堟殏鍋滃嚭浠婃棩娲昏穬闃熷垪锛屽苟鍦ㄥ悓涓€宸ヤ綔鍙版仮澶嶏紝杩欒鍘熷瀷闃舵鐨勫涔犳帶鍒堕潰鏇存帴杩戠湡瀹炲彲鐢ㄤ骇鍝併€?- 杩欎竴杞粛鐒跺彧瑕嗙洊 `active / suspended` 杩欐潯鏈€灏忕姸鎬侀€氳矾锛涘悗缁洿閫傚悎缁х画娌?`ANKI-030 / ANKI-020 / LC-010` 琛ユ挙閿€涓婁竴娆¤瘎鍒嗐€佸煁钘忚涔夊拰涓庣湡瀹炲涔?澶嶄範/閲嶆柊瀛︿範闃熷垪涓€鑷寸殑璋冨害鐘舵€侊紝鑰屼笉鏄户缁湪鍓嶇浼氳瘽閲屽爢鏇村涓€娆℃€у垎鏀垽鏂€?## 2026-07-15 07:02:37 +08:00 | v1.1.0-alpha.252 | 鎺ㄨ繘 ANKI-030 澶嶄範鍩嬭棌褰撳墠鍗＄墖
-### 浠诲姟鍐呭
+- `ANKI-030` 的复习会话现在不仅能“先跳过稍后回来”，也能真正把一张卡先暂停出今日活跃队列，并在同一工作台恢复，这让原型阶段的复习控制面更接近真实可用产品。
+- 这一轮仍然只覆盖 `active / suspended` 这条最小状态通路；后续更适合继续沿 `ANKI-030 / ANKI-020 / LC-010` 补撤销上一次评分、埋藏语义和与真实学习/复习/重新学习队列一致的调度状态，而不是继续在前端会话里堆更多一次性分支判断。
+## 2026-07-15 07:02:37 +08:00 | v1.1.0-alpha.252 | 推进 ANKI-030 复习埋藏当前卡片
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛鎶婁富瀛︿範璺緞鍋氭垚鍙敤鐗堬紝鍐嶉€愭缁嗗寲鈥濇柟鍚戞帹杩?`ANKI-030 / LC-010`锛岃繖涓€杞笉鐩存帴灞曞紑瀹屾暣鐨勯槦鍒楅噸鎺掓垨鎾ら攢璇勫垎锛岃€屾槸鍏堟妸澶嶄範鎺у埗闈㈤噷鏈€鍚庝竴涓珮棰戞樉寮忓姩浣滆ˉ鍒板彲鐢ㄣ€?- 鐩爣鏄鐢ㄦ埛鍦ㄥ涔犱腑鍙互鎶婂綋鍓嶅崱鐗囧煁钘忔帀锛岃瀹冨湪浠婂ぉ鐨勬椿璺冮槦鍒楅噷鍏堟秷澶憋紝鍚屾椂浠嶇劧鑳藉湪绠＄悊闈㈡澘涓仮澶嶏紝鍏堝舰鎴愪竴鐗堝彲浣撻獙鐨勫師鍨嬭涔夈€?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-030 / LC-010`，这一轮不直接展开完整的队列重排或撤销评分，而是先把复习控制面里最后一个高频显式动作补到可用。
+- 目标是让用户在复习中可以把当前卡片埋藏掉，让它在今天的活跃队列里先消失，同时仍然能在管理面板中恢复，先形成一版可体验的原型语义。
+### 实际变更
 
-- 鍚庣鎵╁睍 `card` 鐘舵€侀€氳矾锛歚UpdateCardStatus(...)` 鐜板凡鎺ュ彈 `active / suspended / buried` 涓夌鐘舵€侊紝`TodayQueue(...)` 浠嶅彧杩斿洖 `active` 鍗＄墖锛屽洜姝よ鍩嬭棌鐨勫崱鐗囦細鍜屾殏鍋滃崱鐗囦竴鏍风寮€浠婃棩娲昏穬闃熷垪銆?- 鏇存柊 `backend/internal/modules/card/service/service.go`锛屾妸 `buried` 绾冲叆鍗＄墖鐘舵€佹牎楠岋紱鐜版湁 `PATCH /api/v1/cards/:id/status` API 鏃犻渶鏂板璺敱鍗冲彲鎵挎帴鍩嬭棌鍔ㄤ綔銆?- 鏇存柊 `frontend-user/src/api/review.ts` 涓?`frontend-user/src/api/reviewAi.test.ts`锛岃鍓嶇鐘舵€佹洿鏂板鎴风涓?API 鍥炲綊鏄惧紡瑕嗙洊 `buried`銆?- 鏇存柊 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`锛氬涔犲崱鐗囨搷浣滃尯鏂板 `鍩嬭棌褰撳墠鍗＄墖` 鎸夐挳鍜?`B` 蹇嵎閿紱鍩嬭棌鍚庡綋鍓嶅崱鐗囦細浠庝粖鏃ユ椿璺冮槦鍒楃Щ闄ゃ€佸緟瀹屾垚璁℃暟鍚屾鍑忓皯锛屽苟鎻愮ず鈥滀粖澶╀笉浼氬啀鍑虹幇鈥濄€?- 绠＄悊闈㈡澘涓殑鍗＄墖鍒楄〃鐜板湪瀵?`active` 鍗＄墖鍚屾椂鎻愪緵 `鏆傚仠鍗＄墖 / 鍩嬭棌鍗＄墖` 涓や釜鍔ㄤ綔锛涘 `suspended / buried` 鐘舵€佸垯缁熶竴鎻愪緵 `鎭㈠鍗＄墖`锛岃杩欑増鍘熷瀷閲岀殑闃熷垪澶栧崱鐗囬兘鑳藉洖鍒颁粖鏃ラ泦鍚堛€?- 鎵╁睍 `backend/internal/modules/card/service/status_test.go` 涓?`frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`锛岀敤 RED/GREEN 鍥炲綊閿佸畾鈥滃煁钘忓悗绂诲紑浠婃棩闃熷垪銆佹仮澶嶅悗鍙噸鏂拌繘鍏ラ槦鍒椻€濈殑琛屼负銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ANKI-030 / LC-010` 鐨勯樁娈垫弿杩版帹杩涘埌鈥滃涔犱細璇濆凡鍏峰鍩嬭棌褰撳墠鍗＄墖鈥濊繖涓€灞傘€?### 楠岃瘉缁撴灉
+- 后端扩展 `card` 状态通路：`UpdateCardStatus(...)` 现已接受 `active / suspended / buried` 三种状态，`TodayQueue(...)` 仍只返回 `active` 卡片，因此被埋藏的卡片会和暂停卡片一样离开今日活跃队列。
+- 更新 `backend/internal/modules/card/service/service.go`，把 `buried` 纳入卡片状态校验；现有 `PATCH /api/v1/cards/:id/status` API 无需新增路由即可承接埋藏动作。
+- 更新 `frontend-user/src/api/review.ts` 与 `frontend-user/src/api/reviewAi.test.ts`，让前端状态更新客户端与 API 回归显式覆盖 `buried`。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`：复习卡片操作区新增 `埋藏当前卡片` 按钮和 `B` 快捷键；埋藏后当前卡片会从今日活跃队列移除、待完成计数同步减少，并提示“今天不会再出现”。
+- 管理面板中的卡片列表现在对 `active` 卡片同时提供 `暂停卡片 / 埋藏卡片` 两个动作；对 `suspended / buried` 状态则统一提供 `恢复卡片`，让这版原型里的队列外卡片都能回到今日集合。
+- 扩展 `backend/internal/modules/card/service/status_test.go` 与 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，用 RED/GREEN 回归锁定“埋藏后离开今日队列、恢复后可重新进入队列”的行为。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-030 / LC-010` 的阶段描述推进到“复习会话已具备埋藏当前卡片”这一层。
+### 验证结果
 
-- RED锛歚go test ./internal/modules/card/service`
-- RED锛歚npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
-- GREEN锛歚go test ./internal/modules/card/service`
-- GREEN锛歚npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- RED：`go test ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`go test ./internal/modules/card/service`
+- GREEN：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
 - `go test ./internal/modules/card/...`
 - `npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `ANKI-030` 鐨勫涔犱細璇濈幇鍦ㄥ凡缁忓叿澶囪瘎鍒嗐€佽烦杩囥€佹殏鍋溿€佸煁钘忓拰鎭㈠杩欏嚑绫绘渶鏍稿績鐨勬樉寮忔帶鍒跺姩浣滐紝鍘熷瀷闃舵鐨勨€滃厛鍋氫竴鐗堣兘鐢ㄧ殑澶嶄範浣撻獙鈥濇洿瀹屾暣浜嗕竴姝ャ€?- 杩欎竴杞殑鍩嬭棌浠嶇劧鍏堣惤鎴愨€滄寔涔呭寲鐘舵€?+ 绠＄悊闈㈡澘鎭㈠鈥濈殑鍙敤鍘熷瀷锛岃€屼笉鏄畬鏁寸殑 Anki 鏃ュ垏鍩嬭棌璇箟锛涘悗缁洿閫傚悎缁х画娌?`ANKI-030 / ANKI-020 / LC-010` 琛ユ挙閿€涓婁竴娆¤瘎鍒嗭紝浠ュ強鎶?`buried / suspended / learning / review / relearning` 鐨勭湡瀹炶皟搴﹀叧绯昏繘涓€姝ュ仛瀹炪€?## 2026-07-15 07:20:00 +08:00 | v1.1.0-alpha.253 | 鎺ㄨ繘 ANKI-030 鎾ら攢涓婁竴娆¤瘎鍒?### 浠诲姟鍐呭
+- `ANKI-030` 的复习会话现在已经具备评分、跳过、暂停、埋藏和恢复这几类最核心的显式控制动作，原型阶段的“先做一版能用的复习体验”更完整了一步。
+- 这一轮的埋藏仍然先落成“持久化状态 + 管理面板恢复”的可用原型，而不是完整的 Anki 日切埋藏语义；后续更适合继续沿 `ANKI-030 / ANKI-020 / LC-010` 补撤销上一次评分，以及把 `buried / suspended / learning / review / relearning` 的真实调度关系进一步做实。
+## 2026-07-15 07:20:00 +08:00 | v1.1.0-alpha.253 | 推进 ANKI-030 撤销上一次评分
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛鎶婁富瀛︿範璺緞鍋氭垚鍙敤鐗堬紝鍐嶉€愭缁嗗寲鈥濇柟鍚戞帹杩?`ANKI-030 / LC-010`锛岃繖涓€杞笉鍒囧叆鏂扮殑 Note/Card 缁撴瀯鎴栧畬鏁磋皟搴︽ā鍨嬶紝鑰屾槸琛ラ綈澶嶄範浼氳瘽閲屾渶鍚庝竴涓珮棰戜笖鐩存帴褰卞搷绾犻敊浣撻獙鐨勬樉寮忓姩浣溿€?- 鐩爣鏄鐢ㄦ埛鍦ㄥ垰鎻愪氦璇勫垎鍚庯紝浠嶈兘鍦ㄥ綋鍓嶄細璇濋噷鎶婅繖娆¤瘎鍒嗘挙鍥烇紝鎭㈠璇勫垎鍓嶇殑 schedule锛屽苟鎶婂崱鐗囬噸鏂版斁鍥炰粖鏃ラ槦鍒楋紝鑰屼笉鏄彧鑳藉埛鏂伴〉闈㈡垨鎵嬪伐閲嶅缓涓婁笅鏂囥€?### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-030 / LC-010`，这一轮不切入新的 Note/Card 结构或完整调度模型，而是补齐复习会话里最后一个高频且直接影响纠错体验的显式动作。
+- 目标是让用户在刚提交评分后，仍能在当前会话里把这次评分撤回，恢复评分前的 schedule，并把卡片重新放回今日队列，而不是只能刷新页面或手工重建上下文。
+### 实际变更
 
-- 鏇存柊 `backend/internal/modules/card/dto/card.go`銆乣repository/repository.go`銆乣service/service.go`銆乣handler/handler.go`銆乣router/router.go`锛岃ˉ榻?`POST /api/v1/cards/:id/review/undo` 绔埌绔摼璺細璇锋眰闇€鎼哄甫 `reviewId` 涓庤瘎鍒嗗墠鐨?`previousSchedule` 蹇収锛屾湇鍔＄浼氭牎楠屽崱鐗囧綊灞炪€佷粎鍏佽鎾ら攢杩欏紶鍗℃渶鏂扮殑涓€娆¤瘎鍒嗭紝骞跺湪浜嬪姟閲屾仮澶?schedule 鍚庡垹闄ゅ搴?review 璁板綍銆?- 鏂板 `card.review.undo` 瀹¤浜嬩欢锛屼繚鎸佹挙閿€璇勫垎浠嶇劧鐣欏湪 `card` 鍩熷唴閮ㄩ棴鐜紝涓嶆妸杩欐潯浼氳瘽閫昏緫鎵╂暎鍒板叾浠栨ā鍧椼€?- 鏇存柊 `frontend-user/src/api/review.ts`銆乣frontend-user/src/api/types.ts` 涓?`frontend-user/src/modules/review/ReviewWorkspacePage.tsx`锛屾柊澧?`undoReviewCard(...)` API 瀹㈡埛绔€佸涔犻〉鈥滄挙閿€涓婁竴娆¤瘎鍒嗏€濇寜閽紝浠ュ強璇勫垎鍚庝繚鐣欑殑鏈湴 undo 鐘舵€侊紱鎾ら攢鎴愬姛鍚庝細鎭㈠璇勫垎鍓嶇殑璁℃暟銆佹妸鍗＄墖閲嶆柊鏀惧洖浠婃棩闃熷垪澶撮儴锛屽苟缁欏嚭鏄庣‘鍙嶉銆?- 鏇存柊 `frontend-user/src/styles/studio-workspaces.css`锛岃ˉ涓婂涔犳彁绀哄尯涓庢挙閿€鎸夐挳骞舵帓灞曠ず鐨勬牱寮忥紝淇濇寔绌洪槦鍒楀拰姝ｅ父澶嶄範涓ょ鐘舵€佷笅閮借兘瑙﹀彂鎾ら攢銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ANKI-030 / LC-010` 鐨勯樁娈垫弿杩版帹杩涘埌鈥滃涔犱細璇濆凡鍏峰鎾ら攢涓婁竴娆¤瘎鍒嗗苟鎭㈠浠婃棩闃熷垪鈥濊繖涓€灞傘€?### 楠岃瘉缁撴灉
+- 更新 `backend/internal/modules/card/dto/card.go`、`repository/repository.go`、`service/service.go`、`handler/handler.go`、`router/router.go`，补齐 `POST /api/v1/cards/:id/review/undo` 端到端链路：请求需携带 `reviewId` 与评分前的 `previousSchedule` 快照，服务端会校验卡片归属、仅允许撤销这张卡最新的一次评分，并在事务里恢复 schedule 后删除对应 review 记录。
+- 新增 `card.review.undo` 审计事件，保持撤销评分仍然留在 `card` 域内部闭环，不把这条会话逻辑扩散到其他模块。
+- 更新 `frontend-user/src/api/review.ts`、`frontend-user/src/api/types.ts` 与 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，新增 `undoReviewCard(...)` API 客户端、复习页“撤销上一次评分”按钮，以及评分后保留的本地 undo 状态；撤销成功后会恢复评分前的计数、把卡片重新放回今日队列头部，并给出明确反馈。
+- 更新 `frontend-user/src/styles/studio-workspaces.css`，补上复习提示区与撤销按钮并排展示的样式，保持空队列和正常复习两种状态下都能触发撤销。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-030 / LC-010` 的阶段描述推进到“复习会话已具备撤销上一次评分并恢复今日队列”这一层。
+### 验证结果
 
-- RED锛歚go test ./internal/modules/card/handler ./internal/modules/card/service`
-- RED锛歚npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
-- RED锛歚npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
-- GREEN锛歚go test ./internal/modules/card/handler ./internal/modules/card/service`
-- GREEN锛歚npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
-### 鍚庣画褰卞搷
+- RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- GREEN：`npm --workspace frontend-user run test -- src/api/reviewAi.test.ts`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+### 后续影响
 
-- `ANKI-030` 鐨勫涔犱細璇濈幇鍦ㄥ凡缁忓叿澶囪瘎鍒嗐€佽烦杩囥€佹殏鍋溿€佸煁钘忋€佹仮澶嶅拰鎾ら攢璇勫垎杩欑粍鏈€鍏抽敭鐨勬樉寮忔帶鍒跺姩浣滐紝鍘熷瀷闃舵鐨勨€滃厛鍋氫竴鐗堣兘鐢ㄧ殑澶嶄範浣撻獙鈥濆張瀹屾暣浜嗕竴姝ャ€?- 杩欎竴杞殑鎾ら攢浠嶇劧寤虹珛鍦ㄢ€滃綋鍓嶄細璇濅繚鐣欒瘎鍒嗗墠 schedule 蹇収 + 浠呭厑璁告挙閿€鏈€鏂颁竴鏉¤瘎鍒嗏€濈殑鏈€灏忔ā鍨嬩笂锛涘悗缁洿閫傚悎缁х画娌?`ANKI-030 / ANKI-020 / LC-010` 鍋氱湡瀹炲涔?澶嶄範/閲嶆柊瀛︿範闃熷垪銆佸煁钘忔棩鍒囪涔変笌鏇寸粺涓€鐨?SourceLink/鍙嶉鍥炲啓锛岃€屼笉鏄户缁妸鏇村璋冨害鎺ㄥ鐣欏湪鍓嶇浼氳瘽鐘舵€侀噷銆?
-## 2026-07-15 08:26:07 +08:00 | v1.1.0-alpha.254 | 鎺ㄨ繘 ANKI-040 鍗＄墖娴忚鍣ㄦ湰鍦扮瓫閫変笌鎵归噺鐘舵€佺鐞?### 浠诲姟鍐呭
+- `ANKI-030` 的复习会话现在已经具备评分、跳过、暂停、埋藏、恢复和撤销评分这组最关键的显式控制动作，原型阶段的“先做一版能用的复习体验”又完整了一步。
+- 这一轮的撤销仍然建立在“当前会话保留评分前 schedule 快照 + 仅允许撤销最新一条评分”的最小模型上；后续更适合继续沿 `ANKI-030 / ANKI-020 / LC-010` 做真实学习/复习/重新学习队列、埋藏日切语义与更统一的 SourceLink/反馈回写，而不是继续把更多调度推导留在前端会话状态里。
+## 2026-07-15 08:26:07 +08:00 | v1.1.0-alpha.254 | 推进 ANKI-040 卡片浏览器本地筛选与批量状态管理
+### 任务内容
 
-- 缁х画娌?`CODEX_MASTER_PROMPT.md` 鐨勨€滃厛鎶婁富瀛︿範璺緞鍋氭垚鍙敤鐗堬紝鍐嶉€愭缁嗗寲鈥濇柟鍚戞帹杩?`ANKI-040 / LC-010`锛岃繖涓€杞笉鍏堝垏鍘诲畬鏁寸殑鍚庣杩囨护鎺ュ彛鎴?Note/Card 妯″瀷閲嶆瀯锛岃€屾槸鍏堟妸澶嶄範绠＄悊闈㈡澘閲岀殑鍗＄墖娴忚鍣ㄥ仛鎴愬彲浣撻獙鐨勬渶灏忓師鍨嬨€?- 鐩爣鏄鐢ㄦ埛鍦ㄥ悓涓€澶嶄範宸ヤ綔鍙伴噷鏃㈣兘蹇€熺缉灏忓綋鍓嶇墝缁勪腑鐨勫崱鐗囪寖鍥达紝涔熻兘涓€娆℃€у鐞嗕竴鎵光€滀粖澶╁厛鏆傚仠/鍩嬭棌鈥濇垨鈥滈噸鏂版斁鍥炲涔犻泦鍚堚€濈殑鍗＄墖锛岃€屼笉鏄€愬紶鐐规搷浣溿€?
-### 瀹為檯鍙樻洿
+- 继续沿 `CODEX_MASTER_PROMPT.md` 的“先把主学习路径做成可用版，再逐步细化”方向推进 `ANKI-040 / LC-010`，这一轮不先切去完整的后端过滤接口或 Note/Card 模型重构，而是先把复习管理面板里的卡片浏览器做成可体验的最小原型。
+- 目标是让用户在同一复习工作台里既能快速缩小当前牌组中的卡片范围，也能一次性处理一批“今天先暂停/埋藏”或“重新放回复习集合”的卡片，而不是逐张点操作。
 
-- 鍏堢敤 RED/GREEN 淇骞舵墿灞?`frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`锛屾柊澧炰袱鏉￠〉闈㈢骇鍥炲綊锛氫竴鏉￠攣瀹氬崱鐗囨祻瑙堝櫒鍙寜鍏抽敭璇嶃€佺姸鎬併€佹潵婧愮被鍨嬪仛鏈湴绛涢€夛紱涓€鏉￠攣瀹氬閫夊悗鎵归噺鏆傚仠鍗＄墖浼氬悓姝ョЩ鍑轰粖鏃ラ槦鍒楀苟鏇存柊鍙嶉鏂囨銆?- 鏇存柊 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`锛屼负澶嶄範绠＄悊闈㈡澘鏂板鍗＄墖娴忚鍣ㄧ姸鎬侊細鏈湴鍏抽敭璇嶇瓫閫夈€佺姸鎬佺瓫閫夈€佹潵婧愮被鍨嬬瓫閫夈€佸彲瑙佺粨鏋滆鏁般€佸閫夐泦鍚堛€佸叏閫夊綋鍓嶇粨鏋滐紝浠ュ強鎵归噺鏆傚仠/鍩嬭棌/鎭㈠閫変腑鍗＄墖鐨勪氦浜掍笌闃熷垪鍚屾閫昏緫銆?- 鎵归噺鏆傚仠/鍩嬭棌浼氬湪鏈湴鍚屾鏇存柊鍗＄墖鐘舵€併€佺Щ闄や粖鏃ラ槦鍒椾腑鐨勫懡涓崱鐗囧苟淇寰呭畬鎴愯鏁帮紱鎵归噺鎭㈠鍒欏鐢ㄧ幇鏈夊洖鍒疯矾寰勶紝閲嶆柊鍚屾鍗＄粍鍗＄墖涓庝粖鏃ュ涔犻槦鍒楋紝閬垮厤鍜屾棦鏈夊崟鍗℃仮澶嶈涓哄垎鍙夈€?- 鏇存柊 `frontend-user/src/styles/studio-workspaces.css`锛岃ˉ涓婂崱鐗囨祻瑙堝櫒绛涢€夊尯銆佹壒閲忔搷浣滃尯銆佸閫夊ご閮ㄥ拰鏉ユ簮绫诲瀷 badge 鐨勬牱寮忥紝璁╂柊澧炴帶鍒堕潰缁х画璐村悎鐜版湁澶嶄範宸ヤ綔鍖哄竷灞€銆?- 鏇存柊 `docs/engineering/CODEX_BACKLOG.md`锛屾妸 `ANKI-040` 璋冩暣涓?`IN_PROGRESS`锛屽苟璁板綍杩欐宸插畬鎴愮殑鏄€滄湰鍦扮瓫閫?+ 鎵归噺鐘舵€佺鐞嗏€濊繖涓€闃舵銆?
-### 楠岃瘉缁撴灉
+### 实际变更
 
-- RED锛歚npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
-- GREEN锛歚npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- 先用 RED/GREEN 修复并扩展 `frontend-user/src/modules/review/ReviewWorkspacePage.test.tsx`，新增两条页面级回归：一条锁定卡片浏览器可按关键词、状态、来源类型做本地筛选；一条锁定多选后批量暂停卡片会同步移出今日队列并更新反馈文案。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，为复习管理面板新增卡片浏览器状态：本地关键词筛选、状态筛选、来源类型筛选、可见结果计数、多选集合、全选当前结果，以及批量暂停/埋藏/恢复选中卡片的交互与队列同步逻辑。
+- 批量暂停/埋藏会在本地同步更新卡片状态、移除今日队列中的命中卡片并修正待完成计数；批量恢复则复用现有回刷路径，重新同步卡组卡片与今日复习队列，避免和既有单卡恢复行为分叉。
+- 更新 `frontend-user/src/styles/studio-workspaces.css`，补上卡片浏览器筛选区、批量操作区、多选头部和来源类型 badge 的样式，让新增控制面继续贴合现有复习工作区布局。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-040` 调整为 `IN_PROGRESS`，并记录这次已完成的是“本地筛选 + 批量状态管理”这一阶段。
+
+### 验证结果
+
+- RED：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
 - `npm --workspace frontend-user run typecheck`
 - `npm run build:user`
 
-### 鍚庣画褰卞搷
+### 后续影响
 
-- `ANKI-040` 鐜板湪涓嶅啀鍙槸鈥滄湁鍗＄墖鍒楄〃鍙偣鈥濓紝澶嶄範绠＄悊闈㈡澘宸茬粡寮€濮嬪叿澶囦竴涓洿鎺ヨ繎鐪熷疄鍗＄墖娴忚鍣ㄧ殑鏈€灏忓叆鍙ｏ紝鑳藉湪涓嶇寮€澶嶄範涓婁笅鏂囩殑鍓嶆彁涓嬪畬鎴愮瓫閫夈€佹壒閲忛€夋嫨鍜岀姸鎬佺鐞嗐€?- 杩欎竴杞粛鐒跺彧瑕嗙洊褰撳墠鐗岀粍涓婄殑鍓嶇鏈湴绛涢€変笌鏈€灏忔壒閲忓姩浣滐紱鍚庣画鏇撮€傚悎缁х画娌?`ANKI-040 / ANKI-020 / LC-010` 琛ュ悗绔垪琛?杩囨护 API銆佹爣绛句笌鍒版湡鏃堕棿绛涢€夈€佹壒閲忕‘璁?澶辫触鏄庣粏鍜屽璁¤拷婧紝鑰屼笉鏄户缁妸鏇撮噸鐨勬暟鎹兘鍔涢兘鐣欏湪鍓嶇鍐呭瓨鎬侀噷銆?
+- `ANKI-040` 现在不再只是“有卡片列表可点”，复习管理面板已经开始具备一个更接近真实卡片浏览器的最小入口，能在不离开复习上下文的前提下完成筛选、批量选择和状态管理。
+- 这一轮仍然只覆盖当前牌组上的前端本地筛选与最小批量动作；后续更适合继续沿 `ANKI-040 / ANKI-020 / LC-010` 补后端列表/过滤 API、标签与到期时间筛选、批量确认/失败明细和审计追溯，而不是继续把更重的数据能力都留在前端内存态里。
