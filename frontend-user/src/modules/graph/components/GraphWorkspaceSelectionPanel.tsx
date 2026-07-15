@@ -51,7 +51,7 @@ export function GraphWorkspaceSelectionPanel(props: {
   onNodeSizePresetChange: (preset: GraphNodeSizePreset) => void;
   onNodeTitleChange: (title: string) => void;
   onNodeToneChange: (tone: GraphNodeTone) => void;
-  onOpenReviewWorkspace: () => void;
+  onOpenReviewWorkspace: (filters: { sourceType: string; sourceId: string }) => void;
   onOpenSource: (target: string) => void;
   onOrganizeSelectedNodesBySource: (mode: SourceOrganizerMode) => void;
   onToggleGroupCollapse: (groupId: string) => void;
@@ -318,7 +318,7 @@ function GraphSingleNodePanel(props: {
   onNodeSizePresetChange: (preset: GraphNodeSizePreset) => void;
   onNodeTitleChange: (title: string) => void;
   onNodeToneChange: (tone: GraphNodeTone) => void;
-  onOpenReviewWorkspace: () => void;
+  onOpenReviewWorkspace: (filters: { sourceType: string; sourceId: string }) => void;
   onOpenSource: (target: string) => void;
   selectedNode: GraphNodePayload;
   selectedNodeReviewFeedback: GraphSourceReviewFeedback | null;
@@ -419,7 +419,18 @@ function GraphSingleNodePanel(props: {
             </div>
           ) : null}
           <div className="graph-inline-actions">
-            <button className="secondary-button" onClick={props.onOpenReviewWorkspace} type="button">
+            <button
+              className="secondary-button"
+              onClick={() => {
+                const sourceType = selectedNode.source?.type?.trim();
+                const sourceId = selectedNode.source?.id?.trim();
+                if (!sourceType || !sourceId) {
+                  return;
+                }
+                props.onOpenReviewWorkspace({ sourceType, sourceId });
+              }}
+              type="button"
+            >
               打开复习工作台
             </button>
           </div>

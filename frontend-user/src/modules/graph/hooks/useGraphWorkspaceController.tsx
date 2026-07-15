@@ -2369,7 +2369,12 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                         })
                       : undefined
                   }
-                  onOpenReviewWorkspace={() => navigate("/review")}
+                  onOpenReviewWorkspace={(filters) => {
+                    const params = new URLSearchParams();
+                    params.set("sourceType", filters.sourceType);
+                    params.set("sourceId", filters.sourceId);
+                    navigate(`/review?${params.toString()}`);
+                  }}
                   onOpenSource={(target) => navigate(target)}
                   onOrganizeSelectedNodesBySource={organizeSelectedNodesBySource}
                   onToggleGroupCollapse={toggleGroupCollapse}

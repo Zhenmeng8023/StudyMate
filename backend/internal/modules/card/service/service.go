@@ -87,6 +87,7 @@ func (s *Service) ListCards(ownerUserID string, deckID string, request carddto.L
 		Query:      strings.TrimSpace(request.Query),
 		Status:     status,
 		SourceType: strings.TrimSpace(request.SourceType),
+		SourceID:   strings.TrimSpace(request.SourceID),
 		DueBucket:  dueBucket,
 		Tag:        strings.TrimSpace(request.Tag),
 		Now:        s.now().UTC(),

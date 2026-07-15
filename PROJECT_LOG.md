@@ -1,3 +1,32 @@
+## 2026-07-15 21:01:56 +08:00 | v1.1.0-alpha.286 | 推进 LC-010 / ANKI-060 图谱节点来源级精准回补
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先把主学习闭环跑通”的优先级推进 `LC-010 / ANKI-060`，这一轮不直接切进更重的 mastery 持久化，而是先把图谱节点里的薄弱反馈入口真正落到可操作的复习集合。
+- 目标是让图谱节点检查器里的“打开复习工作台”不再只是粗粒度跳转，而是带着明确的 `sourceType + sourceId` 进入复习工作台，并自动定位这一来源下的卡片集合。
+### 实际变更
+
+- 更新 `backend/internal/modules/card/dto/card.go`、`backend/internal/modules/card/repository/repository.go` 与 `backend/internal/modules/card/service/service.go`，为牌组卡片列表查询补上 `sourceId` 服务端过滤通路。
+- 更新 `backend/internal/modules/card/handler/handler_test.go` 与 `backend/internal/modules/card/service/list_cards_filters_test.go`，锁定 `sourceId` 查询参数会被 handler 正确读取，并且来源类型 + 来源 ID 组合过滤能稳定命中目标卡片。
+- 更新 `frontend-user/src/api/review.ts`，让复习工作台的 `listDeckCards()` 能把 `sourceId` 一并带到后端列表接口。
+- 更新 `frontend-user/src/modules/graph/components/GraphWorkspaceSelectionPanel.tsx` 与对应测试，让图谱节点检查器里的“打开复习工作台”改为显式传出 `{ sourceType, sourceId }`，避免再退化成无上下文跳转。
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，把图谱侧回跳改成 `/review?sourceType=...&sourceId=...` 深链。
+- 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx` 与对应测试，让复习工作台能识别来源级 query、跨牌组查找首个命中的来源卡片集合、自动打开管理卡片视图，并在卡片浏览器里新增“卡片来源 ID”筛选输入。
+- 同步更新 `docs/engineering/CODEX_BACKLOG.md`，把 `ANKI-040 / ANKI-060 / LC-010` 的当前阶段文案推进到“来源级精准回补”这一层，并记录这次执行包。
+### 验证结果
+
+- RED：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- RED：`npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceSelectionPanel.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- GREEN：`go test ./internal/modules/card/handler ./internal/modules/card/service`
+- GREEN：`npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceSelectionPanel.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx`
+- `go test ./internal/modules/card/...`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npm run verify:docs`
+### 后续影响
+
+- `LC-010 / ANKI-060` 现在已经从“图谱里能看到来源级弱项反馈”继续推进到“能直接落到该来源下待处理卡片集合”，图谱到复习的回补链路更接近真实闭环。
+- 这一轮仍然没有做 mastery 持久回写；如果继续推进，更适合优先沿 `WB-033` 做来源级/节点级学习状态沉淀，或把来源级过滤进一步归并到统一 SourceLink / review filter 契约，而不是回到新增分散入口。
+
 ## 2026-07-15 20:37:43 +08:00 | v1.1.0-alpha.285 | 推进 ANKI-060 / LC-010 图谱节点来源级复习反馈
 ### 任务内容
 

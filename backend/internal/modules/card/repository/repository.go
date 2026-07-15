@@ -30,6 +30,7 @@ type ListCardsFilter struct {
 	Query      string
 	Status     string
 	SourceType string
+	SourceID   string
 	DueBucket  string
 	Tag        string
 	Now        time.Time
@@ -154,6 +155,9 @@ func (r *Repository) ListCardsByDeck(deckID string, ownerUserID string, filter L
 		} else {
 			query = query.Where("cards.source_type = ?", filter.SourceType)
 		}
+	}
+	if filter.SourceID != "" {
+		query = query.Where("cards.source_id = ?", filter.SourceID)
 	}
 	if filter.DueBucket == "due" {
 		query = query.Where("card_schedules.due_at <= ?", filter.Now)

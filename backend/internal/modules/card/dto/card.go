@@ -21,6 +21,7 @@ type ListCardsQuery struct {
 	Query      string `form:"q"`
 	Status     string `form:"status"`
 	SourceType string `form:"sourceType"`
+	SourceID   string `form:"sourceId"`
 	DueBucket  string `form:"dueBucket"`
 	Tag        string `form:"tag"`
 }

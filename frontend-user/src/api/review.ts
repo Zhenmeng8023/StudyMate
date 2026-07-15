@@ -59,6 +59,7 @@ export async function listDeckCards(
     query?: string;
     status?: "all" | "active" | "suspended" | "buried";
     sourceType?: "all" | "none" | string;
+    sourceId?: string;
     dueBucket?: "all" | "due" | "upcoming";
     tag?: string;
   }
@@ -72,6 +73,9 @@ export async function listDeckCards(
   }
   if (filters?.sourceType && filters.sourceType !== "all") {
     params.set("sourceType", filters.sourceType);
+  }
+  if (filters?.sourceId?.trim()) {
+    params.set("sourceId", filters.sourceId.trim());
   }
   if (filters?.dueBucket && filters.dueBucket !== "all") {
     params.set("dueBucket", filters.dueBucket);

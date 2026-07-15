@@ -302,7 +302,10 @@ function ReviewSourceSummary(props: { card: Pick<CardPayload, "sourceType" | "so
 
 export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const location = useLocation();
-  const requestedCardId = useMemo(() => new URLSearchParams(location.search).get("card")?.trim() || "", [location.search]);
+  const routeSearch = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const requestedCardId = useMemo(() => routeSearch.get("card")?.trim() || "", [routeSearch]);
+  const requestedSourceType = useMemo(() => routeSearch.get("sourceType")?.trim() || "", [routeSearch]);
+  const requestedSourceId = useMemo(() => routeSearch.get("sourceId")?.trim() || "", [routeSearch]);
   const [decks, setDecks] = useState<DeckPayload[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState<string>("");
   const [cards, setCards] = useState<CardPayload[]>([]);
@@ -324,7 +327,8 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [managementTab, setManagementTab] = useState<ReviewManagementTab>("decks");
   const [cardSearchQuery, setCardSearchQuery] = useState("");
   const [cardStatusFilter, setCardStatusFilter] = useState<ManagedCardStatusFilter>("all");
-  const [cardSourceFilter, setCardSourceFilter] = useState<ManagedCardSourceFilter>("all");
+  const [cardSourceFilter, setCardSourceFilter] = useState<ManagedCardSourceFilter>(requestedSourceType || "all");
+  const [cardSourceIdFilter, setCardSourceIdFilter] = useState(requestedSourceId);
   const [cardDueFilter, setCardDueFilter] = useState<ManagedCardDueFilter>("all");
   const [cardTagFilter, setCardTagFilter] = useState("");
   const [batchAddTagsInput, setBatchAddTagsInput] = useState("");
@@ -419,7 +423,12 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     // The session is stable for the lifetime of a protected route.
     // Query parameters intentionally steer the current review focus.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestedCardId]);
+  }, [requestedCardId, requestedSourceId, requestedSourceType]);
+
+  useEffect(() => {
+    setCardSourceFilter(requestedSourceType || "all");
+    setCardSourceIdFilter(requestedSourceId);
+  }, [requestedSourceId, requestedSourceType]);
 
   useEffect(() => {
     if (!selectedDeckId) {
@@ -428,7 +437,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     }
     void refreshCards(selectedDeckId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cardDueFilter, cardSearchQuery, cardSourceFilter, cardStatusFilter, cardTagFilter, selectedDeckId]);
+  }, [cardDueFilter, cardSearchQuery, cardSourceFilter, cardSourceIdFilter, cardStatusFilter, cardTagFilter, selectedDeckId]);
 
   useEffect(() => {
     setSelectedManagedCardIds((current) => current.filter((id) => cards.some((card) => card.id === id)));
@@ -543,6 +552,26 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
             nextMessage = "没有找到请求的来源卡片，已回到今日复习队列。";
           }
         }
+      } else if (requestedSourceType && requestedSourceId) {
+        for (const deck of nextDecks) {
+          const deckCards = await listDeckCards(props.session, deck.id, {
+            sourceType: requestedSourceType,
+            sourceId: requestedSourceId
+          });
+          if (deckCards.length > 0) {
+            nextSelectedDeckId = deck.id;
+            nextDeckCards = deckCards;
+            nextManagementTab = "cards";
+            nextManagementOpen = true;
+            nextMessage = "已按图谱来源定位到复习卡片，可直接回补薄弱项。";
+            nextFocusedCardId = deckCards[0]?.id || "";
+            break;
+          }
+        }
+
+        if (!nextSelectedDeckId) {
+          nextMessage = "没有找到该来源下对应的卡片，已回到今日复习队列。";
+        }
       }
 
       setDecks(nextDecks);
@@ -576,6 +605,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
           query: cardSearchQuery,
           status: cardStatusFilter,
           sourceType: cardSourceFilter,
+          sourceId: cardSourceIdFilter,
           dueBucket: cardDueFilter,
           tag: cardTagFilter
         })
@@ -1269,6 +1299,15 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                             </option>
                           ))}
                         </Select>
+                      </label>
+                      <label className="review-card-browser__field">
+                        <span>卡片来源 ID</span>
+                        <input
+                          aria-label="卡片来源 ID"
+                          onChange={(event) => setCardSourceIdFilter(event.target.value)}
+                          placeholder="例如：node-1"
+                          value={cardSourceIdFilter}
+                        />
                       </label>
                       <label className="review-card-browser__field">
                         <span>到期时间筛选</span>
