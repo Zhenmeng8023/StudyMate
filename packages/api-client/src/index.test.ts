@@ -236,4 +236,23 @@ describe("@studymate/api-client", () => {
     );
     expect(persistSession).toHaveBeenCalledWith(null);
   });
+  it("handles empty success responses and reports malformed payloads as typed api errors", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response("gateway unavailable", { status: 502, statusText: "Bad Gateway" }))
+      .mockResolvedValueOnce(new Response("<html>unexpected</html>", { status: 200 }));
+
+    await expect(requestApi<void>("/api/v1/no-content")).resolves.toBeUndefined();
+    await expect(requestApi("/api/v1/gateway-error")).rejects.toMatchObject({
+      name: "ApiRequestError",
+      status: 502,
+      code: "request_failed"
+    });
+    await expect(requestApi("/api/v1/malformed")).rejects.toMatchObject({
+      name: "ApiRequestError",
+      status: 200,
+      code: "invalid_response"
+    });
+  });
+
 });

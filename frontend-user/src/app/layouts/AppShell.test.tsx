@@ -12,7 +12,7 @@ const session: AuthSession = {
     id: "user-1",
     username: "student",
     email: "student@example.com",
-    displayName: "学习者",
+    displayName: "Student",
     role: "user"
   }
 };
@@ -21,7 +21,7 @@ function renderShell(pathname: string) {
   return render(
     <MemoryRouter initialEntries={[pathname]}>
       <AppShell onLogout={vi.fn()} session={session}>
-        <div>页面内容</div>
+        <div>workspace child</div>
       </AppShell>
     </MemoryRouter>
   );
@@ -30,38 +30,39 @@ function renderShell(pathname: string) {
 afterEach(cleanup);
 
 describe("AppShell", () => {
-  it("uses focused navigation and a page command bar on standard pages", () => {
+  it("uses primary navigation and the global command bar on standard pages", () => {
     const { container } = renderShell("/");
 
     expect(container.querySelector('[data-layout-mode="standard"]')).toBeInTheDocument();
-    expect(screen.getByLabelText("主导航")).toBeInTheDocument();
-    expect(screen.getByText("学习概览")).toBeInTheDocument();
-    expect(screen.getByLabelText("搜索资料、笔记或图谱")).toBeInTheDocument();
+    expect(container.querySelector(".primary-sidebar")).toBeInTheDocument();
+    expect(container.querySelector(".compact-navigation")).toBeNull();
+    expect(container.querySelector(".topbar")).toBeInTheDocument();
   });
 
-  it("uses a compact shell for graph canvas routes and removes the global context panel", () => {
+  it("uses a compact shell for graph canvas routes without the global command bar", () => {
     const { container } = renderShell("/graph");
 
     expect(container.querySelector('[data-layout-mode="canvas"]')).toBeInTheDocument();
-    expect(screen.getByLabelText("紧凑主导航")).toBeInTheDocument();
-    expect(screen.queryByText("学习工作台")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("搜索资料、笔记或图谱")).not.toBeInTheDocument();
+    expect(container.querySelector(".compact-navigation")).toBeInTheDocument();
+    expect(container.querySelector(".primary-sidebar")).toBeNull();
+    expect(container.querySelector(".topbar")).toBeNull();
   });
 
   it("uses a compact shell for reading and notes", () => {
     const { container } = renderShell("/reader/material-1");
 
     expect(container.querySelector('[data-layout-mode="studio"]')).toBeInTheDocument();
-    expect(screen.getByLabelText("紧凑主导航")).toBeInTheDocument();
-    expect(screen.getByLabelText("搜索资料、笔记或图谱")).toBeInTheDocument();
+    expect(container.querySelector(".compact-navigation")).toBeInTheDocument();
+    expect(container.querySelector(".topbar")).toBeInTheDocument();
   });
 
-  it("removes persistent side navigation in focus mode", () => {
+  it("removes persistent side navigation and the global command bar in focus mode", () => {
     const { container } = renderShell("/review");
 
     expect(container.querySelector('[data-layout-mode="focus"]')).toBeInTheDocument();
-    expect(screen.queryByLabelText("主导航")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("紧凑主导航")).not.toBeInTheDocument();
-    expect(screen.getByText("结束复习")).toBeInTheDocument();
+    expect(container.querySelector(".primary-sidebar")).toBeNull();
+    expect(container.querySelector(".compact-navigation")).toBeNull();
+    expect(container.querySelector(".topbar")).toBeNull();
+    expect(screen.getByText("workspace child")).toBeInTheDocument();
   });
 });

@@ -561,6 +561,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const historyPast = historyState.past;
   const historyFuture = historyState.future;
   const visibleNodeIds = useMemo(() => visibleNodes.map((node) => node.id), [visibleNodes]);
+  const zoomLabel = `${Math.round((document?.viewport.zoom ?? 1) * 100)}%`;
 
   useGraphKeyboardActions({
     hasDocument: Boolean(detailRef.current),
@@ -2116,7 +2117,9 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                 onLocateNode={handleLocateNode}
                 onQuickNodeTypeChange={setQuickNodeType}
                 onRedo={redoCurrentGraph}
+                onResetViewport={graphViewport.resetViewport}
                 onSearchChange={setGraphSearch}
+                onFitViewport={graphViewport.fitViewportToDocument}
                 onToggleKeyboardGuide={() => setShowKeyboardGuide((current) => !current)}
                 onToggleLinkMode={() => setLinkFromNodeId((current) => (current ? "" : selectedNodeId))}
                 onUndo={undoCurrentGraph}
@@ -2126,6 +2129,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                 quickNodeTypeLabel={quickNodeTypeLabel}
                 selectedNodeCount={selectedNodeIds.length}
                 showKeyboardGuide={showKeyboardGuide}
+                zoomLabel={zoomLabel}
               />
 
               <div className="graph-stage-shell graph-stage-shell--canvas">

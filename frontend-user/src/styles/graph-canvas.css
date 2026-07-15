@@ -29,6 +29,10 @@
   min-width: 0;
 }
 
+.graph-canvas-commandbar__leading {
+  align-items: flex-start;
+}
+
 .graph-canvas-commandbar__actions {
   justify-content: flex-end;
   flex-wrap: wrap;
@@ -48,13 +52,15 @@
 }
 
 .graph-canvas-commandbar__title strong {
-  max-width: min(360px, 34vw);
+  display: -webkit-box;
+  max-width: min(460px, 42vw);
   overflow: hidden;
   color: var(--text-0);
   font-size: 15px;
   line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .graph-save-state {
@@ -390,7 +396,7 @@
 
 @media (max-width: 1120px) {
   .graph-canvas-commandbar__title strong {
-    max-width: 210px;
+    max-width: min(320px, 48vw);
   }
 
   .graph-canvas-stage-panel .graph-toolbar {
@@ -419,7 +425,7 @@
   }
 
   .graph-canvas-commandbar__title {
-    max-width: 40vw;
+    max-width: min(56vw, 260px);
   }
 
   .graph-canvas-commandbar__title strong {

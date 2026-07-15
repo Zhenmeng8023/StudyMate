@@ -15,6 +15,8 @@
   --accent: #2563eb;
   --accent-strong: #1d4ed8;
   --accent-soft: rgba(37, 99, 235, 0.1);
+  --success: #16835f;
+  --success-soft: rgba(22, 131, 95, 0.12);
   --amber: #d97706;
   --amber-soft: rgba(217, 119, 6, 0.12);
   --danger: #d14343;
@@ -26,6 +28,20 @@
   --radius-md: 14px;
   --radius-sm: 10px;
   --radius-xs: 8px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --z-sticky: 20;
+  --z-overlay: 80;
+  --z-dialog: 90;
   --shell-max: none;
   --shell-padding: 0px;
   --sidebar-width: 248px;
@@ -40,3 +56,8 @@
   border-color: var(--danger);
   box-shadow: 0 0 0 3px var(--danger-soft);
 }
+
+.chip--accent { color: var(--accent-strong); background: var(--accent-soft); }
+.chip--success { color: var(--success); background: var(--success-soft); }
+.chip--warning { color: var(--amber); background: var(--amber-soft); }
+.chip--danger { color: var(--danger); background: var(--danger-soft); }

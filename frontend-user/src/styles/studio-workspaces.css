@@ -74,12 +74,14 @@
 
 .studio-commandbar__title strong,
 .review-focus-commandbar__leading > div strong {
+  display: -webkit-box;
   overflow: hidden;
   color: var(--text-0);
   font-size: 16px;
   line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .studio-commandbar__metrics span,
@@ -163,7 +165,8 @@
 .reader-stage-card,
 .notes-editor-card,
 .review-focus-stage,
-.review-management-dock {
+.review-management-dock,
+.review-workspace-panel {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -586,7 +589,7 @@
   justify-content: flex-start;
 }
 
-/* The review surface is intentionally single-task; management appears only on demand. */
+/* The review surface now has a workspace stage before the focused session. */
 .review-focus {
   min-height: calc(100vh - 160px);
 }
@@ -620,8 +623,15 @@
   min-height: clamp(600px, calc(100vh - 280px), 860px);
 }
 
-.review-focus:not(.review-focus--management-open) .review-focus__body {
+.review-focus--workspace .review-focus__body {
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.review-focus:not(.review-focus--management-open):not(.review-focus--workspace) .review-focus__body {
   grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
 }
 
 .review-focus--management-open .review-focus__body {
@@ -632,11 +642,153 @@
 .review-focus-stage {
   display: grid;
   place-items: center;
+  width: min(100%, 880px);
   min-height: 0;
   padding: clamp(18px, 4vw, 46px);
   background:
     radial-gradient(circle at 30% 10%, rgba(41, 88, 70, 0.07), transparent 28%),
     linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(247, 248, 244, 0.94));
+}
+
+.review-focus--workspace .review-focus-stage {
+  width: 100%;
+  place-items: stretch;
+}
+
+.review-workspace-stage {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+}
+
+.review-workspace-hero,
+.review-workspace-upnext {
+  display: grid;
+  gap: 18px;
+  padding: clamp(24px, 4vw, 34px);
+  border: 1px solid rgba(41, 88, 70, 0.14);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top left, rgba(94, 139, 126, 0.14), transparent 34%),
+    linear-gradient(152deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 243, 0.96));
+}
+
+.review-workspace-hero__copy,
+.review-workspace-launch {
+  display: grid;
+  gap: 12px;
+}
+
+.review-workspace-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-self: flex-start;
+  min-height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: rgba(41, 88, 70, 0.1);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.review-workspace-hero h1,
+.review-workspace-upnext__head strong {
+  margin: 0;
+  color: var(--text-0);
+}
+
+.review-workspace-hero h1 {
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.2;
+}
+
+.review-workspace-hero p,
+.review-workspace-upnext__head span,
+.review-workspace-upnext__empty {
+  margin: 0;
+  color: var(--text-1);
+  line-height: 1.7;
+}
+
+.review-workspace-launch {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.review-workspace-metrics {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.review-workspace-metric {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(41, 88, 70, 0.08);
+}
+
+.review-workspace-metric span,
+.review-workspace-metric small,
+.review-workspace-upnext__list small {
+  color: var(--text-1);
+}
+
+.review-workspace-metric strong {
+  color: var(--text-0);
+  font-size: 28px;
+}
+
+.review-workspace-upnext__head {
+  display: grid;
+  gap: 8px;
+}
+
+.review-workspace-upnext__list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-workspace-upnext__list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(41, 88, 70, 0.08);
+}
+
+.review-workspace-upnext__list li span {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  color: var(--accent-strong);
+  background: rgba(41, 88, 70, 0.1);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.review-workspace-upnext__list li strong,
+.review-workspace-panel .review-management-heading h2 {
+  color: var(--text-0);
+}
+
+.review-workspace-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .review-focus-card-shell {
@@ -1124,6 +1276,7 @@
     grid-column: span 2;
   }
 
+  .review-focus--workspace .review-focus__body,
   .review-focus--management-open .review-focus__body {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1139,6 +1292,11 @@
   }
 
   .review-card-browser__filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .review-workspace-launch,
+  .review-workspace-metrics {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -1194,6 +1352,11 @@
     padding: 18px;
   }
 
+  .review-workspace-hero,
+  .review-workspace-upnext {
+    padding: 20px;
+  }
+
   .review-focus-card {
     min-height: 320px;
     padding: 30px;
@@ -1218,7 +1381,7 @@
 @media (max-width: 620px) {
   .studio-commandbar__title strong,
   .review-focus-commandbar__leading > div strong {
-    max-width: 180px;
+    max-width: none;
   }
 
   .studio-commandbar__metrics,
@@ -1251,6 +1414,10 @@
   .review-focus-card {
     min-height: 300px;
     padding: 24px;
+  }
+
+  .review-workspace-hero h1 {
+    font-size: 30px;
   }
 
   .review-focus-card strong {

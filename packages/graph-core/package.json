@@ -8,5 +8,8 @@
   "scripts": {
     "test": "node --experimental-strip-types --test test/*.test.ts",
     "test:coverage": "node --experimental-strip-types --experimental-test-coverage --test test/*.test.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
   }
 }

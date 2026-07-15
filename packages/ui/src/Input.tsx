@@ -4,15 +4,15 @@ export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   invalid?: boolean;
 };
 
-export function Input(props: InputProps) {
-  const { className, invalid = false, ...rest } = props;
+export function Input({ className, invalid = false, ...inputProps }: InputProps) {
+  const ariaInvalid = invalid || inputProps["aria-invalid"] === true || inputProps["aria-invalid"] === "true";
 
   return (
     <input
-      {...rest}
-      aria-invalid={invalid || props["aria-invalid"] ? "true" : undefined}
+      {...inputProps}
+      aria-invalid={ariaInvalid ? "true" : undefined}
       className={["ds-input", invalid ? "is-invalid" : "", className ?? ""].filter(Boolean).join(" ")}
-      type={rest.type ?? "text"}
+      type={inputProps.type ?? "text"}
     />
   );
 }

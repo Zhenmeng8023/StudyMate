@@ -1,4 +1,4 @@
-import React, { type ReactNode } from "react";
+import React, { type ReactNode, useEffect, useId, useRef } from "react";
 import { IconButton } from "./IconButton";
 
 export type DrawerProps = {
@@ -12,19 +12,45 @@ export type DrawerProps = {
 };
 
 export function Drawer(props: DrawerProps) {
-  if (!props.isOpen) {
-    return null;
-  }
+  const titleId = useId();
+  const descriptionId = useId();
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!props.isOpen || !props.onClose) return;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = window.requestAnimationFrame(() => closeRef.current?.focus());
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        props.onClose?.();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [props.isOpen, props.onClose]);
+
+  if (!props.isOpen) return null;
 
   return (
-    <aside className={["ds-drawer", `ds-drawer--${props.side ?? "left"}`, props.className ?? ""].filter(Boolean).join(" ")} aria-label={props.title}>
+    <aside
+      aria-describedby={props.description ? descriptionId : undefined}
+      aria-labelledby={titleId}
+      aria-modal="true"
+      className={["ds-drawer", `ds-drawer--${props.side ?? "left"}`, props.className ?? ""].filter(Boolean).join(" ")}
+      role="dialog"
+    >
       <header className="ds-drawer__header">
         <div>
-          <h2>{props.title}</h2>
-          {props.description ? <p>{props.description}</p> : null}
+          <h2 id={titleId}>{props.title}</h2>
+          {props.description ? <p id={descriptionId}>{props.description}</p> : null}
         </div>
         {props.onClose ? (
-          <IconButton aria-label={`关闭${props.title}`} onClick={props.onClose}>
+          <IconButton ref={closeRef} aria-label={`关闭${props.title}`} onClick={props.onClose}>
             <span aria-hidden="true">×</span>
           </IconButton>
         ) : null}

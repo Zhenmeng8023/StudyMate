@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import type { AuthSession } from "../../api/client";
 import { primaryNavItems } from "../appShared";
@@ -6,7 +7,10 @@ export function CompactNavigation(props: { session: AuthSession | null }) {
   return (
     <aside className="compact-navigation" aria-label="紧凑主导航">
       <Link aria-label="返回工作台" className="compact-brand" title="返回工作台" to="/">
-        学
+        S
+      </Link>
+      <Link aria-label="添加资料" className="compact-create" title="添加资料" to="/materials">
+        <Plus aria-hidden="true" size={18} />
       </Link>
       <nav className="compact-nav-list" aria-label="学习功能">
         {primaryNavItems.map((item) => {

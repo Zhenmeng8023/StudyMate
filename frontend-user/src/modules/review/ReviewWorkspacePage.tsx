@@ -73,6 +73,19 @@ const ratingOptions = [
   { value: "easy", label: "轻松", shortcut: "4", accessibilityLabel: "Easy 轻松" }
 ] as const;
 
+async function readImportedTextFile(file: File) {
+  if (typeof file.text === "function") {
+    return file.text();
+  }
+
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error ?? new Error("读取导入文件失败"));
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.readAsText(file);
+  });
+}
+
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("zh-CN", {
     month: "numeric",
@@ -323,6 +336,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [importConfirmError, setImportConfirmError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [reviewMode, setReviewMode] = useState<"workspace" | "focus">("workspace");
   const [managementOpen, setManagementOpen] = useState(false);
   const [managementTab, setManagementTab] = useState<ReviewManagementTab>("decks");
   const [cardSearchQuery, setCardSearchQuery] = useState("");
@@ -381,6 +395,8 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   );
   const allVisibleSelected = visibleCards.length > 0 && selectedVisibleCount === visibleCards.length;
   const reviewedCount = completedCount;
+  const queuePreview = useMemo(() => queue.slice(0, 3), [queue]);
+  const canStartReview = Boolean(currentItem) && !loading;
   const reviewState: ReviewWorkspaceState = useMemo(() => {
     if (loading && queue.length === 0) {
       return {
@@ -416,7 +432,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
 
     return null;
   }, [currentItem, loading, queue.length, workspaceErrorMessage]);
-  const showCurrentCard = currentItem && (!reviewState || reviewState.kind === "stale");
+  const showCurrentCard = reviewMode === "focus" && currentItem && (!reviewState || reviewState.kind === "stale");
 
   useEffect(() => {
     void refreshAll();
@@ -449,6 +465,10 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   }, [currentItem?.card.id]);
 
   useEffect(() => {
+    if (reviewMode !== "focus") {
+      return;
+    }
+
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target;
       if (
@@ -504,7 +524,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [busy, currentItem, queue.length, showAnswer]);
+  }, [busy, currentItem, queue.length, reviewMode, showAnswer]);
 
   async function refreshAll() {
     setBusy(true);
@@ -524,6 +544,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       let nextManagementOpen = false;
       let nextMessage = "";
       let nextFocusedCardId = "";
+      let nextReviewMode: "workspace" | "focus" = "workspace";
 
       if (requestedCardId) {
         const prioritizedQueue = prioritizeRequestedQueueItem(reviewQueue.items, requestedCardId);
@@ -534,6 +555,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
           nextManagementOpen = true;
           nextMessage = "已定位来源卡片，可直接继续复习。";
           nextFocusedCardId = requestedCardId;
+          nextReviewMode = "focus";
         } else {
           for (const deck of nextDecks) {
             const deckCards = await listDeckCards(props.session, deck.id);
@@ -579,13 +601,20 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       setCompletedCount(0);
       setQueue(nextQueue);
       setFocusedManagedCardId(nextFocusedCardId);
+      setManagementTab(nextManagementTab);
       if (nextDeckCards) {
         setCards(nextDeckCards);
       }
-      if (nextManagementOpen) {
-        setManagementTab(nextManagementTab);
-        setManagementOpen(true);
-      }
+      setManagementOpen(nextReviewMode === "focus" ? nextManagementOpen : false);
+      setReviewMode((current) => {
+        if (nextReviewMode === "focus") {
+          return "focus";
+        }
+        if (!nextQueue.length) {
+          return "workspace";
+        }
+        return current;
+      });
       if (nextMessage) {
         setMessage(nextMessage);
       }
@@ -679,6 +708,9 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         previousCompletedCount: completedCount
       });
       setQueue((items) => items.slice(1));
+      if (queue.length <= 1) {
+        setReviewMode("workspace");
+      }
       setDueCount((count) => Math.max(0, count - 1));
       setCompletedCount((count) => count + 1);
       setMessage(`已记录复习，下次 ${formatDateTime(result.schedule.dueAt)}。`);
@@ -706,6 +738,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         schedule: result.schedule
       };
       setQueue((items) => [restoredItem, ...items.filter((item) => item.card.id !== restoredItem.card.id)]);
+      setReviewMode("focus");
       setDueCount(undoableReview.previousDueCount);
       setCompletedCount(undoableReview.previousCompletedCount);
       setUndoableReview(null);
@@ -728,6 +761,9 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       await updateCardStatus(props.session, currentItem.card.id, { status: "suspended" });
       setFocusedManagedCardId(currentItem.card.id);
       setQueue((items) => items.filter((item) => item.card.id !== currentItem.card.id));
+      if (queue.length <= 1) {
+        setReviewMode("workspace");
+      }
       setCards((items) =>
         items.map((card) => (card.id === currentItem.card.id ? { ...card, status: "suspended" } : card))
       );
@@ -751,6 +787,9 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       await updateCardStatus(props.session, currentItem.card.id, { status: "buried" });
       setFocusedManagedCardId(currentItem.card.id);
       setQueue((items) => items.filter((item) => item.card.id !== currentItem.card.id));
+      if (queue.length <= 1) {
+        setReviewMode("workspace");
+      }
       setCards((items) =>
         items.map((card) => (card.id === currentItem.card.id ? { ...card, status: "buried" } : card))
       );
@@ -792,6 +831,9 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
 
       setCards((items) => items.map((item) => (item.id === card.id ? { ...item, status: nextStatus } : item)));
       setQueue((items) => items.filter((item) => item.card.id !== card.id));
+      if (queue.length <= 1 && queue.some((item) => item.card.id === card.id)) {
+        setReviewMode("workspace");
+      }
       setDueCount((count) => Math.max(0, count - 1));
       setMessage(nextStatus === "buried" ? "已埋藏卡片，今日队列已同步移除。" : "已暂停卡片，今日队列已同步移除。");
     } catch (error) {
@@ -825,7 +867,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     setImportConfirmError("");
     setPendingImport(null);
     try {
-      const content = await file.text();
+      const content = await readImportedTextFile(file);
       const result = await importDeckCards(props.session, selectedDeckId, {
         filename: file.name,
         content,
@@ -1080,484 +1122,620 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
 
   function openManagement(tab: ReviewManagementTab) {
     setManagementTab(tab);
-    setManagementOpen(true);
+    if (reviewMode === "focus") {
+      setManagementOpen(true);
+    }
   }
 
-  return (
+  function enterReviewFocus() {
+    if (!currentItem) {
+      setManagementTab("create");
+      return;
+    }
+    setReviewMode("focus");
+    setManagementOpen(false);
+    setShowAnswer(false);
+  }
+
+  function returnToWorkspace() {
+    setReviewMode("workspace");
+    setManagementOpen(false);
+    setShowAnswer(false);
+  }
+
+  const managementPanel = (
     <>
-      <section className={managementOpen ? "review-focus review-focus--management-open" : "review-focus"}>
-      <header className="review-focus-commandbar">
-        <div className="review-focus-commandbar__leading">
-          <span className="review-focus-commandbar__eyebrow">今日复习</span>
-          <div>
-            <strong>{currentItem ? currentItem.deckTitle : "今日队列"}</strong>
-            <span>{loading ? "正在同步复习队列" : `${queue.length} 张仍待完成`}</span>
-          </div>
+      <header className="review-management-heading">
+        <div>
+          <p className="eyebrow">复习管理</p>
+          <h2>{managementTab === "decks" ? "卡组" : managementTab === "create" ? "新建卡组" : "卡片"}</h2>
+          <span>
+            {reviewMode === "focus"
+              ? "管理入口保持可用，但不挤占当前复习画面。"
+              : "这里集中放置 Anki 风格的牌组、卡片浏览、批量处理、标签和导入导出操作。"}
+          </span>
         </div>
-        <div className="review-focus-commandbar__stats" aria-label="复习进度">
-          <span><strong>{dueCount}</strong> 到期</span>
-          <span><strong>{reviewedCount}</strong> 已完成</span>
-          <button className="secondary-button" disabled={busy} onClick={() => void refreshAll()} type="button">
-            <RotateCcw size={16} /> 刷新
+        {reviewMode === "focus" ? (
+          <button aria-label="关闭卡组管理" className="icon-button" onClick={() => setManagementOpen(false)} type="button">
+            <PanelRightClose size={16} />
           </button>
-          <button
-            aria-expanded={managementOpen}
-            aria-label={managementOpen ? "关闭卡组管理" : "打开卡组管理"}
-            className="icon-button"
-            onClick={() => setManagementOpen((current) => !current)}
-            type="button"
-          >
-            {managementOpen ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
-          </button>
-        </div>
+        ) : null}
       </header>
 
-      {message || undoableReview ? (
-        <div className="review-focus-message-row">
-          {message ? <p className="review-focus-message" role="status">{message}</p> : <div />}
-          {undoableReview ? (
-            <button className="secondary-button" disabled={busy} onClick={() => void handleUndoLastReview()} type="button">
-              <RotateCcw size={16} />
-              撤销上一次评分
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+      <nav className="review-management-tabs" aria-label="复习管理分类">
+        <button aria-current={managementTab === "decks" ? "page" : undefined} className={managementTab === "decks" ? "active" : ""} onClick={() => setManagementTab("decks")} type="button">卡组</button>
+        <button aria-current={managementTab === "create" ? "page" : undefined} className={managementTab === "create" ? "active" : ""} onClick={() => setManagementTab("create")} type="button">新建</button>
+        <button aria-current={managementTab === "cards" ? "page" : undefined} className={managementTab === "cards" ? "active" : ""} onClick={() => setManagementTab("cards")} type="button">卡片</button>
+      </nav>
 
-      <div className="review-focus__body">
-        <main className="review-focus-stage" aria-label="复习卡片">
-          {reviewState && reviewState.kind !== "empty" ? (
-            <DataState description={reviewState.description} kind={reviewState.kind} title={reviewState.title} />
-          ) : null}
-          {showCurrentCard ? (
-            <section className="review-focus-card-shell">
-              <div className="review-focus-card-meta">
-                <span>{currentItem.deckTitle}</span>
-                <span>第 {reviewedCount + 1} 张 / 剩余 {queue.length} 张</span>
-              </div>
-              <article className={showAnswer ? "review-focus-card is-revealed" : "review-focus-card"}>
-                <span>{showAnswer ? "答案" : "问题"}</span>
-                <strong>{showAnswer ? currentItem.card.back : currentItem.card.front}</strong>
-                {!showAnswer ? <p>先回想答案，再翻面确认。按空格键或 Enter 翻面。</p> : null}
-              </article>
-              <div className="review-focus-schedule">
-                <span>当前状态：{currentItem.schedule.state}</span>
-                <span>预估下次：{formatRelativeInterval(currentItem.schedule.intervalDays)}</span>
-                <span>计划到期：{formatDateTime(currentItem.schedule.dueAt)}</span>
-              </div>
-              <ReviewSourceSummary card={currentItem.card} />
-              <div className="review-focus-actions">
-                <button className="secondary-button" disabled={busy} onClick={() => setShowAnswer((value) => !value)} type="button">
-                  <Sparkles size={16} />
-                  {showAnswer ? "收起答案" : "显示答案"}
+      <div className="review-management-body">
+        {managementTab === "decks" ? (
+          <div className="review-management-stack">
+            {decks.length ? (
+              decks.map((deck) => (
+                <button
+                  aria-current={deck.id === selectedDeckId ? "page" : undefined}
+                  className={deck.id === selectedDeckId ? "review-deck-row active" : "review-deck-row"}
+                  key={deck.id}
+                  onClick={() => {
+                    setSelectedDeckId(deck.id);
+                    setManagementTab("cards");
+                  }}
+                  type="button"
+                >
+                  <strong>{deck.title}</strong>
+                  <span>{deck.cardCount} 张卡片 · {deck.visibility === "public" ? "公开" : "仅自己"}</span>
                 </button>
-                <button className="secondary-button" disabled={busy || queue.length <= 1} onClick={handleSkipCurrent} type="button">
-                  <ChevronRight size={16} />
-                  跳过当前卡片
-                </button>
-                <button className="secondary-button" disabled={busy} onClick={() => void handleSuspendCurrent()} type="button">
-                  <PanelRightClose size={16} />
-                  暂停当前卡片
-                </button>
-                <button className="secondary-button" disabled={busy} onClick={() => void handleBuryCurrent()} type="button">
-                  <BookOpenCheck size={16} />
-                  埋藏当前卡片
-                </button>
-                <div className="review-focus-ratings" aria-label="记忆评分">
-                  {ratingOptions.map((option) => (
-                    <button
-                      aria-label={option.accessibilityLabel}
-                      className={`review-rating-button review-rating-button--${option.value}`}
-                      disabled={busy || !showAnswer}
-                      key={option.value}
-                      onClick={() => void handleRate(option.value)}
-                      type="button"
-                    >
-                      <span>{option.shortcut}</span>
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </section>
-          ) : reviewState?.kind === "empty" ? (
-            <DataState
-              action={<button className="primary-button" onClick={() => openManagement("create")} type="button"><Plus size={16} /> 创建卡组</button>}
-              description={reviewState.description}
-              kind={reviewState.kind}
-              title={reviewState.title}
-            />
-          ) : null}
-        </main>
-
-        <aside className="review-management-dock" aria-label="复习管理">
-          <header className="review-management-heading">
-            <div>
-              <p className="eyebrow">复习管理</p>
-              <h2>{managementTab === "decks" ? "卡组" : managementTab === "create" ? "新建卡组" : "卡片"}</h2>
-              <span>管理入口保持可用，但不挤占当前复习画面。</span>
-            </div>
-            <button aria-label="关闭卡组管理" className="icon-button" onClick={() => setManagementOpen(false)} type="button"><PanelRightClose size={16} /></button>
-          </header>
-
-          <nav className="review-management-tabs" aria-label="复习管理分类">
-            <button aria-current={managementTab === "decks" ? "page" : undefined} className={managementTab === "decks" ? "active" : ""} onClick={() => setManagementTab("decks")} type="button">卡组</button>
-            <button aria-current={managementTab === "create" ? "page" : undefined} className={managementTab === "create" ? "active" : ""} onClick={() => setManagementTab("create")} type="button">新建</button>
-            <button aria-current={managementTab === "cards" ? "page" : undefined} className={managementTab === "cards" ? "active" : ""} onClick={() => setManagementTab("cards")} type="button">卡片</button>
-          </nav>
-
-          <div className="review-management-body">
-            {managementTab === "decks" ? (
-              <div className="review-management-stack">
-                {decks.length ? (
-                  decks.map((deck) => (
-                    <button
-                      aria-current={deck.id === selectedDeckId ? "page" : undefined}
-                      className={deck.id === selectedDeckId ? "review-deck-row active" : "review-deck-row"}
-                      key={deck.id}
-                      onClick={() => {
-                        setSelectedDeckId(deck.id);
-                        setManagementTab("cards");
-                      }}
-                      type="button"
-                    >
-                      <strong>{deck.title}</strong>
-                      <span>{deck.cardCount} 张卡片 · {deck.visibility === "public" ? "公开" : "仅自己"}</span>
-                    </button>
-                  ))
-                ) : (
-                  <DataState
-                    action={<button className="primary-button" onClick={() => setManagementTab("create")} type="button">新建第一个卡组</button>}
-                    description="卡组是复习内容的容器。阅读、笔记和图谱草稿都会写入这里。"
-                    kind="empty"
-                    title="还没有卡组"
-                  />
-                )}
-              </div>
-            ) : managementTab === "create" ? (
-              <form className="review-management-form" onSubmit={handleCreateDeck}>
-                <label>
-                  <span>标题</span>
-                  <input aria-label="卡组标题" onChange={(event) => setDeckForm((current) => ({ ...current, title: event.target.value }))} placeholder="例如：算法基础" value={deckForm.title} />
-                </label>
-                <label>
-                  <span>说明</span>
-                  <textarea aria-label="卡组说明" onChange={(event) => setDeckForm((current) => ({ ...current, description: event.target.value }))} placeholder="给这组卡片留一点上下文" rows={3} value={deckForm.description} />
-                </label>
-                <label>
-                  <span>可见性</span>
-                  <Select aria-label="卡组可见性" onChange={(event) => setDeckForm((current) => ({ ...current, visibility: event.target.value as "private" | "public" }))} value={deckForm.visibility}>
-                    <option value="private">仅自己可见</option>
-                    <option value="public">公开</option>
-                  </Select>
-                </label>
-                <button className="primary-button" disabled={busy || !deckForm.title.trim()} type="submit"><Layers3 size={16} /> 创建卡组</button>
-              </form>
+              ))
             ) : (
-              <div className="review-management-stack">
-                <section className="review-management-deck-summary">
-                  <strong>{selectedDeck?.title ?? "选择一个卡组"}</strong>
-                  <span>{selectedDeck ? `${selectedDeck.cardCount} 张卡片` : "从卡组页选择后可查看和添加卡片。"}</span>
-                </section>
-                {selectedDeckId ? (
-                  <section className="review-card-browser">
-                    <div className="review-card-browser__filters">
-                      <label className="review-card-browser__field">
-                        <span>筛选卡片关键词</span>
-                        <input
-                          aria-label="筛选卡片关键词"
-                          onChange={(event) => setCardSearchQuery(event.target.value)}
-                          placeholder="搜索问题、答案或来源"
-                          value={cardSearchQuery}
-                        />
-                      </label>
-                      <label className="review-card-browser__field">
-                        <span>卡片状态筛选</span>
-                        <Select
-                          aria-label="卡片状态筛选"
-                          onChange={(event) => setCardStatusFilter(event.target.value as ManagedCardStatusFilter)}
-                          value={cardStatusFilter}
-                        >
-                          <option value="all">全部状态</option>
-                          <option value="active">进行中</option>
-                          <option value="suspended">已暂停</option>
-                          <option value="buried">已埋藏</option>
-                        </Select>
-                      </label>
-                      <label className="review-card-browser__field">
-                        <span>卡片来源类型筛选</span>
-                        <Select
-                          aria-label="卡片来源类型筛选"
-                          onChange={(event) => setCardSourceFilter(event.target.value)}
-                          value={cardSourceFilter}
-                        >
-                          <option value="all">全部来源</option>
-                          <option value="none">未绑定来源</option>
-                          {managedSourceOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </Select>
-                      </label>
-                      <label className="review-card-browser__field">
-                        <span>卡片来源 ID</span>
-                        <input
-                          aria-label="卡片来源 ID"
-                          onChange={(event) => setCardSourceIdFilter(event.target.value)}
-                          placeholder="例如：node-1"
-                          value={cardSourceIdFilter}
-                        />
-                      </label>
-                      <label className="review-card-browser__field">
-                        <span>到期时间筛选</span>
-                        <Select
-                          aria-label="到期时间筛选"
-                          onChange={(event) => setCardDueFilter(event.target.value as ManagedCardDueFilter)}
-                          value={cardDueFilter}
-                        >
-                          <option value="all">全部到期时间</option>
-                          <option value="due">已到期</option>
-                          <option value="upcoming">即将到期</option>
-                        </Select>
-                      </label>
-                      <label className="review-card-browser__field">
-                        <span>卡片标签筛选</span>
-                        <Select
-                          aria-label="卡片标签筛选"
-                          onChange={(event) => setCardTagFilter(event.target.value)}
-                          value={cardTagFilter}
-                        >
-                          <option value="">全部标签</option>
-                          {managedTagOptions.map((tag) => (
-                            <option key={tag} value={tag}>
-                              {tag}
-                            </option>
-                          ))}
-                        </Select>
-                      </label>
+              <DataState
+                action={<button className="primary-button" onClick={() => setManagementTab("create")} type="button">新建第一个卡组</button>}
+                description="卡组是复习内容的容器。阅读、笔记和图谱草稿都会写入这里。"
+                kind="empty"
+                title="还没有卡组"
+              />
+            )}
+          </div>
+        ) : managementTab === "create" ? (
+          <form className="review-management-form" onSubmit={handleCreateDeck}>
+            <label>
+              <span>标题</span>
+              <input aria-label="卡组标题" onChange={(event) => setDeckForm((current) => ({ ...current, title: event.target.value }))} placeholder="例如：算法基础" value={deckForm.title} />
+            </label>
+            <label>
+              <span>说明</span>
+              <textarea aria-label="卡组说明" onChange={(event) => setDeckForm((current) => ({ ...current, description: event.target.value }))} placeholder="给这组卡片留一点上下文" rows={3} value={deckForm.description} />
+            </label>
+            <label>
+              <span>可见性</span>
+              <Select aria-label="卡组可见性" onChange={(event) => setDeckForm((current) => ({ ...current, visibility: event.target.value as "private" | "public" }))} value={deckForm.visibility}>
+                <option value="private">仅自己可见</option>
+                <option value="public">公开</option>
+              </Select>
+            </label>
+            <button className="primary-button" disabled={busy || !deckForm.title.trim()} type="submit"><Layers3 size={16} /> 创建卡组</button>
+          </form>
+        ) : (
+          <div className="review-management-stack">
+            <section className="review-management-deck-summary">
+              <strong>{selectedDeck?.title ?? "选择一个卡组"}</strong>
+              <span>{selectedDeck ? `${selectedDeck.cardCount} 张卡片` : "从卡组页选择后可查看和添加卡片。"}</span>
+            </section>
+            {selectedDeckId ? (
+              <section className="review-card-browser">
+                <div className="review-card-browser__filters">
+                  <label className="review-card-browser__field">
+                    <span>筛选卡片关键词</span>
+                    <input
+                      aria-label="筛选卡片关键词"
+                      onChange={(event) => setCardSearchQuery(event.target.value)}
+                      placeholder="搜索问题、答案或来源"
+                      value={cardSearchQuery}
+                    />
+                  </label>
+                  <label className="review-card-browser__field">
+                    <span>卡片状态筛选</span>
+                    <Select
+                      aria-label="卡片状态筛选"
+                      onChange={(event) => setCardStatusFilter(event.target.value as ManagedCardStatusFilter)}
+                      value={cardStatusFilter}
+                    >
+                      <option value="all">全部状态</option>
+                      <option value="active">进行中</option>
+                      <option value="suspended">已暂停</option>
+                      <option value="buried">已埋藏</option>
+                    </Select>
+                  </label>
+                  <label className="review-card-browser__field">
+                    <span>卡片来源类型筛选</span>
+                    <Select
+                      aria-label="卡片来源类型筛选"
+                      onChange={(event) => setCardSourceFilter(event.target.value)}
+                      value={cardSourceFilter}
+                    >
+                      <option value="all">全部来源</option>
+                      <option value="none">未绑定来源</option>
+                      {managedSourceOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+                  <label className="review-card-browser__field">
+                    <span>卡片来源 ID</span>
+                    <input
+                      aria-label="卡片来源 ID"
+                      onChange={(event) => setCardSourceIdFilter(event.target.value)}
+                      placeholder="例如：node-1"
+                      value={cardSourceIdFilter}
+                    />
+                  </label>
+                  <label className="review-card-browser__field">
+                    <span>到期时间筛选</span>
+                    <Select
+                      aria-label="到期时间筛选"
+                      onChange={(event) => setCardDueFilter(event.target.value as ManagedCardDueFilter)}
+                      value={cardDueFilter}
+                    >
+                      <option value="all">全部到期时间</option>
+                      <option value="due">已到期</option>
+                      <option value="upcoming">即将到期</option>
+                    </Select>
+                  </label>
+                  <label className="review-card-browser__field">
+                    <span>卡片标签筛选</span>
+                    <Select
+                      aria-label="卡片标签筛选"
+                      onChange={(event) => setCardTagFilter(event.target.value)}
+                      value={cardTagFilter}
+                    >
+                      <option value="">全部标签</option>
+                      {managedTagOptions.map((tag) => (
+                        <option key={tag} value={tag}>
+                          {tag}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+                </div>
+                <div className="review-card-browser__summary">
+                  <strong>{`${visibleCards.length} 张卡片`}</strong>
+                  <span>{selectedVisibleCount ? `当前结果已选中 ${selectedVisibleCount} 张` : "先筛选再批量处理状态。"}</span>
+                </div>
+                <div className="review-card-browser__batch-actions">
+                  <label className="review-card-browser__toggle-all">
+                    <input
+                      checked={allVisibleSelected}
+                      disabled={!visibleCards.length}
+                      onChange={toggleAllVisibleManagedCards}
+                      type="checkbox"
+                    />
+                    <span>{allVisibleSelected ? "取消全选当前结果" : "全选当前结果"}</span>
+                  </label>
+                  <div className="review-card-browser__batch-buttons">
+                    <button
+                      className="secondary-button"
+                      disabled={busy || !selectedManagedCards.some((card) => card.status === "active")}
+                      onClick={() => void handleBatchManagedCardStatus("suspended")}
+                      type="button"
+                    >
+                      批量暂停选中卡片
+                    </button>
+                    <button
+                      className="secondary-button"
+                      disabled={busy || !selectedManagedCards.some((card) => card.status === "active")}
+                      onClick={() => void handleBatchManagedCardStatus("buried")}
+                      type="button"
+                    >
+                      批量埋藏选中卡片
+                    </button>
+                    <button
+                      className="secondary-button"
+                      disabled={busy || !selectedManagedCards.some((card) => card.status !== "active")}
+                      onClick={() => void handleBatchManagedCardStatus("active")}
+                      type="button"
+                    >
+                      批量恢复选中卡片
+                    </button>
+                  </div>
+                </div>
+                <div className="review-card-browser__tag-actions">
+                  <label className="review-card-browser__field">
+                    <span>批量添加标签</span>
+                    <input
+                      aria-label="批量添加标签"
+                      disabled={busy || !selectedManagedCards.length}
+                      onChange={(event) => setBatchAddTagsInput(event.target.value)}
+                      placeholder="例如：core, exam"
+                      value={batchAddTagsInput}
+                    />
+                  </label>
+                  <button
+                    className="secondary-button"
+                    disabled={busy || !selectedManagedCards.length || !batchAddTagsInput.trim()}
+                    onClick={() => void handleBatchAddManagedCardTags()}
+                    type="button"
+                  >
+                    为选中卡片添加标签
+                  </button>
+                  <label className="review-card-browser__field">
+                    <span>批量移除标签</span>
+                    <input
+                      aria-label="批量移除标签"
+                      disabled={busy || !selectedManagedCards.length}
+                      onChange={(event) => setBatchRemoveTagsInput(event.target.value)}
+                      placeholder="例如：graph"
+                      value={batchRemoveTagsInput}
+                    />
+                  </label>
+                  <button
+                    className="secondary-button"
+                    disabled={busy || !selectedManagedCards.length || !batchRemoveTagsInput.trim()}
+                    onClick={() => void handleBatchRemoveManagedCardTags()}
+                    type="button"
+                  >
+                    从选中卡片移除标签
+                  </button>
+                </div>
+                <div className="review-card-browser__import-export">
+                  <button className="secondary-button" disabled={busy || !selectedDeckId} onClick={() => void handleExportCards("json")} type="button">
+                    导出 JSON
+                  </button>
+                  <button className="secondary-button" disabled={busy || !selectedDeckId} onClick={() => void handleExportCards("csv")} type="button">
+                    导出 CSV
+                  </button>
+                  <label className="review-card-browser__file-field">
+                    <span>导入卡片文件</span>
+                    <input
+                      accept=".json,.csv,application/json,text/csv"
+                      aria-label="导入卡片文件"
+                      disabled={busy || !selectedDeckId}
+                      onChange={(event) => void handleImportCards(event)}
+                      type="file"
+                    />
+                  </label>
+                </div>
+                {latestImportResult ? (
+                  <section className="review-import-result-card">
+                    <div className="review-import-result-card__header">
+                      <h3>最近一次导入结果</h3>
+                      <span>{buildDeckImportResultLabel(latestImportResult)}</span>
                     </div>
-                    <div className="review-card-browser__summary">
-                      <strong>{`${visibleCards.length} 张卡片`}</strong>
-                      <span>{selectedVisibleCount ? `当前结果已选中 ${selectedVisibleCount} 张` : "先筛选再批量处理状态。"}</span>
-                    </div>
-                    <div className="review-card-browser__batch-actions">
-                      <label className="review-card-browser__toggle-all">
-                        <input
-                          checked={allVisibleSelected}
-                          disabled={!visibleCards.length}
-                          onChange={toggleAllVisibleManagedCards}
-                          type="checkbox"
-                        />
-                        <span>{allVisibleSelected ? "取消全选当前结果" : "全选当前结果"}</span>
-                      </label>
-                      <div className="review-card-browser__batch-buttons">
-                        <button
-                          className="secondary-button"
-                          disabled={busy || !selectedManagedCards.some((card) => card.status === "active")}
-                          onClick={() => void handleBatchManagedCardStatus("suspended")}
-                          type="button"
-                        >
-                          批量暂停选中卡片
-                        </button>
-                        <button
-                          className="secondary-button"
-                          disabled={busy || !selectedManagedCards.some((card) => card.status === "active")}
-                          onClick={() => void handleBatchManagedCardStatus("buried")}
-                          type="button"
-                        >
-                          批量埋藏选中卡片
-                        </button>
-                        <button
-                          className="secondary-button"
-                          disabled={busy || !selectedManagedCards.some((card) => card.status !== "active")}
-                          onClick={() => void handleBatchManagedCardStatus("active")}
-                          type="button"
-                        >
-                          批量恢复选中卡片
-                        </button>
+                    <p className="review-import-result-card__summary">
+                      {buildDeckImportResultSummary(latestImportResult.result)}
+                    </p>
+                    {!pendingImport && buildDeckImportPreviewDetails(latestImportResult.result).length ? (
+                      <div className="review-import-preview">
+                        {buildDeckImportPreviewDetails(latestImportResult.result).map((detail) => (
+                          <section className="review-import-preview__section" key={`${latestImportResult.filename}-${detail.heading}`}>
+                            <h3>{detail.heading}</h3>
+                            <ul className="review-import-preview__list">
+                              {detail.items.map((item) => (
+                                <li key={`${detail.heading}-${item.label}`}>
+                                  <span className="review-import-preview__item-label">{item.label}</span>
+                                  {item.message ? <span className="review-import-preview__item-message">{item.message}</span> : null}
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        ))}
                       </div>
-                    </div>
-                    <div className="review-card-browser__tag-actions">
-                      <label className="review-card-browser__field">
-                        <span>批量添加标签</span>
-                        <input
-                          aria-label="批量添加标签"
-                          disabled={busy || !selectedManagedCards.length}
-                          onChange={(event) => setBatchAddTagsInput(event.target.value)}
-                          placeholder="例如：core, exam"
-                          value={batchAddTagsInput}
-                        />
-                      </label>
-                      <button
-                        className="secondary-button"
-                        disabled={busy || !selectedManagedCards.length || !batchAddTagsInput.trim()}
-                        onClick={() => void handleBatchAddManagedCardTags()}
-                        type="button"
-                      >
-                        为选中卡片添加标签
-                      </button>
-                      <label className="review-card-browser__field">
-                        <span>批量移除标签</span>
-                        <input
-                          aria-label="批量移除标签"
-                          disabled={busy || !selectedManagedCards.length}
-                          onChange={(event) => setBatchRemoveTagsInput(event.target.value)}
-                          placeholder="例如：graph"
-                          value={batchRemoveTagsInput}
-                        />
-                      </label>
-                      <button
-                        className="secondary-button"
-                        disabled={busy || !selectedManagedCards.length || !batchRemoveTagsInput.trim()}
-                        onClick={() => void handleBatchRemoveManagedCardTags()}
-                        type="button"
-                      >
-                        从选中卡片移除标签
-                      </button>
-                    </div>
-                    <div className="review-card-browser__import-export">
-                      <button className="secondary-button" disabled={busy || !selectedDeckId} onClick={() => void handleExportCards("json")} type="button">
-                        导出 JSON
-                      </button>
-                      <button className="secondary-button" disabled={busy || !selectedDeckId} onClick={() => void handleExportCards("csv")} type="button">
-                        导出 CSV
-                      </button>
-                      <label className="review-card-browser__file-field">
-                        <span>导入卡片文件</span>
-                        <input
-                          accept=".json,.csv,application/json,text/csv"
-                          aria-label="导入卡片文件"
-                          disabled={busy || !selectedDeckId}
-                          onChange={(event) => void handleImportCards(event)}
-                          type="file"
-                        />
-                      </label>
-                    </div>
-                    {latestImportResult ? (
-                      <section className="review-import-result-card">
-                        <div className="review-import-result-card__header">
-                          <h3>最近一次导入结果</h3>
-                          <span>{buildDeckImportResultLabel(latestImportResult)}</span>
-                        </div>
-                        <p className="review-import-result-card__summary">
-                          {buildDeckImportResultSummary(latestImportResult.result)}
-                        </p>
-                        {!pendingImport && buildDeckImportPreviewDetails(latestImportResult.result).length ? (
-                          <div className="review-import-preview">
-                            {buildDeckImportPreviewDetails(latestImportResult.result).map((detail) => (
-                              <section className="review-import-preview__section" key={`${latestImportResult.filename}-${detail.heading}`}>
-                                <h3>{detail.heading}</h3>
-                                <ul className="review-import-preview__list">
-                                  {detail.items.map((item) => (
-                                    <li key={`${detail.heading}-${item.label}`}>
-                                      <span className="review-import-preview__item-label">{item.label}</span>
-                                      {item.message ? <span className="review-import-preview__item-message">{item.message}</span> : null}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </section>
-                            ))}
-                          </div>
-                        ) : null}
-                      </section>
                     ) : null}
                   </section>
                 ) : null}
-                {selectedDeckId ? (
-                  <form className="review-management-form review-management-form--compact" onSubmit={handleCreateCard}>
-                    <label>
-                      <span>问题</span>
-                      <textarea aria-label="卡片问题" onChange={(event) => setCardForm((current) => ({ ...current, front: event.target.value }))} placeholder="写在卡片正面的提示或问题" rows={3} value={cardForm.front} />
-                    </label>
-                    <label>
-                      <span>答案</span>
-                      <textarea aria-label="卡片答案" onChange={(event) => setCardForm((current) => ({ ...current, back: event.target.value }))} placeholder="写在卡片反面的答案" rows={4} value={cardForm.back} />
-                    </label>
-                    <label>
-                      <span>卡片标签</span>
-                      <input
-                        aria-label="卡片标签"
-                        onChange={(event) => setCardForm((current) => ({ ...current, tags: event.target.value }))}
-                        placeholder="例如：graph, core"
-                        value={cardForm.tags}
-                      />
-                    </label>
-                    <button className="secondary-button" disabled={busy || !cardForm.front.trim() || !cardForm.back.trim()} type="submit"><Plus size={16} /> 添加卡片</button>
-                  </form>
-                ) : null}
-                {selectedDeckId && cards.length ? (
-                  visibleCards.length ? (
-                    <div className="review-card-list">
-                      {visibleCards.map((card) => (
-                        <article className={card.id === focusedManagedCardId ? "review-managed-card active" : "review-managed-card"} key={card.id}>
-                          <div className="review-managed-card__head">
-                            <label className="review-managed-card__selection">
-                              <input
-                                aria-label={`选择卡片 ${card.front}`}
-                                checked={selectedManagedCardIdSet.has(card.id)}
-                                onChange={() => toggleManagedCardSelection(card.id)}
-                                type="checkbox"
-                              />
-                              <span>选中</span>
-                            </label>
-                            <div className="review-managed-card__title">
-                              <strong>{card.front}</strong>
-                              <small>{formatCardStatusLabel(card.status)}</small>
-                            </div>
-                          </div>
-                          <p>{card.back}</p>
-                          {card.tags?.length ? (
-                            <div className="review-managed-card__tags">
-                              {(card.tags ?? []).map((tag) => (
-                                <span className="review-managed-card__tag" key={tag}>
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
-                          <ReviewSourceSummary card={card} compact />
-                          <span className="review-managed-card__source-type">{formatCardSourceTypeLabel(card.sourceType || "none")}</span>
-                          {card.schedule ? (
-                            <small className="review-managed-card__schedule">
-                              {`${formatScheduleStateLabel(card.schedule.state)} · 计划到期 ${formatDateTime(card.schedule.dueAt)}`}
-                            </small>
-                          ) : null}
-                          <div className="review-managed-card__actions">
-                            {card.status === "active" ? (
-                              <>
-                                <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "suspended")} type="button">
-                                  暂停卡片
-                                </button>
-                                <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "buried")} type="button">
-                                  埋藏卡片
-                                </button>
-                              </>
-                            ) : (
-                              <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "active")} type="button">
-                                恢复卡片
-                              </button>
-                            )}
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  ) : (
-                    <DataState description="换个关键词、状态或来源筛选后再看。" kind="empty" title="当前筛选条件下没有卡片" />
-                  )
-                ) : selectedDeckId ? (
-                  <DataState description="为这个卡组添加第一张卡片，或从阅读和笔记的草稿中写入。" kind="empty" title="这个卡组还没有卡片" />
-                ) : null}
-              </div>
-            )}
+              </section>
+            ) : null}
+            {selectedDeckId ? (
+              <form className="review-management-form review-management-form--compact" onSubmit={handleCreateCard}>
+                <label>
+                  <span>问题</span>
+                  <textarea aria-label="卡片问题" onChange={(event) => setCardForm((current) => ({ ...current, front: event.target.value }))} placeholder="写在卡片正面的提示或问题" rows={3} value={cardForm.front} />
+                </label>
+                <label>
+                  <span>答案</span>
+                  <textarea aria-label="卡片答案" onChange={(event) => setCardForm((current) => ({ ...current, back: event.target.value }))} placeholder="写在卡片反面的答案" rows={4} value={cardForm.back} />
+                </label>
+                <label>
+                  <span>卡片标签</span>
+                  <input
+                    aria-label="卡片标签"
+                    onChange={(event) => setCardForm((current) => ({ ...current, tags: event.target.value }))}
+                    placeholder="例如：graph, core"
+                    value={cardForm.tags}
+                  />
+                </label>
+                <button className="secondary-button" disabled={busy || !cardForm.front.trim() || !cardForm.back.trim()} type="submit"><Plus size={16} /> 添加卡片</button>
+              </form>
+            ) : null}
+            {selectedDeckId && cards.length ? (
+              visibleCards.length ? (
+                <div className="review-card-list">
+                  {visibleCards.map((card) => (
+                    <article className={card.id === focusedManagedCardId ? "review-managed-card active" : "review-managed-card"} key={card.id}>
+                      <div className="review-managed-card__head">
+                        <label className="review-managed-card__selection">
+                          <input
+                            aria-label={`选择卡片 ${card.front}`}
+                            checked={selectedManagedCardIdSet.has(card.id)}
+                            onChange={() => toggleManagedCardSelection(card.id)}
+                            type="checkbox"
+                          />
+                          <span>选中</span>
+                        </label>
+                        <div className="review-managed-card__title">
+                          <strong>{card.front}</strong>
+                          <small>{formatCardStatusLabel(card.status)}</small>
+                        </div>
+                      </div>
+                      <p>{card.back}</p>
+                      {card.tags?.length ? (
+                        <div className="review-managed-card__tags">
+                          {(card.tags ?? []).map((tag) => (
+                            <span className="review-managed-card__tag" key={tag}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                      <ReviewSourceSummary card={card} compact />
+                      <span className="review-managed-card__source-type">{formatCardSourceTypeLabel(card.sourceType || "none")}</span>
+                      {card.schedule ? (
+                        <small className="review-managed-card__schedule">
+                          {`${formatScheduleStateLabel(card.schedule.state)} · 计划到期 ${formatDateTime(card.schedule.dueAt)}`}
+                        </small>
+                      ) : null}
+                      <div className="review-managed-card__actions">
+                        {card.status === "active" ? (
+                          <>
+                            <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "suspended")} type="button">
+                              暂停卡片
+                            </button>
+                            <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "buried")} type="button">
+                              埋藏卡片
+                            </button>
+                          </>
+                        ) : (
+                          <button className="secondary-button" disabled={busy} onClick={() => void handleManagedCardStatus(card, "active")} type="button">
+                            恢复卡片
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <DataState description="换个关键词、状态或来源筛选后再看。" kind="empty" title="当前筛选条件下没有卡片" />
+              )
+            ) : selectedDeckId ? (
+              <DataState description="为这个卡组添加第一张卡片，或从阅读和笔记的草稿中写入。" kind="empty" title="这个卡组还没有卡片" />
+            ) : null}
           </div>
-        </aside>
+        )}
       </div>
+    </>
+  );
+
+  return (
+    <>
+      <section
+        className={
+          reviewMode === "workspace"
+            ? "review-focus review-focus--workspace"
+            : managementOpen
+              ? "review-focus review-focus--management-open"
+              : "review-focus"
+        }
+      >
+        <header className="review-focus-commandbar">
+          <div className="review-focus-commandbar__leading">
+            <span className="review-focus-commandbar__eyebrow">{reviewMode === "focus" ? "专注复习" : "复习工作台"}</span>
+            <div>
+              <strong>{reviewMode === "focus" ? (currentItem ? currentItem.deckTitle : "今日队列") : "先整理卡片，再开始记忆"}</strong>
+              <span>{loading ? "正在同步复习队列" : `${queue.length} 张仍待完成`}</span>
+            </div>
+          </div>
+          <div className="review-focus-commandbar__stats" aria-label="复习进度">
+            <span><strong>{dueCount}</strong> 到期</span>
+            <span><strong>{reviewedCount}</strong> 已完成</span>
+            <button className="secondary-button" disabled={busy} onClick={() => void refreshAll()} type="button">
+              <RotateCcw size={16} /> 刷新
+            </button>
+            {reviewMode === "focus" ? (
+              <>
+                <button className="secondary-button" onClick={returnToWorkspace} type="button">
+                  <ChevronLeft size={16} /> 返回工作台
+                </button>
+                <button
+                  aria-expanded={managementOpen}
+                  aria-label={managementOpen ? "关闭卡组管理" : "打开卡组管理"}
+                  className="icon-button"
+                  onClick={() => setManagementOpen((current) => !current)}
+                  type="button"
+                >
+                  {managementOpen ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
+                </button>
+              </>
+            ) : null}
+          </div>
+        </header>
+
+        {message || undoableReview ? (
+          <div className="review-focus-message-row">
+            {message ? <p className="review-focus-message" role="status">{message}</p> : <div />}
+            {undoableReview ? (
+              <button className="secondary-button" disabled={busy} onClick={() => void handleUndoLastReview()} type="button">
+                <RotateCcw size={16} />
+                撤销上一次评分
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="review-focus__body">
+          <main className="review-focus-stage" aria-label="复习卡片">
+            {reviewMode === "workspace" ? (
+              <section className="review-workspace-stage">
+                {reviewState?.kind === "error" ? (
+                  <DataState description={reviewState.description} kind={reviewState.kind} title={reviewState.title} />
+                ) : reviewState?.kind === "empty" ? (
+                  <DataState
+                    action={<button className="primary-button" onClick={() => setManagementTab("create")} type="button"><Plus size={16} /> 创建卡组</button>}
+                    description={reviewState.description}
+                    kind={reviewState.kind}
+                    title={reviewState.title}
+                  />
+                ) : (
+                  <>
+                    {reviewState?.kind === "stale" ? (
+                      <DataState description={reviewState.description} kind={reviewState.kind} title={reviewState.title} />
+                    ) : null}
+                    <section className="review-workspace-hero">
+                      <div className="review-workspace-hero__copy">
+                        <span className="review-workspace-chip">Anki 式工作台</span>
+                        <h1>先查看牌组和卡片，再进入专注复习</h1>
+                        <p>复习页不再默认直接进入答题舞台。你可以先浏览卡片、批量处理状态、调整标签或导入导出数据，再点击开始复习进入专注模式。</p>
+                      </div>
+                      <div className="review-workspace-launch">
+                        <button className="primary-button" disabled={!canStartReview || busy} onClick={enterReviewFocus} type="button">
+                          <Sparkles size={16} /> 开始复习
+                        </button>
+                        <button className="secondary-button" onClick={() => setManagementTab("cards")} type="button">
+                          <ChevronRight size={16} /> 打开卡片浏览器
+                        </button>
+                        <button className="secondary-button" onClick={() => setManagementTab("create")} type="button">
+                          <Plus size={16} /> 新建卡组或卡片
+                        </button>
+                      </div>
+                      <div className="review-workspace-metrics">
+                        <article className="review-workspace-metric">
+                          <span>今日待复习</span>
+                          <strong>{dueCount}</strong>
+                          <small>{currentItem ? `下一张来自 ${currentItem.deckTitle}` : "可以先整理牌组或新增卡片。"}</small>
+                        </article>
+                        <article className="review-workspace-metric">
+                          <span>已完成</span>
+                          <strong>{reviewedCount}</strong>
+                          <small>{reviewedCount ? "今日已经产生复习记录，可随时继续。" : "还没有开始今天的复习。"}</small>
+                        </article>
+                        <article className="review-workspace-metric">
+                          <span>当前牌组</span>
+                          <strong>{selectedDeck?.title ?? currentItem?.deckTitle ?? "今日队列"}</strong>
+                          <small>{selectedDeck ? `${selectedDeck.cardCount} 张卡片` : "切换到卡片页即可直接管理。"}</small>
+                        </article>
+                      </div>
+                    </section>
+                    <section className="review-workspace-upnext" aria-label="即将复习">
+                      <div className="review-workspace-upnext__head">
+                        <strong>接下来适合做什么</strong>
+                        <span>{queuePreview.length ? "先清理牌组和卡片，再一次性进入专注模式。" : "今天队列已经清空，但仍可继续补卡和整理。"} </span>
+                      </div>
+                      {queuePreview.length ? (
+                        <ul className="review-workspace-upnext__list">
+                          {queuePreview.map((item, index) => (
+                            <li key={item.card.id}>
+                              <span>{`#${index + 1}`}</span>
+                              <strong>{item.deckTitle}</strong>
+                              <small>{`${formatScheduleStateLabel(item.schedule.state)} · ${formatRelativeInterval(item.schedule.intervalDays)}`}</small>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="review-workspace-upnext__empty">当前没有待复习卡片，但你依然可以在右侧继续管理牌组、卡片和导入数据。</p>
+                      )}
+                    </section>
+                  </>
+                )}
+              </section>
+            ) : (
+              <>
+                {reviewState && reviewState.kind !== "empty" ? (
+                  <DataState description={reviewState.description} kind={reviewState.kind} title={reviewState.title} />
+                ) : null}
+                {showCurrentCard ? (
+                  <section className="review-focus-card-shell">
+                    <div className="review-focus-card-meta">
+                      <span>{currentItem.deckTitle}</span>
+                      <span>第 {reviewedCount + 1} 张 / 剩余 {queue.length} 张</span>
+                    </div>
+                    <article className={showAnswer ? "review-focus-card is-revealed" : "review-focus-card"}>
+                      <span>{showAnswer ? "答案" : "问题"}</span>
+                      <strong>{showAnswer ? currentItem.card.back : currentItem.card.front}</strong>
+                      {!showAnswer ? <p>先回想答案，再翻面确认。按空格键或 Enter 翻面。</p> : null}
+                    </article>
+                    <div className="review-focus-schedule">
+                      <span>当前状态：{currentItem.schedule.state}</span>
+                      <span>预估下次：{formatRelativeInterval(currentItem.schedule.intervalDays)}</span>
+                      <span>计划到期：{formatDateTime(currentItem.schedule.dueAt)}</span>
+                    </div>
+                    <ReviewSourceSummary card={currentItem.card} />
+                    <div className="review-focus-actions">
+                      <button className="secondary-button" disabled={busy} onClick={() => setShowAnswer((value) => !value)} type="button">
+                        <Sparkles size={16} />
+                        {showAnswer ? "收起答案" : "显示答案"}
+                      </button>
+                      <button className="secondary-button" disabled={busy || queue.length <= 1} onClick={handleSkipCurrent} type="button">
+                        <ChevronRight size={16} />
+                        跳过当前卡片
+                      </button>
+                      <button className="secondary-button" disabled={busy} onClick={() => void handleSuspendCurrent()} type="button">
+                        <PanelRightClose size={16} />
+                        暂停当前卡片
+                      </button>
+                      <button className="secondary-button" disabled={busy} onClick={() => void handleBuryCurrent()} type="button">
+                        <BookOpenCheck size={16} />
+                        埋藏当前卡片
+                      </button>
+                      <div className="review-focus-ratings" aria-label="记忆评分">
+                        {ratingOptions.map((option) => (
+                          <button
+                            aria-label={option.accessibilityLabel}
+                            className={`review-rating-button review-rating-button--${option.value}`}
+                            disabled={busy || !showAnswer}
+                            key={option.value}
+                            onClick={() => void handleRate(option.value)}
+                            type="button"
+                          >
+                            <span>{option.shortcut}</span>
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                ) : reviewState?.kind === "empty" ? (
+                  <DataState
+                    action={<button className="primary-button" onClick={() => openManagement("create")} type="button"><Plus size={16} /> 创建卡组</button>}
+                    description={reviewState.description}
+                    kind={reviewState.kind}
+                    title={reviewState.title}
+                  />
+                ) : null}
+              </>
+            )}
+          </main>
+
+          {reviewMode === "workspace" ? (
+            <section className="review-workspace-panel" aria-label="复习管理">
+              {managementPanel}
+            </section>
+          ) : managementOpen ? (
+            <aside className="review-management-dock" aria-label="复习管理">
+              {managementPanel}
+            </aside>
+          ) : null}
+        </div>
 
         <footer className="review-focus-footer">
-          <span>快捷键：空格 / Enter 翻面；S 跳过当前卡片；P 暂停当前卡片；B 埋藏当前卡片；答案显示后按 1–4 评分。</span>
-          <button className="ghost-button" onClick={() => openManagement("decks")} type="button">
-            <ChevronLeft size={15} /> 管理卡组 <ChevronRight size={15} />
+          <span>
+            {reviewMode === "focus"
+              ? "快捷键：空格 / Enter 翻面；S 跳过当前卡片；P 暂停当前卡片；B 埋藏当前卡片；答案显示后按 1–4 评分。"
+              : "先管理牌组、标签和导入导出，再进入专注复习，这更接近 Anki 的工作流。"}
+          </span>
+          <button className="ghost-button" onClick={reviewMode === "focus" ? returnToWorkspace : () => setManagementTab("decks")} type="button">
+            {reviewMode === "focus" ? <ChevronLeft size={15} /> : null}
+            {reviewMode === "focus" ? "返回工作台" : "管理卡组"}
+            <ChevronRight size={15} />
           </button>
         </footer>
       </section>

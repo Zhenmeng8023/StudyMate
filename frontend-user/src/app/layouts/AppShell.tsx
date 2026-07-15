@@ -15,6 +15,7 @@ export function AppShell(props: { children: ReactNode; onLogout: () => void; ses
   const navigate = useNavigate();
   const mode = resolveAppLayoutMode(location.pathname);
   const [searchText, setSearchText] = useState(() => new URLSearchParams(location.search).get("q") || "");
+  const showGlobalCommandBar = mode === "standard" || mode === "studio";
 
   useEffect(() => {
     setSearchText(new URLSearchParams(location.search).get("q") || "");
@@ -34,15 +35,17 @@ export function AppShell(props: { children: ReactNode; onLogout: () => void; ses
       <div className={`shell-layout shell-layout--${mode}`}>
         {mode !== "focus" ? compactNavigation ? <CompactNavigation session={props.session} /> : <PrimaryNavigation session={props.session} /> : null}
         <div className={`shell-main shell-main--${mode}`}>
-          <CommandBar
-            mode={mode}
-            onLogout={props.onLogout}
-            onSearchSubmit={handleSearchSubmit}
-            onSearchTextChange={setSearchText}
-            searchText={searchText}
-            session={props.session}
-            showSearch={layoutShowsGlobalSearch(mode)}
-          />
+          {showGlobalCommandBar ? (
+            <CommandBar
+              mode={mode}
+              onLogout={props.onLogout}
+              onSearchSubmit={handleSearchSubmit}
+              onSearchTextChange={setSearchText}
+              searchText={searchText}
+              session={props.session}
+              showSearch={layoutShowsGlobalSearch(mode)}
+            />
+          ) : null}
           <div className={`main-grid main-grid--${mode} main-grid--single`}>
             <main className={`workspace-surface workspace-surface--${mode}`}>{props.children}</main>
           </div>

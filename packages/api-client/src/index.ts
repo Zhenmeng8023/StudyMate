@@ -158,11 +158,24 @@ export function buildApiPath(path: string, query?: Record<string, ApiQueryValue>
 }
 
 export async function readApiResponse<T>(response: Response): Promise<T> {
-  const payload = (await response.json()) as ApiSuccessPayload<T> | ApiErrorPayload;
+  const responseText = await response.text();
+
+  if (!responseText.trim()) {
+    if (response.ok) return undefined as T;
+    throw new ApiRequestError(response.statusText || "Request failed", response.status, "request_failed");
+  }
+
+  let payload: ApiSuccessPayload<T> | ApiErrorPayload;
+  try {
+    payload = JSON.parse(responseText) as ApiSuccessPayload<T> | ApiErrorPayload;
+  } catch {
+    const message = response.ok ? "The server returned an invalid response." : responseText.slice(0, 240) || response.statusText || "Request failed";
+    throw new ApiRequestError(message, response.status, response.ok ? "invalid_response" : "request_failed");
+  }
 
   if (!response.ok || !payload.success) {
     const code = "error" in payload ? payload.error.code : "request_failed";
-    const message = "error" in payload ? payload.error.message : "Request failed";
+    const message = "error" in payload ? payload.error.message : response.statusText || "Request failed";
     throw new ApiRequestError(message, response.status, code);
   }
 

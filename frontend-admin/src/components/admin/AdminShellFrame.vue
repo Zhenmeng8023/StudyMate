@@ -48,7 +48,12 @@ const emit = defineEmits<{
     <aside class="admin-sidebar">
       <div class="admin-brand">
         <span class="admin-brand__mark">S</span>
-        <span><strong>StudyMate</strong><small>运营与治理</small></span>
+        <span><strong>StudyMate</strong><small>运营与治理中心</small></span>
+      </div>
+
+      <div class="admin-environment" aria-label="当前环境">
+        <span class="admin-environment__dot" />
+        <span><strong>生产环境</strong><small>数据与审核实时同步</small></span>
       </div>
 
       <nav class="admin-nav" aria-label="后台导航">
@@ -71,6 +76,10 @@ const emit = defineEmits<{
       </nav>
 
       <footer class="admin-sidebar__footer">
+        <div class="admin-sidebar__health">
+          <span><i />服务正常</span>
+          <small>最后检查：刚刚</small>
+        </div>
         <div class="admin-profile">
           <span>{{ profileInitial }}</span>
           <div><strong>{{ profile?.displayName }}</strong><small>{{ profile?.role || "admin" }}</small></div>

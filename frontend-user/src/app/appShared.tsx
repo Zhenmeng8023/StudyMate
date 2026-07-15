@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Sparkles, BookOpen, Bot, Compass, GraduationCap, LayoutGrid, LibraryBig, Network, NotebookPen, Settings } from "lucide-react";
+import { BookOpen, Bot, Compass, FilePlus2, GraduationCap, LayoutGrid, LibraryBig, Network, NotebookPen, Settings } from "lucide-react";
 import type { AuthSession, CardDraftPayload, MaterialPayload, NotePayload, PostSummary, ReaderAnnotationPayload } from "../api/client";
 import { PageHeader } from "../design-system/primitives";
 
@@ -32,10 +32,10 @@ export const primaryNavItems: ShellNavItem[] = [
 ];
 
 export const quickActions = [
-  { label: "新建资料", description: "把文件上传成可阅读、可引用的学习材料。", to: "/materials" },
-  { label: "继续阅读", description: "回到最近读过的资料，沿着批注继续整理。", to: "/reader", requiresAuth: true },
-  { label: "整理笔记", description: "在富文本编辑区沉淀摘要、观点和待复习内容。", to: "/notes", requiresAuth: true },
-  { label: "进入图谱", description: "把知识点放到统一画布里，继续做关系整理。", to: "/graph", requiresAuth: true }
+  { icon: FilePlus2, label: "添加资料", description: "上传 PDF、讲义或链接，建立可检索的学习来源。", to: "/materials" },
+  { icon: BookOpen, label: "继续阅读", description: "回到上次阅读位置，沿着高亮和批注继续理解。", to: "/reader", requiresAuth: true },
+  { icon: NotebookPen, label: "整理笔记", description: "把摘要、观点和问题沉淀为可复用的知识卡片。", to: "/notes", requiresAuth: true },
+  { icon: Network, label: "连接知识", description: "在画布中组织概念关系，形成可浏览的知识结构。", to: "/graph", requiresAuth: true }
 ];
 
 export const graphPlaceholderColumns = [

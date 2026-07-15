@@ -501,6 +501,36 @@
   padding: 0 30px 0 10px;
 }
 
+.graph-toolbar-zoom-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.graph-toolbar-zoom-chip:hover:not(:disabled) {
+  color: var(--accent-strong);
+  border-color: rgba(41, 88, 70, 0.22);
+  background: var(--accent-soft);
+}
+
+.graph-toolbar-zoom-chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.graph-toolbar-zoom-chip--fit {
+  background: rgba(240, 247, 242, 0.92);
+}
+
 .icon-button.active {
   color: #f7faf7;
   border-color: rgba(41, 88, 70, 0.18);

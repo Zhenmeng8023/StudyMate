@@ -53,4 +53,36 @@ const moderationSummaryItems = computed(() =>
       </ul>
     </AdminFeatureCard>
   </section>
+
+  <section class="admin-ops-flow" aria-label="运营治理流程">
+    <header>
+      <div>
+        <p class="eyebrow">治理流程</p>
+        <h2>从进入队列到完成处置，保持每一步可追踪</h2>
+      </div>
+      <AdminButton variant="ghost" @click="emit('openModeration')">查看完整队列</AdminButton>
+    </header>
+    <div class="admin-ops-flow__steps">
+      <article>
+        <span>01</span>
+        <strong>内容进入</strong>
+        <p>{{ pendingMaterialsCount + pendingPostsCount }} 条内容等待系统分类。</p>
+      </article>
+      <article>
+        <span>02</span>
+        <strong>人工审核</strong>
+        <p>{{ moderationItemsCount }} 条记录需要运营人员判断。</p>
+      </article>
+      <article>
+        <span>03</span>
+        <strong>执行处置</strong>
+        <p>批准、拒绝或下架操作统一在审核工作区完成。</p>
+      </article>
+      <article>
+        <span>04</span>
+        <strong>留痕复盘</strong>
+        <p>治理结果进入记录中心，便于后续查询和复盘。</p>
+      </article>
+    </div>
+  </section>
 </template>

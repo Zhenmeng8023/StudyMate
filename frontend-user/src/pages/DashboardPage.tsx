@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { BookOpen, Upload } from "lucide-react";
+import { ArrowRight, BookOpen, BrainCircuit, FileText, NotebookPen, Sparkles, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { AiDraftPayload, AiTaskPayload, AuthSession, MaterialPayload, NotePayload, PostSummary, ReviewFeedbackPayload, ReviewQueuePayload } from "../api/client";
 import { listAiDrafts, listAiTasks } from "../api/ai";
@@ -375,7 +375,41 @@ export function DashboardPage(props: { session: AuthSession | null }) {
         </div>
       </section>
 
-      <div className="metrics-grid">
+      <section aria-label="推荐学习流程" className="dashboard-study-flow">
+        <div className="dashboard-study-flow__intro">
+          <p className="eyebrow">推荐流程</p>
+          <h2>从资料进入，经过理解与连接，最后用复习完成闭环</h2>
+          <p>每一步都保留来源和上下文，你可以从任意阶段继续，也可以沿着完整路径学习。</p>
+        </div>
+        <div className="dashboard-study-flow__steps">
+          <Link className="study-flow-step" to="/materials">
+            <span className="study-flow-step__index">01</span>
+            <span className="study-flow-step__icon"><FileText size={18} /></span>
+            <span><strong>收集资料</strong><small>PDF、讲义与链接</small></span>
+            <ArrowRight aria-hidden="true" size={16} />
+          </Link>
+          <Link className="study-flow-step" to={props.session ? "/reader" : "/login"}>
+            <span className="study-flow-step__index">02</span>
+            <span className="study-flow-step__icon"><BookOpen size={18} /></span>
+            <span><strong>阅读理解</strong><small>高亮、批注与引用</small></span>
+            <ArrowRight aria-hidden="true" size={16} />
+          </Link>
+          <Link className="study-flow-step" to={props.session ? "/notes" : "/login"}>
+            <span className="study-flow-step__index">03</span>
+            <span className="study-flow-step__icon"><NotebookPen size={18} /></span>
+            <span><strong>沉淀连接</strong><small>笔记、图谱与 AI 草稿</small></span>
+            <ArrowRight aria-hidden="true" size={16} />
+          </Link>
+          <Link className="study-flow-step" to={props.session ? "/review" : "/login"}>
+            <span className="study-flow-step__index">04</span>
+            <span className="study-flow-step__icon"><BrainCircuit size={18} /></span>
+            <span><strong>巩固复习</strong><small>卡片、反馈与弱项</small></span>
+            <ArrowRight aria-hidden="true" size={16} />
+          </Link>
+        </div>
+      </section>
+
+      <div className="metrics-grid dashboard-metrics">
         <MetricTile helper="公开资料和已整理附件总数" label="资料数" value={String(materials.length)} />
         <MetricTile helper="已经沉淀下来的个人笔记" label="笔记数" value={String(notes.length)} />
         <MetricTile helper="社区里可浏览的公开内容" label="社区分享" value={String(posts.length)} />
@@ -620,7 +654,7 @@ export function DashboardPage(props: { session: AuthSession | null }) {
             ) : (
               <div className="mini-card-grid stacked">
                 <article className="mini-card">
-                  <strong>{aiDrafts.length} 条草稿待确认</strong>
+                  <strong><Sparkles aria-hidden="true" size={16} />{aiDrafts.length} 条草稿待确认</strong>
                   <p>{pendingAiTasks.length ? `${pendingAiTasks.length} 个任务仍在进行中。` : "最近生成的草稿会集中显示在这里。"}</p>
                   <Link className="secondary-button" to="/ai">
                     打开 AI 工作台
@@ -650,13 +684,20 @@ export function DashboardPage(props: { session: AuthSession | null }) {
 
           <SectionFrame className="dashboard-section dashboard-section-actions" subtitle="高频入口" title="今天先做什么">
             <div className="dashboard-action-grid">
-              {quickActions.map((item) => (
-                <Link className="mini-card dashboard-action-card" key={item.label} to={item.requiresAuth && !props.session ? "/login" : item.to}>
-                  <strong>{item.label}</strong>
-                  <p>{item.description}</p>
-                  <span className="dashboard-action-link">{item.requiresAuth && !props.session ? "登录后进入" : "立即前往"}</span>
-                </Link>
-              ))}
+              {quickActions.map((item) => {
+                const ActionIcon = item.icon;
+                return (
+                  <Link className="mini-card dashboard-action-card" key={item.label} to={item.requiresAuth && !props.session ? "/login" : item.to}>
+                    <span className="dashboard-action-card__icon"><ActionIcon aria-hidden="true" size={18} /></span>
+                    <strong>{item.label}</strong>
+                    <p>{item.description}</p>
+                    <span className="dashboard-action-link">
+                      {item.requiresAuth && !props.session ? "登录后进入" : "立即前往"}
+                      <ArrowRight aria-hidden="true" size={14} />
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
           </SectionFrame>
         </div>

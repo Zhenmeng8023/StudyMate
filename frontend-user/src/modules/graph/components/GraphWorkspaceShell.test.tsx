@@ -88,6 +88,8 @@ describe("GraphWorkspaceShell components", () => {
   it("exposes toolbar actions and node type changes", () => {
     const onQuickNodeTypeChange = vi.fn();
     const onLocateNode = vi.fn();
+    const onResetViewport = vi.fn();
+    const onFitViewport = vi.fn();
     const onSearchChange = vi.fn();
     const { container } = render(
       <GraphWorkspaceToolbar
@@ -104,9 +106,11 @@ describe("GraphWorkspaceShell components", () => {
         onExportJson={vi.fn()}
         onExportPng={vi.fn()}
         onExportSvg={vi.fn()}
+        onFitViewport={onFitViewport}
         onLocateNode={onLocateNode}
         onQuickNodeTypeChange={onQuickNodeTypeChange}
         onRedo={vi.fn()}
+        onResetViewport={onResetViewport}
         onSearchChange={onSearchChange}
         onToggleKeyboardGuide={vi.fn()}
         onToggleLinkMode={vi.fn()}
@@ -117,6 +121,7 @@ describe("GraphWorkspaceShell components", () => {
         quickNodeTypeLabel="Concept"
         selectedNodeCount={1}
         showKeyboardGuide={false}
+        zoomLabel="100%"
       />
     );
 
@@ -134,6 +139,11 @@ describe("GraphWorkspaceShell components", () => {
 
     fireEvent.keyDown(searchInput!, { key: "Enter" });
     expect(onLocateNode).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "100%" }));
+    fireEvent.click(screen.getByRole("button", { name: "适配视图" }));
+    expect(onResetViewport).toHaveBeenCalledOnce();
+    expect(onFitViewport).toHaveBeenCalledOnce();
+    expect(screen.getByText("100%")).toBeInTheDocument();
     expect(container.querySelector(".graph-toolbar")).not.toBeNull();
   });
 

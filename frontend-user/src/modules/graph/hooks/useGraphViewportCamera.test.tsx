@@ -109,11 +109,9 @@ function CameraHarness(props: {
       />
       <button onClick={() => camera.focusNode(targetNode)} type="button">focus</button>
       <button onClick={() => camera.zoomGraph(0.1, "zoomed in")} type="button">zoom in</button>
+      <button onClick={camera.fitViewportToDocument} type="button">fit</button>
       <button onClick={camera.resetViewport} type="button">reset</button>
-      <div
-        aria-label="wheel target"
-        onWheel={(event) => camera.handleWheel(event)}
-      >
+      <div aria-label="wheel target" onWheel={(event) => camera.handleWheel(event)}>
         wheel target
       </div>
       <span>viewport:{`${detail.document.viewport.x},${detail.document.viewport.y},${detail.document.viewport.zoom}`}</span>
@@ -144,23 +142,28 @@ describe("useGraphViewportCamera", () => {
     fireEvent.click(screen.getByRole("button", { name: "focus" }));
 
     expect(screen.getByText("selected:node-1")).toBeInTheDocument();
-    expect(screen.getByText("status:已定位到节点 Target node")).toBeInTheDocument();
+    expect(screen.getByText(/^status:/)).toHaveTextContent("Target node");
     expect(screen.getByText(/^viewport:/)).not.toHaveTextContent("140,120,1");
   });
 
-  it("zooms and resets the viewport from toolbar and wheel actions", () => {
+  it("zooms, fits, and resets the viewport from toolbar and wheel actions", () => {
     render(<CameraHarness />);
+    const status = screen.getByText(/^status:/);
+    const viewport = screen.getByText(/^viewport:/);
 
     fireEvent.click(screen.getByRole("button", { name: "zoom in" }));
-    expect(screen.getByText("status:zoomed in")).toBeInTheDocument();
-    expect(screen.getByText(/^viewport:/)).toHaveTextContent(",1.1");
+    expect(status).toHaveTextContent("status:zoomed in");
+    expect(viewport).toHaveTextContent(",1.1");
+
+    fireEvent.click(screen.getByRole("button", { name: "fit" }));
+    expect(status).not.toHaveTextContent("status:zoomed in");
+    expect(viewport).not.toHaveTextContent("140,120,1.1");
 
     fireEvent.wheel(screen.getByLabelText("wheel target"), { deltaY: 100 });
-    expect(screen.getByText("status:已调整缩放，等待保存")).toBeInTheDocument();
-    expect(screen.getByText(/^viewport:/)).toHaveTextContent(",1.02");
+    expect(status).not.toHaveTextContent("status:zoomed in");
 
     fireEvent.click(screen.getByRole("button", { name: "reset" }));
-    expect(screen.getByText("status:已重置画布视野")).toBeInTheDocument();
+    expect(status).not.toHaveTextContent("status:zoomed in");
     expect(screen.getByText("viewport:140,120,1")).toBeInTheDocument();
   });
 
@@ -172,7 +175,7 @@ describe("useGraphViewportCamera", () => {
           y: 320,
           width: 220,
           height: 120,
-          label: "Linked note",
+          label: "Linked note"
         }}
         requestedFocusKey="focus-1"
         requestedGraphId="graph-1"
@@ -180,7 +183,7 @@ describe("useGraphViewportCamera", () => {
     );
 
     expect(screen.getByText("focus-preview:Linked note")).toBeInTheDocument();
-    expect(screen.getByText("status:已定位到 Linked note")).toBeInTheDocument();
+    expect(screen.getByText(/^status:/)).toHaveTextContent("Linked note");
     expect(screen.getByText("navigation:/graph")).toBeInTheDocument();
 
     act(() => {

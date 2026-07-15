@@ -1,4 +1,4 @@
-import React, { type ButtonHTMLAttributes } from "react";
+import React, { forwardRef, type ButtonHTMLAttributes } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost";
 
@@ -9,28 +9,27 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 function resolveButtonClassName(variant: ButtonVariant) {
-  if (variant === "primary") {
-    return "primary-button";
-  }
-  if (variant === "ghost") {
-    return "ghost-button";
-  }
+  if (variant === "primary") return "primary-button";
+  if (variant === "ghost") return "ghost-button";
   return "secondary-button";
 }
 
-export function Button(props: ButtonProps) {
-  const variant = props.variant ?? "secondary";
-
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { active = false, danger = false, variant = "secondary", className, type, ...buttonProps },
+  ref
+) {
   return (
     <button
-      {...props}
+      {...buttonProps}
+      ref={ref}
+      aria-pressed={active ? true : buttonProps["aria-pressed"]}
       className={[
         resolveButtonClassName(variant),
-        props.danger ? "danger" : "",
-        props.active ? "active" : "",
-        props.className ?? ""
+        danger ? "danger" : "",
+        active ? "active" : "",
+        className ?? ""
       ].filter(Boolean).join(" ")}
-      type={props.type ?? "button"}
+      type={type ?? "button"}
     />
   );
-}
+});

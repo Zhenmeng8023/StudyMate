@@ -1,19 +1,23 @@
-import React, { type ButtonHTMLAttributes } from "react";
+import React, { forwardRef, type ButtonHTMLAttributes } from "react";
 
 export type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   active?: boolean;
 };
 
-export function IconButton(props: IconButtonProps) {
-  const active = props.active ?? false;
-  const ariaLabel = props["aria-label"] ?? (typeof props.title === "string" ? props.title : undefined);
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
+  { active = false, className, type, ...buttonProps },
+  ref
+) {
+  const ariaLabel = buttonProps["aria-label"] ?? (typeof buttonProps.title === "string" ? buttonProps.title : undefined);
 
   return (
     <button
-      {...props}
+      {...buttonProps}
+      ref={ref}
       aria-label={ariaLabel}
-      className={["icon-button", active ? "active" : "", props.className ?? ""].filter(Boolean).join(" ")}
-      type={props.type ?? "button"}
+      aria-pressed={active ? true : buttonProps["aria-pressed"]}
+      className={["icon-button", active ? "active" : "", className ?? ""].filter(Boolean).join(" ")}
+      type={type ?? "button"}
     />
   );
-}
+});

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject, type WheelEvent } from "react";
 import {
   buildGraphMinimapViewport,
+  clampGraphZoom,
   centerGraphViewportOnRect,
   resetGraphViewport as resetViewportState,
   zoomGraphViewport
@@ -11,6 +12,7 @@ import type {
   GraphNodePayload
 } from "../../../api/client";
 import {
+  buildCombinedBounds,
   buildClearedFocusNavigationLocation,
   buildFocusPreviewViewport,
   minimapScale,
@@ -80,6 +82,47 @@ export function useGraphViewportCamera(options: GraphViewportCameraOptions) {
     },
     [options]
   );
+
+  const fitViewportToDocument = useCallback(() => {
+    const currentDetail = graphDetailRef.current;
+    const stageElement = options.stageRef.current;
+    const nodes = currentDetail?.document.nodes ?? [];
+    if (!currentDetail || !stageElement || nodes.length === 0) {
+      options.onStatusMessage("当前没有可适配视图的节点");
+      return;
+    }
+
+    const bounds = buildCombinedBounds(nodes);
+    const padding = 96;
+    const availableWidth = Math.max(stageElement.clientWidth - padding * 2, 240);
+    const availableHeight = Math.max(stageElement.clientHeight - padding * 2, 200);
+    const targetZoom = clampGraphZoom(
+      Math.min(availableWidth / Math.max(bounds.width, 1), availableHeight / Math.max(bounds.height, 1)),
+      0.4,
+      1.4,
+      currentDetail.document.viewport.zoom
+    );
+    const nextViewport = centerGraphViewportOnRect({
+      rect: {
+        x: bounds.left,
+        y: bounds.top,
+        width: bounds.width,
+        height: bounds.height
+      },
+      stage: {
+        width: stageElement.clientWidth,
+        height: stageElement.clientHeight
+      },
+      zoom: targetZoom
+    });
+
+    options.onViewportDocumentChange(
+      (draft) => {
+        draft.viewport = nextViewport;
+      },
+      { captureHistory: false, status: "已按内容适配画布视图", label: "适配视图" }
+    );
+  }, [options]);
 
   const resetViewport = useCallback(() => {
     options.onViewportDocumentChange(
@@ -164,6 +207,7 @@ export function useGraphViewportCamera(options: GraphViewportCameraOptions) {
 
   return {
     focusNode,
+    fitViewportToDocument,
     focusPreview,
     handleWheel,
     minimapViewport,
