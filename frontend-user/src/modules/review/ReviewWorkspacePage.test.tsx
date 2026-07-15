@@ -6,7 +6,9 @@ import {
   bulkCreateDeckCards,
   createDeck,
   createDeckCard,
+  exportDeckCards,
   getTodayReviewQueue,
+  importDeckCards,
   listDeckCards,
   listDecks,
   reviewCard,
@@ -23,7 +25,9 @@ vi.mock("../../api/client", async () => {
     bulkCreateDeckCards: vi.fn(),
     createDeck: vi.fn(),
     createDeckCard: vi.fn(),
+    exportDeckCards: vi.fn(),
     getTodayReviewQueue: vi.fn(),
+    importDeckCards: vi.fn(),
     listDeckCards: vi.fn(),
     listDecks: vi.fn(),
     reviewCard: vi.fn(),
@@ -53,6 +57,8 @@ const undoReviewCardMock = vi.mocked(undoReviewCard);
 const updateCardStatusMock = vi.mocked(updateCardStatus);
 const createDeckCardMock = vi.mocked(createDeckCard);
 const bulkCreateDeckCardsMock = vi.mocked(bulkCreateDeckCards);
+const exportDeckCardsMock = vi.mocked(exportDeckCards);
+const importDeckCardsMock = vi.mocked(importDeckCards);
 
 function renderPage(path = "/review") {
   return render(
@@ -71,6 +77,8 @@ describe("ReviewWorkspacePage", () => {
     bulkCreateDeckCardsMock.mockReset();
     vi.mocked(createDeck).mockReset();
     vi.mocked(createDeckCard).mockReset();
+    exportDeckCardsMock.mockReset();
+    importDeckCardsMock.mockReset();
     listDecksMock.mockReset();
     listDeckCardsMock.mockReset();
     getTodayReviewQueueMock.mockReset();
@@ -198,6 +206,18 @@ describe("ReviewWorkspacePage", () => {
         updatedAt: "2026-06-02T12:00:00Z"
       }
     ]);
+    exportDeckCardsMock.mockResolvedValue({
+      format: "json",
+      filename: "deck-cards.json",
+      mimeType: "application/json;charset=utf-8",
+      content: "{\"cards\":[]}",
+      cardCount: 1,
+      exportedAt: "2026-06-02T12:00:00Z"
+    });
+    importDeckCardsMock.mockResolvedValue({
+      importedCount: 1,
+      statusMessage: "已导入 1 张卡片到当前卡组。"
+    });
 
     Object.defineProperty(URL, "createObjectURL", {
       configurable: true,
@@ -777,17 +797,13 @@ describe("ReviewWorkspacePage", () => {
     );
 
     await waitFor(() => {
-      expect(bulkCreateDeckCardsMock).toHaveBeenCalledWith(
+      expect(importDeckCardsMock).toHaveBeenCalledWith(
         session,
         "deck-1",
-        [
-          expect.objectContaining({
-            front: "Imported front",
-            back: "Imported back",
-            cardType: "basic",
-            tags: ["graph", "imported"]
-          })
-        ]
+        expect.objectContaining({
+          filename: "cards.json",
+          content: expect.stringContaining("Imported front")
+        })
       );
     });
     expect(await screen.findByText("已导入 1 张卡片到当前卡组。")).toBeInTheDocument();
@@ -804,7 +820,7 @@ describe("ReviewWorkspacePage", () => {
     await user.click(screen.getByRole("button", { name: "导出 JSON" }));
 
     await waitFor(() => {
-      expect(listDeckCardsMock).toHaveBeenLastCalledWith(session, "deck-1");
+      expect(exportDeckCardsMock).toHaveBeenCalledWith(session, "deck-1", "json");
     });
     expect(URL.createObjectURL).toHaveBeenCalled();
     expect(await screen.findByText("已导出 1 张卡片到 JSON。")).toBeInTheDocument();

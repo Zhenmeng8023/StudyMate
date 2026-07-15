@@ -16,7 +16,9 @@ type fakeCardService struct {
 	ownerID       string
 	deckID        string
 	cardID        string
+	exportFormat  string
 	createDeckReq carddto.CreateDeckRequest
+	importDeckReq carddto.ImportDeckRequest
 	listCardsReq  carddto.ListCardsQuery
 	reviewReq     carddto.ReviewCardRequest
 	statusReq     carddto.UpdateCardStatusRequest
@@ -91,6 +93,30 @@ func (s *fakeCardService) ReviewFeedback(ownerUserID string) (*carddto.ReviewFee
 			State:           "relearning",
 			DueAt:           "2026-06-02T12:00:00Z",
 		}},
+	}, nil
+}
+
+func (s *fakeCardService) ExportDeck(ownerUserID string, deckID string, format string) (*carddto.DeckExportPayload, error) {
+	s.ownerID = ownerUserID
+	s.deckID = deckID
+	s.exportFormat = format
+	return &carddto.DeckExportPayload{
+		Format:     format,
+		Filename:   "deck-cards.json",
+		MimeType:   "application/json;charset=utf-8",
+		Content:    "{\"cards\":[]}",
+		CardCount:  1,
+		ExportedAt: "2026-06-02T12:00:00Z",
+	}, nil
+}
+
+func (s *fakeCardService) ImportDeck(ownerUserID string, deckID string, request carddto.ImportDeckRequest) (*carddto.DeckImportPayload, error) {
+	s.ownerID = ownerUserID
+	s.deckID = deckID
+	s.importDeckReq = request
+	return &carddto.DeckImportPayload{
+		ImportedCount: 1,
+		StatusMessage: "已导入 1 张卡片到当前卡组。",
 	}, nil
 }
 
@@ -211,6 +237,46 @@ func TestReviewFeedbackReturnsWeakCards(t *testing.T) {
 	}
 	if payload.Data.WeakCards[0].DeckTitle != "期末复习" || payload.Data.WeakCards[0].State != "relearning" {
 		t.Fatalf("unexpected weak card payload: %#v", payload.Data.WeakCards[0])
+	}
+}
+
+func TestExportDeckReadsFormatQuery(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCardService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.GET("/decks/:id/export", withUser(handler.ExportDeck))
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/decks/deck-1/export?format=csv", nil))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if service.ownerID != "user-1" || service.deckID != "deck-1" || service.exportFormat != "csv" {
+		t.Fatalf("unexpected export request binding: owner=%q deck=%q format=%q", service.ownerID, service.deckID, service.exportFormat)
+	}
+}
+
+func TestImportDeckWritesFilenameAndContent(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCardService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.POST("/decks/:id/import", withUser(handler.ImportDeck))
+
+	body := bytes.NewBufferString(`{"filename":"cards.json","content":"{\"cards\":[{\"front\":\"Q\",\"back\":\"A\"}]}"}`)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/decks/deck-1/import", body))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if service.ownerID != "user-1" || service.deckID != "deck-1" {
+		t.Fatalf("unexpected import request binding: owner=%q deck=%q", service.ownerID, service.deckID)
+	}
+	if service.importDeckReq.Filename != "cards.json" || service.importDeckReq.Content == "" {
+		t.Fatalf("unexpected import request payload: %#v", service.importDeckReq)
 	}
 }
 

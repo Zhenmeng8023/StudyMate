@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -268,5 +269,131 @@ func TestReviewFeedbackSummarizesWeakCardsAndLearningCounts(t *testing.T) {
 	}
 	if feedback.WeakCards[1].CardID != learningCard.ID || feedback.WeakCards[1].State != "learning" {
 		t.Fatalf("expected learning card second, got %#v", feedback.WeakCards[1])
+	}
+}
+
+func TestExportDeckBuildsPortableJsonAndCsvArtifacts(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite db: %v", err)
+	}
+
+	if err := db.AutoMigrate(&adminmodel.AuditLog{}, &cardmodel.Deck{}, &cardmodel.Card{}, &cardmodel.CardSchedule{}, &cardmodel.CardReview{}); err != nil {
+		t.Fatalf("migrate sqlite schema: %v", err)
+	}
+
+	repository := cardrepo.NewRepository(db)
+	service := NewService(repository, adminrepo.NewAuditLogRepository(db), nil)
+	deck := &cardmodel.Deck{
+		ID:          "deck-1",
+		OwnerUserID: "user-1",
+		Title:       "Portable deck",
+		Description: "Exportable cards",
+		Visibility:  "private",
+		CardCount:   0,
+	}
+	if err := repository.CreateDeck(deck); err != nil {
+		t.Fatalf("create deck: %v", err)
+	}
+
+	if _, err := service.CreateCard("user-1", deck.ID, carddto.CreateCardRequest{
+		CardType:       "basic",
+		Front:          "Graph concept",
+		Back:           "Linked to a graph node",
+		Tags:           []string{"graph", "core"},
+		SourceType:     "graph",
+		SourceID:       "node-1",
+		SourceMetadata: map[string]any{"page": 3},
+	}); err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	jsonArtifact, err := service.ExportDeck("user-1", deck.ID, "json")
+	if err != nil {
+		t.Fatalf("export json deck: %v", err)
+	}
+	if jsonArtifact.Format != "json" || jsonArtifact.CardCount != 1 {
+		t.Fatalf("unexpected json artifact summary: %#v", jsonArtifact)
+	}
+	if jsonArtifact.Filename == "" || jsonArtifact.MimeType == "" || jsonArtifact.Content == "" {
+		t.Fatalf("expected json artifact content to be populated: %#v", jsonArtifact)
+	}
+	if want := "\"sourceType\": \"graph\""; !strings.Contains(jsonArtifact.Content, want) {
+		t.Fatalf("expected json artifact to contain %q, got %s", want, jsonArtifact.Content)
+	}
+
+	csvArtifact, err := service.ExportDeck("user-1", deck.ID, "csv")
+	if err != nil {
+		t.Fatalf("export csv deck: %v", err)
+	}
+	if csvArtifact.Format != "csv" || csvArtifact.CardCount != 1 {
+		t.Fatalf("unexpected csv artifact summary: %#v", csvArtifact)
+	}
+	if want := "front,back,cardType,tags,sourceType,sourceId"; !strings.Contains(csvArtifact.Content, want) {
+		t.Fatalf("expected csv header %q, got %s", want, csvArtifact.Content)
+	}
+	if want := "Graph concept"; !strings.Contains(csvArtifact.Content, want) {
+		t.Fatalf("expected csv content to contain %q, got %s", want, csvArtifact.Content)
+	}
+}
+
+func TestImportDeckParsesPortableJsonAndCsvContent(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite db: %v", err)
+	}
+
+	if err := db.AutoMigrate(&adminmodel.AuditLog{}, &cardmodel.Deck{}, &cardmodel.Card{}, &cardmodel.CardSchedule{}, &cardmodel.CardReview{}); err != nil {
+		t.Fatalf("migrate sqlite schema: %v", err)
+	}
+
+	repository := cardrepo.NewRepository(db)
+	service := NewService(repository, adminrepo.NewAuditLogRepository(db), nil)
+	deck := &cardmodel.Deck{
+		ID:          "deck-1",
+		OwnerUserID: "user-1",
+		Title:       "Importable deck",
+		Description: "Portable imports",
+		Visibility:  "private",
+		CardCount:   0,
+	}
+	if err := repository.CreateDeck(deck); err != nil {
+		t.Fatalf("create deck: %v", err)
+	}
+
+	jsonResult, err := service.ImportDeck("user-1", deck.ID, carddto.ImportDeckRequest{
+		Filename: "cards.json",
+		Content:  `{"app":"StudyMate","kind":"deck-cards","cards":[{"front":"JSON card","back":"JSON answer","cardType":"basic","tags":["graph","imported"],"sourceType":"graph","sourceId":"node-2"}]}`,
+	})
+	if err != nil {
+		t.Fatalf("import json deck: %v", err)
+	}
+	if jsonResult.ImportedCount != 1 {
+		t.Fatalf("expected 1 imported json card, got %#v", jsonResult)
+	}
+
+	csvResult, err := service.ImportDeck("user-1", deck.ID, carddto.ImportDeckRequest{
+		Filename: "cards.csv",
+		Content:  "front,back,cardType,tags,sourceType,sourceId\nCSV card,CSV answer,basic,reader|imported,reader,annotation-1",
+	})
+	if err != nil {
+		t.Fatalf("import csv deck: %v", err)
+	}
+	if csvResult.ImportedCount != 1 {
+		t.Fatalf("expected 1 imported csv card, got %#v", csvResult)
+	}
+
+	cards, err := service.ListCards("user-1", deck.ID, carddto.ListCardsQuery{})
+	if err != nil {
+		t.Fatalf("list imported cards: %v", err)
+	}
+	if len(cards) != 2 {
+		t.Fatalf("expected 2 imported cards, got %d", len(cards))
+	}
+	if cards[0].Front != "CSV card" && cards[1].Front != "CSV card" {
+		t.Fatalf("expected one imported csv card in %#v", cards)
+	}
+	if cards[0].Front != "JSON card" && cards[1].Front != "JSON card" {
+		t.Fatalf("expected one imported json card in %#v", cards)
 	}
 }

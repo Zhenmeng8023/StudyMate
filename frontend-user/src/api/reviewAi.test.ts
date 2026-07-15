@@ -3,9 +3,11 @@ import {
   bulkCreateDeckCards,
   commitGraphChangeDraftSelection,
   createDeck,
+  exportDeckCards,
   getReviewFeedback,
   getAiUsageSummary,
   getTodayReviewQueue,
+  importDeckCards,
   listAiDrafts,
   listAiTasks,
   reviewCard,
@@ -152,6 +154,43 @@ describe("review API clients", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/review/feedback");
     expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
       Authorization: "Bearer access-token"
+    });
+  });
+
+  it("exports portable deck artifacts with auth headers and format query", async () => {
+    const fetchMock = mockApiResponse({
+      format: "json",
+      filename: "deck-cards.json",
+      mimeType: "application/json;charset=utf-8",
+      content: "{\"cards\":[]}",
+      cardCount: 1,
+      exportedAt: "2026-06-02T12:00:00Z"
+    });
+
+    await exportDeckCards(session, "deck-1", "json");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/decks/deck-1/export?format=json");
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+      Authorization: "Bearer access-token"
+    });
+  });
+
+  it("posts portable deck import payload with filename and content", async () => {
+    const fetchMock = mockApiResponse({
+      importedCount: 1,
+      statusMessage: "已导入 1 张卡片到当前卡组。"
+    });
+
+    await importDeckCards(session, "deck-1", {
+      filename: "cards.json",
+      content: "{\"cards\":[]}"
+    });
+
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toBe("/api/v1/decks/deck-1/import");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      filename: "cards.json",
+      content: "{\"cards\":[]}"
     });
   });
 
