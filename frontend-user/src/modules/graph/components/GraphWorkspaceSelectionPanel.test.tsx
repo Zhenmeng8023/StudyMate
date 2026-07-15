@@ -133,12 +133,19 @@ describe("GraphWorkspaceSelectionPanel", () => {
         dueCount: 1,
         learningCount: 2,
         maxLapseCount: 3,
+        totalCardCount: 3,
+        masteredCardCount: 1,
+        reviewCardCount: 1,
+        masteryLevel: "building",
+        masteryScore: 33,
         sampleCardFronts: ["资料卡片 A", "资料卡片 B"]
       }
     });
 
     expect(screen.getByText("复习反馈")).toBeInTheDocument();
     expect(screen.getByText("关联 2 张待回补卡片，其中 1 张已经到期。")).toBeInTheDocument();
+    expect(screen.getByText("掌握度 33% · 巩固中")).toBeInTheDocument();
+    expect(screen.getByText("1 / 3 张已进入稳定复习")).toBeInTheDocument();
     expect(screen.getByText("2 张仍在学习中")).toBeInTheDocument();
     expect(screen.getByText("最高遗忘 3 次")).toBeInTheDocument();
     expect(screen.getByText("资料卡片 A")).toBeInTheDocument();

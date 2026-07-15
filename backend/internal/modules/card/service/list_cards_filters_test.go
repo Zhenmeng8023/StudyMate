@@ -243,6 +243,8 @@ func TestReviewFeedbackSummarizesWeakCardsAndLearningCounts(t *testing.T) {
 		CardType: "basic",
 		Front:    "Stable review card",
 		Back:     "Already remembered",
+		SourceType: "graph",
+		SourceID:   "node-2",
 	})
 	if err != nil {
 		t.Fatalf("create stable card: %v", err)
@@ -320,6 +322,28 @@ func TestReviewFeedbackSummarizesWeakCardsAndLearningCounts(t *testing.T) {
 	}
 	if feedback.WeakSources[1].SourceType != "note" || feedback.WeakSources[1].SourceID != "note-1" {
 		t.Fatalf("expected note source summary second, got %#v", feedback.WeakSources[1])
+	}
+	if len(feedback.SourceSummaries) != 3 {
+		t.Fatalf("expected three source summaries, got %d", len(feedback.SourceSummaries))
+	}
+	if feedback.SourceSummaries[0].SourceType != "graph" || feedback.SourceSummaries[0].SourceID != "node-1" {
+		t.Fatalf("expected first source summary to remain graph weak source, got %#v", feedback.SourceSummaries[0])
+	}
+	if feedback.SourceSummaries[0].MasteryLevel != "weak" || feedback.SourceSummaries[0].MasteryScore != 0 {
+		t.Fatalf("expected weak graph source mastery metadata, got %#v", feedback.SourceSummaries[0])
+	}
+	stableSource := feedback.SourceSummaries[2]
+	if stableSource.SourceType != "graph" || stableSource.SourceID != "node-2" {
+		t.Fatalf("expected stable graph source summary, got %#v", stableSource)
+	}
+	if stableSource.TotalCardCount != 1 || stableSource.MasteredCardCount != 1 || stableSource.ReviewCardCount != 1 {
+		t.Fatalf("expected stable source card counts, got %#v", stableSource)
+	}
+	if stableSource.WeakCardCount != 0 || stableSource.LearningCount != 0 || stableSource.DueCount != 0 {
+		t.Fatalf("expected stable source to have no weak counts, got %#v", stableSource)
+	}
+	if stableSource.MasteryLevel != "solid" || stableSource.MasteryScore != 100 {
+		t.Fatalf("expected stable source mastery to be solid 100, got %#v", stableSource)
 	}
 }
 
