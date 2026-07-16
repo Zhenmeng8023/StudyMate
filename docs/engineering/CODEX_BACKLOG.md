@@ -368,6 +368,25 @@
   - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，save 不再只有成功流、冲突流和导入失败旁路，而有了明确的“保存失败后仍保留 dirty 草稿”浏览器级验收。
   - 这一轮仍然没有继续扩保存失败在自动保存、窄屏、离页保护或跨窗口提示共存时的组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 save/reload/restore 在更多失败组合里的浏览器回归。
 
+### 执行记录：WB-034（布局预览失败后回退本地来源泳道回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区新增浏览器级回归，锁定当 `POST /graphs/:id/layouts/preview` 失败时，页面不会中断来源泳道整理，而会自动回退到本地来源泳道布局。
+  - 这条回归会显式验证 fallback 结果：状态栏显示“布局预览接口不可用，已使用本地来源泳道布局”，保存状态切到 `有未保存修改`，并在当前画布上继续看到 3 条本地泳道分组。
+  - 本地 fallback 的标题契约也被真实页面锁定为 `资料来源泳道 / 笔记来源泳道 / AI 草稿泳道`，避免后续把接口成功路径和本地回退路径混为同一组文案假设。
+- 已执行验证：
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "layout preview fails"`
+  - `npm run verify:docs`
+- 后续影响：
+  - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，layout 不再只有接口成功时的 happy path，而开始覆盖“接口失败但本地回退仍可继续整理”的浏览器级验收。
+  - 这一轮仍然没有继续扩布局失败与保存、窄屏、导出或冲突组合共存时的矩阵；如果继续推进，更适合沿 `WB-034` 继续补 layout/export 在更多失败组合里的浏览器回归。
+
 ### 执行记录：WB-033 / LC-010（复习评分后回到图谱查看反馈）
 - 执行日期：2026-07-16
 - 关联提交：`38f611e`（RED）

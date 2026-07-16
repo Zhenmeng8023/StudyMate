@@ -416,6 +416,102 @@ test("graph workspace previews source swimlanes and reports export statuses", as
   await expect(page.getByText("已导出 PNG 图谱")).toBeVisible();
 });
 
+test("graph workspace falls back to local source swimlanes when layout preview fails", async ({ page }) => {
+  const document = buildLayoutExportSmokeDocument();
+  const detail = buildGraphDetail({
+    currentVersion: 4,
+    description: "布局预览失败回退 smoke",
+    document,
+    edgeCount: 1,
+    nodeCount: 3,
+    title: "布局回退图谱",
+    updatedAt: "2026-07-16T10:18:00Z"
+  });
+
+  await page.addInitScript((value) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(value));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname === "/api/v1/auth/me") {
+      await route.fulfill({ contentType: "application/json", body: success(session.user) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([detail]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/layouts/preview") {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: false,
+          error: {
+            code: "layout_preview_unavailable",
+            message: "布局预览服务暂不可用"
+          }
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/review/feedback") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          dueCount: 0,
+          learningCount: 0,
+          weakCardCount: 0,
+          weakCards: [],
+          sourceSummaries: [],
+          weakSources: []
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+
+  await expect(page.getByText("布局回退图谱")).toBeVisible();
+  await expect(page.getByText("版本 4 · 3 节点 · 1 连线")).toBeVisible();
+
+  await page.getByRole("region", { name: "图谱画布" }).click();
+  await page.keyboard.press("Control+A");
+  await page.getByRole("button", { name: "属性" }).click();
+  await expect(page.getByText("已选中 3 个节点")).toBeVisible();
+  await page.getByRole("button", { name: "生成来源泳道" }).click();
+
+  await expect(page.getByText("布局预览接口不可用，已使用本地来源泳道布局")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toBeVisible();
+  await expect(page.locator(".graph-group")).toHaveCount(3);
+  await expect(page.getByText("资料来源泳道")).toBeVisible();
+  await expect(page.getByText("笔记来源泳道")).toBeVisible();
+  await expect(page.getByText("AI 草稿泳道")).toBeVisible();
+});
+
 test("graph workspace keeps the current graph when creating a new graph fails", async ({ page }) => {
   const detail = buildGraphDetail({
     currentVersion: 4,

@@ -1,3 +1,27 @@
+## 2026-07-16 23:44:06 +08:00 | v1.1.0-alpha.305 | 推进 WB-034 布局预览失败回退本地来源泳道回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 restore、save 或冲突取舍逻辑，而是补齐 layout 的失败分支：当来源泳道布局预览接口不可用时，图谱工作区仍要回退到本地来源泳道布局，而不是中断当前整理流程。
+
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级回归“graph workspace falls back to local source swimlanes when layout preview fails”，验证真实点击 `生成来源泳道` 后，若 `POST /api/v1/graphs/graph-1/layouts/preview` 返回失败，页面会回退到本地来源泳道布局。
+- 这条回归显式锁定 fallback 结果：状态栏显示“布局预览接口不可用，已使用本地来源泳道布局”，保存状态切到 `图谱保存状态：有未保存修改`，当前画布继续显示 3 条来源泳道分组。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条 layout 失败回退路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- RED：`npx playwright test e2e/v1-graph-workspace.spec.ts --grep "layout preview fails"`
+- GREEN：`npx playwright test e2e/v1-graph-workspace.spec.ts --grep "layout preview fails"`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在除了 layout preview 成功 smoke 之外，也开始覆盖其失败分支：接口不可用时，图谱工作区仍能回退到本地来源泳道布局继续整理，浏览器矩阵更接近真实故障环境。
+- 这一轮仍然没有继续扩布局失败与保存、窄屏、导出或冲突组合共存时的矩阵；如果继续推进，更适合沿 `WB-034` 继续补 layout/export 在更多失败组合里的浏览器回归。
+
 ## 2026-07-16 23:44:06 +08:00 | v1.1.0-alpha.304 | 推进 WB-034 保存当前图谱失败保留 dirty 草稿回归
 
 ### 本次目标
