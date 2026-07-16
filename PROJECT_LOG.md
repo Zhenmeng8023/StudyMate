@@ -1,3 +1,27 @@
+## 2026-07-16 22:36:26 +08:00 | v1.1.0-alpha.298 | 推进 WB-034 / WB-032 窄屏 restore 后对象级取舍浏览器回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵，这一轮不扩新的 restore 或 conflict 领域逻辑，而是把窄屏下已经成立的 restore/conflict 主链继续推进到“应用对象级取舍并再次保存”的更深组合。
+- 目标是在 `390x844` 窄屏视口下证明：用户先恢复快照，再创建本地修改并命中冲突后，仍能在冲突检查器里完成“保留本地 -> 应用已标记取舍 -> 重新保存”的 rebased save 主链，而不是只能停在冲突提示或桌面路径成立。
+
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增“graph workspace can apply marked conflict resolutions after restore in a narrow viewport” 用例：在窄屏视口下先进入“历史”恢复快照，再创建本地节点并保存，随后在冲突检查器中滚动到对象级取舍按钮，通过焦点与键盘触发完成“保留本地 -> 应用已标记取舍 -> 再次保存”。
+- 这条用例会显式校验两次保存的版本语义：第一次 `batch-save` 仍携带 restore 后的 `document.version = 6`，应用取舍后的第二次 `batch-save` 携带最新 head 上的 `document.version = 7`，最终服务端返回版本 `8` 的新图谱详情。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条窄屏 restore 后对象级取舍浏览器回归补进固定矩阵说明和 `WB-034 / WB-032` 执行记录。
+
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "can apply marked conflict resolutions after restore in a narrow viewport"`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在已经开始覆盖窄屏下 restore -> conflict -> object resolution -> rebased save 的更深组合主链，图谱工作区的响应式冲突处理矩阵比上一轮更接近真实用户环境。
+- 这一轮仍然没有把窄屏下对象级取舍的 pointer/touch 可点击性风险收口成专门的交互修正，也没有继续扩更多权限分支；如果继续推进，更适合沿 `WB-034` 补这条窄屏冲突检查器里的 pointer 可点击性回归，或补 restore 后更多权限组合路径。
+
 ## 2026-07-16 22:07:48 +08:00 | v1.1.0-alpha.297 | 推进 WB-034 / WB-032 窄屏 restore/conflict 组合浏览器回归
 
 ### 本次目标
