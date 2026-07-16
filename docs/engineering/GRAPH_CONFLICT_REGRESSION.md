@@ -42,7 +42,7 @@
 | 前端页面 | 图谱工作区真实冲突路径、latest-head 组合场景、页面级联动建议 | `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`、`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx` | `npm run test:graph:conflicts:frontend` |
 | 前端持久化 | 本地草稿恢复、跨窗口提醒、冲突后状态保持 | `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx`、`frontend-user/src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx` | `npm run test:graph:conflicts:frontend` |
 | 后端 DTO / handler / service | 版本权威、`409 graph_version_conflict`、restore 生命周期 | `backend/internal/modules/graph/dto/*.go`、`handler/*.go`、`service/*.go` | `npm run test:graph:conflicts:backend` |
-| E2E smoke | 图谱工作区真实预览环境下的桌面与窄屏加载、保存、导入、历史、布局预览、导出状态、权限路径、失败态、dirty 状态下的快照恢复前保护、桌面与窄屏下的快照恢复成功路径、桌面与窄屏下的 restore 命中 `forbidden` 后仍保留当前图谱、桌面与窄屏下的 restore 后再次保存命中版本冲突组合路径、版本冲突处理、重载最新图谱命中 `forbidden` 后仍保留冲突辅助与本地草稿、删除当前图谱命中 `forbidden` 后仍保留当前图谱与确认上下文，以及桌面与窄屏下的“应用已标记取舍 -> 生成合并草稿 -> 以 rebased document 再次保存”“联动取舍建议清除阻断 -> 应用已标记取舍 -> 以 rebased document 再次保存”“未标记对象默认沿用最新版本 -> 以 rebased document 再次保存”“多目标本地连线联动建议 -> 应用已标记取舍 -> 以 rebased document 再次保存”与“latest-head 分组依赖阻断 -> 一键应用 2 项联动取舍建议 -> 应用已标记取舍 -> 以 rebased document 再次保存”的主路径 | `e2e/v1-graph-workspace.spec.ts` | `npm run test:graph:conflicts:e2e` |
+| E2E smoke | 图谱工作区真实预览环境下的桌面与窄屏加载、保存、导入、历史、布局预览、导出状态、权限路径、失败态、dirty 状态下的快照恢复前保护、桌面与窄屏下的快照恢复成功路径、创建新图谱命中失败后仍保留当前图谱、桌面与窄屏下的 restore 命中 `forbidden` 后仍保留当前图谱、桌面与窄屏下的 restore 后再次保存命中版本冲突组合路径、版本冲突处理、重载最新图谱命中 `forbidden` 后仍保留冲突辅助与本地草稿、删除当前图谱命中 `forbidden` 后仍保留当前图谱与确认上下文，以及桌面与窄屏下的“应用已标记取舍 -> 生成合并草稿 -> 以 rebased document 再次保存”“联动取舍建议清除阻断 -> 应用已标记取舍 -> 以 rebased document 再次保存”“未标记对象默认沿用最新版本 -> 以 rebased document 再次保存”“多目标本地连线联动建议 -> 应用已标记取舍 -> 以 rebased document 再次保存”与“latest-head 分组依赖阻断 -> 一键应用 2 项联动取舍建议 -> 应用已标记取舍 -> 以 rebased document 再次保存”的主路径 | `e2e/v1-graph-workspace.spec.ts` | `npm run test:graph:conflicts:e2e` |
 | 文档同步 | 路线图、backlog、主文档与里程碑记录一致 | `README.md` / `docs/DEVELOPMENT.md` / `PROJECT_LOG.md` 等 | `npm run verify:docs` |
 
 ## 3. 推荐执行入口
@@ -71,6 +71,7 @@ npm run ci
 - 当前入口聚焦图谱冲突生命周期与工作区回归，不等同于 `WB-034` 已完成。
 - 当前固定入口已经覆盖对象级取舍应用后的真实保存路径、联动取舍建议清除阻断后的真实保存路径、未标记对象默认沿用最新版本后的真实保存路径、多目标本地连线联动建议后的真实保存路径，以及 latest-head 分组依赖阻断清除后的真实保存路径，并会断言第二次 `batch-save` 使用 rebased `document.version`；后续若再扩取舍能力，应继续把这类真实保存链路接进同一入口。
 - 当前固定入口也已覆盖 dirty 状态下的快照恢复前保护：真实页面路径会阻断 restore 请求，并继续保留本地未保存草稿与 dirty 保存状态。
+- 当前固定入口也已覆盖“创建新图谱”失败分支：若头部“新建图谱”动作被服务端拒绝，页面会显示失败提示，同时继续保留当前图谱标题、当前版本文案和当前画布节点，不会误切到空白图谱。
 - 当前固定入口也已覆盖“恢复快照”命中 `forbidden` 的权限分支：若历史面板中的 restore 动作被服务端拒绝，页面会保留失败提示、当前图谱标题和当前画布内容，不会错误切换到空白或其他图谱。
 - 当前固定入口也已覆盖快照恢复成功路径：真实页面路径会进入共享 `恢复历史快照` reset history 流程，切换回 `saved` 保存状态，并展示“已恢复到快照版本 X”的成功提示。
 - 当前固定入口也已覆盖窄屏下的快照恢复成功路径：在 `390x844` 视口里，用户仍可通过检查器进入“历史”标签并完成 restore，说明恢复主链不只在桌面宽度下成立。

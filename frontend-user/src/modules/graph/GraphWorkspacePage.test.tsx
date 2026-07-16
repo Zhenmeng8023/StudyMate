@@ -250,6 +250,43 @@ describe("GraphWorkspacePage persistence states", () => {
     expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
   });
 
+  it("keeps the current graph loaded when creating a new graph fails", async () => {
+    const user = userEvent.setup();
+    createGraphMock.mockRejectedValueOnce(new Error("创建图谱失败"));
+    getGraphMock.mockResolvedValueOnce({
+      ...graphDetail,
+      title: "Current graph",
+      nodeCount: 1,
+      document: {
+        ...graphDetail.document,
+        nodes: [
+          {
+            id: "node-1",
+            type: "concept",
+            title: "当前节点",
+            x: 140,
+            y: 160,
+            width: 220,
+            height: 132,
+            source: null,
+            metadata: {}
+          }
+        ]
+      }
+    });
+
+    renderWorkspace();
+
+    await waitFor(() => expect(getCanvasSaveButton()).toBeInTheDocument());
+    await expect(screen.findByText("Current graph")).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "新建图谱" }));
+
+    await expect(screen.findByText("创建图谱失败")).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("图谱保存状态：空闲")).toBeInTheDocument();
+    expect(screen.getByText(/版本 4 · 1 节点 · 0 连线/)).toBeInTheDocument();
+    expect(getCanvasNodeButton(/当前节点/)).toBeInTheDocument();
+  });
+
   it("offers reloading the latest graph after a version conflict and confirms discarding dirty edits", async () => {
     const user = userEvent.setup();
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);

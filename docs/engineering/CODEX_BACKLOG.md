@@ -326,6 +326,27 @@
   - `WB-034` 的权限矩阵继续向 create/save/restore/export/layout/conflict 全链路靠拢，restore 不再只有“成功”“dirty 阻断”“通用失败”，也补上了真实 `forbidden` 分支。
   - 这一轮仍然没有继续扩 restore 在窄屏、冲突联动或更细粒度权限状态下的组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 restore/reload/delete/open 在更多桌面/窄屏权限组合里的浏览器回归。
 
+### 执行记录：WB-034（创建新图谱失败后保留当前图谱回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区新增页面级回归，锁定头部“新建图谱”动作命中失败时，会显示“创建图谱失败”，同时继续保留当前图谱标题、版本文案、保存状态和当前节点，不会误切到空白图谱。
+  - 浏览器级回归同步验证真实点击路径：用户点击“新建图谱”后，若 `POST /api/v1/graphs` 返回失败，页面仍停留在 `当前图谱`，继续显示 `当前节点` 与 `版本 4 · 1 节点 · 0 连线`，并保持 `图谱保存状态：空闲`。
+  - 固定回归矩阵现在开始覆盖 create 主链里的失败分支，图谱工作区的浏览器验收不再只围绕 restore/conflict/export/layout/权限动作展开。
+- 已执行验证：
+  - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "creating a new graph fails"`
+  - `npm run verify:docs`
+- 后续影响：
+  - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，create 不再只有成功流和通用提示，而有了明确的“失败后仍保留当前图谱上下文”浏览器级验收。
+  - 这一轮仍然没有继续扩创建失败在脏草稿、窄屏或图谱列表切换共存时的组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 create/save/restore 在更多桌面/窄屏失败组合里的浏览器回归。
+
 ### 执行记录：WB-033 / LC-010（复习评分后回到图谱查看反馈）
 - 执行日期：2026-07-16
 - 关联提交：`38f611e`（RED）

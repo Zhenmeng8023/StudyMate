@@ -1,3 +1,27 @@
+## 2026-07-16 23:37:28 +08:00 | v1.1.0-alpha.303 | 推进 WB-034 创建新图谱失败保留当前图谱回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 restore、reload 或冲突取舍逻辑，而是补齐 create 的失败分支：当头部“新建图谱”命中服务端失败时，图谱工作区必须保留当前图谱与当前上下文。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，新增页面级回归，锁定“新建图谱”失败时会显示“创建图谱失败”，同时继续保留当前图谱标题、版本文案、保存状态和当前节点。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级回归“graph workspace keeps the current graph when creating a new graph fails”，验证真实点击 `新建图谱` 后，若 `POST /api/v1/graphs` 返回失败，页面仍保留 `当前图谱`、`当前节点` 和 `版本 4 · 1 节点 · 0 连线`。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条 create 失败路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "creating a new graph fails"`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在除了 restore / reload / delete / open 等高风险动作权限分支外，也开始覆盖 create 主链里的失败分支，图谱工作区的浏览器矩阵更接近 create/save/restore/export/layout/conflict/权限全链路。
+- 这一轮仍然没有继续扩创建失败在脏草稿、窄屏或图谱列表切换共存时的组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 create/save/restore 在更多桌面 / 窄屏失败组合里的浏览器回归。
+
 ## 2026-07-16 23:28:00 +08:00 | v1.1.0-alpha.302 | 推进 WB-034 快照恢复 forbidden 权限回归
 
 ### 本次目标
