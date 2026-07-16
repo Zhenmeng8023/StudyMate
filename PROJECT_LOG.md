@@ -1,3 +1,26 @@
+## 2026-07-16 23:59:59 +08:00 | v1.1.0-alpha.314 | 推进 WB-034 窄屏打开图谱 forbidden 权限回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 delete、restore 或冲突组合逻辑，而是把已覆盖的“打开他人图谱命中 forbidden”权限失败分支继续推进到窄屏真实页面环境，验证在 `390x844` 视口下命中 `403 forbidden` 后仍会保留当前图谱与当前画布上下文。
+
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级窄屏权限回归 `graph workspace keeps the current graph when opening a forbidden graph fails in a narrow viewport`。
+- 这条回归显式锁定窄屏下的真实操作顺序：用户先在 `390x844` 视口里打开资源面板并切到 `图谱` 列表，再点击 `窄屏他人图谱`；若 `/api/v1/graphs/graph-2` 返回 `403 forbidden`，页面仍保留 `窄屏当前图谱`、激活中的当前图谱列表项、`窄屏当前节点` 与 `版本 4 · 1 节点 · 0 连线`。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条窄屏 `open forbidden` 组合路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps the current graph when opening a forbidden graph fails in a narrow viewport"`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在不只在桌面宽度下覆盖“打开他人图谱命中 forbidden”的权限失败分支，也开始覆盖窄屏真实页面环境，图谱工作区的响应式 navigation 权限矩阵又往前闭合了一小段。
+- 这一轮仍然没有继续扩更多窄屏权限分支与更系统的桌面 / 窄屏组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的 forbidden 组合回归。
+
 ## 2026-07-16 23:59:59 +08:00 | v1.1.0-alpha.313 | 推进 WB-034 窄屏删除当前图谱 forbidden 权限回归
 
 ### 本次目标

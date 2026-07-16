@@ -3443,6 +3443,111 @@ test("graph workspace keeps the current graph when opening a forbidden graph fai
   await expect(page.getByText("版本 4 · 1 节点 · 0 连线")).toBeVisible();
 });
 
+test("graph workspace keeps the current graph when opening a forbidden graph fails in a narrow viewport", async ({
+  page
+}) => {
+  const currentDetail = buildGraphDetail({
+    currentVersion: 4,
+    description: "窄屏打开权限路径 smoke",
+    document: {
+      graphId: "graph-1",
+      version: 4,
+      schemaVersion: 1,
+      viewport: { x: 140, y: 120, zoom: 1 },
+      nodes: [
+        {
+          id: "node-1",
+          type: "concept",
+          title: "窄屏当前节点",
+          x: 140,
+          y: 160,
+          width: 220,
+          height: 132,
+          source: null,
+          metadata: {}
+        }
+      ],
+      edges: [],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 0,
+    nodeCount: 1,
+    title: "窄屏当前图谱",
+    updatedAt: "2026-07-09T08:30:00Z"
+  });
+  const forbiddenGraph = {
+    ...currentDetail,
+    id: "graph-2",
+    ownerUserId: "user-2",
+    title: "窄屏他人图谱",
+    currentVersion: 2,
+    nodeCount: 2,
+    updatedAt: "2026-07-09T08:28:00Z"
+  };
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((storedSession) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(storedSession));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(currentDetail) });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-2") {
+      await route.fulfill({
+        status: 403,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: false,
+          error: {
+            code: "forbidden",
+            message: "只能访问自己的图谱"
+          }
+        })
+      });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([currentDetail, forbiddenGraph]) });
+      return;
+    }
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+
+  await expect(page.getByLabel("打开资源面板")).toBeVisible();
+  await expect(page.getByText("窄屏当前图谱")).toBeVisible();
+  await expect(page.getByText("版本 4 · 1 节点 · 0 连线")).toBeVisible();
+
+  await page.getByLabel("打开资源面板").click();
+  await page.getByRole("button", { name: "图谱", exact: true }).click();
+  await page.getByRole("button", { name: /窄屏他人图谱/ }).click();
+
+  await expect(page.getByText("只能访问自己的图谱")).toBeVisible();
+  await expect(page.locator(".graph-list-item.active")).toContainText("窄屏当前图谱");
+  await expect(page.getByRole("button", { name: /窄屏当前节点/ })).toBeVisible();
+  await expect(page.getByText("版本 4 · 1 节点 · 0 连线")).toBeVisible();
+});
+
 test("graph workspace surfaces version conflict actions and reloads the latest head", async ({ page }) => {
   const initialDetail = buildGraphDetail({
     currentVersion: 4,
