@@ -1,3 +1,27 @@
+## 2026-07-16 22:56:00 +08:00 | v1.1.0-alpha.299 | 推进 WB-034 / WB-032 窄屏对象级取舍真实点击回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不新增新的 restore 或 conflict 领域逻辑，而是把上一轮窄屏下 `restore -> conflict -> object resolution -> rebased save` 组合回归里残留的 pointer/touch 风险真正收口：对象级取舍不能只靠焦点和键盘兜底通过，必须恢复真实点击可达性。
+
+### 实际变更
+
+- 更新 `frontend-user/src/styles/product-refresh.css`，在 `@media (max-width: 640px)` 下显式把 `compact-navigation` 收口为底部导航栏，覆盖掉桌面态的 `sticky + 100vh` 侧栏样式，避免它在窄屏图谱工作区里整块遮住冲突检查器。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，把 `graph workspace can apply marked conflict resolutions after restore in a narrow viewport` 从键盘兜底交互恢复为真实点击路径：滚动到对象级取舍按钮后，直接点击“保留本地（当前未保存修改）”和“应用已标记取舍到当前草稿”。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把窄屏对象级取舍回归从“可通过焦点/键盘完成”推进到“真实点击已恢复”，并记录这次 pointer 路径收口。
+
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "can apply marked conflict resolutions after restore in a narrow viewport"`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在已经把窄屏 `restore -> conflict -> object resolution -> rebased save` 组合主链推进到真实 pointer/click 层，图谱工作区的响应式冲突处理矩阵不再只靠键盘兜底成立。
+- 这一轮仍然没有继续扩更多权限分支或更系统的桌面/窄屏组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 restore 后更多权限组合路径，或把同类响应式遮挡风险继续扩成更完整的触控矩阵。
+
 ## 2026-07-16 22:36:26 +08:00 | v1.1.0-alpha.298 | 推进 WB-034 / WB-032 窄屏 restore 后对象级取舍浏览器回归
 
 ### 本次目标

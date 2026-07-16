@@ -1464,6 +1464,43 @@ select:focus-visible {
 }
 
 @media (max-width: 640px) {
+  .compact-navigation {
+    position: fixed;
+    z-index: 35;
+    bottom: 10px;
+    left: 50%;
+    top: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: calc(100% - 20px);
+    height: 52px;
+    padding: 6px;
+    transform: translateX(-50%);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .compact-brand {
+    flex: 0 0 38px;
+  }
+
+  .compact-nav-list {
+    display: flex;
+    gap: 2px;
+    margin: 0;
+    overflow-x: auto;
+  }
+
+  .compact-nav-item {
+    flex: 0 0 38px;
+  }
+
+  .compact-navigation__rail {
+    display: none;
+  }
+
   .shell-layout--standard {
     display: block;
   }

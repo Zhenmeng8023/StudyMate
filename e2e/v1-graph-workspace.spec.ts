@@ -1807,11 +1807,9 @@ test("graph workspace can apply marked conflict resolutions after restore in a n
   await keepLocalButton.evaluate((element) => {
     element.scrollIntoView({ block: "center", inline: "nearest" });
   });
-  await keepLocalButton.focus();
-  await keepLocalButton.press("Enter");
+  await keepLocalButton.click();
   const applyMarkedResolutionsButton = conflictInspector.getByRole("button", { name: "应用已标记取舍到当前草稿" });
-  await applyMarkedResolutionsButton.focus();
-  await applyMarkedResolutionsButton.press("Enter");
+  await applyMarkedResolutionsButton.click();
 
   await expect(page.getByText("已基于最新图谱生成合并草稿：保留本地 1 项，请确认后保存")).toBeVisible();
   await expect(page.getByLabel("图谱保存状态：有未保存修改")).toHaveText("有未保存修改");
