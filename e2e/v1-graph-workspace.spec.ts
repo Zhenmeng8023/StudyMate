@@ -672,11 +672,12 @@ test("graph workspace keeps generated swimlanes visible when export fails after 
 
   await expect(page.getByText("已生成 3 条来源泳道")).toBeVisible();
   await expect(page.locator(".graph-group")).toHaveCount(3);
-  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toHaveText("有未保存修改");
   await expect(page.getByText("资料来源泳道")).toBeVisible();
   await expect(page.getByText("笔记来源泳道")).toBeVisible();
   await expect(page.getByText("AI 来源泳道")).toBeVisible();
 
+  await page.getByLabel("关闭检查器").click();
   await page.getByTitle("导出 PNG").click();
   await expect(page.getByText("导出 PNG 失败")).toBeVisible();
 
@@ -684,8 +685,182 @@ test("graph workspace keeps generated swimlanes visible when export fails after 
   await expect(page.getByText("资料来源泳道")).toBeVisible();
   await expect(page.getByText("笔记来源泳道")).toBeVisible();
   await expect(page.getByText("AI 来源泳道")).toBeVisible();
-  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toHaveText("有未保存修改");
+  await expect(page.getByRole("status")).toContainText("已选 3 个节点");
+});
+
+test("graph workspace keeps generated swimlanes visible when export fails after layout preview succeeds in a narrow viewport", async ({
+  page
+}) => {
+  const document = buildLayoutExportSmokeDocument();
+  const detail = buildGraphDetail({
+    currentVersion: 4,
+    description: "窄屏来源泳道导出失败组合 smoke",
+    document,
+    edgeCount: 1,
+    nodeCount: 3,
+    title: "窄屏来源泳道导出失败图谱",
+    updatedAt: "2026-07-16T10:34:00Z"
+  });
+  const previewDocument = {
+    ...document,
+    groups: [
+      {
+        id: "layout-group-1",
+        title: "资料来源泳道",
+        nodeIds: ["layout-node-1"],
+        x: 60,
+        y: 80,
+        width: 320,
+        height: 240,
+        collapsed: false,
+        metadata: { layoutKind: "source-swimlane", sourceType: "material" }
+      },
+      {
+        id: "layout-group-2",
+        title: "笔记来源泳道",
+        nodeIds: ["layout-node-2"],
+        x: 400,
+        y: 80,
+        width: 320,
+        height: 240,
+        collapsed: false,
+        metadata: { layoutKind: "source-swimlane", sourceType: "note" }
+      },
+      {
+        id: "layout-group-3",
+        title: "AI 来源泳道",
+        nodeIds: ["layout-node-3"],
+        x: 740,
+        y: 80,
+        width: 320,
+        height: 240,
+        collapsed: false,
+        metadata: { layoutKind: "source-swimlane", sourceType: "ai" }
+      }
+    ],
+    nodes: document.nodes.map((node) => {
+      if (node.id === "layout-node-1") {
+        return { ...node, x: 120, y: 160 };
+      }
+      if (node.id === "layout-node-2") {
+        return { ...node, x: 460, y: 160 };
+      }
+      if (node.id === "layout-node-3") {
+        return { ...node, x: 800, y: 160 };
+      }
+      return node;
+    })
+  };
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((value) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(value));
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: () => {
+        throw new Error("download_failed");
+      }
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: () => undefined
+    });
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname === "/api/v1/auth/me") {
+      await route.fulfill({ contentType: "application/json", body: success(session.user) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/layouts/preview") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          statusMessage: "已生成 3 条来源泳道",
+          laneCount: 3,
+          selectedNodeIds: ["layout-node-1", "layout-node-2", "layout-node-3"],
+          document: previewDocument
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([detail]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/review/feedback") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          dueCount: 0,
+          learningCount: 0,
+          weakCardCount: 0,
+          weakCards: [],
+          sourceSummaries: [],
+          weakSources: []
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+
+  await expect(page.getByLabel("打开检查器")).toBeVisible();
+  await expect(page.getByText("窄屏来源泳道导出失败图谱")).toBeVisible();
+  await expect(page.getByText("版本 4 · 3 节点 · 1 连线")).toBeVisible();
+
+  await page.getByRole("region", { name: "图谱画布" }).click();
+  await page.keyboard.press("Control+A");
+  await page.getByRole("button", { name: "属性" }).click();
   await expect(page.getByText("已选中 3 个节点")).toBeVisible();
+  await page.getByRole("button", { name: "生成来源泳道" }).click();
+
+  await expect(page.getByText("已生成 3 条来源泳道")).toBeVisible();
+  await expect(page.locator(".graph-group")).toHaveCount(3);
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toHaveText("有未保存修改");
+  await expect(page.getByText("资料来源泳道")).toBeVisible();
+  await expect(page.getByText("笔记来源泳道")).toBeVisible();
+  await expect(page.getByText("AI 来源泳道")).toBeVisible();
+
+  await page.getByLabel("关闭检查器").first().click();
+  await page.getByTitle("导出 PNG").click();
+  await expect(page.getByText("导出 PNG 失败")).toBeVisible();
+
+  await expect(page.locator(".graph-group")).toHaveCount(3);
+  await expect(page.getByText("资料来源泳道")).toBeVisible();
+  await expect(page.getByText("笔记来源泳道")).toBeVisible();
+  await expect(page.getByText("AI 来源泳道")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toHaveText("有未保存修改");
+  await expect(page.getByRole("status")).toContainText("已选 3 个节点");
 });
 
 test("graph workspace falls back to local source swimlanes when layout preview fails", async ({ page }) => {

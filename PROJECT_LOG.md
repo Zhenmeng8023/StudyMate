@@ -1,3 +1,27 @@
+## 2026-07-16 23:59:00 +08:00 | v1.1.0-alpha.308 | 推进 WB-034 窄屏来源泳道导出失败保留分组与选择回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 save、restore 或 conflict 组合逻辑，而是把上一轮刚补过的 `layout success + export failure` 路径继续推进到窄屏真实页面环境，验证在 `390x844` 视口下这条组合路径也不会丢失当前分组和当前选择。
+
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级窄屏组合回归“graph workspace keeps generated swimlanes visible when export fails after layout preview succeeds in a narrow viewport”。
+- 这条回归显式锁定窄屏下的真实操作顺序：先选中 3 个节点并在检查器里点击“生成来源泳道”，再关闭检查器点击 `导出 PNG` 命中失败；失败后页面仍保留 `资料来源泳道 / 笔记来源泳道 / AI 来源泳道`、`图谱保存状态：有未保存修改`，以及状态栏中的 `已选 3 个节点`。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条窄屏 `layout success + export failure` 组合路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- RED：`npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps generated swimlanes visible when export fails after layout preview succeeds in a narrow viewport"`
+- GREEN：`npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps generated swimlanes visible when export fails after layout preview succeeds in a narrow viewport"`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在不只在桌面宽度下覆盖“先生成来源泳道、再导出失败”的组合路径，也开始覆盖窄屏真实页面环境，图谱工作区浏览器矩阵更接近真实移动端/小屏操作顺序。
+- 这一轮仍然没有继续扩这条组合路径在 `SVG/JSON` 导出失败、来源泳道本地 fallback、或冲突辅助共存时的窄屏矩阵；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的失败组合回归。
+
 ## 2026-07-16 23:56:00 +08:00 | v1.1.0-alpha.307 | 推进 WB-034 来源泳道导出失败保留分组与选择回归
 
 ### 本次目标

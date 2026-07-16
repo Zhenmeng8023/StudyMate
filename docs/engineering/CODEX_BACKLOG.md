@@ -425,6 +425,25 @@
   - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，export/layout 不再只是各自独立的 smoke，而开始覆盖“先整理布局、再导出失败”的真实用户组合路径。
   - 这一轮仍然没有继续扩这条组合路径在窄屏、SVG/JSON 导出失败或冲突辅助共存时的矩阵；如果继续推进，更适合沿 `WB-034` 继续补 export/layout 在更多组合失败场景下的浏览器回归。
 
+### 执行记录：WB-034（窄屏来源泳道导出失败后保留分组与选择回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区新增浏览器级窄屏组合回归，锁定在 `390x844` 视口下，用户先通过 layout preview 生成 3 条来源泳道，再点击 `导出 PNG` 命中失败时，页面仍会保留当前泳道分组与当前选择摘要。
+  - 这条回归会显式验证窄屏结果：先看到“已生成 3 条来源泳道”和 3 个泳道分组，再看到“导出 PNG 失败”；失败后页面依旧保留 `资料来源泳道 / 笔记来源泳道 / AI 来源泳道`、`图谱保存状态：有未保存修改`，以及状态栏中的 `已选 3 个节点`。
+  - 固定回归矩阵现在不只覆盖桌面下的 `layout success + export failure` 组合路径，也开始覆盖窄屏下同一条真实用户操作顺序。
+- 已执行验证：
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps generated swimlanes visible when export fails after layout preview succeeds in a narrow viewport"`
+  - `npm run verify:docs`
+- 后续影响：
+  - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，`layout/export` 组合不再只在桌面宽度下成立，也开始具备窄屏真实页面验收证据。
+  - 这一轮仍然没有继续扩这条组合路径在 `SVG/JSON` 导出失败、来源泳道本地 fallback、或冲突辅助共存时的窄屏矩阵；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的失败组合回归。
+
 ### 执行记录：WB-033 / LC-010（复习评分后回到图谱查看反馈）
 - 执行日期：2026-07-16
 - 关联提交：`38f611e`（RED）
