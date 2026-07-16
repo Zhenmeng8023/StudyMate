@@ -368,6 +368,32 @@
   - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，save 不再只有成功流、冲突流和导入失败旁路，而有了明确的“保存失败后仍保留 dirty 草稿”浏览器级验收。
   - 这一轮仍然没有继续扩保存失败在自动保存、窄屏、离页保护或跨窗口提示共存时的组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 save/reload/restore 在更多失败组合里的浏览器回归。
 
+### 执行记录：WB-034（窄屏保存当前图谱失败回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区新增浏览器级窄屏保存失败回归，锁定在 `390x844` 视口里，用户在 `窄屏当前图谱` 中点击“新建概念节点 -> 保存”后，若服务端返回“保存服务暂不可用”，页面仍会保留当前 dirty 画布上下文。
+  - 这条回归会显式验证结果：失败提示保留“保存服务暂不可用”，保存状态切到 `图谱保存状态：保存失败`，同时继续可见 `窄屏当前节点`、新建节点与 `版本 4 · 2 节点 · 0 连线`。
+  - 固定回归矩阵现在不只覆盖桌面下的 save-failure 分支，也开始覆盖窄屏下同一条真实用户操作路径。
+- 已执行验证：
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps dirty nodes visible when saving the current graph fails in a narrow viewport"`
+  - `npm run verify:docs`
+  - `git diff --check`
+- 未执行验证及原因：
+  - 未执行 `npm run test:graph:conflicts:e2e` 全量矩阵；本工作包仅新增一条窄屏 save-failure 组合路径，先以定向 Playwright 用例控制反馈速度。
+- 兼容性 / 迁移说明：
+  - 本次仅补浏览器级回归与文档同步，无接口契约、数据库 schema 或迁移脚本变更。
+- 已知风险：
+  - 当前只覆盖“窄屏 + 新建本地节点 + 手动保存返回 500”的最小失败路径，尚未覆盖自动保存、离页保护或跨窗口提示并存时的窄屏组合。
+- 后续影响：
+  - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，窄屏下的 save-failure 不再只依赖桌面路径成立。
+  - 这一轮仍然没有继续扩更深一层的窄屏 save 失败组合；如果继续推进，更适合沿 `WB-034` 继续补自动保存、restore 后再保存与更多权限失败矩阵。
+
 ### 执行记录：WB-034（窄屏打开图谱 forbidden 权限回归）
 - 执行日期：2026-07-16
 - 关联提交：本工作包提交
