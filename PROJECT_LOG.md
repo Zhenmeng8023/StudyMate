@@ -1,3 +1,26 @@
+## 2026-07-16 23:59:59 +08:00 | v1.1.0-alpha.311 | 推进 WB-034 窄屏重载最新图谱 forbidden 权限回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 restore、delete 或对象级冲突逻辑，而是把已覆盖的“冲突后重载 latest head”权限失败分支继续推进到窄屏真实页面环境，验证在 `390x844` 视口下命中 `403 forbidden` 后仍会保留冲突辅助、检查器和本地草稿。
+
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级窄屏权限回归 `graph workspace keeps the conflict helper when reloading the latest head is forbidden in a narrow viewport`。
+- 这条回归显式锁定窄屏下的真实操作顺序：用户先在 `390x844` 视口里创建本地节点并保存，命中 `graph_version_conflict` 后打开“放弃本地并重载最新图谱”，确认框里的 `确认重载` 再命中 `403 forbidden`；取消后页面仍保留冲突辅助、检查器、`新概念` 节点与 `版本 4 · 1 节点 · 0 连线`。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条窄屏 `reload latest forbidden` 组合路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps the conflict helper when reloading the latest head is forbidden in a narrow viewport"`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在不只在桌面宽度下覆盖“冲突后放弃本地并重载最新图谱命中 forbidden”的权限失败分支，也开始覆盖窄屏真实页面环境，图谱工作区的响应式权限矩阵又往前闭合了一小段。
+- 这一轮仍然没有继续扩 delete / open / restore 等高风险动作在更多窄屏权限组合中的矩阵；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的 forbidden 组合回归。
+
 ## 2026-07-16 23:59:30 +08:00 | v1.1.0-alpha.309 | 推进 WB-034 窄屏本地来源泳道导出失败回归
 
 ### 本次目标

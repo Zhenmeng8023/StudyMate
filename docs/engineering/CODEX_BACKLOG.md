@@ -406,6 +406,25 @@
   - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，export 不再只有成功导出提示，而有了明确的“失败后仍保留当前选中状态与图谱上下文”浏览器级验收。
   - 这一轮仍然没有继续扩导出失败与窄屏、来源泳道、冲突辅助或更多浏览器能力缺失组合时的矩阵；如果继续推进，更适合沿 `WB-034` 继续补 export/save/layout 在更多失败组合里的浏览器回归。
 
+### 执行记录：WB-034（窄屏重载最新图谱 forbidden 权限回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区新增浏览器级窄屏权限回归，锁定在 `390x844` 视口里，用户先创建本地节点并保存，命中 `graph_version_conflict` 后点击 `放弃本地并重载最新图谱`，若服务端返回 `403 forbidden`，页面仍会保留冲突辅助与当前本地草稿。
+  - 这条回归会显式验证结果：确认框保留 `只能访问自己的图谱`，关闭后冲突辅助、`放弃本地并重载最新图谱`、图谱检查器、`新概念` 节点与 `版本 4 · 1 节点 · 0 连线` 仍继续可见。
+  - 固定回归矩阵现在不只覆盖桌面下的 `reload latest forbidden` 权限分支，也开始覆盖窄屏下同一条真实用户操作路径。
+- 已执行验证：
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps the conflict helper when reloading the latest head is forbidden in a narrow viewport"`
+  - `npm run verify:docs`
+- 后续影响：
+  - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，窄屏下的 `reload latest forbidden` 不再只停留在桌面路径成立。
+  - 这一轮仍然没有继续扩 delete / open / restore 等高风险动作在更多窄屏权限组合中的矩阵；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的 forbidden 组合回归。
+
 ### 执行记录：WB-034（来源泳道导出失败后保留分组与选择回归）
 - 执行日期：2026-07-16
 - 关联提交：本工作包提交
