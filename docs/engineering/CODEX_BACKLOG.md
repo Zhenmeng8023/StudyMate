@@ -368,6 +368,25 @@
   - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，save 不再只有成功流、冲突流和导入失败旁路，而有了明确的“保存失败后仍保留 dirty 草稿”浏览器级验收。
   - 这一轮仍然没有继续扩保存失败在自动保存、窄屏、离页保护或跨窗口提示共存时的组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 save/reload/restore 在更多失败组合里的浏览器回归。
 
+### 执行记录：WB-034（窄屏恢复快照 forbidden 权限回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区新增浏览器级窄屏权限回归，锁定在 `390x844` 视口里，用户先进入图谱检查器“历史”标签并点击 `恢复`，若服务端返回 `403 forbidden`，页面仍会保留当前图谱与当前画布节点。
+  - 这条回归会显式验证结果：失败提示保留 `只能访问自己的图谱`，保存状态切到 `保存失败`，同时 `窄屏快照恢复图谱`、`窄屏当前节点` 与 `版本 4 · 1 节点 · 0 连线` 仍继续可见。
+  - 固定回归矩阵现在不只覆盖桌面下的 `restore forbidden` 权限分支，也开始覆盖窄屏下同一条真实用户操作路径。
+- 已执行验证：
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps the current graph when snapshot restore is forbidden in a narrow viewport"`
+  - `npm run verify:docs`
+- 后续影响：
+  - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，窄屏下的 `restore forbidden` 不再只停留在桌面路径成立。
+  - 这一轮仍然没有继续扩 delete / open 等高风险动作在更多窄屏权限组合中的矩阵；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的 forbidden 组合回归。
+
 ### 执行记录：WB-034（布局预览失败后回退本地来源泳道回归）
 - 执行日期：2026-07-16
 - 关联提交：本工作包提交
