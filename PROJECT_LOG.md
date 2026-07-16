@@ -1,3 +1,27 @@
+## 2026-07-16 23:44:06 +08:00 | v1.1.0-alpha.304 | 推进 WB-034 保存当前图谱失败保留 dirty 草稿回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的冲突取舍或 restore 组合逻辑，而是补齐 save 的显式失败分支：当用户创建本地新节点后点击保存时，如果服务端返回失败，图谱工作区必须保留当前 dirty 草稿与当前上下文。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，补强现有页面级保存失败回归，锁定“保存服务暂不可用”时仍保留 `版本 4 · 2 节点 · 0 连线`，并继续显示 `当前节点` 与 `新概念`。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级回归“graph workspace keeps dirty nodes visible when saving the current graph fails”，验证真实点击 `新建概念节点 -> 保存` 后，若 `POST /api/v1/graphs/graph-1/batch-save` 失败，页面会切到 `图谱保存状态：保存失败`，同时继续保留 dirty 草稿节点。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条 save 失败路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "saving the current graph fails"`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在除了 create / restore / reload / delete 等失败分支外，也开始覆盖 save 主链里的显式失败态，图谱工作区的浏览器矩阵更接近 create/save/restore/export/layout/conflict/权限全链路。
+- 这一轮仍然没有继续扩保存失败在自动保存、窄屏、离页保护或跨窗口提示共存时的组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 save/reload/restore 在更多失败组合里的浏览器回归。
+
 ## 2026-07-16 23:37:28 +08:00 | v1.1.0-alpha.303 | 推进 WB-034 创建新图谱失败保留当前图谱回归
 
 ### 本次目标

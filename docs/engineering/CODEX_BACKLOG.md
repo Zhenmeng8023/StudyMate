@@ -347,6 +347,27 @@
   - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，create 不再只有成功流和通用提示，而有了明确的“失败后仍保留当前图谱上下文”浏览器级验收。
   - 这一轮仍然没有继续扩创建失败在脏草稿、窄屏或图谱列表切换共存时的组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 create/save/restore 在更多桌面/窄屏失败组合里的浏览器回归。
 
+### 执行记录：WB-034（保存当前图谱失败后保留 dirty 草稿回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区页面级回归现在明确锁定：当用户新增本地节点后点击保存，如果服务端返回“保存服务暂不可用”，页面仍会保留 `版本 4 · 2 节点 · 0 连线`，并继续显示 `当前节点` 与 `新概念` 两个节点。
+  - 浏览器级回归同步验证真实点击路径：用户在 `当前图谱` 中点击“新建概念节点 -> 保存”后，若 `POST /graphs/:id/batch-save` 失败，页面会显示“保存服务暂不可用”、切到 `图谱保存状态：保存失败`，同时继续保留 dirty 草稿对应的节点与版本上下文。
+  - 固定回归矩阵现在不只覆盖 create 失败、restore 失败、reload forbidden、delete forbidden 等动作失败分支，也开始覆盖 save 主链里的显式失败态。
+- 已执行验证：
+  - `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "saving the current graph fails"`
+  - `npm run verify:docs`
+- 后续影响：
+  - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，save 不再只有成功流、冲突流和导入失败旁路，而有了明确的“保存失败后仍保留 dirty 草稿”浏览器级验收。
+  - 这一轮仍然没有继续扩保存失败在自动保存、窄屏、离页保护或跨窗口提示共存时的组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 save/reload/restore 在更多失败组合里的浏览器回归。
+
 ### 执行记录：WB-033 / LC-010（复习评分后回到图谱查看反馈）
 - 执行日期：2026-07-16
 - 关联提交：`38f611e`（RED）

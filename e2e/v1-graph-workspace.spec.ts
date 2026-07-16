@@ -533,6 +533,132 @@ test("graph workspace keeps the current graph when creating a new graph fails", 
   await expect(page.getByRole("button", { name: /当前节点/ })).toBeVisible();
 });
 
+test("graph workspace keeps dirty nodes visible when saving the current graph fails", async ({ page }) => {
+  const detail = buildGraphDetail({
+    currentVersion: 4,
+    description: "保存图谱失败路径 smoke",
+    document: {
+      graphId: "graph-1",
+      version: 4,
+      schemaVersion: 1,
+      viewport: { x: 140, y: 120, zoom: 1 },
+      nodes: [
+        {
+          id: "node-1",
+          type: "text",
+          title: "当前节点",
+          x: 220,
+          y: 160,
+          width: 240,
+          height: 132,
+          source: null,
+          metadata: {}
+        }
+      ],
+      edges: [],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 0,
+    nodeCount: 1,
+    title: "当前图谱",
+    updatedAt: "2026-07-16T09:24:00Z"
+  });
+  let batchSaveRequestCount = 0;
+
+  await page.addInitScript((value) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(value));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname === "/api/v1/auth/me") {
+      await route.fulfill({ contentType: "application/json", body: success(session.user) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([detail]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/batch-save") {
+      batchSaveRequestCount += 1;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: false,
+          error: {
+            code: "graph_save_failed",
+            message: "保存服务暂不可用"
+          }
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/review/feedback") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          dueCount: 0,
+          learningCount: 0,
+          weakCardCount: 0,
+          weakCards: [],
+          sourceSummaries: [],
+          weakSources: []
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+
+  await expect(page.getByText("当前图谱")).toBeVisible();
+  await expect(page.getByText("版本 4 · 1 节点 · 0 连线")).toBeVisible();
+  await expect(page.getByRole("button", { name: /当前节点/ })).toBeVisible();
+
+  await page.getByTitle("新建概念节点").click();
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toBeVisible();
+  await expect(page.getByText("版本 4 · 2 节点 · 0 连线")).toBeVisible();
+  await expect(page.getByRole("button", { name: /新概念/ })).toBeVisible();
+
+  await page.getByRole("button", { name: "保存" }).click();
+
+  await expect(page.getByText("保存服务暂不可用")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：保存失败")).toBeVisible();
+  await expect(page.getByText("版本 4 · 2 节点 · 0 连线")).toBeVisible();
+  await expect(page.getByRole("button", { name: /当前节点/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /新概念/ })).toBeVisible();
+  expect(batchSaveRequestCount).toBe(1);
+});
+
 test("graph workspace shows source mastery feedback in the inspector", async ({ page }) => {
   const document = buildLayoutExportSmokeDocument();
   const detail = buildGraphDetail({

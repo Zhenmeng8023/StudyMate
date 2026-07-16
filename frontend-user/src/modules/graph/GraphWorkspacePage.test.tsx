@@ -237,17 +237,43 @@ describe("GraphWorkspacePage persistence states", () => {
   it("shows a failed save state when batch save rejects", async () => {
     const user = userEvent.setup();
     batchSaveGraphMock.mockRejectedValueOnce(new Error("保存服务暂不可用"));
+    getGraphMock.mockResolvedValueOnce({
+      ...graphDetail,
+      title: "Current graph",
+      nodeCount: 1,
+      document: {
+        ...graphDetail.document,
+        nodes: [
+          {
+            id: "node-1",
+            type: "concept",
+            title: "当前节点",
+            x: 140,
+            y: 160,
+            width: 220,
+            height: 132,
+            source: null,
+            metadata: {}
+          }
+        ]
+      }
+    });
 
     renderWorkspace();
 
     await waitFor(() => expect(getCanvasSaveButton()).toBeInTheDocument());
+    await expect(screen.findByText("Current graph")).resolves.toBeInTheDocument();
     await user.click(screen.getByTitle("新建概念节点"));
     expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
+    expect(screen.getByText(/版本 4 · 2 节点 · 0 连线/)).toBeInTheDocument();
 
     await user.click(getCanvasSaveButton());
 
     await expect(screen.findByText("保存服务暂不可用")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
+    expect(screen.getByText(/版本 4 · 2 节点 · 0 连线/)).toBeInTheDocument();
+    expect(getCanvasNodeButton(/当前节点/)).toBeInTheDocument();
+    expect(getCanvasNodeButton(/新概念/)).toBeInTheDocument();
   });
 
   it("keeps the current graph loaded when creating a new graph fails", async () => {
