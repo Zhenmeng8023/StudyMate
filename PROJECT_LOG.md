@@ -1,3 +1,22 @@
+## 2026-07-16 04:16:00 +08:00 | v1.1.0-alpha.292 | 推进 WB-034 / WB-033 图谱学习反馈刷新浏览器回归
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-033 / LC-010` 相关收口，这一轮不再扩新的学习反馈逻辑，而是把上一轮刚落地的“刷新学习反馈且保留本地草稿”补成浏览器级可验收路径。
+- 目标是让图谱工作区这条新反馈链路不只停留在 Vitest 页面测试层，而是真正具备一次完整的页面交互、真实路由与 API mock 验收证据，并同步把 backlog 里尚未回填的提交记录修正到实际仓库状态。
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增“graph workspace refreshes learning feedback without discarding dirty local edits” 用例，覆盖来源节点初始显示旧 mastery 摘要、用户在检查器里修改节点标题形成未保存草稿、点击“刷新学习反馈”后拉回最新 100% mastery 摘要、并确认本地脏编辑没有被回滚。
+- 保留 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx` 作为页面层交叉验证入口，并重新执行该页现有 20 条 Vitest 用例，确认浏览器回归补入后并未破坏既有图谱工作区编辑/保存/反馈路径。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，将 `WB-034` 从 `TODO` 推进到 `IN_PROGRESS`，记录这次“图谱学习反馈刷新浏览器回归”切片；同时把上一轮 `WB-033 / LC-010` 的执行记录从“待提交”对齐到实际提交 `cdcf3c8`。
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "refreshes learning feedback without discarding dirty local edits"`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+### 后续影响
+
+- `WB-034` 现在不只覆盖图谱工作区的加载/保存、布局预览、导出和权限失败 smoke，也开始承接学习反馈闭环里的“刷新后不丢草稿”关键路径，图谱回归矩阵更接近真实用户操作。
+- 这一轮仍然没有把窄屏组合、restore/conflict 组合路径或 mastery 正式持久化边界并入同一条浏览器矩阵；如果继续推进，更适合沿 `WB-034` 继续补 restore/conflict/窄屏组合回归，或沿 `WB-033` 继续补 mastery 持久化边界与失效策略。
+
 ## 2026-07-16 04:09:33 +08:00 | v1.1.0-alpha.291 | 推进 WB-033 / LC-010 图谱侧刷新学习反馈并保留本地草稿
 ### 任务内容
 
