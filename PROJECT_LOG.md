@@ -1,3 +1,27 @@
+## 2026-07-16 22:07:48 +08:00 | v1.1.0-alpha.297 | 推进 WB-034 / WB-032 窄屏 restore/conflict 组合浏览器回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵，这一轮仍不扩新的图谱恢复或冲突逻辑，而是把已经分别成立的“窄屏 restore”与“restore 后触发 conflict”接成一条真实页面组合路径。
+- 目标是在 `390x844` 窄屏视口下证明：用户先通过检查器完成快照恢复，再回到画布继续编辑并保存时，仍能基于恢复后的版本语义进入冲突辅助流程，而不是因为覆盖层、响应式布局或版本串联断掉。
+
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增“graph workspace keeps restore and conflict handling reachable in a narrow viewport” 用例：在窄屏视口下先进入“历史”恢复快照，再收起检查器继续创建本地节点并保存，随后断言页面进入 `graph_version_conflict` 辅助流程、允许查看冲突处理并可重载到最新 head。
+- 这条用例会显式校验 restore 后第一次 `batch-save` 携带的是 `document.version = 6`，说明窄屏布局下 restore 与后续 conflict 链路之间的版本语义仍然保持连通。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条窄屏 restore/conflict 组合浏览器回归补进固定矩阵说明和 `WB-034 / WB-032` 执行记录。
+
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "keeps restore and conflict handling reachable in a narrow viewport"`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在已经同时覆盖桌面与窄屏下的 restore/conflict 组合主路径，图谱工作区的响应式恢复与冲突辅助矩阵比上一轮更接近真实用户环境。
+- 这一轮仍然没有把窄屏下的 restore 后对象级取舍再保存、更多权限分支，或更系统的桌面/窄屏组合矩阵并入同一条浏览器回归；如果继续推进，更适合沿 `WB-034` 继续补窄屏 restore 后应用冲突取舍再保存的组合路径。
+
 ## 2026-07-16 21:58:15 +08:00 | v1.1.0-alpha.296 | 推进 WB-034 / WB-032 窄屏快照恢复浏览器回归
 ### 任务内容
 
