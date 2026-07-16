@@ -3239,6 +3239,109 @@ test("graph workspace keeps the current graph when deleting the current graph is
   await expect(page.getByText("版本 4 · 1 节点 · 0 连线")).toBeVisible();
 });
 
+test("graph workspace keeps the current graph when deleting the current graph is forbidden in a narrow viewport", async ({
+  page
+}) => {
+  const currentDetail = buildGraphDetail({
+    currentVersion: 4,
+    description: "窄屏删除权限路径 smoke",
+    document: {
+      graphId: "graph-1",
+      version: 4,
+      schemaVersion: 1,
+      viewport: { x: 140, y: 120, zoom: 1 },
+      nodes: [
+        {
+          id: "node-1",
+          type: "concept",
+          title: "窄屏当前节点",
+          x: 140,
+          y: 160,
+          width: 220,
+          height: 132,
+          source: null,
+          metadata: {}
+        }
+      ],
+      edges: [],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 0,
+    nodeCount: 1,
+    title: "窄屏当前图谱",
+    updatedAt: "2026-07-16T23:50:00Z"
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((storedSession) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(storedSession));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/v1/graphs/graph-1" && route.request().method() === "DELETE") {
+      await route.fulfill({
+        status: 403,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: false,
+          error: {
+            code: "forbidden",
+            message: "只能访问自己的图谱"
+          }
+        })
+      });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(currentDetail) });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([currentDetail]) });
+      return;
+    }
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+
+  await expect(page.getByLabel("打开资源面板")).toBeVisible();
+  await expect(page.getByLabel("打开检查器")).toBeVisible();
+  await expect(page.getByText("窄屏当前图谱")).toBeVisible();
+  await expect(page.getByText("版本 4 · 1 节点 · 0 连线")).toBeVisible();
+
+  await page.getByLabel("打开检查器").click();
+  await page.getByRole("button", { name: "概览" }).click();
+  await page.getByRole("button", { name: "删除当前图谱" }).click();
+  await expect(page.getByRole("dialog", { name: "确认删除图谱" })).toBeVisible();
+  await page.getByRole("button", { name: "确认删除" }).click();
+
+  await expect(page.getByRole("dialog", { name: "确认删除图谱" })).toContainText("只能访问自己的图谱");
+
+  await page.getByRole("button", { name: "取消" }).click();
+
+  await expect(page.getByRole("dialog", { name: "确认删除图谱" })).toHaveCount(0);
+  await expect(page.getByLabel("图谱标题")).toHaveValue("窄屏当前图谱");
+  await expect(page.locator(".graph-stage").getByRole("button", { name: /窄屏当前节点/ })).toBeVisible();
+  await expect(page.getByText("版本 4 · 1 节点 · 0 连线")).toBeVisible();
+});
+
 test("graph workspace keeps the current graph when opening a forbidden graph fails", async ({ page }) => {
   const currentDetail = buildGraphDetail({
     currentVersion: 4,

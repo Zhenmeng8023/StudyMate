@@ -42,7 +42,7 @@
 | 前端页面 | 图谱工作区真实冲突路径、latest-head 组合场景、页面级联动建议 | `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`、`frontend-user/src/modules/graph/GraphWorkspaceConflictResolutionDependencies.test.tsx` | `npm run test:graph:conflicts:frontend` |
 | 前端持久化 | 本地草稿恢复、跨窗口提醒、冲突后状态保持 | `frontend-user/src/modules/graph/hooks/useGraphWorkspacePersistence.test.tsx`、`frontend-user/src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx` | `npm run test:graph:conflicts:frontend` |
 | 后端 DTO / handler / service | 版本权威、`409 graph_version_conflict`、restore 生命周期 | `backend/internal/modules/graph/dto/*.go`、`handler/*.go`、`service/*.go` | `npm run test:graph:conflicts:backend` |
-| E2E smoke | 图谱工作区真实预览环境下的桌面与窄屏加载、保存、导入、历史、布局预览、导出状态、权限路径、失败态、dirty 状态下的快照恢复前保护、桌面与窄屏下的快照恢复成功路径、创建新图谱命中失败后仍保留当前图谱、保存当前图谱命中失败后仍保留 dirty 草稿与当前节点、布局预览接口失败后回退本地来源泳道布局、导出 `JSON / SVG / PNG` 失败后仍保留当前选中状态与图谱上下文、来源泳道已生成后导出 PNG 失败仍保留当前分组与当前选择、窄屏下来源泳道已生成后导出 PNG 失败仍保留当前分组与当前选择、窄屏下来源泳道本地 fallback 后导出 `PNG / JSON / SVG` 失败仍保留当前分组与当前选择、桌面与窄屏下的 restore 命中 `forbidden` 后仍保留当前图谱、桌面与窄屏下的 restore 后再次保存命中版本冲突组合路径、版本冲突处理、重载最新图谱命中 `forbidden` 后仍保留冲突辅助与本地草稿、删除当前图谱命中 `forbidden` 后仍保留当前图谱与确认上下文，以及桌面与窄屏下的“应用已标记取舍 -> 生成合并草稿 -> 以 rebased document 再次保存”“联动取舍建议清除阻断 -> 应用已标记取舍 -> 以 rebased document 再次保存”“未标记对象默认沿用最新版本 -> 以 rebased document 再次保存”“多目标本地连线联动建议 -> 应用已标记取舍 -> 以 rebased document 再次保存”与“latest-head 分组依赖阻断 -> 一键应用 2 项联动取舍建议 -> 应用已标记取舍 -> 以 rebased document 再次保存”的主路径 | `e2e/v1-graph-workspace.spec.ts` | `npm run test:graph:conflicts:e2e` |
+| E2E smoke | 图谱工作区真实预览环境下的桌面与窄屏加载、保存、导入、历史、布局预览、导出状态、权限路径、失败态、dirty 状态下的快照恢复前保护、桌面与窄屏下的快照恢复成功路径、创建新图谱命中失败后仍保留当前图谱、保存当前图谱命中失败后仍保留 dirty 草稿与当前节点、布局预览接口失败后回退本地来源泳道布局、导出 `JSON / SVG / PNG` 失败后仍保留当前选中状态与图谱上下文、来源泳道已生成后导出 PNG 失败仍保留当前分组与当前选择、窄屏下来源泳道已生成后导出 PNG 失败仍保留当前分组与当前选择、窄屏下来源泳道本地 fallback 后导出 `PNG / JSON / SVG` 失败仍保留当前分组与当前选择、桌面与窄屏下的 restore 命中 `forbidden` 后仍保留当前图谱、桌面与窄屏下的 restore 后再次保存命中版本冲突组合路径、版本冲突处理、重载最新图谱命中 `forbidden` 后仍保留冲突辅助与本地草稿、桌面与窄屏下的删除当前图谱命中 `forbidden` 后仍保留当前图谱与确认上下文，以及桌面与窄屏下的“应用已标记取舍 -> 生成合并草稿 -> 以 rebased document 再次保存”“联动取舍建议清除阻断 -> 应用已标记取舍 -> 以 rebased document 再次保存”“未标记对象默认沿用最新版本 -> 以 rebased document 再次保存”“多目标本地连线联动建议 -> 应用已标记取舍 -> 以 rebased document 再次保存”与“latest-head 分组依赖阻断 -> 一键应用 2 项联动取舍建议 -> 应用已标记取舍 -> 以 rebased document 再次保存”的主路径 | `e2e/v1-graph-workspace.spec.ts` | `npm run test:graph:conflicts:e2e` |
 | 文档同步 | 路线图、backlog、主文档与里程碑记录一致 | `README.md` / `docs/DEVELOPMENT.md` / `PROJECT_LOG.md` 等 | `npm run verify:docs` |
 
 ## 3. 推荐执行入口
@@ -86,7 +86,8 @@ npm run ci
 - 当前固定入口也已覆盖 restore 与 conflict 的组合主路径：快照恢复成功后继续编辑并保存时，若服务端又推进了更新，页面仍会基于 restored `document.version` 正确进入 `graph_version_conflict` 辅助流程，而不是回退到旧版本语义。
 - 当前固定入口也已覆盖桌面与窄屏下“重载最新图谱”命中 `forbidden` 的权限分支：若冲突态下尝试放弃本地并重载最新图谱时被服务端拒绝，确认框会保留错误信息，关闭后冲突辅助与当前本地草稿仍继续可见，不会被提前清空。
 - 当前固定入口也已覆盖窄屏下的“重载最新图谱”命中 `forbidden` 的权限分支：在 `390x844` 视口里，若冲突态下尝试放弃本地并重载最新图谱时被服务端拒绝，确认框仍会保留“只能访问自己的图谱”，关闭后冲突辅助、重载入口、检查器与当前本地草稿都继续可见。
-- 当前固定入口也已覆盖“删除当前图谱”命中 `forbidden` 的权限分支：若概览面板中的删除动作被服务端拒绝，确认框会保留错误信息，取消后当前图谱、当前标题和当前画布内容仍继续停留在原工作区里。
+- 当前固定入口也已覆盖桌面与窄屏下“删除当前图谱”命中 `forbidden` 的权限分支：若概览面板中的删除动作被服务端拒绝，确认框会保留错误信息，取消后当前图谱、当前标题和当前画布内容仍继续停留在原工作区里。
+- 当前固定入口也已覆盖窄屏下的“删除当前图谱”命中 `forbidden` 的权限分支：在 `390x844` 视口里，若图谱检查器“概览”标签中的删除动作被服务端拒绝，确认框仍会保留“只能访问自己的图谱”，关闭后 `窄屏当前图谱`、`窄屏当前节点` 与 `版本 4 · 1 节点 · 0 连线` 都继续可见。
 - 当前固定入口也已覆盖窄屏下的 restore 与 conflict 组合主路径：在 `390x844` 视口里，用户仍可先通过检查器完成 restore，再收起检查器继续编辑并保存，随后命中 `graph_version_conflict` 辅助流程并重载到最新 head。
 - 当前固定入口也已覆盖窄屏下的 restore 后对象级取舍再保存路径：在 `390x844` 视口里，用户可在冲突检查器中滚动到对象级取舍按钮，并通过真实点击完成“保留本地 -> 应用已标记取舍 -> 再次保存”，最终得到 rebased `document.version` 的成功保存结果。
 - 当前固定入口也已覆盖窄屏下对象级取舍的 pointer 路径收口：`compact-navigation` 在 `390x844` 视口里会收口为底部导航栏，不再以整高侧栏形态拦截冲突检查器中的对象级取舍按钮点击。
