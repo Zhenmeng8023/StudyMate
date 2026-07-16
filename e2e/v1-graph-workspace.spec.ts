@@ -502,6 +502,8 @@ test("graph workspace keeps the current selection when graph export actions fail
   await page.keyboard.press("Control+A");
   await page.getByRole("button", { name: "属性" }).click();
   await expect(page.getByText("已选中 3 个节点")).toBeVisible();
+  await page.getByLabel("关闭检查器").first().click();
+  await expect(page.getByRole("status")).toContainText("已选 3 个节点");
 
   await page.getByTitle("导出 StudyMate JSON").click();
   await expect(page.getByText("导出 StudyMate JSON 失败")).toBeVisible();
@@ -514,6 +516,115 @@ test("graph workspace keeps the current selection when graph export actions fail
 
   await expect(page.getByText("版本 4 · 3 节点 · 1 连线")).toBeVisible();
   await expect(page.getByText("已选中 3 个节点")).toBeVisible();
+  await expect(page.getByRole("button", { name: /布局节点 1/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /布局节点 2/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /布局节点 3/ })).toBeVisible();
+});
+
+test("graph workspace keeps the current selection when graph export actions fail in a narrow viewport", async ({
+  page
+}) => {
+  const document = buildLayoutExportSmokeDocument();
+  const detail = buildGraphDetail({
+    currentVersion: 4,
+    description: "窄屏导出失败路径 smoke",
+    document,
+    edgeCount: 1,
+    nodeCount: 3,
+    title: "窄屏导出失败图谱",
+    updatedAt: "2026-07-16T23:40:00Z"
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((value) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(value));
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: () => {
+        throw new Error("download_failed");
+      }
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: () => undefined
+    });
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname === "/api/v1/auth/me") {
+      await route.fulfill({ contentType: "application/json", body: success(session.user) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([detail]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/review/feedback") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          dueCount: 0,
+          learningCount: 0,
+          weakCardCount: 0,
+          weakCards: [],
+          sourceSummaries: [],
+          weakSources: []
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+
+  await expect(page.getByLabel("打开检查器")).toBeVisible();
+  await expect(page.getByText("窄屏导出失败图谱")).toBeVisible();
+  await expect(page.getByText("版本 4 · 3 节点 · 1 连线")).toBeVisible();
+
+  await page.getByRole("region", { name: "图谱画布" }).click();
+  await page.keyboard.press("Control+A");
+  await page.getByRole("button", { name: "属性" }).click();
+  await expect(page.getByText("已选中 3 个节点")).toBeVisible();
+  await page.getByLabel("关闭检查器").first().click();
+  await expect(page.getByRole("status")).toContainText("已选 3 个节点");
+
+  await page.getByTitle("导出 StudyMate JSON").click();
+  await expect(page.getByText("导出 StudyMate JSON 失败")).toBeVisible();
+
+  await page.getByTitle("导出 SVG").click();
+  await expect(page.getByText("导出 SVG 失败")).toBeVisible();
+
+  await page.getByTitle("导出 PNG").click();
+  await expect(page.getByText("导出 PNG 失败")).toBeVisible();
+
+  await expect(page.getByText("版本 4 · 3 节点 · 1 连线")).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("已选 3 个节点");
   await expect(page.getByRole("button", { name: /布局节点 1/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /布局节点 2/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /布局节点 3/ })).toBeVisible();

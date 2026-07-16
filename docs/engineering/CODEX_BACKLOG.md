@@ -515,6 +515,32 @@
   - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，export 不再只有成功导出提示，而有了明确的“失败后仍保留当前选中状态与图谱上下文”浏览器级验收。
   - 这一轮仍然没有继续扩导出失败与窄屏、来源泳道、冲突辅助或更多浏览器能力缺失组合时的矩阵；如果继续推进，更适合沿 `WB-034` 继续补 export/save/layout 在更多失败组合里的浏览器回归。
 
+### 执行记录：WB-034（窄屏导出失败后保留当前选中状态回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区新增浏览器级窄屏导出失败回归，锁定在 `390x844` 视口里，用户选中 3 个节点后连续触发 `导出 StudyMate JSON / SVG / PNG` 失败，页面仍会保留当前选中状态与当前图谱上下文。
+  - 这条回归会显式验证结果：失败提示分别保留 `导出 StudyMate JSON 失败`、`导出 SVG 失败` 与 `导出 PNG 失败`，同时继续可见 `窄屏导出失败图谱`、`版本 4 · 3 节点 · 1 连线`、`已选中 3 个节点`、状态栏中的 `已选 3 个节点`，以及画布上的 3 个布局节点。
+  - 固定回归矩阵现在不只覆盖桌面下的 export-failure 分支，也开始覆盖窄屏下同一条真实用户操作路径。
+- 已执行验证：
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps the current selection when graph export actions fail in a narrow viewport"`
+  - `npm run verify:docs`
+  - `git diff --check`
+- 未执行验证及原因：
+  - 未执行 `npm run test:graph:conflicts:e2e` 全量矩阵；本工作包仅新增一条窄屏 export-failure 组合路径，先以定向 Playwright 用例控制反馈速度。
+- 兼容性 / 迁移说明：
+  - 本次仅补浏览器级回归与文档同步，无接口契约、数据库 schema 或迁移脚本变更。
+- 已知风险：
+  - 当前只覆盖“窄屏 + 当前选择 + 三种导出按钮失败”的最小路径，尚未覆盖与来源泳道、本地 fallback、冲突辅助或更多浏览器能力缺失并存时的窄屏组合。
+- 后续影响：
+  - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，窄屏下的 export-failure 不再只依赖桌面路径成立。
+  - 这一轮仍然没有继续扩更深一层的窄屏导出失败组合；如果继续推进，更适合沿 `WB-034` 继续补 export/layout/冲突辅助的更多窄屏失败矩阵。
+
 ### 执行记录：WB-034（窄屏重载最新图谱 forbidden 权限回归）
 - 执行日期：2026-07-16
 - 关联提交：本工作包提交

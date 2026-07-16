@@ -1,3 +1,27 @@
+## 2026-07-16 23:59:59 +08:00 | v1.1.0-alpha.317 | 推进 WB-034 窄屏导出失败后保留当前选中状态回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 restore、forbidden 或来源泳道组合逻辑，而是把已覆盖的“导出失败后保留当前选中状态与图谱上下文”分支继续推进到窄屏真实页面环境，验证在 `390x844` 视口下命中导出失败后仍会保留当前选择与当前图谱上下文。
+
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级窄屏导出失败回归 `graph workspace keeps the current selection when graph export actions fail in a narrow viewport`。
+- 这条回归显式锁定窄屏下的真实操作顺序：用户先在 `390x844` 视口里选中 3 个节点并切到“属性”，再连续点击 `导出 StudyMate JSON`、`导出 SVG` 与 `导出 PNG`；若浏览器下载能力失败，页面仍保留 `窄屏导出失败图谱`、`版本 4 · 3 节点 · 1 连线`、`已选中 3 个节点` 与状态栏中的 `已选 3 个节点`。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条窄屏 export-failure 组合路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps the current selection when graph export actions fail in a narrow viewport"`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 影响与后续
+
+- `WB-034` 的回归矩阵现在不只在桌面宽度下覆盖“导出失败后保留当前选中状态与图谱上下文”，也开始覆盖窄屏真实页面环境，export 失败链路的桌面 / 窄屏语义更加对齐。
+- 这一轮仍然没有继续扩来源泳道、本地 fallback、冲突辅助或更多浏览器能力缺失共存时的导出失败组合；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的窄屏 export 失败矩阵。
+
 ## 2026-07-16 23:59:59 +08:00 | v1.1.0-alpha.316 | 推进 WB-034 窄屏创建新图谱失败回归
 
 ### 本次目标
