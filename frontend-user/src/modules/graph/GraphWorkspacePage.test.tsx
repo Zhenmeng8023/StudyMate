@@ -642,6 +642,32 @@ describe("GraphWorkspacePage persistence states", () => {
     confirmSpy.mockRestore();
   });
 
+  it("keeps the current graph loaded when deleting the current graph is forbidden", async () => {
+    const user = userEvent.setup();
+    deleteGraphMock.mockRejectedValueOnce(new Error("只能访问自己的图谱"));
+
+    renderWorkspace();
+
+    await openInspectorTab(user, "概览");
+    await expect(screen.findByDisplayValue("Graph")).resolves.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "删除当前图谱" }));
+    expect(screen.getByRole("dialog", { name: "确认删除图谱" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "确认删除" }));
+
+    expect(deleteGraphMock).toHaveBeenCalledWith(session, "graph-1");
+    await waitFor(() =>
+      expect(screen.getByRole("dialog", { name: "确认删除图谱" })).toHaveTextContent("只能访问自己的图谱")
+    );
+
+    await user.click(screen.getByRole("button", { name: "取消" }));
+
+    expect(screen.queryByRole("dialog", { name: "确认删除图谱" })).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue("Graph")).toBeInTheDocument();
+    expect(screen.getByText(/版本 4 · 0 节点 · 0 连线/)).toBeInTheDocument();
+  });
+
   it("explains when a stale local draft is discarded in favor of the latest graph head", async () => {
     window.sessionStorage.setItem(
       buildGraphWorkspaceDraftStorageKey("graph-1"),

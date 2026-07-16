@@ -1,3 +1,27 @@
+## 2026-07-16 23:24:00 +08:00 | v1.1.0-alpha.301 | 推进 WB-034 删除当前图谱 forbidden 权限回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 restore、reload 或对象级冲突逻辑，而是补齐另一条高风险权限动作：当用户在概览面板里尝试“删除当前图谱”却命中 `forbidden` 时，图谱工作区必须保留当前图谱与确认上下文。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，新增页面级回归，锁定“删除当前图谱”命中 `forbidden` 时，确认框会保留错误信息，取消后当前图谱标题和当前工作区仍保持不变。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级回归“graph workspace keeps the current graph when deleting the current graph is forbidden”，验证真实点击 `删除当前图谱 -> 确认删除` 后，若服务端返回 `403 forbidden`，页面仍保留当前图谱、当前节点和原版本文案。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条 destructive action 权限失败路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "deleting the current graph is forbidden"`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在除了“打开他人图谱被拒绝”“重载最新图谱被拒绝”之外，又补上了一条 destructive action 的真实权限分支：删除动作被拒绝时，用户不会被错误跳出当前图谱，也不会丢掉当前上下文。
+- 这一轮仍然没有继续扩“删除当前图谱”在窄屏、脏草稿共存或更多权限状态下的组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 delete/open/reload/restore 在更多权限分支里的浏览器回归。
+
 ## 2026-07-16 23:12:00 +08:00 | v1.1.0-alpha.300 | 推进 WB-034 / WB-032 重载最新图谱 forbidden 后保留冲突辅助
 
 ### 本次目标
