@@ -8947,3 +8947,25 @@
 
 - `WB-033 / LC-010` 现在除了“图谱节点带过滤条件跳回复习工作台”，也已经具备“复习中的 graph 来源卡片精确回到图谱焦点区域”的最小反链，主学习闭环的双向可追溯更完整了一步。
 - 这一步仍然没有把 mastery 持久回写进图谱文档或节点字段；后续更适合继续补 `WB-033` 的节点/来源级持久化，或者把 graph/review/source 深链进一步归并成统一的 SourceLink 契约。
+## 2026-07-16 23:59:50 +08:00 | v1.1.0-alpha.310 | 推进 WB-034 窄屏本地来源泳道 JSON/SVG 导出失败回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 save、restore 或 conflict 组合逻辑，而是把上一轮刚补过的“窄屏下本地来源泳道 fallback 后导出 PNG 失败”继续扩到同一路径上的 `JSON / SVG` 导出失败分支：当 layout preview 接口不可用时，页面先回退到本地来源泳道布局，再命中 `导出 StudyMate JSON` 与 `导出 SVG` 失败，也不能丢失当前分组和当前选择。
+
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级窄屏组合回归“graph workspace keeps local fallback swimlanes visible when JSON and SVG export fail in a narrow viewport”。
+- 这条回归显式锁定窄屏下的真实操作顺序：先在 `390x844` 视口里选中 3 个节点并在检查器中点击“生成来源泳道”，命中 `layout preview` 失败后回退到本地来源泳道布局，再关闭检查器依次点击 `导出 StudyMate JSON` 与 `导出 SVG` 命中失败；两次失败后页面都仍保留 `资料来源泳道 / 笔记来源泳道 / AI 草稿泳道`、`图谱保存状态：有未保存修改`，以及状态栏中的 `已选 3 个节点`。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条窄屏 `layout fallback + JSON/SVG export failure` 组合路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps local fallback swimlanes visible when JSON and SVG export fail in a narrow viewport"`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在不只覆盖窄屏下本地来源泳道 fallback 之后的 `PNG` 导出失败，也开始覆盖同一条 fallback 路径上的 `JSON / SVG` 导出失败分支，图谱工作区导出故障矩阵又往前闭合了一小段。
+- 这一轮仍然没有继续扩这条路径在更多浏览器能力缺失或冲突辅助共存时的窄屏矩阵；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的失败组合回归。

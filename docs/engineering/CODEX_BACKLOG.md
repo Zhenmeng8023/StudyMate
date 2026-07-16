@@ -463,6 +463,25 @@
   - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，窄屏下的 `layout/export` 失败组合不再只覆盖接口成功预览分支，也开始覆盖本地 fallback 分支。
   - 这一轮仍然没有继续扩这条路径在 `SVG/JSON` 导出失败、更多浏览器能力缺失或冲突辅助共存时的窄屏矩阵；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的失败组合回归。
 
+### 执行记录：WB-034（窄屏本地来源泳道 JSON/SVG 导出失败回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区新增浏览器级窄屏组合回归，锁定在 `390x844` 视口下，若 layout preview 接口不可用，页面先回退到本地来源泳道布局，再点击 `导出 StudyMate JSON` 与 `导出 SVG` 命中失败时，仍会保留当前本地泳道分组与当前选择摘要。
+  - 这条回归会显式验证窄屏 fallback 结果：先看到“布局预览接口不可用，已使用本地来源泳道布局”和 `资料来源泳道 / 笔记来源泳道 / AI 草稿泳道`，再分别看到“导出 StudyMate JSON 失败”和“导出 SVG 失败”；每次失败后页面依旧保留 `图谱保存状态：有未保存修改`，以及状态栏中的 `已选 3 个节点`。
+  - 固定回归矩阵现在不只覆盖窄屏下 `layout fallback + 导出 PNG 失败`，也开始覆盖同一条 fallback 路径上的 `JSON/SVG` 导出失败分支。
+- 已执行验证：
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps local fallback swimlanes visible when JSON and SVG export fail in a narrow viewport"`
+  - `npm run verify:docs`
+- 后续影响：
+  - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，窄屏下本地 fallback 的导出失败路径不再只锁定 `PNG`，也开始补上 `JSON/SVG` 两条同类故障分支。
+  - 这一轮仍然没有继续扩这条路径在更多浏览器能力缺失或冲突辅助共存时的窄屏矩阵；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的失败组合回归。
+
 ### 执行记录：WB-033 / LC-010（复习评分后回到图谱查看反馈）
 - 执行日期：2026-07-16
 - 关联提交：`38f611e`（RED）
