@@ -243,7 +243,7 @@
 
 ### 执行记录：WB-034 / WB-032（窄屏对象级取舍真实点击回归）
 - 执行日期：2026-07-16
-- 关联提交：待提交
+- 关联提交：e2af8f6
 - 实际变更：
   - 更新 `frontend-user/src/styles/product-refresh.css`
   - 更新 `e2e/v1-graph-workspace.spec.ts`
