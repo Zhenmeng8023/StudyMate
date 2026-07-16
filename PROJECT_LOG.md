@@ -1,3 +1,27 @@
+## 2026-07-16 23:59:59 +08:00 | v1.1.0-alpha.318 | 推进 WB-034 窄屏布局预览失败后回退本地来源泳道回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的导出、forbidden 或冲突组合逻辑，而是把已覆盖的“布局预览接口失败后回退本地来源泳道布局”分支继续推进到窄屏真实页面环境，验证在 `390x844` 视口下命中 layout preview 失败后仍会保留本地来源泳道、当前选择与未保存状态。
+
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级窄屏 layout fallback 回归 `graph workspace falls back to local source swimlanes when layout preview fails in a narrow viewport`。
+- 这条回归显式锁定窄屏下的真实操作顺序：用户先在 `390x844` 视口里选中 3 个节点并切到“属性”，再点击“生成来源泳道”；若 `/api/v1/graphs/graph-1/layouts/preview` 返回“布局预览服务暂不可用”，页面仍保留 `资料来源泳道 / 笔记来源泳道 / AI 草稿泳道`、`图谱保存状态：有未保存修改` 与状态栏中的 `已选 3 个节点`。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条窄屏 layout fallback 路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace falls back to local source swimlanes when layout preview fails in a narrow viewport"`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 影响与后续
+
+- `WB-034` 的回归矩阵现在不只在桌面宽度下覆盖“布局预览接口失败后回退本地来源泳道布局”，也开始覆盖窄屏真实页面环境，layout fallback 链路的桌面 / 窄屏语义更加对齐。
+- 这一轮仍然没有继续扩导出、冲突辅助或更多浏览器能力缺失共存时的 layout fallback 组合；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的窄屏 layout/export 失败矩阵。
+
 ## 2026-07-16 23:59:59 +08:00 | v1.1.0-alpha.317 | 推进 WB-034 窄屏导出失败后保留当前选中状态回归
 
 ### 本次目标

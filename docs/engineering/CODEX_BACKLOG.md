@@ -496,6 +496,32 @@
   - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，layout 不再只有接口成功时的 happy path，而开始覆盖“接口失败但本地回退仍可继续整理”的浏览器级验收。
   - 这一轮仍然没有继续扩布局失败与保存、窄屏、导出或冲突组合共存时的矩阵；如果继续推进，更适合沿 `WB-034` 继续补 layout/export 在更多失败组合里的浏览器回归。
 
+### 执行记录：WB-034（窄屏布局预览失败后回退本地来源泳道回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区新增浏览器级窄屏 layout fallback 回归，锁定在 `390x844` 视口里，用户选中 3 个节点后点击“生成来源泳道”，若服务端返回“布局预览服务暂不可用”，页面仍会回退到本地来源泳道布局。
+  - 这条回归会显式验证结果：页面保留“布局预览接口不可用，已使用本地来源泳道布局”、3 个分组、`图谱保存状态：有未保存修改`，以及状态栏中的 `已选 3 个节点`。
+  - 固定回归矩阵现在不只覆盖桌面下的 layout preview fallback 分支，也开始覆盖窄屏下同一条真实用户操作路径。
+- 已执行验证：
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace falls back to local source swimlanes when layout preview fails in a narrow viewport"`
+  - `npm run verify:docs`
+  - `git diff --check`
+- 未执行验证及原因：
+  - 未执行 `npm run test:graph:conflicts:e2e` 全量矩阵；本工作包仅新增一条窄屏 layout fallback 路径，先以定向 Playwright 用例控制反馈速度。
+- 兼容性 / 迁移说明：
+  - 本次仅补浏览器级回归与文档同步，无接口契约、数据库 schema 或迁移脚本变更。
+- 已知风险：
+  - 当前只覆盖“窄屏 + layout preview 失败 + 本地来源泳道 fallback”的最小路径，尚未覆盖与导出、冲突辅助或更多浏览器能力缺失并存时的窄屏组合。
+- 后续影响：
+  - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，窄屏下的 layout preview fallback 不再只依赖桌面路径成立。
+  - 这一轮仍然没有继续扩更深一层的窄屏 layout/export 失败组合；如果继续推进，更适合沿 `WB-034` 继续补导出、冲突辅助或更多 fallback 组合路径。
+
 ### 执行记录：WB-034（导出失败后保留当前选中状态回归）
 - 执行日期：2026-07-16
 - 关联提交：本工作包提交
