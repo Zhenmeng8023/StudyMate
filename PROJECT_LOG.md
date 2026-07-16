@@ -1,3 +1,23 @@
+## 2026-07-16 21:53:13 +08:00 | v1.1.0-alpha.295 | 推进 WB-034 / WB-032 restore 后继续保存的 conflict 组合浏览器回归
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵，这一轮不扩新的恢复或冲突逻辑，而是把两条已存在的主链真正接成一个组合路径。
+- 目标是让图谱工作区不只分别验证“恢复成功”和“保存命中版本冲突”，还要在真实页面、真实 restore 请求和真实 save 冲突场景里证明：恢复后的版本语义会继续正确传递到后续冲突处理流程。
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增“graph workspace keeps conflict handling reachable after restoring a snapshot” 用例：先从“历史”面板恢复快照进入 restored graph detail，再继续创建本地节点并保存；当服务端在恢复后又推进了新版本时，页面会基于 restored `document.version` 正确进入 `graph_version_conflict` 辅助流程。
+- 同一条回归还会断言 restore 后第一次 `batch-save` 请求携带 `document.version = 6`，随后用户仍可通过“放弃本地并重载最新图谱”回到服务端版本 7 的最新 head，从而把 restore 和 conflict 两条浏览器主链在同一用例里接起来。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条 restore/conflict 组合回归补进图谱固定矩阵说明和 `WB-034` 执行记录。
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "keeps conflict handling reachable after restoring a snapshot"`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm run verify:docs`
+### 后续影响
+
+- `WB-034` 现在不只是在浏览器层分别覆盖 restore 和 conflict，还开始锁定两者之间的真实组合主路径，图谱工作区的 create/save/restore/conflict 主链又闭合了一段。
+- 这一轮仍然没有把窄屏 restore 组合路径、restore 后应用对象级取舍再保存，或更多权限分支并入同一条浏览器矩阵；如果继续推进，更适合沿 `WB-034` 继续补窄屏 restore smoke 或更深一层的 restore/conflict/save 组合回归。
+
 ## 2026-07-16 21:48:36 +08:00 | v1.1.0-alpha.294 | 推进 WB-034 / WB-032 快照恢复成功浏览器回归
 ### 任务内容
 
