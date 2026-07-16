@@ -125,6 +125,32 @@
   - `WB-034` 现在不只覆盖图谱工作区的加载/保存/布局/导出/权限等 smoke，也开始承接学习反馈闭环里的“刷新后不丢草稿”关键路径，为后续继续扩 create/save/restore/export/layout/conflict/权限矩阵提供了更贴近真实学习闭环的基座。
   - 这一轮仍然没有把窄屏组合、更多权限分支或冲突恢复路径并入同一条浏览器矩阵；如果继续推进，更适合沿 `WB-034` 继续补图谱工作区的 restore/conflict/窄屏组合回归，或沿 `WB-033` 继续补 mastery 持久化边界。
 
+### 执行记录：WB-034 / WB-033（窄屏图谱学习反馈刷新浏览器回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区新增浏览器级窄屏学习反馈回归，锁定在 `390x844` 视口里，来源节点初始显示旧 mastery 摘要时，用户仍可通过检查器刷新到最新反馈。
+  - 这条回归会显式验证结果：检查器里的掌握度会从 `掌握度 33% · 巩固中` 刷新到 `掌握度 100% · 已掌握`，旧卡片样例消失并替换为 `新卡片 A`，同时 `节点标题` 仍保留 `窄屏已更新节点`，保存状态继续停留在 `图谱保存状态：有未保存修改`。
+  - 固定回归矩阵现在不只覆盖桌面下的“刷新学习反馈且保留草稿”，也开始覆盖窄屏下同一条真实检查器操作路径。
+- 已执行验证：
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace refreshes learning feedback without discarding dirty local edits in a narrow viewport"`
+  - `npm run verify:docs`
+  - `git diff --check`
+- 未执行验证及原因：
+  - 未执行 `npm run test:graph:conflicts:e2e` 全量矩阵；本工作包仅新增一条窄屏 learning-feedback 路径，先以定向 Playwright 用例控制反馈速度。
+- 兼容性 / 迁移说明：
+  - 本次仅补浏览器级回归与文档同步，无接口契约、数据库 schema 或迁移脚本变更。
+- 已知风险：
+  - 当前只覆盖“窄屏 + 检查器刷新学习反馈 + 保留本地标题草稿”的最小路径，尚未覆盖它与冲突辅助、恢复快照或更多反馈失败态并存时的窄屏组合。
+- 后续影响：
+  - `WB-034 / WB-033` 的浏览器矩阵继续向主演示闭环靠拢，窄屏下的“复习完成后回图谱刷新反馈”不再只依赖桌面路径成立。
+  - 这一轮仍然没有继续扩刷新反馈失败提示、更多来源类型或与冲突/导出共存时的窄屏矩阵；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的组合回归。
+
 ### 执行记录：WB-034 / WB-032（dirty 快照恢复前保护浏览器回归）
 - 执行日期：2026-07-16
 - 关联提交：`3b4865b`

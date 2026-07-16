@@ -1,3 +1,27 @@
+## 2026-07-16 23:59:59 +08:00 | v1.1.0-alpha.319 | 推进 WB-034 / WB-033 窄屏图谱学习反馈刷新浏览器回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 restore、forbidden 或导出组合逻辑，而是把已覆盖的“刷新学习反馈且保留本地草稿”分支继续推进到窄屏真实页面环境，验证在 `390x844` 视口下刷新学习反馈后仍会保留本地脏编辑。
+
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级窄屏学习反馈回归 `graph workspace refreshes learning feedback without discarding dirty local edits in a narrow viewport`。
+- 这条回归显式锁定窄屏下的真实操作顺序：用户先在 `390x844` 视口里选中来源节点并自动展开检查器、把 `节点标题` 改为 `窄屏已更新节点`，再点击“刷新学习反馈”；若 `/api/v1/review/feedback` 返回最新 mastery 摘要，页面仍会保留本地标题草稿与 `图谱保存状态：有未保存修改`。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条窄屏 feedback-refresh 路径补进固定矩阵说明和 `WB-034 / WB-033` 执行记录。
+
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace refreshes learning feedback without discarding dirty local edits in a narrow viewport"`
+- `npm run verify:docs`
+- `git diff --check`
+
+### 影响与后续
+
+- `WB-034 / WB-033` 的浏览器矩阵现在不只在桌面宽度下覆盖“刷新学习反馈且保留本地草稿”，也开始覆盖窄屏真实页面环境，学习反馈刷新链路的桌面 / 窄屏语义更加对齐。
+- 这一轮仍然没有继续扩刷新反馈失败提示、更多来源类型或与冲突/导出共存时的组合；如果继续推进，更适合沿 `WB-034` 继续补这些更深一层的窄屏学习反馈矩阵。
+
 ## 2026-07-16 23:59:59 +08:00 | v1.1.0-alpha.318 | 推进 WB-034 窄屏布局预览失败后回退本地来源泳道回归
 
 ### 本次目标

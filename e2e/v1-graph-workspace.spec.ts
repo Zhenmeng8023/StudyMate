@@ -2056,6 +2056,179 @@ test("graph workspace refreshes learning feedback without discarding dirty local
   expect(reviewFeedbackRequestCount).toBe(2);
 });
 
+test("graph workspace refreshes learning feedback without discarding dirty local edits in a narrow viewport", async ({
+  page
+}) => {
+  const detail = buildGraphDetail({
+    currentVersion: 6,
+    description: "窄屏图谱学习反馈刷新 smoke",
+    document: {
+      graphId: "graph-1",
+      version: 6,
+      schemaVersion: 1,
+      viewport: { x: 140, y: 120, zoom: 1 },
+      nodes: [
+        {
+          id: "node-1",
+          type: "material",
+          title: "窄屏原始节点",
+          x: 240,
+          y: 180,
+          width: 240,
+          height: 132,
+          source: { type: "material", id: "material-1", label: "资料 A" },
+          metadata: {
+            reviewFeedback: {
+              sourceType: "material",
+              sourceId: "material-1",
+              totalCardCount: 3,
+              reviewCardCount: 1,
+              masteredCardCount: 1,
+              masteryLevel: "building",
+              masteryScore: 33,
+              weakCardCount: 2,
+              dueCount: 1,
+              learningCount: 2,
+              maxLapseCount: 3,
+              sampleCardFronts: ["旧卡片 A"]
+            }
+          }
+        }
+      ],
+      edges: [],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 0,
+    nodeCount: 1,
+    title: "窄屏反馈刷新图谱",
+    updatedAt: "2026-07-16T23:50:00Z"
+  });
+  let reviewFeedbackRequestCount = 0;
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((value) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(value));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname === "/api/v1/auth/me") {
+      await route.fulfill({ contentType: "application/json", body: success(session.user) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([detail]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/review/feedback") {
+      reviewFeedbackRequestCount += 1;
+      const payload =
+        reviewFeedbackRequestCount === 1
+          ? {
+              dueCount: 1,
+              learningCount: 2,
+              weakCardCount: 2,
+              weakCards: [],
+              sourceSummaries: [
+                {
+                  sourceType: "material",
+                  sourceId: "material-1",
+                  totalCardCount: 3,
+                  reviewCardCount: 1,
+                  masteredCardCount: 1,
+                  masteryLevel: "building",
+                  masteryScore: 33,
+                  weakCardCount: 2,
+                  dueCount: 1,
+                  learningCount: 2,
+                  maxLapseCount: 3,
+                  sampleCardFronts: ["旧卡片 A"]
+                }
+              ],
+              weakSources: []
+            }
+          : {
+              dueCount: 0,
+              learningCount: 0,
+              weakCardCount: 0,
+              weakCards: [],
+              sourceSummaries: [
+                {
+                  sourceType: "material",
+                  sourceId: "material-1",
+                  totalCardCount: 3,
+                  reviewCardCount: 3,
+                  masteredCardCount: 3,
+                  masteryLevel: "solid",
+                  masteryScore: 100,
+                  weakCardCount: 0,
+                  dueCount: 0,
+                  learningCount: 0,
+                  maxLapseCount: 0,
+                  sampleCardFronts: ["新卡片 A"]
+                }
+              ],
+              weakSources: []
+            };
+
+      await route.fulfill({ contentType: "application/json", body: success(payload) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+  await expect(page.getByLabel("打开检查器")).toBeVisible();
+  await expect(page.getByText("窄屏反馈刷新图谱")).toBeVisible();
+
+  const nodeButton = page.getByRole("button", { name: /窄屏原始节点/ });
+  await nodeButton.focus();
+  await nodeButton.press("Enter");
+  await expect(page.getByRole("complementary", { name: "图谱检查器" })).toBeVisible();
+
+  await expect(page.getByText("掌握度 33% · 巩固中")).toBeVisible();
+
+  const titleInput = page.getByLabel("节点标题");
+  await titleInput.fill("窄屏已更新节点");
+  await expect(titleInput).toHaveValue("窄屏已更新节点");
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toHaveText("有未保存修改");
+
+  await page.getByRole("button", { name: "刷新学习反馈" }).click();
+
+  await expect(page.getByText("掌握度 100% · 已掌握")).toBeVisible();
+  await expect(page.getByText("新卡片 A")).toBeVisible();
+  await expect(page.getByText("旧卡片 A")).toHaveCount(0);
+  await expect(titleInput).toHaveValue("窄屏已更新节点");
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toHaveText("有未保存修改");
+  expect(reviewFeedbackRequestCount).toBe(2);
+});
+
 test("graph workspace blocks snapshot restore while local edits are still dirty", async ({ page }) => {
   const detail = buildGraphDetail({
     currentVersion: 5,
