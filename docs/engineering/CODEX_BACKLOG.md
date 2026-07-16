@@ -184,7 +184,7 @@
 
 ### 执行记录：WB-034 / WB-032（窄屏快照恢复浏览器回归）
 - 执行日期：2026-07-16
-- 关联提交：待提交
+- 关联提交：fa5bd11
 - 实际变更：
   - 更新 `e2e/v1-graph-workspace.spec.ts`
   - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
