@@ -1,3 +1,26 @@
+## 2026-07-16 23:55:52 +08:00 | v1.1.0-alpha.306 | 推进 WB-034 导出失败保留当前选中状态回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 save、restore 或 conflict 组合逻辑，而是补齐 export 的失败分支：当浏览器下载能力不可用时，图谱工作区的 `JSON / SVG / PNG` 导出动作应只回写失败消息，不破坏当前选中状态和当前图谱上下文。
+
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级回归“graph workspace keeps the current selection when graph export actions fail”，通过在页面初始化时让 `URL.createObjectURL(...)` 抛错，验证三个导出按钮都会走失败分支。
+- 这条回归显式锁定失败后的上下文保持：依次点击 `导出 StudyMate JSON`、`导出 SVG`、`导出 PNG` 后，页面分别显示对应失败提示，同时继续保留 `版本 4 · 3 节点 · 1 连线`、`已选中 3 个节点` 和当前布局节点。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条 export 失败路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "export actions fail"`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在除了 export 成功 smoke 之外，也开始覆盖导出失败分支：浏览器下载能力不可用时，图谱工作区仍会保留当前选中状态与当前图谱上下文，浏览器矩阵更接近真实故障环境。
+- 这一轮仍然没有继续扩导出失败与窄屏、来源泳道、冲突辅助或更多浏览器能力缺失组合时的矩阵；如果继续推进，更适合沿 `WB-034` 继续补 export/save/layout 在更多失败组合里的浏览器回归。
+
 ## 2026-07-16 23:44:06 +08:00 | v1.1.0-alpha.305 | 推进 WB-034 布局预览失败回退本地来源泳道回归
 
 ### 本次目标

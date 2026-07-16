@@ -387,6 +387,25 @@
   - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，layout 不再只有接口成功时的 happy path，而开始覆盖“接口失败但本地回退仍可继续整理”的浏览器级验收。
   - 这一轮仍然没有继续扩布局失败与保存、窄屏、导出或冲突组合共存时的矩阵；如果继续推进，更适合沿 `WB-034` 继续补 layout/export 在更多失败组合里的浏览器回归。
 
+### 执行记录：WB-034（导出失败后保留当前选中状态回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区新增浏览器级回归，锁定当浏览器下载能力不可用时，`导出 StudyMate JSON / 导出 SVG / 导出 PNG` 三个动作都会回写明确失败消息，而不是静默失败。
+  - 这条回归会显式验证失败后的上下文保持：页面依旧停留在 `导出失败图谱`，继续显示 `版本 4 · 3 节点 · 1 连线`、`已选中 3 个节点` 和当前画布上的 3 个布局节点。
+  - 固定回归矩阵现在不只覆盖导出成功 smoke，也开始覆盖导出失败分支，图谱工作区的 export 路径有了真实浏览器级故障验收。
+- 已执行验证：
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "export actions fail"`
+  - `npm run verify:docs`
+- 后续影响：
+  - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，export 不再只有成功导出提示，而有了明确的“失败后仍保留当前选中状态与图谱上下文”浏览器级验收。
+  - 这一轮仍然没有继续扩导出失败与窄屏、来源泳道、冲突辅助或更多浏览器能力缺失组合时的矩阵；如果继续推进，更适合沿 `WB-034` 继续补 export/save/layout 在更多失败组合里的浏览器回归。
+
 ### 执行记录：WB-033 / LC-010（复习评分后回到图谱查看反馈）
 - 执行日期：2026-07-16
 - 关联提交：`38f611e`（RED）
