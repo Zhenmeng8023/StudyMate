@@ -1,3 +1,28 @@
+## 2026-07-16 23:12:00 +08:00 | v1.1.0-alpha.300 | 推进 WB-034 / WB-032 重载最新图谱 forbidden 后保留冲突辅助
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 restore 或对象级冲突语义，而是补齐 `reload latest` 的权限失败分支：当冲突态下尝试“放弃本地并重载最新图谱”却命中 `forbidden` 时，图谱工作区不能把冲突辅助和本地草稿提前清空。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx`，让 `reloadLatestGraph()` 在真正重载成功前不再提前清空 `reloadLatestSuggested`，并把“正在重新加载最新图谱...”改为只更新状态文案，不再顺手重置冲突建议位。
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，新增并收口“keeps the conflict helper and current draft when reloading the latest graph is forbidden” 页面级回归，同时把画布节点断言收窄到 `.graph-stage`，避免误命中冲突卡片里的对象级取舍按钮。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增并收口“graph workspace keeps the conflict helper when reloading the latest head is forbidden” 浏览器级回归，锁定确认框错误、冲突辅助留存与本地节点草稿留存这条权限失败路径。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把“重载最新图谱命中 forbidden 后仍保留冲突辅助与本地草稿”补进固定矩阵说明和 `WB-034 / WB-032` 执行记录。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "keeps the conflict helper when reloading the latest head is forbidden"`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在不只覆盖“重载最新图谱成功”主链，也开始锁定其权限失败分支：当服务端拒绝读取最新图谱时，页面仍会保留冲突辅助卡片、当前本地节点草稿和原始版本语义，用户不会被迫丢失上下文。
+- 这一轮仍然没有继续扩“reload latest”在更多权限状态、更多桌面/窄屏组合中的矩阵；如果继续推进，更适合沿 `WB-034` 继续补 restore/conflict/reload 在更多权限分支里的浏览器回归。
+
 ## 2026-07-16 22:56:00 +08:00 | v1.1.0-alpha.299 | 推进 WB-034 / WB-032 窄屏对象级取舍真实点击回归
 
 ### 本次目标

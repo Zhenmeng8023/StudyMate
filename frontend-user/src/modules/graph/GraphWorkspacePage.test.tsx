@@ -146,6 +146,12 @@ function getCanvasSaveButton() {
   return button!;
 }
 
+function getCanvasNodeButton(name: RegExp | string) {
+  const stage = document.querySelector(".graph-stage");
+  expect(stage).not.toBeNull();
+  return within(stage as HTMLElement).getByRole("button", { name });
+}
+
 describe("GraphWorkspacePage persistence states", () => {
   afterEach(() => {
     cleanup();
@@ -278,7 +284,7 @@ describe("GraphWorkspacePage persistence states", () => {
     await user.click(screen.getByTitle("新建概念节点"));
     await user.click(getCanvasSaveButton());
 
-    await expect(screen.findByText("图谱已被其他窗口更新，请刷新当前图谱后再保存。")).resolves.toBeInTheDocument();
+    await expect(screen.findByLabelText("图谱冲突辅助")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("图谱冲突辅助")).toHaveTextContent("先留存当前草稿，再决定是否重载");
     expect(screen.getByText("如果确认放弃本地修改：可直接重载最新图谱。")).toBeInTheDocument();
     expect(screen.getByText("如果打算稍后人工合并：先导出冲突处理包，再重载最新图谱。")).toBeInTheDocument();
@@ -342,6 +348,52 @@ describe("GraphWorkspacePage persistence states", () => {
     confirmSpy.mockRestore();
   });
 
+  it("keeps the conflict helper and current draft when reloading the latest graph is forbidden", async () => {
+    const user = userEvent.setup();
+    batchSaveGraphMock.mockRejectedValueOnce(new Error("图谱已被其他窗口更新，请刷新当前图谱后再保存。"));
+    getGraphMock.mockReset();
+    getGraphMock
+      .mockResolvedValueOnce(graphDetail)
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        title: "Graph on server",
+        currentVersion: 5,
+        updatedAt: "2026-07-01T20:20:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 5
+        }
+      })
+      .mockRejectedValueOnce(new Error("只能访问自己的图谱"));
+
+    renderWorkspace();
+
+    await waitFor(() => expect(getCanvasSaveButton()).toBeInTheDocument());
+    await user.click(screen.getByTitle("新建概念节点"));
+    await user.click(getCanvasSaveButton());
+
+    await expect(screen.findByLabelText("图谱冲突辅助")).resolves.toBeInTheDocument();
+    expect(getCanvasNodeButton(/新概念/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "放弃本地并重载最新图谱" }));
+    expect(screen.getByRole("dialog", { name: "确认重载最新图谱" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "确认重载" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("dialog", { name: "确认重载最新图谱" })).toHaveTextContent("只能访问自己的图谱")
+    );
+
+    await user.click(screen.getByRole("button", { name: "取消" }));
+
+    expect(screen.queryByRole("dialog", { name: "确认重载最新图谱" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("图谱冲突辅助")).toHaveTextContent("先留存当前草稿，再决定是否重载");
+    expect(screen.getByRole("button", { name: /重载最新图谱/ })).toBeInTheDocument();
+    expect(getCanvasNodeButton(/新概念/)).toBeInTheDocument();
+    expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
+    expect(screen.getByText(/版本 4 · 1 节点 · 0 连线/)).toBeInTheDocument();
+  });
+
   it("applies marked object resolutions onto the latest head and saves the rebased draft", async () => {
     const user = userEvent.setup();
     batchSaveGraphMock
@@ -372,6 +424,16 @@ describe("GraphWorkspacePage persistence states", () => {
     getGraphMock.mockReset();
     getGraphMock
       .mockResolvedValueOnce(graphDetail)
+      .mockResolvedValueOnce({
+        ...graphDetail,
+        title: "Graph on server",
+        currentVersion: 5,
+        updatedAt: "2026-07-01T20:20:00Z",
+        document: {
+          ...graphDetail.document,
+          version: 5
+        }
+      })
       .mockResolvedValueOnce({
         ...graphDetail,
         title: "Graph on server",

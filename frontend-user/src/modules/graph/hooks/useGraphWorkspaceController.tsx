@@ -1012,9 +1012,8 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
 
     const shouldConfirmDiscard = dirty;
     setLoading(true);
-    setReloadLatestSuggested(false);
     setConfirmDialogError("");
-    setWorkspaceStatusMessage("正在重新加载最新图谱...");
+    setStatusMessage("正在重新加载最新图谱...");
     try {
       const detail = await getGraph(props.session, current.id);
       const normalized = normalizeGraphWorkspaceDetail(detail);
