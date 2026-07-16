@@ -957,6 +957,136 @@ test("graph workspace restores a snapshot through the shared history reset path"
   expect(restoreRequestCount).toBe(1);
 });
 
+test("graph workspace keeps the current graph when snapshot restore is forbidden", async ({ page }) => {
+  const detail = buildGraphDetail({
+    currentVersion: 4,
+    description: "快照恢复权限路径 smoke",
+    document: {
+      graphId: "graph-1",
+      version: 4,
+      schemaVersion: 1,
+      viewport: { x: 140, y: 120, zoom: 1 },
+      nodes: [
+        {
+          id: "node-1",
+          type: "text",
+          title: "当前节点",
+          x: 220,
+          y: 160,
+          width: 240,
+          height: 132,
+          source: null,
+          metadata: {}
+        }
+      ],
+      edges: [],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 0,
+    nodeCount: 1,
+    title: "快照恢复图谱",
+    updatedAt: "2026-07-16T23:28:00Z"
+  });
+  let restoreRequestCount = 0;
+
+  await page.addInitScript((value) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(value));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname === "/api/v1/auth/me") {
+      await route.fulfill({ contentType: "application/json", body: success(session.user) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([detail]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success([
+          {
+            id: "snapshot-1",
+            graphId: "graph-1",
+            versionNumber: 3,
+            summary: "恢复前版本",
+            createdAt: "2026-07-16T23:20:00Z"
+          }
+        ])
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/restore") {
+      restoreRequestCount += 1;
+      await route.fulfill({
+        status: 403,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: false,
+          error: {
+            code: "forbidden",
+            message: "只能访问自己的图谱"
+          }
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/review/feedback") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          dueCount: 0,
+          learningCount: 0,
+          weakCardCount: 0,
+          weakCards: [],
+          sourceSummaries: [],
+          weakSources: []
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+  await page.getByLabel("打开检查器").click();
+  await page.getByRole("button", { name: "历史" }).click();
+  await page.getByRole("button", { name: "恢复" }).click();
+
+  await expect(page.getByText("只能访问自己的图谱")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：保存失败")).toBeVisible();
+  await expect(page.getByText("版本 4 · 1 节点 · 0 连线")).toBeVisible();
+  await page.getByRole("button", { name: "概览" }).click();
+  await expect(page.getByLabel("图谱标题")).toHaveValue("快照恢复图谱");
+  await expect(page.locator(".graph-stage").getByRole("button", { name: /当前节点/ })).toBeVisible();
+  expect(restoreRequestCount).toBe(1);
+});
+
 test("graph workspace keeps conflict handling reachable after restoring a snapshot", async ({ page }) => {
   const initialDetail = buildGraphDetail({
     currentVersion: 5,

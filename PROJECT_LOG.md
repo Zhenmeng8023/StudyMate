@@ -1,3 +1,27 @@
+## 2026-07-16 23:28:00 +08:00 | v1.1.0-alpha.302 | 推进 WB-034 快照恢复 forbidden 权限回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 restore 成功链路或冲突取舍逻辑，而是补齐 restore 的权限失败分支：当历史面板中的“恢复”命中 `forbidden` 时，图谱工作区必须保留当前图谱与当前上下文。
+
+### 实际变更
+
+- 更新 `frontend-user/src/modules/graph/GraphWorkspacePage.test.tsx`，新增页面级回归，锁定快照恢复命中 `forbidden` 时会继续保留失败提示、当前版本文案和当前图谱标题。
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级回归“graph workspace keeps the current graph when snapshot restore is forbidden”，验证真实点击 `历史 -> 恢复` 后若服务端返回 `403 forbidden`，页面仍保留 `快照恢复图谱`、`当前节点` 和 `版本 4 · 1 节点 · 0 连线`。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条 restore 权限失败路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "snapshot restore is forbidden"`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在除了 `open / reload / delete` 的权限失败回归外，又补上了 `restore` 的真实 `forbidden` 分支，图谱工作区高风险动作的权限矩阵更完整了一层。
+- 这一轮仍然没有继续扩 restore 在窄屏、冲突联动或更细粒度权限状态下的组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 restore/reload/delete/open 在更多桌面 / 窄屏权限组合里的浏览器回归。
+
 ## 2026-07-16 23:24:00 +08:00 | v1.1.0-alpha.301 | 推进 WB-034 删除当前图谱 forbidden 权限回归
 
 ### 本次目标

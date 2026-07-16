@@ -498,6 +498,24 @@ describe("GraphWorkspacePage persistence states", () => {
     expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
   });
 
+  it("keeps the current graph loaded when snapshot restore is forbidden", async () => {
+    const user = userEvent.setup();
+    restoreGraphSnapshotMock.mockRejectedValueOnce(new Error("只能访问自己的图谱"));
+
+    renderWorkspace();
+
+    await openInspectorTab(user, "历史");
+    await expect(screen.findByText("Before change")).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "恢复" }));
+
+    await expect(screen.findByText("只能访问自己的图谱")).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("图谱保存状态：保存失败")).toBeInTheDocument();
+    expect(screen.getByText(/版本 4 · 0 节点 · 0 连线/)).toBeInTheDocument();
+
+    await openInspectorTab(user, "概览");
+    expect(screen.getByDisplayValue("Graph")).toBeInTheDocument();
+  });
+
   it("blocks snapshot restore when the graph still has unsaved edits", async () => {
     const user = userEvent.setup();
 
