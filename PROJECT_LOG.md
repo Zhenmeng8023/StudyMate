@@ -1,3 +1,23 @@
+## 2026-07-16 21:48:36 +08:00 | v1.1.0-alpha.294 | 推进 WB-034 / WB-032 快照恢复成功浏览器回归
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵，这一轮不扩新的恢复逻辑，而是把快照恢复主链里“恢复成功后的共享 reset history 路径”补成真实浏览器验收。
+- 目标是让图谱 restore 不只覆盖“失败提示”和“dirty 阻断”，还要在真实页面交互与 API mock 环境下证明：点击历史快照 `恢复` 后，工作区会切换到 restored graph detail、保存状态回到 `saved`，并给出清晰的版本恢复提示。
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增“graph workspace restores a snapshot through the shared history reset path” 用例：在历史面板点击 `恢复` 后，断言页面发出 restore 请求，显示“已恢复到快照版本 4”，保存状态切回 `已保存`，版本文案推进到新 head，且节点列表改为展示恢复后的节点。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，把这条 restore 成功浏览器回归补进图谱冲突/恢复回归矩阵说明，明确 E2E 固定入口现在已同时覆盖 restore 成功、restore 失败和 dirty 状态下的 restore 阻断。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把这次“快照恢复成功浏览器回归”补回 `WB-034 / WB-032` 执行记录，并顺手将前两条 `WB-034` 记录中的“待提交”对齐为真实提交 `cd1b35d` 与 `3b4865b`。
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "restores a snapshot through the shared history reset path"`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm run verify:docs`
+### 后续影响
+
+- `WB-034` 现在已经在浏览器层同时覆盖图谱快照恢复的失败、dirty 阻断与成功三条基本主路径，图谱工作区的 create/save/restore 验收矩阵又完整了一层。
+- 这一轮仍然没有把 restore/conflict 组合路径、窄屏恢复路径或更多权限分支并入同一条浏览器矩阵；如果继续推进，更适合沿 `WB-034` 继续补 restore/conflict 组合回归或窄屏 restore smoke。
+
 ## 2026-07-16 21:45:00 +08:00 | v1.1.0-alpha.293 | 推进 WB-034 / WB-032 dirty 快照恢复前保护浏览器回归
 ### 任务内容
 

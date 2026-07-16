@@ -808,6 +808,155 @@ test("graph workspace blocks snapshot restore while local edits are still dirty"
   expect(restoreRequestCount).toBe(0);
 });
 
+test("graph workspace restores a snapshot through the shared history reset path", async ({ page }) => {
+  const detail = buildGraphDetail({
+    currentVersion: 5,
+    description: "快照恢复成功 smoke",
+    document: {
+      graphId: "graph-1",
+      version: 5,
+      schemaVersion: 1,
+      viewport: { x: 140, y: 120, zoom: 1 },
+      nodes: [
+        {
+          id: "node-1",
+          type: "text",
+          title: "当前节点",
+          x: 220,
+          y: 160,
+          width: 240,
+          height: 132,
+          source: null,
+          metadata: {}
+        }
+      ],
+      edges: [],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 0,
+    nodeCount: 1,
+    title: "快照恢复图谱",
+    updatedAt: "2026-07-16T21:30:00Z"
+  });
+  const restoredDetail = buildGraphDetail({
+    currentVersion: 6,
+    description: "已恢复旧快照",
+    document: {
+      graphId: "graph-1",
+      version: 6,
+      schemaVersion: 1,
+      viewport: { x: 90, y: 80, zoom: 1 },
+      nodes: [
+        {
+          id: "node-restored",
+          type: "text",
+          title: "恢复后的节点",
+          x: 160,
+          y: 140,
+          width: 220,
+          height: 132,
+          source: null,
+          metadata: {}
+        }
+      ],
+      edges: [],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 0,
+    nodeCount: 1,
+    title: "快照恢复图谱",
+    updatedAt: "2026-07-16T21:32:00Z"
+  });
+  let restoreRequestCount = 0;
+
+  await page.addInitScript((value) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(value));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname === "/api/v1/auth/me") {
+      await route.fulfill({ contentType: "application/json", body: success(session.user) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([detail]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success([
+          {
+            id: "snapshot-1",
+            graphId: "graph-1",
+            versionNumber: 4,
+            summary: "恢复前版本",
+            createdAt: "2026-07-16T21:20:00Z"
+          }
+        ])
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/restore") {
+      restoreRequestCount += 1;
+      await route.fulfill({ contentType: "application/json", body: success(restoredDetail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/review/feedback") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          dueCount: 0,
+          learningCount: 0,
+          weakCardCount: 0,
+          weakCards: [],
+          sourceSummaries: [],
+          weakSources: []
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+  await page.getByLabel("打开检查器").click();
+  await page.getByRole("button", { name: "历史" }).click();
+  await page.getByRole("button", { name: "恢复" }).click();
+
+  await expect(page.getByText("已恢复到快照版本 4")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：已保存")).toBeVisible();
+  await expect(page.getByText("版本 6 · 1 节点 · 0 连线")).toBeVisible();
+  await expect(page.getByRole("button", { name: /恢复后的节点/ })).toBeVisible();
+  expect(restoreRequestCount).toBe(1);
+});
+
 test("graph workspace keeps the current graph when opening a forbidden graph fails", async ({ page }) => {
   const currentDetail = buildGraphDetail({
     currentVersion: 4,
