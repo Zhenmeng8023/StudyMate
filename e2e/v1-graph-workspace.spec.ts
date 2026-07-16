@@ -683,6 +683,131 @@ test("graph workspace refreshes learning feedback without discarding dirty local
   expect(reviewFeedbackRequestCount).toBe(2);
 });
 
+test("graph workspace blocks snapshot restore while local edits are still dirty", async ({ page }) => {
+  const detail = buildGraphDetail({
+    currentVersion: 5,
+    description: "快照恢复前保护 smoke",
+    document: {
+      graphId: "graph-1",
+      version: 5,
+      schemaVersion: 1,
+      viewport: { x: 140, y: 120, zoom: 1 },
+      nodes: [
+        {
+          id: "node-1",
+          type: "text",
+          title: "原始节点",
+          x: 220,
+          y: 160,
+          width: 240,
+          height: 132,
+          source: null,
+          metadata: {}
+        }
+      ],
+      edges: [],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 0,
+    nodeCount: 1,
+    title: "快照保护图谱",
+    updatedAt: "2026-07-16T04:20:00Z"
+  });
+  let restoreRequestCount = 0;
+
+  await page.addInitScript((value) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(value));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname === "/api/v1/auth/me") {
+      await route.fulfill({ contentType: "application/json", body: success(session.user) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([detail]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success([
+          {
+            id: "snapshot-1",
+            graphId: "graph-1",
+            versionNumber: 4,
+            summary: "恢复前版本",
+            createdAt: "2026-07-16T04:15:00Z"
+          }
+        ])
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/restore") {
+      restoreRequestCount += 1;
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/review/feedback") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          dueCount: 0,
+          learningCount: 0,
+          weakCardCount: 0,
+          weakCards: [],
+          sourceSummaries: [],
+          weakSources: []
+        })
+      });
+      return;
+    }
+
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+  await page.getByLabel("打开检查器").click();
+  await page.locator(".graph-node", { hasText: "原始节点" }).click();
+
+  const titleInput = page.getByLabel("节点标题");
+  await titleInput.fill("未保存节点");
+  await expect(titleInput).toHaveValue("未保存节点");
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toBeVisible();
+
+  await page.getByRole("button", { name: "历史" }).click();
+  await page.getByRole("button", { name: "恢复" }).click();
+
+  await expect(page.getByText("当前图谱仍有未保存修改，请先保存后再恢复快照")).toBeVisible();
+  await expect(page.getByLabel("图谱保存状态：有未保存修改")).toBeVisible();
+  await page.getByRole("button", { name: "属性" }).click();
+  await expect(titleInput).toHaveValue("未保存节点");
+  expect(restoreRequestCount).toBe(0);
+});
+
 test("graph workspace keeps the current graph when opening a forbidden graph fails", async ({ page }) => {
   const currentDetail = buildGraphDetail({
     currentVersion: 4,

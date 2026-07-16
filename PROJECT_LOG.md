@@ -1,3 +1,23 @@
+## 2026-07-16 21:45:00 +08:00 | v1.1.0-alpha.293 | 推进 WB-034 / WB-032 dirty 快照恢复前保护浏览器回归
+### 任务内容
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵，这一轮不扩新的图谱恢复逻辑，而是把已有的“dirty 状态下禁止直接恢复快照”从页面级测试提升到真实浏览器路径。
+- 目标是让图谱快照恢复这条高风险链路不只在 Vitest 里被锁住，还能在真实路由、真实按钮交互和 API mock 环境下证明：当本地仍有未保存编辑时，恢复请求会被拦住，且草稿不会被静默覆盖。
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增“graph workspace blocks snapshot restore while local edits are still dirty” 用例：进入图谱工作区后先修改节点标题形成 dirty 草稿，再切到“历史”标签点击 `恢复`，断言页面提示“当前图谱仍有未保存修改，请先保存后再恢复快照”，restore API 请求不发出，最后切回“属性”标签确认本地输入值仍保留。
+- 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`，把这条新浏览器回归补进图谱冲突/恢复回归矩阵说明，明确 E2E 固定入口现在也覆盖 dirty 状态下的快照恢复前保护。
+- 更新 `docs/engineering/CODEX_BACKLOG.md`，把 `WB-034` 的阶段描述推进到“浏览器级回归已覆盖 dirty 状态下的快照恢复前保护”，并记录这次执行切片。
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "blocks snapshot restore while local edits are still dirty"`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm run verify:docs`
+### 后续影响
+
+- `WB-034` 现在不只覆盖图谱工作区的学习反馈刷新、布局预览、导出、权限失败和冲突处理 smoke，也开始覆盖 restore 安全边界里最容易静默丢草稿的高风险路径，图谱工作区浏览器矩阵更接近真实 create/save/restore 主链。
+- 这一轮仍然没有把 restore 成功后的历史边界、restore/conflict 组合路径或窄屏恢复路径并入同一条浏览器矩阵；如果继续推进，更适合沿 `WB-034` 继续补 restore 成功路径或 restore/conflict 组合回归。
+
 ## 2026-07-16 04:16:00 +08:00 | v1.1.0-alpha.292 | 推进 WB-034 / WB-033 图谱学习反馈刷新浏览器回归
 ### 任务内容
 
