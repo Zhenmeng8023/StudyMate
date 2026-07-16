@@ -1,3 +1,26 @@
+## 2026-07-16 23:56:00 +08:00 | v1.1.0-alpha.307 | 推进 WB-034 来源泳道导出失败保留分组与选择回归
+
+### 本次目标
+
+- 继续沿 `CODEX_MASTER_PROMPT.md` 当前“先跑通主演示闭环，再补专业深度”的优先级推进 `WB-034` 图谱工作区浏览器验收矩阵。
+- 这一轮不扩新的 save、restore 或 conflict 组合逻辑，而是把刚补过的 `layout` 与 `export` 失败路径真正串起来：当用户先生成来源泳道，再命中导出失败时，图谱工作区必须保留当前分组和当前选择。
+
+### 实际变更
+
+- 更新 `e2e/v1-graph-workspace.spec.ts`，新增浏览器级组合回归“graph workspace keeps generated swimlanes visible when export fails after layout preview succeeds”，验证真实点击 `生成来源泳道` 成功后，再点击 `导出 PNG` 命中失败时，页面仍保留当前泳道分组与当前选择。
+- 这条回归显式锁定组合结果：先看到“已生成 3 条来源泳道”和 3 个泳道分组，再看到“导出 PNG 失败”；失败后页面仍继续显示 `资料来源泳道 / 笔记来源泳道 / AI 来源泳道`、`图谱保存状态：有未保存修改` 和 `已选中 3 个节点`。
+- 同步更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md` 与 `docs/engineering/CODEX_BACKLOG.md`，把这条 `layout success + export failure` 组合路径补进固定矩阵说明和 `WB-034` 执行记录。
+
+### 验证结果
+
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "generated swimlanes visible when export fails"`
+- `npm run verify:docs`
+
+### 影响与后续
+
+- `WB-034` 现在不只分别覆盖 layout 成功和 export 失败，也开始覆盖两者串起来后的真实页面组合路径，图谱工作区浏览器矩阵更接近真实用户在整理后立刻导出的操作顺序。
+- 这一轮仍然没有继续扩这条组合路径在窄屏、SVG/JSON 导出失败或冲突辅助共存时的矩阵；如果继续推进，更适合沿 `WB-034` 继续补 export/layout 在更多组合失败场景下的浏览器回归。
+
 ## 2026-07-16 23:55:52 +08:00 | v1.1.0-alpha.306 | 推进 WB-034 导出失败保留当前选中状态回归
 
 ### 本次目标
