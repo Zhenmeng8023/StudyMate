@@ -347,6 +347,32 @@
   - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，create 不再只有成功流和通用提示，而有了明确的“失败后仍保留当前图谱上下文”浏览器级验收。
   - 这一轮仍然没有继续扩创建失败在脏草稿、窄屏或图谱列表切换共存时的组合矩阵；如果继续推进，更适合沿 `WB-034` 继续补 create/save/restore 在更多桌面/窄屏失败组合里的浏览器回归。
 
+### 执行记录：WB-034（窄屏创建新图谱失败回归）
+- 执行日期：2026-07-16
+- 关联提交：本工作包提交
+- 实际变更：
+  - 更新 `e2e/v1-graph-workspace.spec.ts`
+  - 更新 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`
+  - 更新 `docs/engineering/CODEX_BACKLOG.md`
+  - 更新 `PROJECT_LOG.md`
+- 完成证据：
+  - 图谱工作区新增浏览器级窄屏创建失败回归，锁定在 `390x844` 视口里，用户点击头部“新建图谱”后若服务端返回“创建图谱失败”，页面仍会保留当前工作区上下文。
+  - 这条回归会显式验证结果：失败提示保留“创建图谱失败”，保存状态仍是 `图谱保存状态：空闲`，同时继续可见 `窄屏当前图谱`、`窄屏当前节点` 与 `版本 4 · 1 节点 · 0 连线`。
+  - 固定回归矩阵现在不只覆盖桌面下的 create-failure 分支，也开始覆盖窄屏下同一条真实用户操作路径。
+- 已执行验证：
+  - `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "graph workspace keeps the current graph when creating a new graph fails in a narrow viewport"`
+  - `npm run verify:docs`
+  - `git diff --check`
+- 未执行验证及原因：
+  - 未执行 `npm run test:graph:conflicts:e2e` 全量矩阵；本工作包仅新增一条窄屏 create-failure 组合路径，先以定向 Playwright 用例控制反馈速度。
+- 兼容性 / 迁移说明：
+  - 本次仅补浏览器级回归与文档同步，无接口契约、数据库 schema 或迁移脚本变更。
+- 已知风险：
+  - 当前只覆盖“窄屏 + 点击新建图谱 + 服务端返回 500”的最小失败路径，尚未覆盖与脏草稿、图谱列表切换或更多权限态并存时的窄屏组合。
+- 后续影响：
+  - `WB-034` 的回归矩阵继续向 create/save/restore/export/layout/conflict/权限全链路靠拢，窄屏下的 create-failure 不再只依赖桌面路径成立。
+  - 这一轮仍然没有继续扩更深一层的窄屏 create 失败组合；如果继续推进，更适合沿 `WB-034` 继续补 create/save/restore 的更多窄屏失败矩阵。
+
 ### 执行记录：WB-034（保存当前图谱失败后保留 dirty 草稿回归）
 - 执行日期：2026-07-16
 - 关联提交：本工作包提交
