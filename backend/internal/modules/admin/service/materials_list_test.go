@@ -66,8 +66,16 @@ func TestPersonalMaterialsAreExcludedFromGovernanceAndCannotBePublished(t *testi
 		t.Fatalf("expected only official/community rows, got %#v", rows)
 	}
 	for _, row := range rows {
+		if row.LibraryScope != row.ID {
+			t.Fatalf("missing material scope: %#v", row)
+		}
 		if row.ID == "personal" {
 			t.Fatal("private material leaked to governance")
+		}
+	}
+	for _, status := range []string{"approved", "hidden", "rejected", "pending"} {
+		if err := s.ModerateMaterial("admin", "official", status, "moderation"); err == nil {
+			t.Fatalf("official lifecycle bypass accepted: %s", status)
 		}
 	}
 	for _, status := range []string{"approved", "hidden", "rejected", "pending"} {

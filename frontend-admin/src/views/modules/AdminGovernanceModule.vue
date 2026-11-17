@@ -145,5 +145,6 @@ const showTable = computed(
         />
       </template>
     </AdminRecordInspector>
+    <p v-if="selectedRecord?.libraryScope === 'official'" class="admin-panel-copy">官方资料请在用户端「官方资料库 → 管理官方资料」维护，上下架操作不走社区投稿审核。</p>
   </section>
 </template>

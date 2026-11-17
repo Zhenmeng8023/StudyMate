@@ -15,6 +15,7 @@ const governanceFieldLabels: Record<string, string> = {
   createdAt: "创建时间",
   updatedAt: "更新时间",
   ownerUserId: "归属用户",
+  libraryScope: "来源库",
   reporterUserId: "举报用户",
   handledBy: "处理人",
   handledAt: "处理时间",

@@ -13,6 +13,8 @@ func RegisterPublicRoutes(group *gin.RouterGroup, handler *materialhandler.Handl
 }
 
 func RegisterProtectedRoutes(group *gin.RouterGroup, handler *materialhandler.Handler) {
+	group.GET("/official-materials/manage", handler.ListOfficialManagement)
+	group.PUT("/official-materials/:id/status", handler.ChangeOfficialStatus)
 	group.GET("/library/materials", handler.ListLibrary)
 	group.POST("/library/materials", handler.CreatePersonal)
 	group.GET("/library/materials/:id", handler.GetLibraryMaterial)

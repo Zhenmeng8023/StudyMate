@@ -24,6 +24,7 @@ type AdminReportPayload struct {
 }
 
 type AdminMaterialPayload struct {
+	LibraryScope   string `json:"libraryScope"`
 	ID             string `json:"id"`
 	OwnerUserID    string `json:"ownerUserId"`
 	OwnerName      string `json:"ownerName"`

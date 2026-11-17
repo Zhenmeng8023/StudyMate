@@ -20,6 +20,10 @@ func (h *Handler) ListLibrary(ctx *gin.Context) {
 }
 
 func (h *Handler) ListOfficial(ctx *gin.Context) {
+	if len(ctx.Request.URL.Query()) > 0 {
+		h.listOfficialCatalog(ctx, false)
+		return
+	}
 	items, err := h.service.ListOfficial()
 	if err != nil {
 		response.Error(ctx, err)

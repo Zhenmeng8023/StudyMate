@@ -8,6 +8,13 @@ import (
 )
 
 type Material struct {
+	MaterialType     string    `gorm:"size:32;not null;default:other"`
+	Author           string    `gorm:"size:200;not null;default:''"`
+	SourceURL        string    `gorm:"size:2048;not null;default:''"`
+	PublicationYear  int       `gorm:"not null;default:0"`
+	Edition          string    `gorm:"size:120;not null;default:''"`
+	LicenseStatus    string    `gorm:"size:32;not null;default:unknown"`
+	ArchiveReason    string    `gorm:"size:500;not null;default:''"`
 	ID               string    `gorm:"primaryKey;size:36"`
 	OwnerUserID      string    `gorm:"size:36;index;not null"`
 	LibraryScope     string    `gorm:"size:32;index;not null;default:community"`

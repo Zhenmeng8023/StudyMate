@@ -1,6 +1,7 @@
 package dto
 
 type CreateMaterialRequest struct {
+	OfficialMetadata
 	FolderName       string   `json:"folderName" binding:"max=120"`
 	Title            string   `json:"title" binding:"required,min=4,max=200"`
 	Description      string   `json:"description" binding:"required,min=10"`
@@ -11,6 +12,7 @@ type CreateMaterialRequest struct {
 }
 
 type UpdateMaterialRequest struct {
+	OfficialMetadata
 	FolderName       string   `json:"folderName" binding:"max=120"`
 	Title            string   `json:"title" binding:"required,min=4,max=200"`
 	Description      string   `json:"description" binding:"required,min=10"`
@@ -25,6 +27,8 @@ type RateMaterialRequest struct {
 }
 
 type MaterialSummary struct {
+	OfficialMetadata
+	ArchiveReason    string                   `json:"archiveReason"`
 	ReadingProgress  *MaterialReadingProgress `json:"readingProgress,omitempty"`
 	LibraryScope     string                   `json:"libraryScope"`
 	FolderName       string                   `json:"folderName"`
@@ -63,4 +67,34 @@ type MaterialFavoriteResponse struct {
 type MaterialRatingResponse struct {
 	AverageRating float64 `json:"averageRating"`
 	UserScore     int     `json:"userScore"`
+}
+
+// OfficialMetadata stays optional for historical callers and personal resources.
+type OfficialMetadata struct {
+	MaterialType    string `json:"materialType"`
+	Author          string `json:"author"`
+	SourceURL       string `json:"sourceUrl"`
+	PublicationYear int    `json:"publicationYear"`
+	Edition         string `json:"edition"`
+	LicenseStatus   string `json:"licenseStatus"`
+}
+type OfficialCatalogQuery struct {
+	Page         int
+	PageSize     int
+	Q            string
+	Category     string
+	MaterialType string
+	Sort         string
+	Status       string
+}
+type OfficialCatalogPage struct {
+	Items      []MaterialSummary `json:"items"`
+	Total      int64             `json:"total"`
+	Page       int               `json:"page"`
+	PageSize   int               `json:"pageSize"`
+	Categories []string          `json:"categories"`
+}
+type OfficialStatusRequest struct {
+	Status string `json:"status"`
+	Reason string `json:"reason"`
 }

@@ -33,6 +33,14 @@ func (r *Repository) UpdateLibraryMetadata(material *materialmodel.Material) err
 		"tags":          material.Tags,
 		"cover_file_id": material.CoverFileID,
 	}
+	if material.LibraryScope == "official" {
+		values["material_type"] = material.MaterialType
+		values["author"] = material.Author
+		values["source_url"] = material.SourceURL
+		values["publication_year"] = material.PublicationYear
+		values["edition"] = material.Edition
+		values["license_status"] = material.LicenseStatus
+	}
 	return r.db.Model(&materialmodel.Material{}).Where("id = ?", material.ID).Updates(values).Error
 }
 

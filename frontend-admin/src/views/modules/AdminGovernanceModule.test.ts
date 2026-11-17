@@ -3,6 +3,13 @@ import { describe, expect, it } from "vitest";
 import AdminGovernanceModule from "./AdminGovernanceModule.vue";
 
 describe("AdminGovernanceModule", () => {
+  it("directs official resource maintenance to its dedicated catalog", () => {
+    const wrapper = mount(AdminGovernanceModule, { props: {
+      columns: ["title", "libraryScope"], emptyText: "暂无记录", query: "", rows: [], summary: null,
+      selectedRecord: { id: "official-1", title: "官方资料", libraryScope: "official" }
+    } });
+    expect(wrapper.text()).toContain("官方资料库 → 管理官方资料");
+  });
   it("renders shared summary cards, filter bar, filter select, data table, table head, inspector, record rows, status tags, and emits query, filter, and selection changes", async () => {
     const wrapper = mount(AdminGovernanceModule, {
       props: {

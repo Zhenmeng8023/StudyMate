@@ -88,6 +88,9 @@ func (s *Service) ModerateMaterial(actorID string, materialID string, status str
 	if material.LibraryScope == "personal" {
 		return apperrors.New(403, "personal_material_not_moderated", "个人知识库资料不参与公开审核")
 	}
+	if material.LibraryScope == "official" {
+		return apperrors.New(409, "official_lifecycle_required", "请在官方资料库管理入口维护上下架状态")
+	}
 	material.Status = status
 	if err := s.materials.Save(material); err != nil {
 		return apperrors.Internal("更新资料审核状态失败")
@@ -271,6 +274,7 @@ func (s *Service) ListMaterials(limit int) ([]admindto.AdminMaterialPayload, err
 	}
 
 	type row struct {
+		LibraryScope   string
 		ID             string
 		OwnerUserID    string
 		OwnerName      string
@@ -286,6 +290,7 @@ func (s *Service) ListMaterials(limit int) ([]admindto.AdminMaterialPayload, err
 	var rows []row
 	err := s.db.Table("materials").
 		Select(`
+			materials.library_scope,
 			materials.id,
 			materials.owner_user_id,
 			users.display_name AS owner_name,
@@ -310,6 +315,7 @@ func (s *Service) ListMaterials(limit int) ([]admindto.AdminMaterialPayload, err
 	result := make([]admindto.AdminMaterialPayload, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, admindto.AdminMaterialPayload{
+			LibraryScope:   row.LibraryScope,
 			ID:             row.ID,
 			OwnerUserID:    row.OwnerUserID,
 			OwnerName:      row.OwnerName,

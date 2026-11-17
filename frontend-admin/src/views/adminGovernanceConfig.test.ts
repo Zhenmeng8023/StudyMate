@@ -9,6 +9,11 @@ import {
 } from "./adminGovernanceConfig";
 
 describe("adminGovernanceConfig", () => {
+  it("keeps official lifecycle actions out of community moderation", () => {
+    for (const status of ["pending", "approved", "hidden", "archived"]) {
+      expect(getGovernanceActions("materials", { libraryScope: "official", status })).toEqual([]);
+    }
+  });
   it("exposes the shared governance module endpoints and graph template override", () => {
     expect(isGovernanceModuleView("materials")).toBe(true);
     expect(isGovernanceModuleView("dashboard")).toBe(false);

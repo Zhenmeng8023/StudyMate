@@ -171,6 +171,8 @@ func (r *Repository) BuildSummary(material *materialmodel.Material) (*materialdt
 
 	avg, _ := r.getAverageRating(row.ID)
 	return &materialdto.MaterialSummary{
+		OfficialMetadata: materialdto.OfficialMetadata{MaterialType: material.MaterialType, Author: material.Author, SourceURL: material.SourceURL, PublicationYear: material.PublicationYear, Edition: material.Edition, LicenseStatus: material.LicenseStatus},
+		ArchiveReason:    material.ArchiveReason,
 		LibraryScope:     row.LibraryScope,
 		FolderName:       row.FolderName,
 		ID:               row.ID,
@@ -245,7 +247,7 @@ func (r *Repository) UpsertRating(materialID string, userID string, score int) (
 
 func (r *Repository) ListForModeration() ([]materialmodel.Material, error) {
 	var materials []materialmodel.Material
-	err := r.db.Where("status <> ? AND library_scope <> ?", "approved", "personal").Order("created_at desc").Find(&materials).Error
+	err := r.db.Where("status <> ? AND COALESCE(library_scope, 'community') IN (?, ?)", "approved", "community", "").Order("created_at desc").Find(&materials).Error
 	return materials, err
 }
 
@@ -257,7 +259,7 @@ func (r *Repository) CountAllMaterials() (int64, error) {
 
 func (r *Repository) CountPendingMaterials() (int64, error) {
 	var count int64
-	err := r.db.Model(&materialmodel.Material{}).Where("status <> ? AND library_scope <> ?", "approved", "personal").Count(&count).Error
+	err := r.db.Model(&materialmodel.Material{}).Where("status <> ? AND COALESCE(library_scope, 'community') IN (?, ?)", "approved", "community", "").Count(&count).Error
 	return count, err
 }
 
@@ -284,7 +286,7 @@ func (r *Repository) ListModerationItems() ([]admindto.ModerationItem, error) {
 			materials.updated_at
 		`).
 		Joins("left join users on users.id = materials.owner_user_id").
-		Where("materials.status <> ? AND materials.library_scope <> ?", "approved", "personal").
+		Where("materials.status <> ? AND COALESCE(materials.library_scope, 'community') IN (?, ?)", "approved", "community", "").
 		Order("materials.created_at desc").
 		Scan(&rows).Error
 	if err != nil {

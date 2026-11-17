@@ -79,6 +79,10 @@ func (s *Service) CreateOfficial(userID, role string, request materialdto.Create
 }
 
 func (s *Service) createLibraryMaterial(userID, scope, status string, request materialdto.CreateMaterialRequest) (*materialdto.MaterialSummary, error) {
+	metadata, metadataErr := normalizeOfficialMetadata(request.OfficialMetadata)
+	if scope == "official" && metadataErr != nil {
+		return nil, metadataErr
+	}
 	if err := s.validatePDFAttachment(userID, request.AttachmentFileID); err != nil {
 		return nil, err
 	}
@@ -86,6 +90,9 @@ func (s *Service) createLibraryMaterial(userID, scope, status string, request ma
 		return nil, err
 	}
 	material := &materialmodel.Material{OwnerUserID: userID, LibraryScope: scope, Status: status, FolderName: strings.TrimSpace(request.FolderName), Title: request.Title, Description: request.Description, Category: request.Category, Tags: materialrepo.EncodeTags(request.Tags), CoverFileID: request.CoverFileID, AttachmentFileID: request.AttachmentFileID}
+	if scope == "official" {
+		applyOfficialMetadata(material, metadata)
+	}
 	if err := s.repository.LibraryTransaction(func(repository *materialrepo.Repository, auditLogs *adminrepo.AuditLogRepository) error {
 		if err := repository.Create(material); err != nil {
 			return err
@@ -155,6 +162,13 @@ func (s *Service) UpdateLibraryMaterial(userID, role, id, scope string, request 
 		}
 	}
 	updated := *material
+	if scope == "official" && request.OfficialMetadata != (materialdto.OfficialMetadata{}) {
+		metadata, err := normalizeOfficialMetadata(request.OfficialMetadata)
+		if err != nil {
+			return nil, err
+		}
+		applyOfficialMetadata(&updated, metadata)
+	}
 	updated.Title, updated.Description, updated.Category = request.Title, request.Description, request.Category
 	updated.FolderName, updated.Tags, updated.CoverFileID = strings.TrimSpace(request.FolderName), materialrepo.EncodeTags(request.Tags), request.CoverFileID
 	if err := s.repository.LibraryTransaction(func(repository *materialrepo.Repository, auditLogs *adminrepo.AuditLogRepository) error {
@@ -183,6 +197,10 @@ func (s *Service) requireManager(userID, role, id, scope string) (*materialmodel
 }
 
 func (s *Service) DeleteLibraryMaterial(userID, role, id, scope string) error {
+	if scope == "official" {
+		_, err := s.ChangeOfficialStatus(userID, role, id, materialdto.OfficialStatusRequest{Status: "archived", Reason: "Archived by administrator"})
+		return err
+	}
 
 	material, err := s.requireManager(userID, role, id, scope)
 	if err != nil {

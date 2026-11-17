@@ -114,6 +114,7 @@ export function getGovernanceActions(view: AdminRouteKey, record: GovernanceReco
   }
 
   if (view === "materials") {
+    if (record.libraryScope === "official") return [];
     if (status === "pending") {
       return [
         { key: "approve", label: "通过资料" },
