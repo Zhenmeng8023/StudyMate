@@ -3,6 +3,7 @@ export * from "./auth";
 export * from "./files";
 export * from "./community";
 export * from "./materials";
+export * from "./library";
 export * from "./notes";
 export * from "./reader";
 export * from "./graphs";

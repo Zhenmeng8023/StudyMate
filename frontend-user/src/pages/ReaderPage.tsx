@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { BookMarked, FileText, Highlighter, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
 import type { AuthSession, CardDraftPayload, DeckPayload, MaterialPayload, ReaderStatePayload } from "../api/client";
@@ -11,13 +11,15 @@ import {
   getReaderState,
   listDecks,
   listMaterials,
-  updateReaderProgress
 } from "../api/client";
+import { downloadLibraryMaterial, getLibraryMaterial, getMaterialAttachmentUrl, listLibraryMaterials } from "../api/library";
 import { DataState, Select, Tag } from "../design-system/primitives";
 import { PdfReaderPane } from "../modules/reader/PdfReaderPane";
+import { isPdfMaterial, type PdfTextSelection } from "../modules/reader/pdfSelection";
+import { useReaderProgress } from "../modules/reader/useReaderProgress";
+import { ReaderAnnotationList } from "../modules/reader/ReaderAnnotationList";
 import {
   buildCardInputsFromDrafts,
-  displayAnnotationText,
   displayMaterialDescription,
   displayMaterialTitle,
   formatDate
@@ -42,11 +44,16 @@ export function ReaderPage(props: { session: AuthSession }) {
   const params = useParams();
   const location = useLocation();
   const requestedPage = parseReaderPageQuery(location.search);
+  const requestedAnnotation = new URLSearchParams(location.search).get("annotation") || "";
+  const sessionRef = useRef(props.session);
+  sessionRef.current = props.session;
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
   const [decks, setDecks] = useState<DeckPayload[]>([]);
   const [selectedId, setSelectedId] = useState(params.materialId ?? "");
   const [readerState, setReaderState] = useState<ReaderStatePayload | null>(null);
-  const [selection, setSelection] = useState("");
+  const [selection, setSelection] = useState<PdfTextSelection | null>(null);
+  const [annotationColor, setAnnotationColor] = useState("amber");
+  const [focusedAnnotationId, setFocusedAnnotationId] = useState(requestedAnnotation);
   const [annotationComment, setAnnotationComment] = useState("");
   const [annotationDrafts, setAnnotationDrafts] = useState<CardDraftPayload[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState("");
@@ -56,23 +63,37 @@ export function ReaderPage(props: { session: AuthSession }) {
   const [materialsError, setMaterialsError] = useState("");
   const [loadingReaderState, setLoadingReaderState] = useState(false);
   const [readerStateError, setReaderStateError] = useState("");
-  const [sourcesOpen, setSourcesOpen] = useState(true);
-  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [sourcesOpen, setSourcesOpen] = useState(!params.materialId);
+  const [inspectorOpen, setInspectorOpen] = useState(() => window.innerWidth >= 640);
   const [activeInspectorTab, setActiveInspectorTab] = useState<ReaderInspectorTab>("annotations");
 
   useEffect(() => {
     let cancelled = false;
     setLoadingMaterials(true);
     setMaterialsError("");
+    setMaterials([]);
+    setReaderState(null);
+    setSelection(null);
+    setAnnotationComment("");
+    setAnnotationDrafts([]);
 
-    void Promise.all([listMaterials(), listDecks(props.session)])
-      .then(([items, deckItems]) => {
+    void Promise.all([listLibraryMaterials(sessionRef.current), listMaterials(), listDecks(sessionRef.current).catch(() => {
+      if (!cancelled) setMessage("卡组暂时不可用，仍可继续阅读和批注。");
+      return [];
+    })])
+      .then(async ([personal, publicItems, deckItems]) => {
+        const byId = new Map([...publicItems, ...personal].map((item) => [item.id, item]));
         if (cancelled) return;
-        const readable = items.filter((item) => item.attachmentFileId);
+        if (params.materialId && !byId.has(params.materialId)) {
+          const direct = await getLibraryMaterial(sessionRef.current, params.materialId);
+          byId.set(direct.id, direct);
+        }
+        if (cancelled) return;
+        const readable = [...byId.values()].filter((item) => item.attachmentFileId);
         setMaterials(readable);
         setDecks(deckItems);
         setSelectedDeckId((current) => current || deckItems[0]?.id || "");
-        setSelectedId((current) => current || params.materialId || readable[0]?.id || "");
+        setSelectedId((current) => params.materialId || current || readable[0]?.id || "");
       })
       .catch((error) => {
         if (cancelled) return;
@@ -87,12 +108,15 @@ export function ReaderPage(props: { session: AuthSession }) {
     return () => {
       cancelled = true;
     };
-  }, [params.materialId, props.session]);
+  }, [params.materialId, props.session.user.id]);
 
   const selectedMaterial = useMemo(
     () => materials.find((material) => material.id === selectedId) ?? null,
     [materials, selectedId]
   );
+  const activeMaterialId = useRef("");
+  activeMaterialId.current = selectedMaterial?.id || "";
+  const progress = useReaderProgress(props.session, selectedMaterial?.id || "", readerState, setReaderState);
   const readerWorkspaceState: ReaderWorkspaceState = useMemo(() => {
     if (selectedMaterial && loadingReaderState && !readerState) {
       return {
@@ -123,6 +147,7 @@ export function ReaderPage(props: { session: AuthSession }) {
   const showReaderContent = Boolean(selectedMaterial && readerState && (!readerWorkspaceState || readerWorkspaceState.kind === "stale"));
 
   async function refreshReaderState(material: MaterialPayload, options?: { preserveExisting?: boolean }) {
+    if (activeMaterialId.current !== material.id) return false;
     setLoadingReaderState(true);
     setReaderStateError("");
     if (!options?.preserveExisting) {
@@ -131,16 +156,24 @@ export function ReaderPage(props: { session: AuthSession }) {
 
     try {
       const state = await getReaderState(props.session, material.id);
-      setReaderState(applyRequestedReaderPage(state, requestedPage));
+      if (activeMaterialId.current !== material.id) return false;
+      setReaderState((current) => current?.materialId === state.materialId ? {
+        ...state,
+        currentPage: current.currentPage,
+        totalPages: current.totalPages || state.totalPages,
+        progressPercent: current.progressPercent,
+        bookmarks: current.bookmarks
+      } : state);
       return true;
     } catch (error) {
+      if (activeMaterialId.current !== material.id) return false;
       setReaderStateError(error instanceof Error ? error.message : "读取阅读状态失败。");
       if (!options?.preserveExisting) {
         setReaderState(null);
       }
       return false;
     } finally {
-      setLoadingReaderState(false);
+      if (activeMaterialId.current === material.id) setLoadingReaderState(false);
     }
   }
 
@@ -157,10 +190,14 @@ export function ReaderPage(props: { session: AuthSession }) {
     setLoadingReaderState(true);
     setReaderStateError("");
     setReaderState(null);
-    void getReaderState(props.session, selectedMaterial.id)
+    setSelection(null);
+    setAnnotationComment("");
+    setFocusedAnnotationId(requestedAnnotation);
+    void getReaderState(sessionRef.current, selectedMaterial.id)
       .then((state) => {
         if (!cancelled) {
-          setReaderState(applyRequestedReaderPage(state, requestedPage));
+          const annotation = state.annotations.find((item) => item.id === requestedAnnotation);
+          setReaderState(applyRequestedReaderPage(state, annotation?.page || requestedPage));
         }
       })
       .catch((error) => {
@@ -178,34 +215,13 @@ export function ReaderPage(props: { session: AuthSession }) {
     return () => {
       cancelled = true;
     };
-  }, [props.session, requestedPage, selectedMaterial]);
+  }, [props.session.user.id, requestedPage, requestedAnnotation, selectedMaterial?.id]);
 
-  async function persistProgress(nextPage: number, totalPages: number) {
-    if (!selectedMaterial || !readerState) return;
-
-    const progressPercent = totalPages
-      ? Math.min(100, Math.round((nextPage / totalPages) * 100))
-      : readerState.progressPercent;
-    const payload = await updateReaderProgress(props.session, selectedMaterial.id, {
-      currentPage: nextPage,
-      totalPages,
-      progressPercent,
-      bookmarks: readerState.bookmarks
-    });
-    setReaderState(payload);
-  }
-
-  async function handleAddBookmark() {
+  function handleAddBookmark() {
     if (!selectedMaterial || !readerState) return;
 
     const bookmarks = Array.from(new Set([...readerState.bookmarks, readerState.currentPage])).sort((a, b) => a - b);
-    const payload = await updateReaderProgress(props.session, selectedMaterial.id, {
-      currentPage: readerState.currentPage,
-      totalPages: readerState.totalPages,
-      progressPercent: readerState.progressPercent,
-      bookmarks
-    });
-    setReaderState(payload);
+    progress.save({ bookmarks });
     setActiveInspectorTab("bookmarks");
     setInspectorOpen(true);
   }
@@ -217,21 +233,13 @@ export function ReaderPage(props: { session: AuthSession }) {
     setMessage("");
     try {
       await createReaderAnnotation(props.session, selectedMaterial.id, {
-        page: readerState.currentPage,
-        quote: selection,
+        page: selection?.page || readerState.currentPage,
+        quote: selection?.text || "",
         comment: annotationComment,
-        color: "amber",
-        rects: [
-          {
-            page: readerState.currentPage,
-            x: 0,
-            y: 0,
-            width: 1,
-            height: 0.08
-          }
-        ]
+        color: annotationColor,
+        rects: selection?.rects || []
       });
-      setSelection("");
+      setSelection(null);
       setAnnotationComment("");
       const refreshed = await refreshReaderState(selectedMaterial, { preserveExisting: true });
       setActiveInspectorTab("annotations");
@@ -332,8 +340,16 @@ export function ReaderPage(props: { session: AuthSession }) {
     setInspectorOpen(true);
   }
 
-  const fileUrl = selectedMaterial ? `/api/v1/materials/${selectedMaterial.id}/attachment` : "";
-  const canUsePdf = selectedMaterial?.attachmentMime?.toLowerCase().includes("pdf") ?? false;
+  async function handleDownload() {
+    if (!selectedMaterial) return;
+    setBusy("download");
+    try { await downloadLibraryMaterial(props.session, selectedMaterial); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "下载原文件失败。"); }
+    finally { setBusy(""); }
+  }
+
+  const fileUrl = selectedMaterial ? getMaterialAttachmentUrl(selectedMaterial.id) : "";
+  const canUsePdf = isPdfMaterial(selectedMaterial);
   const readerTitle = selectedMaterial ? displayMaterialTitle(selectedMaterial) : "选择一份资料开始阅读";
   const activeReaderMaterial = showReaderContent ? selectedMaterial : null;
   const activeReaderState = showReaderContent ? readerState : null;
@@ -371,10 +387,11 @@ export function ReaderPage(props: { session: AuthSession }) {
           ) : null}
         </div>
         <div className="studio-commandbar__actions">
-          <button aria-label="添加书签" className="secondary-button" disabled={!readerState} onClick={() => void handleAddBookmark()} type="button">
+          <button aria-label="添加书签" className="secondary-button" disabled={!readerState || !canUsePdf} onClick={handleAddBookmark} type="button">
             <BookMarked size={16} />
             <span>书签</span>
           </button>
+          {selectedMaterial ? <button className="secondary-button" disabled={busy === "download"} onClick={() => void handleDownload()} type="button">下载原文件</button> : null}
           {selectedMaterial ? (
             <Link className="primary-button" to={`/notes?material=${selectedMaterial.id}`}>
               <FileText size={16} />
@@ -394,6 +411,7 @@ export function ReaderPage(props: { session: AuthSession }) {
       </header>
 
       {message ? <p className="studio-inline-message" role="status">{message}</p> : null}
+      {progress.error ? <div className="reader-progress-error" role="alert"><span>阅读进度尚未保存：{progress.error}</span><button className="secondary-button" onClick={progress.retry} type="button">重试保存进度</button></div> : null}
 
       <div className="reader-studio__body">
         <aside className="studio-resource-dock reader-resource-dock" aria-label="可阅读资料">
@@ -448,6 +466,7 @@ export function ReaderPage(props: { session: AuthSession }) {
         <main className="reader-stage-shell" aria-label="阅读内容">
           {readerWorkspaceState && readerWorkspaceState.kind !== "stale" ? (
             <DataState
+              action={selectedMaterial && readerWorkspaceState.kind === "error" ? <button className="secondary-button" onClick={() => void refreshReaderState(selectedMaterial)} type="button">重新加载阅读状态</button> : undefined}
               description={readerWorkspaceState.description}
               kind={readerWorkspaceState.kind}
               title={readerWorkspaceState.title}
@@ -455,6 +474,7 @@ export function ReaderPage(props: { session: AuthSession }) {
           ) : null}
           {readerWorkspaceState?.kind === "stale" ? (
             <DataState
+              action={selectedMaterial ? <button className="secondary-button" onClick={() => void refreshReaderState(selectedMaterial, { preserveExisting: true })} type="button">刷新阅读状态</button> : undefined}
               description={readerWorkspaceState.description}
               kind={readerWorkspaceState.kind}
               title={readerWorkspaceState.title}
@@ -466,6 +486,7 @@ export function ReaderPage(props: { session: AuthSession }) {
                 <div>
                   <span>{activeReaderMaterial.attachmentName || "学习资料"}</span>
                   <strong>{displayMaterialTitle(activeReaderMaterial)}</strong>
+                  <small className="reader-download-note">批注单独保存，下载的是原文件。</small>
                 </div>
                 <div className="reader-stage-card__chips">
                   <Tag>共 {activeReaderState.totalPages || "待识别"} 页</Tag>
@@ -475,14 +496,20 @@ export function ReaderPage(props: { session: AuthSession }) {
               <div className="reader-stage reader-stage--studio">
                 {canUsePdf ? (
                   <PdfReaderPane
+                    key={activeReaderMaterial.id}
                     fileUrl={fileUrl}
+                    accessToken={props.session.accessToken}
+                    onNavigationOpen={() => { setSourcesOpen(false); setInspectorOpen(false); }}
+                    onAuthorizationExpired={async () => { await getLibraryMaterial(sessionRef.current, activeReaderMaterial.id); }}
+                    annotations={activeReaderState.annotations}
+                    focusedAnnotationId={focusedAnnotationId}
                     initialPage={activeReaderState.currentPage}
-                    onPageChange={(page) => void persistProgress(page, activeReaderState.totalPages || page).catch(() => undefined)}
+                    onPageChange={(page) => { setSelection(null); progress.save({ currentPage: page }); }}
                     onSelectionChange={setSelection}
-                    onTotalPagesChange={(pages) => void persistProgress(activeReaderState.currentPage, pages).catch(() => undefined)}
+                    onTotalPagesChange={(pages) => progress.save({ totalPages: pages, currentPage: Math.min(activeReaderState.currentPage, pages) })}
                   />
                 ) : (
-                  <iframe className="reader-embed" src={fileUrl} title={activeReaderMaterial.attachmentName} />
+                  <DataState kind="empty" title="此文件暂不支持在线预览" description="这是历史非 PDF 附件，可下载原文件查看。新上传仅接受 PDF。" />
                 )}
               </div>
             </div>
@@ -540,15 +567,16 @@ export function ReaderPage(props: { session: AuthSession }) {
                     <Highlighter size={16} />
                     <div>
                       <strong>当前选中文本</strong>
-                      <p>{selection || "在 PDF 内选中一段文字，或者直接写一条批注。"}</p>
+                      <p>{selection?.text || "在 PDF 内选中一段文字，或者直接写一条批注。"}</p>
                     </div>
                   </div>
                   <label className="form-stack">
                     <span>批注内容</span>
                     <input aria-label="批注内容" onChange={(event) => setAnnotationComment(event.target.value)} value={annotationComment} />
                   </label>
+                  <label className="form-stack"><span>高亮颜色</span><select aria-label="高亮颜色" value={annotationColor} onChange={(event) => setAnnotationColor(event.target.value)}><option value="amber">黄色</option><option value="green">绿色</option><option value="blue">蓝色</option><option value="pink">粉色</option></select></label>
                   <div className="detail-actions">
-                    <button className="primary-button" disabled={busy === "annotation"} onClick={() => void handleCreateAnnotation()} type="button">
+                    <button className="primary-button" disabled={!canUsePdf || busy === "annotation" || (!selection && !annotationComment.trim())} onClick={() => void handleCreateAnnotation()} type="button">
                       保存批注
                     </button>
                     <button
@@ -571,30 +599,8 @@ export function ReaderPage(props: { session: AuthSession }) {
                   </div>
                 </section>
 
-                {readerState.annotations.length ? (
-                  <div className="reader-annotation-list">
-                    {readerState.annotations.map((annotation) => (
-                      <article className="reader-annotation-item" key={annotation.id}>
-                        <div className="reader-annotation-item__head">
-                          <strong>第 {annotation.page} 页</strong>
-                          <span>{annotation.rects.length ? `${annotation.rects.length} 个坐标片段` : "无坐标片段"}</span>
-                        </div>
-                        <p>{displayAnnotationText(annotation)}</p>
-                        <small>来源：{displayMaterialTitle(selectedMaterial)} / PDF 第 {annotation.page} 页</small>
-                        <button
-                          className="secondary-button danger"
-                          disabled={busy === `annotation-${annotation.id}`}
-                          onClick={() => void handleDeleteAnnotation(annotation.id)}
-                          type="button"
-                        >
-                          删除批注
-                        </button>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <DataState description="选中文本或记录想法后，批注会按页码与来源坐标保留在这里。" kind="empty" title="还没有批注" />
-                )}
+                <ReaderAnnotationList material={selectedMaterial} annotations={readerState.annotations} focusedId={focusedAnnotationId} busy={busy}
+                  onDelete={(id) => void handleDeleteAnnotation(id)} onLocate={(annotation) => { setFocusedAnnotationId(annotation.id); setSelection(null); progress.save({ currentPage: annotation.page }); }} />
               </div>
             ) : activeInspectorTab === "bookmarks" ? (
               <div className="studio-panel-stack">
@@ -608,12 +614,12 @@ export function ReaderPage(props: { session: AuthSession }) {
                 {readerState.bookmarks.length ? (
                   <div className="reader-bookmark-list">
                     {readerState.bookmarks.map((bookmark) => (
-                      <span className="bookmark-chip chip" key={bookmark}>第 {bookmark} 页</span>
+                      <span className="reader-bookmark-actions" key={bookmark}><button className="bookmark-chip chip" onClick={() => progress.save({ currentPage: bookmark })} type="button">第 {bookmark} 页</button><button className="ghost-button" aria-label={`移除第 ${bookmark} 页书签`} onClick={() => progress.save({ bookmarks: readerState.bookmarks.filter((page) => page !== bookmark) })} type="button">移除</button></span>
                     ))}
                   </div>
                 ) : (
                   <DataState
-                    action={<button className="primary-button" onClick={() => void handleAddBookmark()} type="button">为当前页添加书签</button>}
+                    action={<button className="primary-button" disabled={!canUsePdf} onClick={handleAddBookmark} type="button">为当前页添加书签</button>}
                     description="书签会与当前阅读进度同步保存，方便从关键页继续。"
                     kind="empty"
                     title="还没有书签"

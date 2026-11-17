@@ -1,4 +1,5 @@
 import { request, withAuth } from "./core";
+import { validatePdfUpload } from "./pdfUpload";
 import type {
   AiDraftPayload,
   AiTaskPayload,
@@ -32,6 +33,7 @@ import type {
 } from "./types";
 
 export async function uploadFile(session: AuthSession, file: File) {
+  await validatePdfUpload(file);
   const formData = new FormData();
   formData.append("file", file);
 

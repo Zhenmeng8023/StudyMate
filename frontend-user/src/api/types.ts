@@ -66,6 +66,22 @@ export interface TogglePayload {
 }
 
 export interface MaterialPayload {
+  materialType?: "book" | "paper" | "lecture" | "exercises" | "course" | "other";
+  author?: string;
+  sourceUrl?: string;
+  publicationYear?: number;
+  edition?: string;
+  licenseStatus?: "unknown" | "self_owned" | "authorized" | "open_license" | "public_domain";
+  archiveReason?: string;
+  readingProgress?: {
+    currentPage: number;
+    totalPages: number;
+    progressPercent: number;
+    lastReadAt: string;
+  } | null;
+  libraryScope?: "personal" | "official" | "community";
+  folderName?: string;
+  isCollected?: boolean;
   id: string;
   ownerUserId: string;
   ownerName: string;

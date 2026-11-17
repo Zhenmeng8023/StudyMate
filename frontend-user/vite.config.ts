@@ -1,8 +1,19 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { createRequire } from "node:module";
+import { dirname } from "node:path";
+
+const require = createRequire(import.meta.url);
+// Resolve from react-pdf: its API, text-layer styles and worker are a versioned set.
+const pdfJsRoot = dirname(require.resolve("pdfjs-dist/package.json", {
+  paths: [dirname(require.resolve("react-pdf"))]
+}));
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: [{ find: /^pdfjs-dist(?=\/|$)/, replacement: pdfJsRoot }]
+  },
   build: {
     rollupOptions: {
       output: {

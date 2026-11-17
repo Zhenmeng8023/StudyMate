@@ -16,6 +16,8 @@ import {
   updateNote
 } from "../api/client";
 import { ConfirmDialog, DataState, Select } from "../design-system/primitives";
+import { createReaderExcerptDraft } from "../modules/notes/readerExcerpt";
+import { listLibraryMaterials } from "../api/library";
 import { RichTextEditor } from "../modules/notes/RichTextEditor";
 import {
   buildCardInputsFromDrafts,
@@ -53,7 +55,7 @@ export function NotesPage(props: { session: AuthSession }) {
   const [decks, setDecks] = useState<DeckPayload[]>([]);
   const [versions, setVersions] = useState<NoteVersionPayload[]>([]);
   const [noteId, setNoteId] = useState("");
-  const [draft, setDraft] = useState(() => createNoteDraft(materialFromQuery));
+  const [draft, setDraft] = useState(() => createReaderExcerptDraft(searchParams));
   const [cardDrafts, setCardDrafts] = useState<CardDraftPayload[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState("");
   const [message, setMessage] = useState("");
@@ -70,19 +72,20 @@ export function NotesPage(props: { session: AuthSession }) {
     setLoading(true);
     setLoadError("");
     try {
-      const [noteItems, materialItems, deckItems] = await Promise.all([
+      const [noteItems, materialItems, deckItems, libraryItems] = await Promise.all([
         listNotes(props.session),
         listMaterials(),
-        listDecks(props.session)
+        listDecks(props.session),
+        listLibraryMaterials(props.session)
       ]);
       setNotes(noteItems);
-      setMaterials(materialItems);
+      setMaterials([...new Map([...materialItems, ...libraryItems].map((material) => [material.id, material])).values()]);
       setDecks(deckItems);
       setSelectedDeckId((current) => current || deckItems[0]?.id || "");
       const nextId = options?.selected || searchParams.get("selected") || (materialFromQuery ? "" : noteItems[0]?.id || "");
       setNoteId(nextId);
       if (!nextId && materialFromQuery) {
-        setDraft(createNoteDraft(materialFromQuery));
+        setDraft(createReaderExcerptDraft(searchParams));
       }
       return true;
     } catch (error) {

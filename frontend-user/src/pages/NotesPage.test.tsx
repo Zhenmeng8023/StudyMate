@@ -14,6 +14,8 @@ import {
 } from "../api/client";
 import type { AuthSession } from "../api/client";
 import { NotesPage } from "./NotesPage";
+import { listLibraryMaterials } from "../api/library";
+vi.mock("../api/library", () => ({ listLibraryMaterials: vi.fn().mockResolvedValue([]) }));
 
 vi.mock("../modules/notes/RichTextEditor", () => ({
   RichTextEditor: (props: { onChange: (value: string) => void; value: string }) => (
@@ -136,6 +138,20 @@ describe("NotesPage", () => {
     updateNoteMock.mockResolvedValue({} as never);
   });
 
+  it("starts a private reader excerpt without overwriting an existing note", async () => {
+    vi.mocked(listLibraryMaterials).mockResolvedValueOnce([{
+      id: "private-1", title: "Private PDF", libraryScope: "personal", ownerUserId: "user-1",
+      ownerName: "Alice", description: "Private reading", category: "book", tags: [], coverFileId: "",
+      attachmentFileId: "file-1", attachmentName: "private.pdf", attachmentMime: "application/pdf",
+      status: "private", favoritesCount: 0, averageRating: 0, createdAt: "2026-11-16", updatedAt: "2026-11-16"
+    }]);
+    render(<MemoryRouter initialEntries={["/notes?material=private-1&annotation=anno-1&page=4&quote=Selected%20quote&comment=My%20thought"]}><NotesPage session={session} /></MemoryRouter>);
+    await waitFor(() => expect((screen.getByLabelText("富文本正文") as HTMLTextAreaElement).value).toContain("Selected quote"));
+    expect((screen.getByLabelText("富文本正文") as HTMLTextAreaElement).value).toContain("annotation=anno-1");
+    expect((screen.getByLabelText("富文本正文") as HTMLTextAreaElement).value).toContain("My thought");
+    expect(updateNoteMock).not.toHaveBeenCalled();
+  });
+
   it("keeps editor, source and version history in separate studio areas", async () => {
     const user = userEvent.setup();
     render(
@@ -147,7 +163,7 @@ describe("NotesPage", () => {
     expect((await screen.findAllByText("Binary Search Notes")).length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText("Algorithms Guide").length).toBeGreaterThan(0);
 
-    await user.click(screen.getByRole("button", { name: "历史" }));
+    await user.click(screen.getByRole("button", { name: /^历史/ }));
     expect(await screen.findByText("v1")).toBeInTheDocument();
   });
 

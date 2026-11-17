@@ -293,7 +293,7 @@ export function MaterialsPage(props: { session: AuthSession | null }) {
             <label className="secondary-button">
               <Upload size={16} />
               选择附件
-              <Input hidden onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} type="file" />
+              <Input accept=".pdf,application/pdf" hidden onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} type="file" />
             </label>
             <button
               className="secondary-button"
