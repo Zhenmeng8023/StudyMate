@@ -18,12 +18,19 @@ type cardService interface {
 	ListDecks(ownerUserID string) ([]carddto.DeckPayload, error)
 	CreateDeck(ownerUserID string, request carddto.CreateDeckRequest) (*carddto.DeckPayload, error)
 	ListCards(ownerUserID string, deckID string, request carddto.ListCardsQuery) ([]carddto.CardPayload, error)
+	CreateCardNote(ownerUserID string, deckID string, request carddto.CreateCardNoteRequest) (*carddto.CreateCardNoteResultPayload, error)
+	ListCardNotes(ownerUserID string, queries ...carddto.ListCardNotesQuery) ([]carddto.ManagedCardNotePayload, error)
+	GetCardNote(ownerUserID string, cardNoteID string) (*carddto.ManagedCardNotePayload, error)
+	DeleteCard(ownerUserID string, cardID string, request carddto.DeleteCardRequest) (*carddto.DeleteCardResultPayload, error)
+	UpdateCardNote(ownerUserID string, cardNoteID string, request carddto.UpdateCardNoteRequest) (*carddto.ManagedCardNotePayload, error)
 	CreateCard(ownerUserID string, deckID string, request carddto.CreateCardRequest) (*carddto.CardPayload, error)
 	BulkCreateCards(ownerUserID string, deckID string, requests []carddto.CreateCardRequest) ([]carddto.CardPayload, error)
 	ExportDeck(ownerUserID string, deckID string, format string) (*carddto.DeckExportPayload, error)
 	ImportDeck(ownerUserID string, deckID string, request carddto.ImportDeckRequest) (*carddto.DeckImportPayload, error)
 	TodayQueue(ownerUserID string) (*carddto.ReviewQueuePayload, error)
 	ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPayload, error)
+	ReviewInsights(ownerUserID string) (*carddto.ReviewInsightsPayload, error)
+	SourceProfile(ownerUserID string, query carddto.SourceProfileQuery) (*carddto.SourceProfilePayload, error)
 	ReviewCard(ownerUserID string, cardID string, request carddto.ReviewCardRequest) (*carddto.ReviewResultPayload, error)
 	UpdateCardStatus(ownerUserID string, cardID string, request carddto.UpdateCardStatusRequest) (*carddto.CardPayload, error)
 	UpdateCardTags(ownerUserID string, cardID string, request carddto.UpdateCardTagsRequest) (*carddto.CardPayload, error)
@@ -94,6 +101,53 @@ func (h *Handler) CreateCard(ctx *gin.Context) {
 	response.Success(ctx, http.StatusCreated, result)
 }
 
+func (h *Handler) CreateCardNote(ctx *gin.Context) {
+	var request carddto.CreateCardNoteRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	result, err := h.service.CreateCardNote(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), request)
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusCreated, result)
+}
+
+func (h *Handler) ListCardNotes(ctx *gin.Context) {
+	var query carddto.ListCardNotesQuery
+	if err := ctx.ShouldBindQuery(&query); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+	result, err := h.service.ListCardNotes(ctx.GetString(middleware.ContextUserIDKey), query)
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}
+
+func (h *Handler) UpdateCardNote(ctx *gin.Context) {
+	var request carddto.UpdateCardNoteRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	result, err := h.service.UpdateCardNote(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), request)
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}
+
 func (h *Handler) CreateCardsBulk(ctx *gin.Context) {
 	var request carddto.BulkCreateCardsRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
@@ -154,6 +208,32 @@ func (h *Handler) TodayQueue(ctx *gin.Context) {
 
 func (h *Handler) ReviewFeedback(ctx *gin.Context) {
 	result, err := h.service.ReviewFeedback(ctx.GetString(middleware.ContextUserIDKey))
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}
+
+func (h *Handler) ReviewInsights(ctx *gin.Context) {
+	result, err := h.service.ReviewInsights(ctx.GetString(middleware.ContextUserIDKey))
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	response.Success(ctx, http.StatusOK, result)
+}
+
+func (h *Handler) SourceProfile(ctx *gin.Context) {
+	var query carddto.SourceProfileQuery
+	if err := ctx.ShouldBindQuery(&query); err != nil {
+		response.Error(ctx, err)
+		return
+	}
+
+	result, err := h.service.SourceProfile(ctx.GetString(middleware.ContextUserIDKey), query)
 	if err != nil {
 		response.Error(ctx, err)
 		return

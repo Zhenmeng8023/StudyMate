@@ -8,19 +8,22 @@ import (
 )
 
 type Card struct {
-	ID             string    `gorm:"primaryKey;size:36"`
-	DeckID         string    `gorm:"size:36;index;not null"`
-	OwnerUserID    string    `gorm:"size:36;index;not null"`
-	CardType       string    `gorm:"size:32;index;not null"`
-	Front          string    `gorm:"type:text;not null"`
-	Back           string    `gorm:"type:text;not null"`
-	Tags           string    `gorm:"type:text"`
-	SourceType     string    `gorm:"size:32;index"`
-	SourceID       string    `gorm:"size:36;index"`
-	SourceMetadata string    `gorm:"type:text"`
-	Status         string    `gorm:"size:32;index;not null"`
-	CreatedAt      time.Time `gorm:"not null"`
-	UpdatedAt      time.Time `gorm:"not null"`
+	ID              string    `gorm:"primaryKey;size:36"`
+	DeckID          string    `gorm:"size:36;index;not null"`
+	OwnerUserID     string    `gorm:"size:36;index;not null"`
+	CardNoteID      string    `gorm:"size:36;index"`
+	TemplateID      string    `gorm:"size:64;index"`
+	TemplateOrdinal int       `gorm:"not null;default:0"`
+	CardType        string    `gorm:"size:32;index;not null"`
+	Front           string    `gorm:"type:text;not null"`
+	Back            string    `gorm:"type:text;not null"`
+	Tags            string    `gorm:"type:text"`
+	SourceType      string    `gorm:"size:32;index"`
+	SourceID        string    `gorm:"size:36;index"`
+	SourceMetadata  string    `gorm:"type:text"`
+	Status          string    `gorm:"size:32;index;not null"`
+	CreatedAt       time.Time `gorm:"not null"`
+	UpdatedAt       time.Time `gorm:"not null"`
 }
 
 func (c *Card) BeforeCreate(_ *gorm.DB) error {

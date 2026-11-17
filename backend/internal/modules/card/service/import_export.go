@@ -41,10 +41,10 @@ type portableImportRow struct {
 }
 
 type deckImportCandidate struct {
-	Request     carddto.CreateCardRequest
-	RowNumber   int
-	Front       string
-	Signature   string
+	Request   carddto.CreateCardRequest
+	RowNumber int
+	Front     string
+	Signature string
 }
 
 type deckImportAnalysis struct {

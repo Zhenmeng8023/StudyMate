@@ -15,6 +15,12 @@ import (
 	"studymate/backend/internal/pkg/apperrors"
 )
 
+const (
+	defaultDailyNewLimit    = 20
+	defaultDailyReviewLimit = 200
+	todayQueuePreviewLimit  = 40
+)
+
 type Service struct {
 	repository *cardrepo.Repository
 	auditLogs  *adminrepo.AuditLogRepository
@@ -82,10 +88,15 @@ func (s *Service) ListCards(ownerUserID string, deckID string, request carddto.L
 	if !ok {
 		return nil, apperrors.New(http.StatusBadRequest, "invalid_card_due_bucket", "到期时间筛选必须是 all、due 或 upcoming")
 	}
+	queueState, ok := normalizeCardQueueState(request.QueueState)
+	if !ok {
+		return nil, apperrors.New(http.StatusBadRequest, "invalid_card_queue_state", "????????????????? all??ew??earning??eview??elearning??uspended ??buried")
+	}
 
 	cards, err := s.repository.ListCardsByDeck(deck.ID, ownerUserID, cardrepo.ListCardsFilter{
 		Query:      strings.TrimSpace(request.Query),
 		Status:     status,
+		QueueState: queueState,
 		SourceType: strings.TrimSpace(request.SourceType),
 		SourceID:   strings.TrimSpace(request.SourceID),
 		DueBucket:  dueBucket,
@@ -215,18 +226,54 @@ func (s *Service) ImportDeck(ownerUserID string, deckID string, request carddto.
 
 func (s *Service) TodayQueue(ownerUserID string) (*carddto.ReviewQueuePayload, error) {
 	now := s.now().UTC()
-	dueCount, err := s.repository.CountDueCards(ownerUserID, now)
+	learningCount, err := s.repository.CountDueCardsByStates(ownerUserID, now, []string{"learning"})
 	if err != nil {
-		return nil, apperrors.Internal("读取今日复习统计失败")
+		return nil, apperrors.Internal("???????????????")
+	}
+	relearningCount, err := s.repository.CountDueCardsByStates(ownerUserID, now, []string{"relearning"})
+	if err != nil {
+		return nil, apperrors.Internal("???????????????")
+	}
+	reviewCount, err := s.repository.CountDueCardsByStates(ownerUserID, now, []string{"review"})
+	if err != nil {
+		return nil, apperrors.Internal("???????????????")
+	}
+	newCount, err := s.repository.CountDueCardsByStates(ownerUserID, now, []string{"new"})
+	if err != nil {
+		return nil, apperrors.Internal("???????????????")
 	}
 
-	rows, err := s.repository.ListDueCards(ownerUserID, now, 40)
-	if err != nil {
-		return nil, apperrors.Internal("读取今日复习队列失败")
+	queuedRows := make([]cardrepo.DueCardRow, 0, todayQueuePreviewLimit)
+	appendStateRows := func(states []string, limit int) error {
+		if len(queuedRows) >= todayQueuePreviewLimit || limit == 0 {
+			return nil
+		}
+		if len(queuedRows)+limit > todayQueuePreviewLimit {
+			limit = todayQueuePreviewLimit - len(queuedRows)
+		}
+		rows, err := s.repository.ListDueCardsByStates(ownerUserID, now, states, limit)
+		if err != nil {
+			return err
+		}
+		queuedRows = append(queuedRows, rows...)
+		return nil
 	}
 
-	items := make([]carddto.ReviewQueueItemPayload, 0, len(rows))
-	for _, row := range rows {
+	if err := appendStateRows([]string{"learning"}, todayQueuePreviewLimit); err != nil {
+		return nil, apperrors.Internal("???????????????")
+	}
+	if err := appendStateRows([]string{"relearning"}, todayQueuePreviewLimit); err != nil {
+		return nil, apperrors.Internal("???????????????")
+	}
+	if err := appendStateRows([]string{"review"}, defaultDailyReviewLimit); err != nil {
+		return nil, apperrors.Internal("???????????????")
+	}
+	if err := appendStateRows([]string{"new"}, defaultDailyNewLimit); err != nil {
+		return nil, apperrors.Internal("???????????????")
+	}
+
+	items := make([]carddto.ReviewQueueItemPayload, 0, len(queuedRows))
+	for _, row := range queuedRows {
 		items = append(items, carddto.ReviewQueueItemPayload{
 			DeckTitle: row.Deck.Title,
 			Card:      cardrepo.BuildCardPayload(row.Card),
@@ -234,9 +281,27 @@ func (s *Service) TodayQueue(ownerUserID string) (*carddto.ReviewQueuePayload, e
 		})
 	}
 
+	dueCount := learningCount + relearningCount
+	if reviewCount > defaultDailyReviewLimit {
+		dueCount += int64(defaultDailyReviewLimit)
+	} else {
+		dueCount += reviewCount
+	}
+	if newCount > defaultDailyNewLimit {
+		dueCount += int64(defaultDailyNewLimit)
+	} else {
+		dueCount += newCount
+	}
+
 	return &carddto.ReviewQueuePayload{
-		DueCount: dueCount,
-		Items:    items,
+		DueCount:        dueCount,
+		NewCount:        newCount,
+		LearningCount:   learningCount,
+		ReviewCount:     reviewCount,
+		RelearningCount: relearningCount,
+		NewLimit:        defaultDailyNewLimit,
+		ReviewLimit:     defaultDailyReviewLimit,
+		Items:           items,
 	}, nil
 }
 
@@ -268,22 +333,40 @@ func (s *Service) ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPay
 
 	weakCards := make([]carddto.ReviewFeedbackCardPayload, 0, len(rows))
 	for _, row := range rows {
+		sourceMetadata := cardrepo.ParseSourceMetadata(row.Card.SourceMetadata)
+		readModel := cardrepo.BuildPrimarySourceLinkReadModel(row.Card.SourceType, row.Card.SourceID, sourceMetadata)
+		sourceType := strings.TrimSpace(row.Card.SourceType)
+		sourceID := strings.TrimSpace(row.Card.SourceID)
+		primarySourceLink := cardrepo.BuildPrimarySourceLinkPayload(row.Card.SourceType, row.Card.SourceID, sourceMetadata)
+		sourceLinks := cardrepo.BuildSourceLinksPayload(row.Card.SourceType, row.Card.SourceID, sourceMetadata)
+		if readModel != nil {
+			sourceType = readModel.SourceType
+			sourceID = readModel.SourceID
+			sourceMetadata = readModel.SourceMetadata
+			primarySourceLink = readModel.PrimarySourceLink
+			sourceLinks = readModel.SourceLinks
+		}
 		weakCards = append(weakCards, carddto.ReviewFeedbackCardPayload{
-			CardID:          row.Card.ID,
-			DeckID:          row.Deck.ID,
-			DeckTitle:       row.Deck.Title,
-			Front:           row.Card.Front,
-			SourceType:      row.Card.SourceType,
-			SourceID:        row.Card.SourceID,
-			SourceMetadata:  cardrepo.ParseSourceMetadata(row.Card.SourceMetadata),
-			DueAt:           row.Schedule.DueAt.Format(time.RFC3339),
-			LapseCount:      row.Schedule.LapseCount,
-			RepetitionCount: row.Schedule.RepetitionCount,
-			State:           row.Schedule.State,
+			CardID:            row.Card.ID,
+			DeckID:            row.Deck.ID,
+			DeckTitle:         row.Deck.Title,
+			Front:             row.Card.Front,
+			SourceType:        sourceType,
+			SourceID:          sourceID,
+			SourceMetadata:    sourceMetadata,
+			PrimarySourceLink: primarySourceLink,
+			SourceLinks:       sourceLinks,
+			DueAt:             row.Schedule.DueAt.Format(time.RFC3339),
+			LapseCount:        row.Schedule.LapseCount,
+			RepetitionCount:   row.Schedule.RepetitionCount,
+			State:             row.Schedule.State,
 		})
 	}
 
-	sourceSummaries := buildSourceSummaries(sourceRows, now)
+	sourceSummaries, err := s.sourceSummariesWithReviewTimes(ownerUserID, sourceRows, now)
+	if err != nil {
+		return nil, apperrors.Internal("读取最近复习时间失败")
+	}
 
 	return &carddto.ReviewFeedbackPayload{
 		DueCount:        dueCount,
@@ -295,164 +378,155 @@ func (s *Service) ReviewFeedback(ownerUserID string) (*carddto.ReviewFeedbackPay
 	}, nil
 }
 
-func (s *Service) ReviewCard(ownerUserID string, cardID string, request carddto.ReviewCardRequest) (*carddto.ReviewResultPayload, error) {
-	card, err := s.requireOwnerCard(ownerUserID, cardID)
+func (s *Service) ReviewInsights(ownerUserID string) (*carddto.ReviewInsightsPayload, error) {
+	now := s.now().UTC()
+	start := beginningOfUTCDay(now).AddDate(0, 0, -6)
+	events, err := s.repository.ListReviewEventsSince(ownerUserID, start)
 	if err != nil {
-		return nil, err
+		return nil, apperrors.Internal("读取学习趋势失败")
+	}
+	sourceRows, err := s.repository.ListSourceCards(ownerUserID)
+	if err != nil {
+		return nil, apperrors.Internal("读取学习趋势来源失败")
+	}
+	sources, err := s.sourceSummariesWithReviewTimes(ownerUserID, sourceRows, now)
+	if err != nil {
+		return nil, apperrors.Internal("读取最近复习时间失败")
+	}
+	days := buildReviewInsightDays(events, start)
+	trends := buildReviewInsightSourceTrends(events, sources, start)
+
+	return &carddto.ReviewInsightsPayload{
+		Days:         days,
+		SourceTrends: trends,
+		Sources:      sources,
+	}, nil
+}
+
+func (s *Service) SourceProfile(ownerUserID string, query carddto.SourceProfileQuery) (*carddto.SourceProfilePayload, error) {
+	sourceType := normalizeFeedbackSourceType(query.SourceType)
+	sourceID := strings.TrimSpace(query.SourceID)
+	if sourceType == "" || sourceID == "" {
+		return nil, apperrors.New(http.StatusBadRequest, "invalid_source_profile_query", "来源类型和来源 ID 不能为空")
 	}
 
-	schedule, err := s.repository.FindSchedule(card.ID, ownerUserID)
+	sourceRows, err := s.repository.ListSourceCardsBySource(ownerUserID, sourceType, sourceID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(http.StatusNotFound, "schedule_not_found", "当前卡片还没有复习计划")
-		}
-		return nil, apperrors.Internal("读取复习计划失败")
+		return nil, apperrors.Internal("读取来源档案失败")
+	}
+	allCardNotes, err := s.repository.ListCardNotesByOwner(ownerUserID)
+	if err != nil {
+		return nil, apperrors.Internal("读取来源 CardNote 失败")
+	}
+	reviews, err := s.repository.ListReviewEventsBySource(ownerUserID, sourceType, sourceID, 8)
+	if err != nil {
+		return nil, apperrors.Internal("读取来源复习记录失败")
 	}
 
 	now := s.now().UTC()
-	nextSchedule, ok := s.scheduler.Apply(*schedule, request.Rating, now)
-	if !ok {
-		return nil, apperrors.New(http.StatusBadRequest, "invalid_review_rating", "评分必须是 again、hard、good 或 easy")
+	summaries := buildSourceSummaries(sourceRows, now)
+	var summary carddto.ReviewFeedbackSourcePayload
+	if len(summaries) > 0 {
+		summary = summaries[0]
+	} else {
+		summary = carddto.ReviewFeedbackSourcePayload{
+			SourceType:     sourceType,
+			SourceID:       sourceID,
+			MasteryLevel:   "building",
+			MasteryScore:   0,
+			TotalCardCount: 0,
+		}
 	}
 
-	review := &cardmodel.CardReview{
-		CardID:     card.ID,
-		UserID:     ownerUserID,
-		Rating:     NormalizeReviewRating(request.Rating),
-		ElapsedMs:  maxElapsed(request.ElapsedMs),
-		ReviewedAt: now,
+	generatedCards := make([]carddto.GeneratedCardPayload, 0, len(sourceRows))
+	queueStates := map[string]int{
+		"new":        0,
+		"learning":   0,
+		"review":     0,
+		"relearning": 0,
+		"suspended":  0,
+		"buried":     0,
 	}
-	if err := s.repository.CreateReview(review); err != nil {
-		return nil, apperrors.Internal("记录复习结果失败")
+	for _, row := range sourceRows {
+		card := cardrepo.BuildCardPayload(row.Card)
+		schedule := cardrepo.BuildSchedulePayload(row.Schedule)
+		card.Schedule = &schedule
+		generatedCards = append(generatedCards, card)
+		if row.Card.Status == "suspended" || row.Card.Status == "buried" {
+			queueStates[row.Card.Status]++
+			continue
+		}
+		state := strings.TrimSpace(row.Schedule.State)
+		if state == "" {
+			state = "new"
+		}
+		queueStates[state]++
 	}
 
-	if err := s.repository.SaveSchedule(&nextSchedule); err != nil {
-		return nil, apperrors.Internal("更新复习计划失败")
+	cardNotes := make([]carddto.ManagedCardNotePayload, 0)
+	for _, cardNote := range allCardNotes {
+		if !cardNoteMatchesSource(cardrepo.BuildCardNotePayload(cardNote), sourceType, sourceID) {
+			continue
+		}
+		managed, err := s.buildManagedCardNotePayload(ownerUserID, cardNote)
+		if err != nil {
+			return nil, err
+		}
+		cardNotes = append(cardNotes, *managed)
 	}
 
-	_ = s.auditLogs.Create(ownerUserID, "card.review", "card", map[string]any{
-		"cardId": card.ID,
-		"rating": review.Rating,
-	})
+	recentReviews := make([]carddto.SourceProfileReviewPayload, 0, len(reviews))
+	lastReviewedAt := ""
+	for index, row := range reviews {
+		if index == 0 {
+			lastReviewedAt = row.Review.ReviewedAt.Format(time.RFC3339)
+		}
+		recentReviews = append(recentReviews, carddto.SourceProfileReviewPayload{
+			ReviewID:   row.Review.ID,
+			CardID:     row.Review.CardID,
+			Rating:     row.Review.Rating,
+			ReviewedAt: row.Review.ReviewedAt.Format(time.RFC3339),
+		})
+	}
 
-	return &carddto.ReviewResultPayload{
-		ReviewID: review.ID,
-		Schedule: cardrepo.BuildSchedulePayload(nextSchedule),
+	primarySourceLink := summary.PrimarySourceLink
+	sourceLinks := summary.SourceLinks
+	if primarySourceLink == nil {
+		primarySourceLink, sourceLinks = sourceLinksFromMatchedCardNotes(cardNotes, sourceType, sourceID)
+	}
+	title, excerpt, locator := sourceProfileSummary(primarySourceLink, sourceLinks, generatedCards, cardNotes)
+
+	return &carddto.SourceProfilePayload{
+		SourceType:        sourceType,
+		SourceID:          sourceID,
+		Title:             title,
+		Excerpt:           excerpt,
+		Locator:           locator,
+		Target:            "",
+		CardNotes:         cardNotes,
+		GeneratedCards:    generatedCards,
+		QueueStates:       queueStates,
+		MasteryScore:      summary.MasteryScore,
+		MasteryLevel:      summary.MasteryLevel,
+		DueCount:          summary.DueCount,
+		LearningCount:     summary.LearningCount,
+		WeakCardCount:     summary.WeakCardCount,
+		LastReviewedAt:    lastReviewedAt,
+		RecentReviews:     recentReviews,
+		PrimarySourceLink: primarySourceLink,
+		SourceLinks:       sourceLinks,
 	}, nil
 }
 
-func (s *Service) UpdateCardStatus(ownerUserID string, cardID string, request carddto.UpdateCardStatusRequest) (*carddto.CardPayload, error) {
-	card, err := s.requireOwnerCard(ownerUserID, cardID)
-	if err != nil {
-		return nil, err
-	}
-
-	status, ok := normalizeCardStatus(request.Status)
-	if !ok {
-		return nil, apperrors.New(http.StatusBadRequest, "invalid_card_status", "卡片状态必须是 active、suspended 或 buried")
-	}
-	if card.Status == status {
-		payload := cardrepo.BuildCardPayload(*card)
-		return &payload, nil
-	}
-
-	card.Status = status
-	if err := s.repository.SaveCard(card); err != nil {
-		return nil, apperrors.Internal("更新卡片状态失败")
-	}
-
-	_ = s.auditLogs.Create(ownerUserID, "card.status.update", "card", map[string]any{
-		"cardId": card.ID,
-		"status": status,
-	})
-
-	payload := cardrepo.BuildCardPayload(*card)
-	return &payload, nil
-}
-
-func (s *Service) UpdateCardTags(ownerUserID string, cardID string, request carddto.UpdateCardTagsRequest) (*carddto.CardPayload, error) {
-	card, err := s.requireOwnerCard(ownerUserID, cardID)
-	if err != nil {
-		return nil, err
-	}
-
-	tags := normalizeCardTags(request.Tags)
-	if sameNormalizedTags(cardrepo.DecodeTags(card.Tags), tags) {
-		payload := cardrepo.BuildCardPayload(*card)
-		return &payload, nil
-	}
-
-	card.Tags = cardrepo.EncodeTags(tags)
-	if err := s.repository.SaveCard(card); err != nil {
-		return nil, apperrors.Internal("更新卡片标签失败")
-	}
-
-	_ = s.auditLogs.Create(ownerUserID, "card.tags.update", "card", map[string]any{
-		"cardId": card.ID,
-		"tags":   tags,
-		"count":  len(tags),
-	})
-
-	payload := cardrepo.BuildCardPayload(*card)
-	return &payload, nil
-}
-
-func (s *Service) UndoReview(ownerUserID string, cardID string, request carddto.UndoReviewRequest) (*carddto.UndoReviewResultPayload, error) {
-	card, err := s.requireOwnerCard(ownerUserID, cardID)
-	if err != nil {
-		return nil, err
-	}
-
-	reviewID := strings.TrimSpace(request.ReviewID)
-	if reviewID == "" {
-		return nil, apperrors.New(http.StatusBadRequest, "invalid_review_id", "撤销评分时必须提供 reviewId")
-	}
-
-	schedule, err := s.repository.FindSchedule(card.ID, ownerUserID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(http.StatusNotFound, "schedule_not_found", "当前卡片还没有复习计划")
+func sourceLinksFromMatchedCardNotes(cardNotes []carddto.ManagedCardNotePayload, sourceType string, sourceID string) (*carddto.SourceLinkPayload, []carddto.SourceLinkPayload) {
+	for _, cardNote := range cardNotes {
+		for _, readModel := range cardrepo.BuildSourceLinkReadModels(cardNote.CardNote.PrimarySourceLink, cardNote.CardNote.SourceLinks, "", "", nil) {
+			if cardrepo.SourceLinkReadModelMatches(readModel, sourceType, sourceID) {
+				return readModel.PrimarySourceLink, readModel.SourceLinks
+			}
 		}
-		return nil, apperrors.Internal("读取复习计划失败")
 	}
-
-	latestReview, err := s.repository.FindLatestReview(card.ID, ownerUserID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(http.StatusNotFound, "review_not_found", "没有找到可撤销的评分记录")
-		}
-		return nil, apperrors.Internal("读取评分记录失败")
-	}
-	if latestReview.ID != reviewID {
-		return nil, apperrors.New(http.StatusConflict, "review_undo_conflict", "当前只能撤销这张卡片最新的一次评分")
-	}
-
-	restoredSchedule, err := buildRestoredSchedule(*schedule, card.ID, ownerUserID, request.PreviousSchedule)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := s.repository.InTransaction(func(repository *cardrepo.Repository) error {
-		if err := repository.SaveSchedule(&restoredSchedule); err != nil {
-			return err
-		}
-		if err := repository.DeleteReviewByID(latestReview.ID); err != nil {
-			return err
-		}
-
-		return nil
-	}); err != nil {
-		return nil, apperrors.Internal("撤销上一条评分失败")
-	}
-
-	_ = s.auditLogs.Create(ownerUserID, "card.review.undo", "card", map[string]any{
-		"cardId":   card.ID,
-		"reviewId": latestReview.ID,
-	})
-
-	return &carddto.UndoReviewResultPayload{
-		Schedule: cardrepo.BuildSchedulePayload(restoredSchedule),
-	}, nil
+	return nil, nil
 }
 
 func (s *Service) requireOwnerDeck(ownerUserID string, deckID string) (*cardmodel.Deck, error) {
@@ -536,6 +610,18 @@ func normalizeCardListDueBucket(value string) (string, bool) {
 	}
 }
 
+func normalizeCardQueueState(value string) (string, bool) {
+	trimmed := strings.ToLower(strings.TrimSpace(value))
+	switch trimmed {
+	case "", "all":
+		return "all", true
+	case "new", "learning", "review", "relearning", "suspended", "buried":
+		return trimmed, true
+	default:
+		return "", false
+	}
+}
+
 func normalizeDeckExportFormat(value string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "", "json":
@@ -580,6 +666,7 @@ func buildRestoredSchedule(current cardmodel.CardSchedule, cardID string, userID
 	current.CardID = cardID
 	current.UserID = userID
 	current.DueAt = dueAt
+	current.LearningStep = payload.LearningStep
 	current.IntervalDays = payload.IntervalDays
 	current.EaseFactor = payload.EaseFactor
 	current.RepetitionCount = payload.RepetitionCount
@@ -645,6 +732,7 @@ func (s *Service) createCardsForDeck(ownerUserID string, deck *cardmodel.Deck, r
 			CardID:          card.ID,
 			UserID:          ownerUserID,
 			DueAt:           now,
+			LearningStep:    0,
 			IntervalDays:    0,
 			EaseFactor:      2.5,
 			RepetitionCount: 0,
@@ -662,8 +750,7 @@ func (s *Service) createCardsForDeck(ownerUserID string, deck *cardmodel.Deck, r
 		created = append(created, cardrepo.BuildCardPayload(*card))
 	}
 
-	deck.CardCount += int64(len(created))
-	if err := s.repository.SaveDeck(deck); err != nil {
+	if err := s.repository.AdjustDeckCardCount(ownerUserID, deck.ID, int64(len(created))); err != nil {
 		return nil, apperrors.Internal("更新卡组统计失败")
 	}
 	if s.aiTasks != nil && len(draftIDs) > 0 {

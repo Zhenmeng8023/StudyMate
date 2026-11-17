@@ -13,17 +13,21 @@ import (
 )
 
 type fakeCardService struct {
-	ownerID       string
-	deckID        string
-	cardID        string
-	exportFormat  string
-	createDeckReq carddto.CreateDeckRequest
-	importDeckReq carddto.ImportDeckRequest
-	listCardsReq  carddto.ListCardsQuery
-	reviewReq     carddto.ReviewCardRequest
-	statusReq     carddto.UpdateCardStatusRequest
-	tagReq        carddto.UpdateCardTagsRequest
-	undoReq       carddto.UndoReviewRequest
+	ownerID           string
+	deckID            string
+	cardID            string
+	exportFormat      string
+	createDeckReq     carddto.CreateDeckRequest
+	createCardNoteReq carddto.CreateCardNoteRequest
+	updateCardNoteReq carddto.UpdateCardNoteRequest
+	importDeckReq     carddto.ImportDeckRequest
+	listCardsReq      carddto.ListCardsQuery
+	reviewReq         carddto.ReviewCardRequest
+	statusReq         carddto.UpdateCardStatusRequest
+	tagReq            carddto.UpdateCardTagsRequest
+	undoReq           carddto.UndoReviewRequest
+	managedQuery      carddto.ListCardNotesQuery
+	deleteReq         carddto.DeleteCardRequest
 }
 
 func (s *fakeCardService) ListDecks(ownerUserID string) ([]carddto.DeckPayload, error) {
@@ -56,6 +60,73 @@ func (s *fakeCardService) CreateCard(ownerUserID string, deckID string, request 
 	s.ownerID = ownerUserID
 	s.deckID = deckID
 	return &carddto.CardPayload{ID: "card-1", DeckID: deckID, OwnerUserID: ownerUserID, Front: request.Front, Back: request.Back}, nil
+}
+
+func (s *fakeCardService) CreateCardNote(ownerUserID string, deckID string, request carddto.CreateCardNoteRequest) (*carddto.CreateCardNoteResultPayload, error) {
+	s.ownerID = ownerUserID
+	s.deckID = deckID
+	s.createCardNoteReq = request
+	return &carddto.CreateCardNoteResultPayload{
+		CardNote: carddto.CardNotePayload{
+			ID:                 "note-1",
+			DeckID:             deckID,
+			OwnerUserID:        ownerUserID,
+			NoteTypeID:         "basic",
+			NoteTypeCode:       request.NoteTypeCode,
+			PrimarySourceLink:  request.PrimarySourceLink,
+			SourceLinks:        request.SourceLinks,
+			Fields:             request.Fields,
+			GeneratedCardCount: 1,
+			Status:             "active",
+		},
+		GeneratedCards: []carddto.GeneratedCardPayload{{
+			ID:          "card-1",
+			DeckID:      deckID,
+			OwnerUserID: ownerUserID,
+			Front:       "Front",
+			Back:        "Back",
+			Status:      "active",
+		}},
+	}, nil
+}
+
+func (s *fakeCardService) ListCardNotes(ownerUserID string, queries ...carddto.ListCardNotesQuery) ([]carddto.ManagedCardNotePayload, error) {
+	s.ownerID = ownerUserID
+	if len(queries) > 0 {
+		s.managedQuery = queries[0]
+	}
+	return []carddto.ManagedCardNotePayload{{
+		CardNote: carddto.CardNotePayload{
+			ID:                 "note-1",
+			DeckID:             "deck-1",
+			OwnerUserID:        ownerUserID,
+			NoteTypeCode:       "basic",
+			Fields:             map[string]string{"front": "Front", "back": "Back"},
+			GeneratedCardCount: 1,
+			Status:             "active",
+		},
+		GeneratedCards: []carddto.GeneratedCardPayload{{ID: "card-1", CardNoteID: "note-1", Front: "Front", Back: "Back"}},
+		QueueStates:    map[string]int{"new": 1},
+		Tags:           []string{"graph"},
+	}}, nil
+}
+
+func (s *fakeCardService) UpdateCardNote(ownerUserID string, cardNoteID string, request carddto.UpdateCardNoteRequest) (*carddto.ManagedCardNotePayload, error) {
+	s.ownerID = ownerUserID
+	s.cardID = cardNoteID
+	s.updateCardNoteReq = request
+	return &carddto.ManagedCardNotePayload{
+		CardNote: carddto.CardNotePayload{
+			ID:           cardNoteID,
+			OwnerUserID:  ownerUserID,
+			NoteTypeCode: "basic",
+			Fields:       request.Fields,
+			Status:       "active",
+		},
+		GeneratedCards: []carddto.GeneratedCardPayload{{ID: "card-1", CardNoteID: cardNoteID, Front: request.Fields["front"], Back: request.Fields["back"]}},
+		QueueStates:    map[string]int{"new": 1},
+		Tags:           request.Tags,
+	}, nil
 }
 
 func (s *fakeCardService) BulkCreateCards(ownerUserID string, deckID string, requests []carddto.CreateCardRequest) ([]carddto.CardPayload, error) {
@@ -122,6 +193,36 @@ func (s *fakeCardService) ReviewFeedback(ownerUserID string) (*carddto.ReviewFee
 			MaxLapseCount:     2,
 			SampleCardFronts:  []string{"什么是图谱？"},
 		}},
+	}, nil
+}
+
+func (s *fakeCardService) ReviewInsights(ownerUserID string) (*carddto.ReviewInsightsPayload, error) {
+	s.ownerID = ownerUserID
+	return &carddto.ReviewInsightsPayload{
+		Days: []carddto.ReviewInsightDailyPayload{{
+			Date:        "2026-07-18",
+			ReviewCount: 2,
+			RatingCounts: map[string]int{
+				"again": 1,
+				"hard":  0,
+				"good":  1,
+				"easy":  0,
+			},
+			WeakNewCount: 1,
+		}},
+	}, nil
+}
+
+func (s *fakeCardService) SourceProfile(ownerUserID string, query carddto.SourceProfileQuery) (*carddto.SourceProfilePayload, error) {
+	s.ownerID = ownerUserID
+	return &carddto.SourceProfilePayload{
+		SourceType:    query.SourceType,
+		SourceID:      query.SourceID,
+		Title:         "图谱节点",
+		QueueStates:   map[string]int{"learning": 1},
+		MasteryScore:  33,
+		MasteryLevel:  "building",
+		LearningCount: 1,
 	}, nil
 }
 
@@ -356,6 +457,122 @@ func TestListCardsReadsServerSideFiltersFromQuery(t *testing.T) {
 		service.listCardsReq.DueBucket != "upcoming" ||
 		service.listCardsReq.Tag != "graph" {
 		t.Fatalf("unexpected list cards query: %#v", service.listCardsReq)
+	}
+}
+
+func TestReviewInsightsUsesAuthenticatedOwner(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCardService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.GET("/review/insights", withUser(handler.ReviewInsights))
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/review/insights", nil))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if service.ownerID != "user-1" {
+		t.Fatalf("expected authenticated owner, got %s", service.ownerID)
+	}
+}
+
+func TestSourceProfileBindsQueryAndUsesAuthenticatedOwner(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCardService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.GET("/review/source-profile", withUser(handler.SourceProfile))
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/review/source-profile?sourceType=graph-node&sourceId=node-1", nil))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if service.ownerID != "user-1" {
+		t.Fatalf("expected authenticated owner, got %s", service.ownerID)
+	}
+	var body struct {
+		Data carddto.SourceProfilePayload `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if body.Data.SourceType != "graph-node" || body.Data.SourceID != "node-1" {
+		t.Fatalf("unexpected source profile: %#v", body.Data)
+	}
+}
+
+func TestCreateCardNoteBindsBodyAndUsesAuthenticatedOwner(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCardService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.POST("/decks/:id/card-notes", withUser(handler.CreateCardNote))
+
+	body := bytes.NewBufferString(`{"noteTypeCode":"basic_reverse","fields":{"front":"Q","back":"A"},"sourceLinks":[{"sourceType":"annotation","sourceId":"annotation-1","locator":{"materialId":"material-1","page":8}}]}`)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/decks/deck-1/card-notes", body))
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if service.ownerID != "user-1" || service.deckID != "deck-1" {
+		t.Fatalf("unexpected card note binding: owner=%q deck=%q", service.ownerID, service.deckID)
+	}
+	if service.createCardNoteReq.NoteTypeCode != "basic_reverse" {
+		t.Fatalf("unexpected card note request: %#v", service.createCardNoteReq)
+	}
+	if len(service.createCardNoteReq.SourceLinks) != 1 || service.createCardNoteReq.SourceLinks[0].SourceType != "annotation" {
+		t.Fatalf("expected source link binding, got %#v", service.createCardNoteReq.SourceLinks)
+	}
+}
+
+func TestListCardNotesUsesAuthenticatedOwner(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCardService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.GET("/card-notes", withUser(handler.ListCardNotes))
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/card-notes", nil))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if service.ownerID != "user-1" {
+		t.Fatalf("expected authenticated owner, got %q", service.ownerID)
+	}
+	if !bytes.Contains(recorder.Body.Bytes(), []byte("note-1")) {
+		t.Fatalf("expected card note response, got %s", recorder.Body.String())
+	}
+}
+
+func TestUpdateCardNoteBindsBodyAndUsesAuthenticatedOwner(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &fakeCardService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.PATCH("/card-notes/:id", withUser(handler.UpdateCardNote))
+
+	body := bytes.NewBufferString(`{"fields":{"front":"Updated front","back":"Updated back"},"tags":["graph","weak"],"sourceLinks":[{"sourceType":"note","sourceId":"note-source-1"}]}`)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPatch, "/card-notes/note-1", body))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if service.ownerID != "user-1" || service.cardID != "note-1" {
+		t.Fatalf("unexpected binding: owner=%q cardNote=%q", service.ownerID, service.cardID)
+	}
+	if service.updateCardNoteReq.Fields["front"] != "Updated front" || len(service.updateCardNoteReq.Tags) != 2 {
+		t.Fatalf("unexpected update request: %#v", service.updateCardNoteReq)
+	}
+	if len(service.updateCardNoteReq.SourceLinks) != 1 || service.updateCardNoteReq.SourceLinks[0].SourceType != "note" {
+		t.Fatalf("expected source links binding, got %#v", service.updateCardNoteReq.SourceLinks)
 	}
 }
 
