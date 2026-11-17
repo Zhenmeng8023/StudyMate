@@ -7,6 +7,7 @@ import (
 
 func RegisterRoutes(group *gin.RouterGroup, fileHandler *handler.Handler) {
 	group.POST("/files", fileHandler.Upload)
+	group.GET("/files/storage", fileHandler.Storage)
 	group.GET("/files/:id", fileHandler.GetMetadata)
 	group.GET("/files/:id/download", fileHandler.Download)
 }

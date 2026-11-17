@@ -20,6 +20,16 @@ func NewHandler(service *service.Service) *Handler {
 	return &Handler{service: service}
 }
 
+func (h *Handler) Storage(ctx *gin.Context) {
+	result, err := h.service.GetStorage(ctx.GetString(middleware.ContextUserIDKey))
+	if err != nil {
+		response.Error(ctx, err)
+		return
+	}
+	ctx.Header("Cache-Control", "private, no-store")
+	response.Success(ctx, http.StatusOK, result)
+}
+
 func (h *Handler) Upload(ctx *gin.Context) {
 	userID := ctx.GetString(middleware.ContextUserIDKey)
 	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, service.MaxUploadBytes+1024*1024)

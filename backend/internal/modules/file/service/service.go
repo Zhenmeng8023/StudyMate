@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -18,13 +19,23 @@ import (
 )
 
 type Service struct {
-	files     *filerepo.Repository
-	auditLogs *adminrepo.AuditLogRepository
-	uploadDir string
+	files      *filerepo.Repository
+	auditLogs  *adminrepo.AuditLogRepository
+	uploadDir  string
+	quotaBytes int64
 }
 
-func NewService(files *filerepo.Repository, auditLogs *adminrepo.AuditLogRepository, uploadDir string) *Service {
-	return &Service{files: files, auditLogs: auditLogs, uploadDir: uploadDir}
+func NewService(files *filerepo.Repository, auditLogs *adminrepo.AuditLogRepository, uploadDir string, quota ...int64) *Service {
+	limit := DefaultUserQuotaBytes
+	if len(quota) > 0 && quota[0] != 0 {
+		limit = quota[0]
+	}
+	return &Service{
+		files:      files,
+		auditLogs:  auditLogs,
+		uploadDir:  uploadDir,
+		quotaBytes: limit,
+	}
 }
 
 func (s *Service) Upload(ownerUserID string, fileHeader *multipart.FileHeader) (*dto.FileResponse, error) {
@@ -40,6 +51,13 @@ func (s *Service) Upload(ownerUserID string, fileHeader *multipart.FileHeader) (
 	extension, mimeType, err := validateUpload(fileHeader, file)
 	if err != nil {
 		return nil, err
+	}
+	used, err := s.files.UsedBytes(ownerUserID)
+	if err != nil {
+		return nil, apperrors.Internal("读取存储占用失败")
+	}
+	if s.quotaBytes <= 0 || used > s.quotaBytes || fileHeader.Size > s.quotaBytes-used {
+		return nil, quotaExceeded()
 	}
 
 	dateDir := time.Now().Format("20060102")
@@ -83,7 +101,10 @@ func (s *Service) Upload(ownerUserID string, fileHeader *multipart.FileHeader) (
 		Size:         written,
 		Path:         targetPath,
 	}
-	if err := s.files.Create(record); err != nil {
+	if err := s.files.CreateWithinQuota(record, s.quotaBytes); err != nil {
+		if errors.Is(err, filerepo.ErrStorageQuotaExceeded) {
+			return nil, quotaExceeded()
+		}
 		return nil, apperrors.Internal("保存文件记录失败")
 	}
 	committed = true

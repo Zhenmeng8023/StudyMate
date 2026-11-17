@@ -52,6 +52,7 @@ func fileTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 		}
 	})
 	router.POST("/files", h.Upload)
+	router.GET("/files/storage", h.Storage)
 	router.GET("/files/:id", h.GetMetadata)
 	router.GET("/files/:id/download", h.Download)
 	return router, db

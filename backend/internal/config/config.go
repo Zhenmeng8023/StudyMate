@@ -51,7 +51,8 @@ type RedisConfig struct {
 }
 
 type StorageConfig struct {
-	UploadDir string
+	UploadDir      string
+	UserQuotaBytes int64
 }
 
 type BootstrapConfig struct {
@@ -98,7 +99,8 @@ func Load() Config {
 			ConnectTimeout: getDurationEnv("REDIS_TIMEOUT", 2*time.Second),
 		},
 		Storage: StorageConfig{
-			UploadDir: getEnv("UPLOAD_DIR", "../storage/uploads"),
+			UploadDir:      getEnv("UPLOAD_DIR", "../storage/uploads"),
+			UserQuotaBytes: getUploadQuotaEnv(),
 		},
 		Bootstrap: BootstrapConfig{
 			AdminUsername: getEnv("ADMIN_BOOTSTRAP_USERNAME", ""),
@@ -138,6 +140,9 @@ func ValidateMySQLConfig(cfg Config) error {
 
 func ValidateServerConfig(cfg Config) error {
 	issues := make([]string, 0, 5)
+	if cfg.Storage.UserQuotaBytes < 0 {
+		issues = append(issues, "UPLOAD_USER_QUOTA_BYTES must be a positive int64")
+	}
 
 	if err := ValidateMySQLConfig(cfg); err != nil {
 		if validationErr, ok := err.(*ValidationError); ok {
@@ -179,6 +184,19 @@ func ValidateServerConfig(cfg Config) error {
 	}
 
 	return buildValidationError(issues)
+}
+
+func getUploadQuotaEnv() int64 {
+	raw := os.Getenv("UPLOAD_USER_QUOTA_BYTES")
+	if raw == "" {
+		return 1024 * 1024 * 1024
+	}
+	value := strings.TrimSpace(raw)
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || parsed <= 0 {
+		return -1
+	}
+	return parsed
 }
 
 func buildValidationError(issues []string) error {

@@ -115,7 +115,7 @@ func NewServer(cfg config.Config) (*Server, error) {
 	)
 	userService := userservice.NewService(userRepository, auditRepository)
 	aiService := aiservice.NewService(aiRepository, aiDocumentRepository, auditRepository)
-	fileService := fileservice.NewService(fileRepository, auditRepository, cfg.Storage.UploadDir)
+	fileService := fileservice.NewService(fileRepository, auditRepository, cfg.Storage.UploadDir, cfg.Storage.UserQuotaBytes)
 	communityService := communityservice.NewService(communityRepository, auditRepository)
 	materialService := materialservice.NewService(materialRepository, auditRepository)
 	noteService := noteservice.NewService(noteRepository, noteDocumentRepository, materialRepository, auditRepository, aiService, cfg.Content.NoteReadModel)
