@@ -1,6 +1,6 @@
 ﻿# StudyMate 项目上下文与技术基线
 
-**基线日期：2026-07-01；PDF 评审补充日期：2026-07-08**
+**基线日期：2026-07-01；PDF 评审补充日期：2026-07-08；静态复核日期：2026-11-17**
 **核验分支：`master`**  
 **用途：供 Codex 进入仓库时快速判断“哪些能力已经真实存在、哪些判断已经过期、下一步该收口什么”。**
 
@@ -96,9 +96,25 @@ StudyMate/
 
 - `frontend-user/src/styles.css` 与 `frontend-admin/src/main.ts` 现已都接入 `@studymate/ui/tokens.css`；用户端重复的根 token 定义已经移除，管理端基础背景 / 文本 / 描边 / accent 变量也已映射到共享 token，前后台至少完成了共享设计 token 的共同起步。
 - `packages/ui` 已同时承接共享 `DataStateKind` / `dataStateKinds` / `getDataStateLabel(...)`、共享 `tokens.css`，以及第一批共享 primitive：`DataState`、`Drawer`、`Inspector`、`IconButton`、`Button`、`Tag`、`Input`、`Select`、`PageHeader`、`CommandBar`、`ConfirmDialog`；其中 `IconButton` 与 `Button` 已被图谱工作区骨架真实消费，`Tag` 已被阅读和资料页面消费，`Input` 已接入资料页搜索与详情编辑表单，`Select` 已接入笔记与阅读页的资料/Deck 选择器，`PageHeader` 已通过 `WorkspaceHeader` 接入多条工作区页面头部，`CommandBar` 已接入主站壳层顶部骨架，`ConfirmDialog` 已同时接入 `NotesPage` 删除确认、图谱工作区的“重载最新图谱 / 删除图谱”确认，以及管理端审核队列里的“通过 / 驳回 / 隐藏”确认层；用户端对应 primitive 文件也已改为兼容转发层，管理端则新增了沿同一确认语义实现的 `AdminConfirmDialog`，但更多 primitives、管理端更深层的视觉契约与跨端共享层仍未收口。`packages/api-client/src/index.ts` 已开始承接共享 `requestApi(...)`、`readApiResponse(...)`、`createAuthHeaders(...)`、`buildApiPath(...)`、JSON 请求体归一化、`ApiRequestError`、`createSessionRequest(...)` 与 `SessionInvalidationState`；其中用户端 `frontend-user/src/api/core.ts` 与 `frontend-user/src/app/sessionStore.ts`、管理端 `frontend-admin/src/api/client.ts` 与 `frontend-admin/src/api/sessionStore.ts` 都已接入共享 401 refresh/replay、会话失效原因记录、统一 fail-logout 提示，以及请求阶段直接收到 `403 user_disabled` 时的清 session / 被动登出提示联动，但更完整的 pagination、更多后台模块请求边界与 HttpOnly Refresh Token 迁移说明仍未收口。`packages/editor-core/src/index.ts` 仍只有最小类型定义；这些包仍需要继续进入真实共享能力建设，而不是继续作为占位目录存在。
-- `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 约 79KB，仍包含大量 `useState` 与跨领域函数；`WB-032` 的冲突处理已经很深，下一步必须把状态边界、commands 与 features 从控制器中拆出，避免继续集中膨胀。
+- `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 现为 **2578 行 / 约 79KB**（39 处 `useState`、11 个 `useEffect`、27 个 `useMemo`、72 个函数声明），仍包含大量跨领域函数；`WB-032` 的冲突处理已经很深，下一步必须把状态边界、commands 与 features 从控制器中拆出，避免继续集中膨胀。
 - `frontend-admin/src/views/AdminWorkspaceView.vue` 已开始从单体工作台向模块壳层收口：最基础的请求边界与后台 session store 已抽到 `frontend-admin/src/api/client.ts` 和 `frontend-admin/src/api/sessionStore.ts`，启动时 refresh 失败会显式清空本地会话并回退登录页；`frontend-admin/src/router/index.ts` 已提供规范化的 `/admin/dashboard`、`/admin/moderation`、`/admin/users` 等路径映射；当前已先后拆出 `frontend-admin/src/views/modules/AdminDashboardModule.vue`、`AdminModerationModule.vue` 与 `AdminGovernanceModule.vue` 三个首批模块视图，以及 `frontend-admin/src/components/admin/AdminLoginPanel.vue`、`AdminShellFrame.vue` 两个工作台壳层组件，让登录视图、已登录框架、概览、审核与治理列表都先脱离单文件模板。`AdminGovernanceModule` 也已开始承接真实治理动作切片：举报可在前端直接 `resolve / dismiss`，资料治理已切到真实材料列表并支持 `approve / reject / hide` 与隐藏后的恢复，AI 任务可在治理视图里直接 `retry / cancel`，用户治理则已支持 `disable / activate` 与对应确认流。后台目前仍未进入真正的 Vue Router page 级拆分，但 `AdminWorkspaceView.vue` 已进一步回到“session / URL / 确认层 / 数据协调器”的角色。
 - 根 `package.json`、`package-lock.json` 与 `.github/workflows/ci.yml` 在真实仓库中存在，因此 PDF 中“压缩包缺少根工程入口/CI”的判断不作为当前事实；当前仓库已进一步补上 `packageManager` / `engines`、`npm run bootstrap`、`npm run verify:runtimes`、`npm run verify:deps`、`npm run verify:secrets`、`@studymate/graph-core` 显式 `--experimental-strip-types` 测试命令，以及 `toolchain go1.26.5`、前端安全锁文件与默认 CI 里的依赖审计/secret scan 门禁，工程可复现性与依赖安全基线都已进入可执行状态。
+
+### 3.7 2026-11-17 静态复核补充
+
+以下结论来自只读静态审计（文件、路由、DDL、导出符号、行数统计），**未运行** `go test` / `vitest` / `playwright` / `tsc`，因此只说明“代码存在且结构如何”，不代表测试已通过。
+
+- **图谱后端分层是空壳**：`backend/internal/modules/graph/` 下 `domain / operation / snapshot / importer / exporter / layout / ai` 7 个目录已存在但**全部为 0 个 Go 文件**；领域逻辑集中在 `service/`（`helpers.go` 876 行、`layout.go` 316 行、`service.go` 774 行）。因此后端**没有任何 export 路由或实现**，JSON/SVG/PNG 导出只在前端完成。
+- **前端图谱目录同样是占位**：`modules/graph/exporters/`、`importers/` 各只有 3 行 README，`modules/graph/state/` 只有 2 行类型别名；导出/导入真实实现仍在 `lib/`。`frontend-user/src/graph-core/`（8 个空子目录）、`frontend-user/src/shared/`、`modules/{ai,cards,community,materials}` 均为 0 文件。
+- **管理端是“适配层拆分”而非 page 拆分**：`/admin/dashboard|moderation|materials|community|users|graph|ai|system|audit` 9 条路由**全部指向同一个** `AdminRouteWorkspacePage`，7 个治理视图共用 `AdminGovernanceModule` 并由配置驱动。`AdminWorkspaceView.vue` 仅 62 行，但 `frontend-admin/src/views/` 根下堆了 **57 个 `admin*.ts` 助手文件（合计 4202 行）+ 59 个测试文件**。判断 `ADM-010` 进度时应按“路由化 + 适配层”口径，不能理解成模块页已独立。
+- **搜索分页存在静默丢结果**：fallback 的 SQL 只 `LIMIT` 不 `OFFSET`，候选上限 200，`offset` 在内存切片（`backend/internal/modules/search/service/indexer.go:128-133`）。命中数超 200 时结果取不回，但 `nextOffset` 仍会给出。
+- **迁移不是版本化执行**：`migrations/mysql/migrator.go` 每次启动 glob 全部 `*.sql`、过滤 `.down.sql`、排序后逐个 `Exec`，**不读 `schema_migrations` 跳过**；正确性完全依赖各脚本自身幂等，`.down.sql` 不会被自动执行。
+- **schema 超前于实现**：`001_init_schema.sql` 有 65 个 `CREATE TABLE`，其中 `courses`、`document_chunks`、`embedding_tasks`、`search_sync_jobs`、`rag_query_logs`、`graph_operation_logs`、`code_analysis_tasks` 在 Go 代码中**零引用**（静态 grep 无命中）。
+- **测试分布不均**：后端 `card` 44 文件/16 测试、`graph` 20/6、`search` 10/5，但 `community`（8 文件）与 `user`（6 文件）**没有任何测试文件**，而 community 承载 4 条公开路由。
+- **单文件风险已从 src 转移到 e2e**：`e2e/v1-graph-workspace.spec.ts` 单文件 6051 行，超过规范的业务组件 500 行量级。
+- **无用依赖/空壳**：`frontend-user/package.json` 声明 `zustand` 但 `src/` 零 import；`packages/editor-core/src/index.ts` 仍为 7 行类型空壳、无任何调用方。
+
+这些不等于“文档在说谎”，但意味着：**凡引用“目录已建好/能力已分层/分页已收口”的表述，都应回到代码确认后再作为执行前提。**
 
 ## 4. 当前阶段判断
 

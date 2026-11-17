@@ -73,6 +73,14 @@
 - 长摘要会折叠空白并压成单行，裁剪到 160 个字符以内。
 - 搜索结果的 `url` 与 `source` 统一在 Go 层组装，不再依赖数据库方言内联字符串拼接。
 
+### 1.7 已知实现限制（2026-11-17 核验）
+
+- MySQL fallback 使用 `LIKE '%kw%'` 全表扫描，没有 FULLTEXT 索引或外部索引。
+- SQL **只 `LIMIT` 不 `OFFSET`**：先按 `candidateLimit = (offset + limit) * 4` 取一小批候选，候选上限硬编码为 **200**，`offset` 在内存切片完成（[indexer.go](../../backend/internal/modules/search/service/indexer.go) 第 128-133 行）。
+- 后果：某个分组命中数超过 200 时，第 200 条之后的结果**无法被取回**，但 `nextOffset` 仍按真实 `count` 给出，前端可能出现“继续加载却是空批次”。
+- `total` / `count` 是独立 `COUNT(*)`，与候选窗口无关；因此 `count` 大于可返回条数属于正常现象，**不代表分页可信**。
+- 以上属于 `SE-020` 未收口部分，不是“已完成的服务端分页”。
+
 ## 2. 当前用户端行为
 
 ### 2.1 URL 与筛选
@@ -141,6 +149,7 @@ npm --workspace frontend-user run test -- src/api/searchShare.test.ts src/module
 ## 5. 后续迭代提醒
 
 - `SE-020` 仍未完成：后续还需要补更完整的多分组分页编排、统一排序语义暴露和空结果建议。
+- 分页的最小修复方向：先把候选上限与 `offset` 语义改为 SQL 层 `LIMIT/OFFSET`（或 keyset），再决定是否保留内存重排；当前 200 条候选上限会**静默丢结果**，应优先于“换搜索引擎”处理。
 - `WB-043` 若升级 `SearchIndexer` 或引入 Meilisearch，必须继续保持当前 `/api/v1/search` grouped contract 兼容，除非明确引入迁移策略。
 - `WB-050` 若补笔记双链 / 反链，应复用这里记录的来源跳转与权限边界，而不是另起一套搜索结果语义。
 - 任何把“当前已加载结果集分页”误写成“后端已完成统一真分页”的文档更新，都应视为契约漂移并立即修正。

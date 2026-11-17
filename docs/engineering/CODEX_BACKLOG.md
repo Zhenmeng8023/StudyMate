@@ -1,6 +1,44 @@
 # StudyMate Codex 可执行任务队列
 
+## 2026-11-17 DOC-010 文档基线对齐（只改 docs/，不动代码）
+
+本轮不改代码、不改接口、不改 schema、不改迁移；只修正 `docs/` 中已被当前仓库推翻或表述不足的基线，避免后续工作包按错数字估算。
+
+| 项 | 文件 | 修正内容 |
+| --- | --- | --- |
+| DOC-010-01 | `docs/planning/VERSION_PLAN.md` | §1“当前真实状态”表补核验块，声明该表是 2026-06 基线、不得再当事实；§C2 的“约 1486 行”标注为历史快照，并给出当前 2578 行 |
+| DOC-010-02 | `docs/engineering/CODEX_PROJECT_CONTEXT.md` | 头部补“静态复核日期：2026-11-17”；控制器改为 2578 行精确口径；新增 §3.7 静态复核补充（8 条已验证事实） |
+| DOC-010-03 | `docs/architecture/ARCHITECTURE.md` | 明确 graph 的 7 个分层目录已存在但为空，领域逻辑在 `service/` |
+| DOC-010-04 | `docs/DEVELOPMENT.md` | 补迁移“每次启动重放全部 up、不读 `schema_migrations`”的执行模型；补搜索分页候选上限 200 的可信度缺口 |
+| DOC-010-05 | `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md` | 新增 §1.7 已知实现限制（`LIKE` 全表扫描、只用 `LIMIT`、200 候选上限、`count` 与候选窗口无关），并在 §5 给出最小修复方向 |
+| DOC-010-06 | `docs/engineering/CODEX_BACKLOG.md` | 本条目；并收紧 `DONE` / `VERIFY` 状态语义 |
+
+**本轮证据（静态核对，未运行测试）**
+
+| 结论 | 证据 |
+| --- | --- |
+| 图谱控制器 2578 行 / 39 `useState` / 11 `useEffect` / 27 `useMemo` / 72 函数声明 | `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` |
+| graph 7 个分层目录各 0 文件 | `backend/internal/modules/graph/{domain,operation,snapshot,importer,exporter,layout,ai}` |
+| 后端无 export 实现/路由 | `backend/internal/modules/graph/router/router.go` + `exporter/` 为空 |
+| 9 条 admin 路由指向同一页面 | `frontend-admin/src/router/appRouter.ts` |
+| 管理端 57 个 `admin*.ts`（4202 行）+ 59 个测试 | `frontend-admin/src/views/` 根目录 |
+| 搜索候选上限 200、只 `LIMIT` | `backend/internal/modules/search/service/indexer.go:128-133` |
+| 迁移每次重放全部 up | `backend/internal/migrations/mysql/migrator.go` `Apply(...)` |
+| 65 个 `CREATE TABLE`，7 张表零 Go 引用 | `backend/internal/migrations/mysql/001_init_schema.sql` |
+| `community` / `user` 后端零测试 | `backend/internal/modules/{community,user}` |
+| e2e 单文件 6051 行 | `e2e/v1-graph-workspace.spec.ts` |
+| `zustand` 声明但零 import | `frontend-user/package.json` vs `frontend-user/src/` |
+
+**验证与边界**
+
+- 本轮为纯文档变更，无接口/迁移/前端可见行为变化。
+- 已运行 `node scripts/verify-doc-sync.mjs`（等价 `npm run verify:docs`）：**passed，exit 0**。未运行任何代码测试/构建，本轮无代码变更。
+- `README.md` 与 `PROJECT_LOG.md` 位于仓库根目录，不在本工作包的 `docs/` 范围内，**本轮未修改**；若需要把 DOC-010 写入推进日志，应另开一个允许改根文件的工作包。
+- 本次只登记“已核实”的事实；`ADM-010`、`FE-040 / FE-041`、`GPH-040` 等状态值保持原表不变，避免文档单向改口径。
+
 **状态约定：** `TODO` / `IN_PROGRESS` / `BLOCKED` / `DONE` / `VERIFY`
+
+> **2026-11-17 语义收紧（DOC-010）**：`DONE` = 代码与测试已落地且有验收证据；`VERIFY` = 代码已落地但仍有明确缺口或回归矩阵未补齐，**不等于完成**。同一工作包在不同小节同时出现 `DONE` 与 `VERIFY` 时（例如 `ANKI-030 / ANKI-040 / ANKI-050 / ANKI-060`），以本文 P0/P1 表的 `VERIFY` 为准，补齐缺口后再改为 `DONE`。
 
 ## 2026-07-15 快速原型优先级校准
 

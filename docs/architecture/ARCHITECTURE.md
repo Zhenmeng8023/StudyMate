@@ -25,7 +25,7 @@
 handler -> service -> repository -> model/dto
 ```
 
-图谱模块额外保留：
+图谱模块**规划**额外保留以下子包：
 
 ```text
 domain
@@ -36,6 +36,8 @@ exporter
 layout
 ai
 ```
+
+> **2026-11-17 静态复核**：上述 7 个目录当前**已存在但全部为空**（0 个 Go 文件）。图谱领域逻辑实际集中在 `backend/internal/modules/graph/service/`：`helpers.go`（876 行，Markdown/Mermaid 导入与 `ValidateDocument`）、`layout.go`（316 行，来源泳道布局）、`service.go`（774 行，版本推进、快照恢复与 AI 提交）。新增图谱领域能力时应进入 `service/` 并补测试，不要假设这些分层目录已经在承载逻辑。
 
 ## 前端结构
 

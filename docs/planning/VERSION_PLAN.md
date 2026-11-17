@@ -50,6 +50,15 @@
 | 后台 | 审核主链存在 | 用户、举报、标签、AI、审计、文件治理变为可操作模块 |
 | 搜索/分享 | 未收口 | 先做 MySQL fallback 和基础分享，再保留 Meilisearch adapter 边界 |
 
+> **2026-11-17 核验修正**：上表是 `v1.0.0` 阶段（2026-06）的基线描述，其中“复习=部分实现 / 搜索·分享=未收口 / 后台=审核主链存在”已被后续实现推翻，**不得再作为当前事实引用**。当前实际：
+>
+> - 复习：`card` 模块 44 个 Go 文件 / 16 个测试文件，已落地 `CardNote / NoteType / CardTemplate`、`{{cN::}}` Cloze、`Scheduler` 接口 + SM-2；六态队列分两处存储（`new/learning/review/relearning` 在 `card_schedules.state`，`suspended/buried` 在 `cards.status`）。
+> - 搜索：`/api/v1/search` grouped 契约 + `SearchIndexer` 抽象 + MySQL fallback 已存在，但仍是 `LIKE` + 内存排序、候选上限 200（见 [SEARCH_CONTRACT_AND_REGRESSION.md](../engineering/SEARCH_CONTRACT_AND_REGRESSION.md)）。
+> - 分享：`share_links` 迁移、`/share-links` 与公开只读解析已存在。
+> - 后台：9 条 `/admin/*` 路由已接入真实治理数据。
+>
+> 判断当前能力请以本文 §D 与 `CODEX_BACKLOG.md` 的 P0/P1 表为准。
+
 ## 2. 1.0 范围
 
 包含：
@@ -168,6 +177,8 @@
 - 按来源类型分列/分行整理和来源分组生成已拆成 `graphSourceLayout.ts` 纯逻辑，新增测试覆盖来源排序、未选中节点引用不变、来源分组边界和 `makeGroupId`；`useGraphWorkspaceController.tsx` 继续下降到约 1505 行，后续重点转向来源泳道、批量样式和 node/edge/group mutations。
 - 来源泳道生成后的节点位置、旧生成泳道替换、手动分组保留和选择态回写已拆成 `graphSourceSwimlanes.ts` 纯逻辑，新增测试覆盖 generated metadata、未选中节点引用不变和选中不足返回原文档；`useGraphWorkspaceController.tsx` 继续下降到约 1488 行，后续重点转向批量样式和 node/edge/group mutations。
 - 选中节点批量 tone、emphasis 和 size preset 已拆成 `graphBatchAppearance.ts` 纯逻辑，新增测试覆盖未选中节点引用不变、保留已有 tone 和尺寸 preset；`useGraphWorkspaceController.tsx` 继续下降到约 1486 行，后续重点转向新增、删除、复制、分组、折叠和连线 mutations。
+
+> **2026-11-17 核验**：以上“下降到约 N 行”是各轮拆分完成时的**历史快照**，不是当前值。当前 `frontend-user/src/modules/graph/hooks/useGraphWorkspaceController.tsx` 为 **2578 行**（39 处 `useState`、11 个 `useEffect`、27 个 `useMemo`、72 个函数声明），说明新增闭环逻辑的速度已超过拆分速度。`GPH-040` 仍为 `IN_PROGRESS`，规划剩余工作量时**不得沿用“约 1486 行”**这一历史数字。
 
 退出标准：
 

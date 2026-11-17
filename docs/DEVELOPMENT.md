@@ -129,6 +129,8 @@ go list -m -json all
 - `002_seed_baseline.down.sql`
 - `003_align_current_tables.down.sql`
 
+> **2026-11-17 核验（执行模型）**：迁移器是“**每次启动重放全部 up 脚本**”，不是版本化迁移——`Apply(...)` 会 glob 全部 `*.sql`、过滤掉 `.down.sql`、按文件名排序后逐个 `Exec`，**不读取 `schema_migrations` 做跳过判断**（[migrator.go](../backend/internal/migrations/mysql/migrator.go)）。因此新迁移脚本必须自身幂等（`CREATE TABLE IF NOT EXISTS` / 条件式 `ALTER`），否则重复启动会失败；`.down.sql` 不会被自动执行，回滚必须手工运行。
+
 如果只想先执行数据库迁移，可以单独运行：
 
 ```powershell
@@ -324,6 +326,7 @@ go test ./...
 - 用户端搜索页只消费后端 grouped payload，不再在浏览器中拉全量资料、帖子、笔记和图谱做本地过滤。
 - 用户端搜索页现支持 URL `types` 类型筛选，并有页面级 Vitest 回归覆盖无关键词空态、后端错误态、筛选请求形状与来源链接渲染。
 - 搜索页分页目前明确限定在“当前已加载结果”内：前端每次最多请求每组 `12` 条结果，并按每页 `4` 条切换；当某个分组返回 `nextOffset` 时，无论当前是“全部类型”还是单一类型视图，都可直接继续追加该分组的下一批结果；若后续需要跨批次真分页，应先扩展后端 offset/cursor 契约。
+- **2026-11-17 核验（分页可信度缺口）**：后端 fallback 的 SQL 只 `LIMIT` 不 `OFFSET`，候选集为 `(offset + limit) * 4` 且**封顶 200**，`offset` 在内存切片（[indexer.go](../backend/internal/modules/search/service/indexer.go) 第 128-133 行）。某组命中数超过 200 时，超出部分无法取回，但 `nextOffset` 仍会按 `count` 继续给出，前端可能请求到空批次。修复归入 `SE-020`。
 - 搜索专项回归入口为 `npm run verify:search`；契约、权限矩阵和自动化映射集中记录在 `docs/engineering/SEARCH_CONTRACT_AND_REGRESSION.md`。
 - 图谱冲突专项回归入口为 `npm run verify:graph-conflicts`；当前冲突生命周期、工作区测试映射、图谱工作区桌面/窄屏 smoke、布局预览/导出状态、权限路径、真实 `graph_version_conflict` 路径和固定入口集中记录在 `docs/engineering/GRAPH_CONFLICT_REGRESSION.md`。
 - 分享入口为受保护的 `GET/POST /api/v1/share-links` 与 `DELETE /api/v1/share-links/:id`，公开解析为 `GET /api/v1/share/:token`；`share_links` 表由 `004_share_links.sql` 创建，`.down.sql` 可回滚。
