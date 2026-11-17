@@ -10,8 +10,8 @@ import type {
   GraphSummaryPayload
 } from "../api/client";
 import {
-  bulkCreateDeckCards,
   commitGraphChangeDraftSelection,
+  createDeckCardNote,
   getAiUsageSummary,
   getGraph,
   listAiDrafts,
@@ -21,10 +21,12 @@ import {
 } from "../api/client";
 import { formatDate, MetricTile, SectionFrame, WorkspaceHeader } from "../app/appShared";
 import { DataState, Select } from "../design-system/primitives";
+import { CardNoteComposer, buildCardNoteFields, type CardNoteTemplateCode } from "../features/card-notes/CardNoteComposer";
+import { CardNoteCreationResult, type CardNoteCreationResultData } from "../features/card-notes/CardNoteCreationResult";
+import { commitCardNoteBatch } from "../features/card-notes/commitCardNoteBatch";
 import {
   buildAiDraftWorkspacePath,
   buildAiTaskWorkspacePath,
-  buildCardInputsFromAiDrafts,
   buildGraphFocusLink,
   estimateAiDraftNodePlacement,
   findSimilarGraphTitles,
@@ -39,6 +41,7 @@ import {
   getAiDraftNodeIds,
   getAiDraftSourceKey
 } from "../features/ai/aiDrafts";
+import { buildPrimarySourceLink, buildSourceProfileTarget } from "../features/sources/sourceLinks";
 
 type AiWorkspaceState =
   | {
@@ -66,13 +69,45 @@ function prioritizeRequestedItems<T extends { id: string }>(items: T[], requeste
   return [target, ...items.slice(0, targetIndex), ...items.slice(targetIndex + 1)];
 }
 
+function buildAiDraftSourceLinks(draft: AiDraftPayload) {
+  const sourceLinks = [];
+  const originalSource = buildPrimarySourceLink({
+    sourceType: draft.sourceType,
+    sourceId: draft.sourceId,
+    sourceMetadata: draft.metadata
+  });
+  if (originalSource) {
+    sourceLinks.push({
+      sourceType: originalSource.sourceType,
+      sourceId: originalSource.sourceId,
+      ...(originalSource.title ? { title: originalSource.title } : {}),
+      ...(originalSource.excerpt ? { excerpt: originalSource.excerpt } : {}),
+      ...(originalSource.locator ? { locator: originalSource.locator } : {}),
+      ...(originalSource.metadata ? { metadata: originalSource.metadata } : {})
+    });
+  }
+  sourceLinks.push({
+    sourceType: "ai-draft",
+    sourceId: draft.id,
+    title: draft.sourceLabel || draft.front,
+    excerpt: draft.explanation,
+    locator: {
+      draftId: draft.id
+    }
+  });
+  return sourceLinks;
+}
+
 export function AiPage(props: { session: AuthSession }) {
   const location = useLocation();
   const [tasks, setTasks] = useState<AiTaskPayload[]>([]);
   const [drafts, setDrafts] = useState<AiDraftPayload[]>([]);
+  const [creationResult, setCreationResult] = useState<CardNoteCreationResultData | null>(null);
+  const [writtenDraftIds, setWrittenDraftIds] = useState<string[]>([]);
   const [decks, setDecks] = useState<DeckPayload[]>([]);
   const [graphs, setGraphs] = useState<GraphSummaryPayload[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState("");
+  const [aiCardTemplate, setAiCardTemplate] = useState<Extract<CardNoteTemplateCode, "basic" | "cloze">>("basic");
   const [selectedGraphId, setSelectedGraphId] = useState("");
   const [selectedGraphDraftIds, setSelectedGraphDraftIds] = useState<string[]>([]);
   const [selectedGraphNodeIdsByDraft, setSelectedGraphNodeIdsByDraft] = useState<Record<string, string[]>>({});
@@ -94,7 +129,7 @@ export function AiPage(props: { session: AuthSession }) {
   );
   const filteredDrafts = useMemo(
     () => {
-      const matchedDrafts = drafts.filter((draft) => {
+      const matchedDrafts = drafts.map((draft) => writtenDraftIds.includes(draft.id) ? { ...draft, status: "committed" } : draft).filter((draft) => {
         const matchesSource = sourceFilter === "all" || getAiDraftSourceKey(draft) === sourceFilter;
         const matchesStatus = statusFilter === "all" || draft.status === statusFilter;
         return matchesSource && matchesStatus;
@@ -102,7 +137,7 @@ export function AiPage(props: { session: AuthSession }) {
 
       return prioritizeRequestedItems(matchedDrafts, requestedDraftId);
     },
-    [drafts, sourceFilter, statusFilter, requestedDraftId]
+    [drafts, sourceFilter, statusFilter, requestedDraftId, writtenDraftIds]
   );
   const orderedTasks = useMemo(() => prioritizeRequestedItems(tasks, requestedTaskId), [tasks, requestedTaskId]);
   const pendingCardDrafts = useMemo(
@@ -111,6 +146,10 @@ export function AiPage(props: { session: AuthSession }) {
   );
   const pendingGraphDrafts = useMemo(
     () => filteredDrafts.filter((draft) => draft.status === "pending" && draft.draftType === "graph_change"),
+    [filteredDrafts]
+  );
+  const visibleDrafts = useMemo(
+    () => filteredDrafts.filter((draft) => !(draft.status === "pending" && draft.draftType === "card_draft")),
     [filteredDrafts]
   );
   const selectedPendingGraphDrafts = useMemo(
@@ -260,9 +299,19 @@ export function AiPage(props: { session: AuthSession }) {
     setBusy("commit");
     setMessage("");
     try {
-      const payload = await bulkCreateDeckCards(props.session, selectedDeckId, buildCardInputsFromAiDrafts(pendingCardDrafts));
-      const refreshed = await loadAiWorkspace({ preserveExisting: true });
-      setMessage(refreshed ? `已把 ${payload.length} 张 AI 草稿写入复习系统。` : "");
+      const batch = await commitCardNoteBatch(pendingCardDrafts, (draft) =>
+          createDeckCardNote(props.session, selectedDeckId, {
+            noteTypeCode: aiCardTemplate,
+            fields: buildCardNoteFields(draft, aiCardTemplate),
+            sourceLinks: buildAiDraftSourceLinks(draft)
+          })
+      );
+      const createdCount = batch.createdCount;
+      setWrittenDraftIds((current) => Array.from(new Set([...current, ...batch.succeededIds])));
+      const writtenDraft = pendingCardDrafts.find((draft) => batch.succeededIds.includes(draft.id));
+      if (createdCount && writtenDraft) setCreationResult({ count: createdCount, cardId: batch.cardId, sourcePath: buildAiDraftWorkspacePath(writtenDraft) || `/ai?draft=${encodeURIComponent(writtenDraft.id)}` });
+      const refreshed = batch.failedIds.length ? true : await loadAiWorkspace({ preserveExisting: true });
+      setMessage(batch.error ? `${batch.error} 已保留 ${batch.failedIds.length} 条未写入草稿，重试只会提交这些草稿。` : refreshed ? "" : "卡片已生成，草稿列表需要刷新，请勿重复写入。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "写入 AI 草稿失败。");
     } finally {
@@ -402,32 +451,33 @@ export function AiPage(props: { session: AuthSession }) {
               {pendingCardDrafts.length ? (
                 decks.length ? (
                   <div className="form-stack ai-panel-controls">
-                    <label>
-                      <span>写入目标 deck</span>
-                      <Select
-                        className="select-field"
-                        onChange={(event) => setSelectedDeckId(event.target.value)}
-                        value={selectedDeckId}
-                      >
-                        {decks.map((deck) => (
-                          <option key={deck.id} value={deck.id}>
-                            {deck.title} · {deck.cardCount} 张
-                          </option>
-                        ))}
-                      </Select>
-                    </label>
                     <div className="ai-panel-actions">
-                      <button
-                        className="primary-button"
-                        disabled={!selectedDeckId || busy === "commit"}
-                        onClick={() => void handleCommitDrafts()}
-                        type="button"
-                      >
-                        {busy === "commit" ? "写入中..." : `把 ${pendingCardDrafts.length} 张待确认卡片草稿写入复习系统`}
-                      </button>
-                      <span className="inline-message">
-                        确认后会按当前正反面内容创建卡片，并把对应草稿标记为已确认。
-                      </span>
+                      <CardNoteComposer
+                        allowedTemplates={["basic", "cloze"]}
+                        busy={busy === "commit"}
+                        decks={decks}
+                        drafts={pendingCardDrafts.map((draft) => ({
+                          id: draft.id,
+                          title: draft.sourceLabel || draft.front,
+                          excerpt: draft.explanation,
+                          locatorLabel: formatAiDraftTarget(draft),
+                          sourcePath: buildAiDraftWorkspacePath(draft),
+                          front: draft.front,
+                          back: draft.back,
+                          explanation: draft.explanation
+                        }))}
+                        onDeckChange={setSelectedDeckId}
+                        onDraftFieldChange={(draftId, field, value) => {
+                          setDrafts((current) =>
+                            current.map((draft) => (draft.id === draftId ? { ...draft, [field]: value } : draft))
+                          );
+                        }}
+                        onSubmit={() => void handleCommitDrafts()}
+                        onTemplateChange={(template) => setAiCardTemplate(template as Extract<CardNoteTemplateCode, "basic" | "cloze">)}
+                        selectedDeckId={selectedDeckId}
+                        selectClassName="select-field"
+                        template={aiCardTemplate}
+                      />
                     </div>
                   </div>
                 ) : (
@@ -492,8 +542,14 @@ export function AiPage(props: { session: AuthSession }) {
               ) : null}
 
               <div className="ai-task-list">
-                {filteredDrafts.length ? (
-                  filteredDrafts.map((draft) => (
+                {visibleDrafts.length ? (
+                  visibleDrafts.map((draft) => {
+                    const sourceProfileTarget = buildSourceProfileTarget(buildPrimarySourceLink({
+                      sourceType: draft.sourceType,
+                      sourceId: draft.sourceId,
+                      sourceMetadata: draft.metadata
+                    }));
+                    return (
                     <article className="ai-task-card" key={draft.id}>
                       <div className="story-card-head">
                         <div className="ai-card-heading">
@@ -587,10 +643,12 @@ export function AiPage(props: { session: AuthSession }) {
                       {buildAiDraftWorkspacePath(draft) ? (
                         <p className="inline-link-row">
                           <Link to={buildAiDraftWorkspacePath(draft)}>打开来源工作台</Link>
+                          {sourceProfileTarget ? <Link to={sourceProfileTarget}>查看来源学习档案</Link> : null}
                         </p>
                       ) : null}
                     </article>
-                  ))
+                  );
+                  })
                 ) : (
                   <article className="placeholder-card">
                     <strong>当前筛选下没有草稿</strong>
@@ -598,6 +656,7 @@ export function AiPage(props: { session: AuthSession }) {
                   </article>
                 )}
               </div>
+              <CardNoteCreationResult result={creationResult} />
               {message ? <p className="muted-copy">{message}</p> : null}
             </SectionFrame>
 

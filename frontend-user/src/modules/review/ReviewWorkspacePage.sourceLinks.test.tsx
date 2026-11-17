@@ -1,7 +1,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getTodayReviewQueue, listDeckCards, listDecks, reviewCard } from "../../api/client";
+import { getTodayReviewQueue, listCardNotes, listDeckCards, listDecks, reviewCard } from "../../api/client";
 import type { AuthSession, CardPayload, DeckPayload, ReviewQueuePayload } from "../../api/client";
 import { ReviewWorkspacePage } from "./ReviewWorkspacePage";
 
@@ -10,6 +10,7 @@ vi.mock("../../api/client", async () => {
   return {
     ...actual,
     getTodayReviewQueue: vi.fn(),
+    listCardNotes: vi.fn(),
     listDeckCards: vi.fn(),
     listDecks: vi.fn(),
     reviewCard: vi.fn()
@@ -30,6 +31,7 @@ const session: AuthSession = {
 };
 
 const listDecksMock = vi.mocked(listDecks);
+const listCardNotesMock = vi.mocked(listCardNotes);
 const listDeckCardsMock = vi.mocked(listDeckCards);
 const getTodayReviewQueueMock = vi.mocked(getTodayReviewQueue);
 const reviewCardMock = vi.mocked(reviewCard);
@@ -167,6 +169,7 @@ describe("ReviewWorkspacePage source links", () => {
 
   beforeEach(() => {
     listDecksMock.mockReset();
+    listCardNotesMock.mockReset();
     listDeckCardsMock.mockReset();
     getTodayReviewQueueMock.mockReset();
     reviewCardMock.mockReset();
@@ -174,6 +177,7 @@ describe("ReviewWorkspacePage source links", () => {
     const deck = buildDeck();
     const card = buildCard();
     listDecksMock.mockResolvedValue([deck]);
+    listCardNotesMock.mockResolvedValue([]);
     listDeckCardsMock.mockResolvedValue([card]);
     getTodayReviewQueueMock.mockResolvedValue(buildQueue(card));
   });

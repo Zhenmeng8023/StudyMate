@@ -3,12 +3,14 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   AuthSession,
   SearchGroupPayload,
+  SearchResultPayload,
   SearchResponsePayload,
   SearchResultType,
   searchAll
 } from "../../api/client";
 import { DataState } from "../../design-system/primitives";
 import { WorkspaceHeader } from "../../app/appShared";
+import { buildSourceProfileTarget } from "../../features/sources/sourceLinks";
 
 const searchGroupOrder: SearchResultType[] = ["material", "post", "note", "graph", "card"];
 
@@ -22,6 +24,7 @@ const groupLabels: Record<SearchResultType, string> = {
 
 const searchFetchLimit = 12;
 const groupPageSize = 4;
+const sourceProfileSearchTypes = new Set<SearchResultType>(["material", "note", "graph", "card"]);
 
 function normalizeSearchTypes(raw: string | null): SearchResultType[] {
   if (!raw) {
@@ -398,11 +401,7 @@ function SearchGroupSection(props: {
       ) : null}
       <div className="search-result-list">
         {visibleResults.map((item) => (
-          <Link className="search-result-card" key={`${item.type}:${item.id}`} to={item.url}>
-            <strong>{item.title}</strong>
-            <span>{item.source}</span>
-            <p>{item.summary}</p>
-          </Link>
+          <SearchResultCard item={item} key={`${item.type}:${item.id}`} />
         ))}
         {props.keyword && props.group.results.length === 0 ? <p className="panel-copy">\u6682\u65e0\u5339\u914d\u7ed3\u679c\u3002</p> : null}
       </div>
@@ -430,6 +429,31 @@ function SearchGroupSection(props: {
             </button>
           </div>
         </div>
+      ) : null}
+    </article>
+  );
+}
+
+function SearchResultCard(props: { item: SearchResultPayload }) {
+  const sourceProfileTarget = sourceProfileSearchTypes.has(props.item.type)
+    ? buildSourceProfileTarget({ sourceType: props.item.type, sourceId: props.item.id })
+    : "";
+
+  return (
+    <article className="search-result-card">
+      <Link className="search-result-primary-link" to={props.item.url}>
+        <strong>{props.item.title}</strong>
+        <span>{props.item.source}</span>
+        <p>{props.item.summary}</p>
+      </Link>
+      {sourceProfileTarget ? (
+        <Link
+          aria-label="查看来源学习档案"
+          className="filter-chip"
+          to={sourceProfileTarget}
+        >
+          来源学习档案
+        </Link>
       ) : null}
     </article>
   );

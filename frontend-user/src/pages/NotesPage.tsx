@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { BookOpen, History, Layers3, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Sparkles } from "lucide-react";
 import type { AuthSession, CardDraftPayload, DeckPayload, MaterialPayload, NotePayload, NoteVersionPayload } from "../api/client";
 import {
-  bulkCreateDeckCards,
+  createDeckCardNote,
   createNote,
   deleteNote,
   generateNoteCardDrafts,
@@ -16,11 +16,14 @@ import {
   updateNote
 } from "../api/client";
 import { ConfirmDialog, DataState, Select } from "../design-system/primitives";
+import { CardNoteComposer, buildCardNoteFields, type CardNoteTemplateCode } from "../features/card-notes/CardNoteComposer";
+import { CardNoteCreationResult, type CardNoteCreationResultData } from "../features/card-notes/CardNoteCreationResult";
+import { commitCardNoteBatch } from "../features/card-notes/commitCardNoteBatch";
+import { buildPrimarySourceLink } from "../features/sources/sourceLinks";
+import { RichTextEditor } from "../modules/notes/RichTextEditor";
 import { createReaderExcerptDraft } from "../modules/notes/readerExcerpt";
 import { listLibraryMaterials } from "../api/library";
-import { RichTextEditor } from "../modules/notes/RichTextEditor";
 import {
-  buildCardInputsFromDrafts,
   createNoteDraft,
   displayMaterialCategory,
   displayMaterialDescription,
@@ -32,6 +35,7 @@ import {
 } from "../app/appShared";
 
 type NoteInspectorTab = "source" | "history" | "review";
+type NoteCardTemplate = Extract<CardNoteTemplateCode, "basic" | "basic_reverse">;
 type NotesWorkspaceState =
   | {
       kind: "loading" | "error" | "empty" | "stale";
@@ -57,7 +61,9 @@ export function NotesPage(props: { session: AuthSession }) {
   const [noteId, setNoteId] = useState("");
   const [draft, setDraft] = useState(() => createReaderExcerptDraft(searchParams));
   const [cardDrafts, setCardDrafts] = useState<CardDraftPayload[]>([]);
+  const [creationResult, setCreationResult] = useState<CardNoteCreationResultData | null>(null);
   const [selectedDeckId, setSelectedDeckId] = useState("");
+  const [noteCardTemplate, setNoteCardTemplate] = useState<NoteCardTemplate>("basic");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState("");
   const [deleteError, setDeleteError] = useState("");
@@ -274,6 +280,7 @@ export function NotesPage(props: { session: AuthSession }) {
     if (!selectedNote) return;
 
     setBusy("note-drafts");
+    setCreationResult(null);
     setMessage("");
     try {
       const payload = await generateNoteCardDrafts(props.session, selectedNote.id);
@@ -309,16 +316,24 @@ export function NotesPage(props: { session: AuthSession }) {
     setBusy("note-commit");
     setMessage("");
     try {
-      const payload = await bulkCreateDeckCards(props.session, selectedDeckId, buildCardInputsFromDrafts(cardDrafts));
+      const batch = await commitCardNoteBatch(cardDrafts, (draft) =>
+          createDeckCardNote(props.session, selectedDeckId, {
+            noteTypeCode: noteCardTemplate,
+            fields: buildCardNoteFields(draft, noteCardTemplate),
+            sourceLinks: buildNoteDraftSourceLinks(draft)
+          })
+      );
+      const createdCount = batch.createdCount;
+      if (createdCount) setCreationResult({ count: createdCount, cardId: batch.cardId, sourcePath: `/notes?selected=${encodeURIComponent(selectedNote?.id || noteId)}` });
       setDecks((current) =>
         current.map((deck) =>
           deck.id === selectedDeckId
-            ? { ...deck, cardCount: deck.cardCount + payload.length, updatedAt: new Date().toISOString() }
+            ? { ...deck, cardCount: deck.cardCount + createdCount, updatedAt: new Date().toISOString() }
             : deck
         )
       );
-      setCardDrafts([]);
-      setMessage(`已把 ${payload.length} 张笔记卡片写入 deck。`);
+      setCardDrafts((current) => current.filter((draft) => !batch.succeededIds.includes(draft.id)));
+      setMessage(batch.error ? `${batch.error} 已保留 ${batch.failedIds.length} 条未写入草稿，重试只会提交这些草稿。` : "");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "写入复习卡片失败。");
     } finally {
@@ -386,6 +401,7 @@ export function NotesPage(props: { session: AuthSession }) {
       </header>
 
       {message ? <p className="studio-inline-message" role="status">{message}</p> : null}
+      <CardNoteCreationResult result={creationResult} />
       <ConfirmDialog
         confirmLabel="确认"
         confirmTone="danger"
@@ -538,8 +554,8 @@ export function NotesPage(props: { session: AuthSession }) {
                 type="button"
               >
                 {tab.label}
-                {tab.id === "history" && versions.length ? <em>{versions.length}</em> : null}
-                {tab.id === "review" && cardDrafts.length ? <em>{cardDrafts.length}</em> : null}
+                {tab.id === "history" && versions.length ? <em aria-hidden="true">{versions.length}</em> : null}
+                {tab.id === "review" && cardDrafts.length ? <em aria-hidden="true">{cardDrafts.length}</em> : null}
               </button>
             ))}
           </nav>
@@ -604,34 +620,26 @@ export function NotesPage(props: { session: AuthSession }) {
                 {!selectedNote ? (
                   <DataState description="先创建并保存笔记，才能生成可确认的复习和图谱草稿。" kind="empty" title="保存笔记后继续" />
                 ) : cardDrafts.length ? (
-                  <>
-                    <section className="notes-review-actions">
-                      <label className="form-stack">
-                        <span>写入 Deck</span>
-                        <Select aria-label="写入 Deck" onChange={(event) => setSelectedDeckId(event.target.value)} value={selectedDeckId}>
-                          <option value="">请选择一个 deck</option>
-                          {decks.map((deck) => <option key={deck.id} value={deck.id}>{deck.title}</option>)}
-                        </Select>
-                      </label>
-                      <button className="primary-button" disabled={!selectedDeckId || busy === "note-commit"} onClick={() => void handleCommitCardDrafts()} type="button">写入复习系统</button>
-                    </section>
-                    <div className="studio-draft-list">
-                      {cardDrafts.map((item) => (
-                        <article className="studio-draft-card" key={item.id}>
-                          <strong>{item.sourceLabel || "笔记草稿"}</strong>
-                          <label>
-                            <span>问题</span>
-                            <input onChange={(event) => handleDraftChange(item.id, "front", event.target.value)} value={item.front} />
-                          </label>
-                          <label>
-                            <span>答案</span>
-                            <textarea onChange={(event) => handleDraftChange(item.id, "back", event.target.value)} rows={4} value={item.back} />
-                          </label>
-                          {item.explanation ? <small>{item.explanation}</small> : null}
-                        </article>
-                      ))}
-                    </div>
-                  </>
+                  <CardNoteComposer
+                    allowedTemplates={["basic", "basic_reverse"]}
+                    busy={busy === "note-commit"}
+                    decks={decks}
+                    drafts={cardDrafts.map((item) => ({
+                      id: item.id,
+                      title: item.sourceLabel || "笔记草稿",
+                      excerpt: item.explanation,
+                      locatorLabel: item.sourceType && item.sourceId ? `${item.sourceType} / ${item.sourceId}` : undefined,
+                      front: item.front,
+                      back: item.back,
+                      explanation: item.explanation
+                    }))}
+                    onDeckChange={setSelectedDeckId}
+                    onDraftFieldChange={handleDraftChange}
+                    onSubmit={() => void handleCommitCardDrafts()}
+                    onTemplateChange={(template) => setNoteCardTemplate(template as NoteCardTemplate)}
+                    selectedDeckId={selectedDeckId}
+                    template={noteCardTemplate}
+                  />
                 ) : decks.length ? (
                   <DataState
                     action={
@@ -661,4 +669,13 @@ export function NotesPage(props: { session: AuthSession }) {
       </div>
     </section>
   );
+}
+
+function buildNoteDraftSourceLinks(draft: CardDraftPayload) {
+  const sourceLink = buildPrimarySourceLink({
+    sourceType: draft.sourceType,
+    sourceId: draft.sourceId,
+    sourceMetadata: draft.sourceMetadata
+  });
+  return sourceLink ? [sourceLink] : [];
 }

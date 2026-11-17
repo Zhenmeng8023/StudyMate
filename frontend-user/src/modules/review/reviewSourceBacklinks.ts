@@ -1,38 +1,43 @@
 import type { CardPayload } from "../../api/client";
+import { buildSourceLinkReadModel, normalizeSourceType } from "../../features/sources/sourceLinks";
 import { buildGraphSourceBacklinkFromSource, type GraphSourceBacklink } from "../graph/lib/graphSourceBacklinks";
 
-type CardSourceLike = Pick<CardPayload, "sourceType" | "sourceId" | "sourceMetadata"> | null | undefined;
+type CardSourceLike =
+  | Pick<CardPayload, "sourceType" | "sourceId" | "sourceMetadata" | "primarySourceLink" | "sourceLinks">
+  | null
+  | undefined;
 
 export function buildReviewSourceBacklink(card: CardSourceLike): GraphSourceBacklink | null {
-  const sourceType = card?.sourceType?.trim();
-  const sourceId = card?.sourceId?.trim();
-  if (!sourceType || !sourceId) {
+  const sourceLink = buildSourceLinkReadModel(card ?? {});
+  if (!sourceLink) {
     return null;
   }
 
   return buildGraphSourceBacklinkFromSource(
     {
-      type: sourceType,
-      id: sourceId,
+      type: sourceLink.sourceType,
+      id: sourceLink.sourceId,
       label: "",
       excerpt: ""
     },
-    card?.sourceMetadata
+    {
+      ...(sourceLink.locator ?? {}),
+      ...(sourceLink.metadata ?? {}),
+      ...(sourceLink.title ? { title: sourceLink.title } : {}),
+      ...(sourceLink.excerpt ? { excerpt: sourceLink.excerpt } : {})
+    }
   );
 }
 
 export function formatReviewSourceReference(card: CardSourceLike) {
-  const sourceType = normalizeSourceType(card?.sourceType);
-  const sourceId = card?.sourceId?.trim();
+  const sourceLink = buildSourceLinkReadModel(card ?? {});
+  const sourceType = normalizeSourceType(sourceLink?.sourceType);
+  const sourceId = sourceLink?.sourceId?.trim();
   if (!sourceType || !sourceId) {
     return "";
   }
 
   return `${getReviewSourceTypeLabel(sourceType)} / ${sourceId}`;
-}
-
-function normalizeSourceType(sourceType: string | undefined) {
-  return sourceType?.trim().toLowerCase().replace(/_/g, "-") ?? "";
 }
 
 function getReviewSourceTypeLabel(sourceType: string) {

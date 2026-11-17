@@ -271,6 +271,12 @@ test("review page can jump back to a graph focus preview for graph-sourced cards
 test("review page completes a due-card writeback with an authenticated session", async ({ page }) => {
   const reviewRequests: Array<{ authorization: string | undefined; body: unknown }> = [];
 
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: { success: true, data: session.user } }));
+  await page.route("**/api/v1/card-notes", (route) => route.fulfill({ json: { success: true, data: [] } }));
+  await page.route("**/api/v1/review/feedback", (route) => route.fulfill({ json: { success: true, data: {
+    dueCount: 1, learningCount: 0, weakCardCount: 0, weakCards: [], weakSources: [], sourceSummaries: []
+  } } }));
+
   await page.addInitScript((storedSession) => {
     window.localStorage.setItem("studymate.session", JSON.stringify(storedSession));
   }, session);
@@ -373,7 +379,7 @@ test("review page completes a due-card writeback with an authenticated session",
   await page.getByRole("button", { name: "开始复习" }).click();
 
   await expect(page.getByLabel("复习卡片")).toContainText("Graph concept?");
-  await expect(page.locator(".review-focus-card-meta")).toContainText("Release Deck");
+  await expect(page.locator(".review-focus-card-meta").filter({ hasText: "Release Deck" })).toBeVisible();
 
   await page.getByRole("button", { name: "显示答案" }).click();
   await expect(page.getByText("Nodes and relationships.").first()).toBeVisible();

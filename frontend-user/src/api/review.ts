@@ -6,6 +6,7 @@ import type {
   AuthPayload,
   AuthSession,
   CardDraftPayload,
+  CreateCardNoteResultPayload,
   CardPayload,
   DeckExportPayload,
   DeckImportPayload,
@@ -21,6 +22,7 @@ import type {
   MaterialFavoritePayload,
   MaterialPayload,
   MaterialRatingPayload,
+  ManagedCardNotePayload,
   NotePayload,
   NoteVersionPayload,
   PostDetailPayload,
@@ -30,7 +32,9 @@ import type {
   ReaderStatePayload,
   ReviewQueuePayload,
   ReviewFeedbackPayload,
+  ReviewInsightsPayload,
   ReviewResultPayload,
+  SourceProfilePayload,
   UndoReviewResultPayload,
   TogglePayload
 } from "./types";
@@ -58,6 +62,7 @@ export async function listDeckCards(
   filters?: {
     query?: string;
     status?: "all" | "active" | "suspended" | "buried";
+    queueState?: "all" | "new" | "learning" | "review" | "relearning" | "suspended" | "buried";
     sourceType?: "all" | "none" | string;
     sourceId?: string;
     dueBucket?: "all" | "due" | "upcoming";
@@ -70,6 +75,9 @@ export async function listDeckCards(
   }
   if (filters?.status && filters.status !== "all") {
     params.set("status", filters.status);
+  }
+  if (filters?.queueState && filters.queueState !== "all") {
+    params.set("queueState", filters.queueState);
   }
   if (filters?.sourceType && filters.sourceType !== "all") {
     params.set("sourceType", filters.sourceType);
@@ -105,6 +113,88 @@ export async function createDeckCard(
 ) {
   return request<CardPayload>(`/decks/${deckId}/cards`, {
     method: "POST",
+    headers: withAuth(session),
+    body: input
+  });
+}
+
+export async function createDeckCardNote(
+  session: AuthSession,
+  deckId: string,
+  input: {
+    noteTypeCode: string;
+    primarySourceLink?: {
+      sourceType: string;
+      sourceId: string;
+      title?: string;
+      excerpt?: string;
+      locator?: Record<string, unknown>;
+      metadata?: Record<string, unknown>;
+    };
+    sourceLinks?: Array<{
+      sourceType: string;
+      sourceId: string;
+      title?: string;
+      excerpt?: string;
+      locator?: Record<string, unknown>;
+      metadata?: Record<string, unknown>;
+    }>;
+    fields: Record<string, string>;
+    templateKeys?: string[];
+  }
+) {
+  return request<CreateCardNoteResultPayload>(`/decks/${deckId}/card-notes`, {
+    method: "POST",
+    headers: withAuth(session),
+    body: input
+  });
+}
+
+export async function listCardNotes(session: AuthSession, filters?: { sourceType?: string; sourceId?: string }) {
+  const params = new URLSearchParams();
+  if (filters?.sourceType?.trim()) params.set("sourceType", filters.sourceType.trim());
+  if (filters?.sourceId?.trim()) params.set("sourceId", filters.sourceId.trim());
+  return request<ManagedCardNotePayload[]>(`/card-notes${params.size ? `?${params.toString()}` : ""}`, {
+    headers: withAuth(session)
+  });
+}
+
+export async function getCardNote(session: AuthSession, cardNoteId: string) {
+  return request<ManagedCardNotePayload>(`/card-notes/${encodeURIComponent(cardNoteId)}`, { headers: withAuth(session) });
+}
+
+export async function deleteCard(session: AuthSession, cardId: string, input: { confirmDeleteHistory: boolean }) {
+  return request<{ cardId: string; deckId: string; deletedReviewCount: number }>(`/cards/${encodeURIComponent(cardId)}`, {
+    method: "DELETE", headers: withAuth(session), body: input
+  });
+}
+
+export async function updateCardNote(
+  session: AuthSession,
+  cardNoteId: string,
+  input: {
+    fields?: Record<string, string>;
+    primarySourceLink?: {
+      sourceType: string;
+      sourceId: string;
+      title?: string;
+      excerpt?: string;
+      locator?: Record<string, unknown>;
+      metadata?: Record<string, unknown>;
+    };
+    sourceLinks?: Array<{
+      sourceType: string;
+      sourceId: string;
+      title?: string;
+      excerpt?: string;
+      locator?: Record<string, unknown>;
+      metadata?: Record<string, unknown>;
+    }>;
+    tags?: string[];
+  }
+) {
+  return request<ManagedCardNotePayload>(`/card-notes/${cardNoteId}`, {
+    method: "PATCH",
     headers: withAuth(session),
     body: input
   });
@@ -169,6 +259,28 @@ export async function getReviewFeedback(session: AuthSession) {
   });
 }
 
+export async function getReviewInsights(session: AuthSession) {
+  return request<ReviewInsightsPayload>("/review/insights", {
+    headers: withAuth(session)
+  });
+}
+
+export async function getSourceProfile(
+  session: AuthSession,
+  query: {
+    sourceType: string;
+    sourceId: string;
+  }
+) {
+  const params = new URLSearchParams({
+    sourceType: query.sourceType,
+    sourceId: query.sourceId
+  });
+  return request<SourceProfilePayload>(`/review/source-profile?${params.toString()}`, {
+    headers: withAuth(session)
+  });
+}
+
 export async function reviewCard(
   session: AuthSession,
   cardId: string,
@@ -193,6 +305,7 @@ export async function undoReviewCard(
       cardId: string;
       userId: string;
       dueAt: string;
+      learningStep: number;
       intervalDays: number;
       easeFactor: number;
       repetitionCount: number;

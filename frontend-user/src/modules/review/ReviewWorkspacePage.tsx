@@ -6,27 +6,36 @@ import {
   CardPayload,
   DeckImportPayload,
   DeckPayload,
+  ManagedCardNotePayload,
   ReviewQueueItemPayload,
   createDeck,
   createDeckCard,
+  deleteCard,
   exportDeckCards,
   getTodayReviewQueue,
+  getReviewFeedback,
   importDeckCards,
+  listCardNotes,
   listDeckCards,
   listDecks,
   reviewCard,
   undoReviewCard,
+  updateCardNote,
   updateCardTags,
   updateCardStatus
 } from "../../api/client";
+import { CardNoteManager } from "../../features/card-notes/CardNoteManager";
+import type { CardNoteUpdateInput } from "../../features/card-notes/cardNoteManagement";
 import { ConfirmDialog, DataState, Select } from "../../design-system/primitives";
+import { buildPrimarySourceLink, buildSourceProfileTarget } from "../../features/sources/sourceLinks";
 import { buildReviewSourceBacklink, formatReviewSourceReference } from "./reviewSourceBacklinks";
+import { addReviewSessionRating, createReviewSessionSummary, type ReviewSessionSummary } from "./reviewSession";
 
 type ReviewWorkspacePageProps = {
   session: AuthSession;
 };
 
-type ReviewManagementTab = "decks" | "create" | "cards";
+type ReviewManagementTab = "decks" | "create" | "cards" | "notes";
 type ReviewWorkspaceState =
   | {
       kind: "loading" | "error" | "empty" | "stale";
@@ -40,6 +49,7 @@ type UndoableReviewState = {
   item: ReviewQueueItemPayload;
   previousDueCount: number;
   previousCompletedCount: number;
+  previousSessionSummary: ReviewSessionSummary;
 };
 
 type PendingDeckImportState = {
@@ -63,8 +73,18 @@ type DeckImportPreviewDetail = {
 };
 
 type ManagedCardStatusFilter = "all" | "active" | "suspended" | "buried";
+type ManagedCardQueueStateFilter = "all" | "new" | "learning" | "review" | "relearning" | "suspended" | "buried";
 type ManagedCardSourceFilter = "all" | "none" | string;
 type ManagedCardDueFilter = "all" | "due" | "upcoming";
+
+type QueueStateCounts = {
+  newCount: number;
+  learningCount: number;
+  reviewCount: number;
+  relearningCount: number;
+  newLimit: number;
+  reviewLimit: number;
+};
 
 const ratingOptions = [
   { value: "again", label: "重来", shortcut: "1", accessibilityLabel: "Again 重来" },
@@ -72,6 +92,10 @@ const ratingOptions = [
   { value: "good", label: "记得", shortcut: "3", accessibilityLabel: "Good 记得" },
   { value: "easy", label: "轻松", shortcut: "4", accessibilityLabel: "Easy 轻松" }
 ] as const;
+
+type ReviewRatingValue = (typeof ratingOptions)[number]["value"];
+
+const emptyReviewSessionSummary = createReviewSessionSummary();
 
 async function readImportedTextFile(file: File) {
   if (typeof file.text === "function") {
@@ -99,6 +123,13 @@ function formatRelativeInterval(days: number) {
   if (days <= 0) return "短期复习";
   if (days === 1) return "1 天后";
   return `${days} 天后`;
+}
+
+function estimateReviewMinutes(totalCards: number) {
+  if (totalCards <= 0) {
+    return 0;
+  }
+  return Math.max(1, Math.ceil((totalCards * 25) / 60));
 }
 
 function formatCardStatusLabel(status: string) {
@@ -148,6 +179,16 @@ function formatScheduleStateLabel(state?: string) {
     default:
       return "新卡";
   }
+}
+
+function formatTemplateLabel(card: Pick<CardPayload, "templateOrdinal" | "templateId" | "cardType">) {
+  if (typeof card.templateOrdinal === "number") {
+    return `模板 #${card.templateOrdinal + 1}`;
+  }
+  if (card.templateId?.trim()) {
+    return "模板卡";
+  }
+  return card.cardType || "basic";
 }
 
 function parseCardTags(value: string) {
@@ -288,13 +329,14 @@ function buildDeckImportResultSummary(result: DeckImportPayload) {
   return `总计 ${result.totalCount} 张 · ${primaryLabel} ${primaryCount} 张 · 重复 ${result.duplicateCount} 张 · 失败 ${result.failedCount} 行`;
 }
 
-function ReviewSourceSummary(props: { card: Pick<CardPayload, "sourceType" | "sourceId">; compact?: boolean }) {
+function ReviewSourceSummary(props: { card: Pick<CardPayload, "sourceType" | "sourceId" | "sourceMetadata" | "primarySourceLink" | "sourceLinks">; compact?: boolean }) {
   const sourceReference = formatReviewSourceReference(props.card);
   if (!sourceReference) {
     return null;
   }
 
   const backlink = buildReviewSourceBacklink(props.card);
+  const profileTarget = buildSourceProfileTarget(buildPrimarySourceLink(props.card));
   const compact = props.compact ?? false;
 
   return (
@@ -309,6 +351,11 @@ function ReviewSourceSummary(props: { card: Pick<CardPayload, "sourceType" | "so
           {compact ? "当前来源暂不支持直达" : "当前来源还缺少直达上下文，可先回到对应工作台继续定位。"}
         </small>
       )}
+      {profileTarget ? (
+        <Link className="review-source-link" to={profileTarget}>
+          来源档案
+        </Link>
+      ) : null}
     </div>
   );
 }
@@ -322,10 +369,39 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [decks, setDecks] = useState<DeckPayload[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState<string>("");
   const [cards, setCards] = useState<CardPayload[]>([]);
+  const [cardNotes, setCardNotes] = useState<ManagedCardNotePayload[]>([]);
   const [focusedManagedCardId, setFocusedManagedCardId] = useState("");
   const [queue, setQueue] = useState<ReviewQueueItemPayload[]>([]);
   const [dueCount, setDueCount] = useState(0);
+  const [queueStateCounts, setQueueStateCounts] = useState<QueueStateCounts>({
+    newCount: 0,
+    learningCount: 0,
+    reviewCount: 0,
+    relearningCount: 0,
+    newLimit: 0,
+    reviewLimit: 0
+  });
   const [completedCount, setCompletedCount] = useState(0);
+  const [sessionSummary, setSessionSummary] = useState<ReviewSessionSummary>(emptyReviewSessionSummary);
+  const [todayWeakSourceCount, setTodayWeakSourceCount] = useState<number | null>(null);
+  const [todayFeedbackError, setTodayFeedbackError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getReviewFeedback(props.session).then((feedback) => {
+      if (!active) return;
+      const sources = feedback.sourceSummaries?.length ? feedback.sourceSummaries : feedback.weakSources ?? [];
+      const keys = sources.filter((source) => source.weakCardCount > 0).map((source) => {
+        const link = buildPrimarySourceLink(source);
+        return link ? `${link.sourceType}:${link.sourceId}` : "";
+      }).filter(Boolean);
+      setTodayWeakSourceCount(new Set(keys).size);
+      setTodayFeedbackError(false);
+    }).catch(() => {
+      if (active) setTodayFeedbackError(true);
+    });
+    return () => { active = false; };
+  }, [props.session, completedCount]);
   const [showAnswer, setShowAnswer] = useState(false);
   const [shownAt, setShownAt] = useState(() => Date.now());
   const [message, setMessage] = useState("");
@@ -341,6 +417,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const [managementTab, setManagementTab] = useState<ReviewManagementTab>("decks");
   const [cardSearchQuery, setCardSearchQuery] = useState("");
   const [cardStatusFilter, setCardStatusFilter] = useState<ManagedCardStatusFilter>("all");
+  const [cardQueueStateFilter, setCardQueueStateFilter] = useState<ManagedCardQueueStateFilter>("all");
   const [cardSourceFilter, setCardSourceFilter] = useState<ManagedCardSourceFilter>(requestedSourceType || "all");
   const [cardSourceIdFilter, setCardSourceIdFilter] = useState(requestedSourceId);
   const [cardDueFilter, setCardDueFilter] = useState<ManagedCardDueFilter>("all");
@@ -396,6 +473,12 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   const allVisibleSelected = visibleCards.length > 0 && selectedVisibleCount === visibleCards.length;
   const reviewedCount = completedCount;
   const queuePreview = useMemo(() => queue.slice(0, 3), [queue]);
+  const plannedReviewCount =
+    queueStateCounts.newCount +
+    queueStateCounts.learningCount +
+    queueStateCounts.reviewCount +
+    queueStateCounts.relearningCount;
+  const estimatedReviewMinutes = estimateReviewMinutes(plannedReviewCount || dueCount || queue.length);
   const canStartReview = Boolean(currentItem) && !loading;
   const latestReviewedCard = useMemo(() => {
     if (!undoableReview) {
@@ -449,13 +532,15 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     if (!currentItem) {
       return {
         kind: "empty",
-        title: "今天的队列已经清空",
-        description: "今天没有需要处理的卡片。可以补充卡片，或从阅读、笔记和图谱继续生成草稿。"
+        title: decks.length ? "今天的队列已经清空" : "先创建你的第一副牌组",
+        description: decks.length
+          ? "当前没有到期卡片。已有卡片和复习进度会保留，可以继续阅读新资料或整理卡片。"
+          : "创建牌组后，从阅读批注、笔记或图谱生成卡片，开始第一次复习。"
       };
     }
 
     return null;
-  }, [currentItem, loading, queue.length, workspaceErrorMessage]);
+  }, [currentItem, decks.length, loading, queue.length, workspaceErrorMessage]);
   const showCurrentCard = reviewMode === "focus" && currentItem && (!reviewState || reviewState.kind === "stale");
 
   useEffect(() => {
@@ -477,7 +562,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     }
     void refreshCards(selectedDeckId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cardDueFilter, cardSearchQuery, cardSourceFilter, cardSourceIdFilter, cardStatusFilter, cardTagFilter, selectedDeckId]);
+  }, [cardDueFilter, cardQueueStateFilter, cardSearchQuery, cardSourceFilter, cardSourceIdFilter, cardStatusFilter, cardTagFilter, selectedDeckId]);
 
   useEffect(() => {
     setSelectedManagedCardIds((current) => current.filter((id) => cards.some((card) => card.id === id)));
@@ -557,9 +642,10 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     setWorkspaceErrorMessage("");
     setUndoableReview(null);
     try {
-      const [nextDecks, reviewQueue] = await Promise.all([
+      const [nextDecks, reviewQueue, nextCardNotes] = await Promise.all([
         listDecks(props.session),
-        getTodayReviewQueue(props.session)
+        getTodayReviewQueue(props.session),
+        listCardNotes(props.session)
       ]);
       let nextQueue = reviewQueue.items;
       let nextSelectedDeckId = "";
@@ -621,8 +707,18 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       }
 
       setDecks(nextDecks);
+      setCardNotes(nextCardNotes);
       setDueCount(reviewQueue.dueCount);
+      setQueueStateCounts({
+        newCount: reviewQueue.newCount ?? 0,
+        learningCount: reviewQueue.learningCount ?? 0,
+        reviewCount: reviewQueue.reviewCount ?? 0,
+        relearningCount: reviewQueue.relearningCount ?? 0,
+        newLimit: reviewQueue.newLimit ?? 0,
+        reviewLimit: reviewQueue.reviewLimit ?? 0
+      });
       setCompletedCount(0);
+      setSessionSummary(emptyReviewSessionSummary);
       setQueue(nextQueue);
       setFocusedManagedCardId(nextFocusedCardId);
       setManagementTab(nextManagementTab);
@@ -657,6 +753,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         await listDeckCards(props.session, deckId, {
           query: cardSearchQuery,
           status: cardStatusFilter,
+          queueState: cardQueueStateFilter,
           sourceType: cardSourceFilter,
           sourceId: cardSourceIdFilter,
           dueBucket: cardDueFilter,
@@ -666,6 +763,11 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "读取卡片失败");
     }
+  }
+
+  async function refreshCardNotes() {
+    const nextCardNotes = await listCardNotes(props.session);
+    setCardNotes(nextCardNotes);
   }
 
   async function handleCreateDeck(event: FormEvent<HTMLFormElement>) {
@@ -714,6 +816,63 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     }
   }
 
+  async function syncQueueAfterManagement() {
+    const payload = await getTodayReviewQueue(props.session);
+    setQueue(payload.items);
+    setDueCount(payload.dueCount);
+    setQueueStateCounts({
+      newCount: payload.newCount ?? 0, learningCount: payload.learningCount ?? 0,
+      reviewCount: payload.reviewCount ?? 0, relearningCount: payload.relearningCount ?? 0,
+      newLimit: payload.newLimit ?? 0, reviewLimit: payload.reviewLimit ?? 0
+    });
+    if (!payload.items.length) setReviewMode("workspace");
+  }
+
+  async function handleSaveCardNote(note: ManagedCardNotePayload, input: CardNoteUpdateInput) {
+    setBusy(true);
+    setMessage("");
+    try {
+      const updated = await updateCardNote(props.session, note.cardNote.id, input);
+      setCardNotes((items) => items.map((item) => item.cardNote.id === updated.cardNote.id ? updated : item));
+      const refreshed = await Promise.allSettled([
+        syncQueueAfterManagement(),
+        listDecks(props.session).then(setDecks),
+        ...(selectedDeckId ? [refreshCards(selectedDeckId)] : [])
+      ]);
+      const summary = updated.regeneration;
+      const detail = summary ? `新增 ${summary.createdCount} 张，更新 ${summary.updatedCount} 张，移除 ${summary.removedCount} 张，保留 ${summary.preservedCount} 张已学习卡片。` : "";
+      setMessage(`CardNote 已更新，未开始复习的 GeneratedCards 已重新生成。${detail}${refreshed.some((result) => result.status === "rejected") ? "部分数据同步失败，请刷新后确认。" : ""}`);
+      return updated;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "更新来源笔记失败，请重试。");
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteGeneratedCard(card: CardPayload) {
+    setBusy(true);
+    try {
+      await deleteCard(props.session, card.id, { confirmDeleteHistory: true });
+      setCards((items) => items.filter((item) => item.id !== card.id));
+      setCardNotes((items) => items.map((note) => {
+        const removed = note.generatedCards.find((item) => item.id === card.id);
+        if (!removed) return note;
+        const queueState = removed.status === "active" ? removed.schedule?.state ?? "new" : removed.status;
+        return { ...note, tags: Array.from(new Set(note.generatedCards.filter((item) => item.id !== card.id).flatMap((item) => item.tags ?? []))), cardNote: { ...note.cardNote, generatedCardCount: Math.max(0, note.cardNote.generatedCardCount - 1) }, generatedCards: note.generatedCards.filter((item) => item.id !== card.id), queueStates: { ...note.queueStates, [queueState]: Math.max(0, (note.queueStates[queueState] ?? 0) - 1) } };
+      }));
+      setQueue((items) => items.filter((item) => item.card.id !== card.id));
+      setDecks((items) => items.map((deck) => deck.id === card.deckId ? { ...deck, cardCount: Math.max(0, deck.cardCount - 1) } : deck));
+      setSelectedManagedCardIds((ids) => ids.filter((id) => id !== card.id));
+      setUndoableReview((current) => current?.item.card.id === card.id ? null : current);
+      const refreshed = await Promise.allSettled([syncQueueAfterManagement()]);
+      setMessage(`卡片及其复习记录已删除。${refreshed.some((result) => result.status === "rejected") ? "队列同步失败，请刷新后确认。" : ""}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleRate(rating: (typeof ratingOptions)[number]["value"]) {
     if (!currentItem) return;
 
@@ -729,7 +888,8 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         reviewId: result.reviewId,
         item: reviewedItem,
         previousDueCount: dueCount,
-        previousCompletedCount: completedCount
+        previousCompletedCount: completedCount,
+        previousSessionSummary: sessionSummary
       });
       setQueue((items) => items.slice(1));
       if (queue.length <= 1) {
@@ -737,6 +897,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       }
       setDueCount((count) => Math.max(0, count - 1));
       setCompletedCount((count) => count + 1);
+      setSessionSummary((current) => addReviewSessionRating(current, rating, currentItem.card));
       setMessage(`已记录复习，下次 ${formatDateTime(result.schedule.dueAt)}。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "提交复习结果失败");
@@ -755,7 +916,10 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
     try {
       const result = await undoReviewCard(props.session, undoableReview.item.card.id, {
         reviewId: undoableReview.reviewId,
-        previousSchedule: undoableReview.item.schedule
+        previousSchedule: {
+          ...undoableReview.item.schedule,
+          learningStep: undoableReview.item.schedule.learningStep ?? 0
+        }
       });
       const restoredItem = {
         ...cloneQueueItem(undoableReview.item),
@@ -765,6 +929,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       setReviewMode("focus");
       setDueCount(undoableReview.previousDueCount);
       setCompletedCount(undoableReview.previousCompletedCount);
+      setSessionSummary(undoableReview.previousSessionSummary);
       setUndoableReview(null);
       setMessage("已撤销上一条评分，卡片已回到今日队列。");
     } catch (error) {
@@ -841,25 +1006,15 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
   }
 
   async function handleManagedCardStatus(card: CardPayload, nextStatus: "active" | "suspended" | "buried") {
-
     setBusy(true);
     setMessage("");
     try {
       await updateCardStatus(props.session, card.id, { status: nextStatus });
       setFocusedManagedCardId(card.id);
-      if (nextStatus === "active") {
-        await Promise.all([refreshCards(card.deckId), refreshAll()]);
-        setMessage("已恢复卡片，今日队列已同步更新。");
-        return;
-      }
-
-      setCards((items) => items.map((item) => (item.id === card.id ? { ...item, status: nextStatus } : item)));
-      setQueue((items) => items.filter((item) => item.card.id !== card.id));
-      if (queue.length <= 1 && queue.some((item) => item.card.id === card.id)) {
-        setReviewMode("workspace");
-      }
-      setDueCount((count) => Math.max(0, count - 1));
-      setMessage(nextStatus === "buried" ? "已埋藏卡片，今日队列已同步移除。" : "已暂停卡片，今日队列已同步移除。");
+      setCards((items) => items.map((item) => item.id === card.id ? { ...item, status: nextStatus } : item));
+      const refreshed = await Promise.allSettled([refreshCardNotes(), syncQueueAfterManagement(), refreshCards(card.deckId)]);
+      const action = nextStatus === "active" ? "恢复" : nextStatus === "buried" ? "埋藏" : "暂停";
+      setMessage(`已${action}卡片。${refreshed.some((result) => result.status === "rejected") ? "部分数据同步失败，请刷新后确认。" : "今日队列已同步更新。"}`);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -1025,6 +1180,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       setCards((items) =>
         items.map((card) => (selectedIds.has(card.id) ? { ...card, status: nextStatus } : card))
       );
+      await refreshCardNotes();
       setQueue((items) => items.filter((item) => !selectedIds.has(item.card.id)));
       setDueCount((count) => Math.max(0, count - removedFromQueueCount));
       setSelectedManagedCardIds([]);
@@ -1172,7 +1328,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
       <header className="review-management-heading">
         <div>
           <p className="eyebrow">复习管理</p>
-          <h2>{managementTab === "decks" ? "卡组" : managementTab === "create" ? "新建卡组" : "卡片"}</h2>
+          <h2>{managementTab === "decks" ? "卡组" : managementTab === "create" ? "新建卡组" : managementTab === "notes" ? "Note 视图" : "卡片"}</h2>
           <span>
             {reviewMode === "focus"
               ? "管理入口保持可用，但不挤占当前复习画面。"
@@ -1190,6 +1346,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
         <button aria-current={managementTab === "decks" ? "page" : undefined} className={managementTab === "decks" ? "active" : ""} onClick={() => setManagementTab("decks")} type="button">卡组</button>
         <button aria-current={managementTab === "create" ? "page" : undefined} className={managementTab === "create" ? "active" : ""} onClick={() => setManagementTab("create")} type="button">新建</button>
         <button aria-current={managementTab === "cards" ? "page" : undefined} className={managementTab === "cards" ? "active" : ""} onClick={() => setManagementTab("cards")} type="button">卡片</button>
+        <button aria-current={managementTab === "notes" ? "page" : undefined} className={managementTab === "notes" ? "active" : ""} onClick={() => setManagementTab("notes")} type="button">Note 视图</button>
       </nav>
 
       <div className="review-management-body">
@@ -1239,7 +1396,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
             </label>
             <button className="primary-button" disabled={busy || !deckForm.title.trim()} type="submit"><Layers3 size={16} /> 创建卡组</button>
           </form>
-        ) : (
+        ) : managementTab === "cards" ? (
           <div className="review-management-stack">
             <section className="review-management-deck-summary">
               <strong>{selectedDeck?.title ?? "选择一个卡组"}</strong>
@@ -1324,8 +1481,21 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                   </label>
                 </div>
                 <div className="review-card-browser__summary">
-                  <strong>{`${visibleCards.length} 张卡片`}</strong>
-                  <span>{selectedVisibleCount ? `当前结果已选中 ${selectedVisibleCount} 张` : "先筛选再批量处理状态。"}</span>
+                  <strong>{`${visibleCards.length} cards`}</strong>
+                  <span>{selectedVisibleCount ? `${selectedVisibleCount} selected in current results` : "Filter cards before running batch actions."}</span>
+                  <Select
+                    aria-label="Formal queue state filter"
+                    onChange={(event) => setCardQueueStateFilter(event.target.value as ManagedCardQueueStateFilter)}
+                    value={cardQueueStateFilter}
+                  >
+                    <option value="all">All queues</option>
+                    <option value="new">new</option>
+                    <option value="learning">learning</option>
+                    <option value="review">review</option>
+                    <option value="relearning">relearning</option>
+                    <option value="suspended">suspended</option>
+                    <option value="buried">buried</option>
+                  </Select>
                 </div>
                 <div className="review-card-browser__batch-actions">
                   <label className="review-card-browser__toggle-all">
@@ -1502,6 +1672,11 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                           ))}
                         </div>
                       ) : null}
+                      <div className="review-managed-card__meta">
+                        {card.cardNoteId ? <small>{`CardNote ${card.cardNoteId}`}</small> : null}
+                        <small>{formatTemplateLabel(card)}</small>
+                        {card.schedule ? <small>{`queue ${card.schedule.state}`}</small> : null}
+                      </div>
                       <ReviewSourceSummary card={card} compact />
                       <span className="review-managed-card__source-type">{formatCardSourceTypeLabel(card.sourceType || "none")}</span>
                       {card.schedule ? (
@@ -1535,6 +1710,9 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
               <DataState description="为这个卡组添加第一张卡片，或从阅读和笔记的草稿中写入。" kind="empty" title="这个卡组还没有卡片" />
             ) : null}
           </div>
+        ) : (
+          <CardNoteManager notes={cardNotes} busy={busy} onSave={handleSaveCardNote}
+            onStatus={(card, status) => void handleManagedCardStatus(card, status)} onDelete={handleDeleteGeneratedCard} />
         )}
       </div>
     </>
@@ -1610,12 +1788,33 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                 {reviewState?.kind === "error" ? (
                   <DataState description={reviewState.description} kind={reviewState.kind} title={reviewState.title} />
                 ) : reviewState?.kind === "empty" ? (
-                  <DataState
-                    action={<button className="primary-button" onClick={() => setManagementTab("create")} type="button"><Plus size={16} /> 创建卡组</button>}
-                    description={reviewState.description}
-                    kind={reviewState.kind}
-                    title={reviewState.title}
-                  />
+                  <>
+                    {sessionSummary.completed > 0 ? (
+                      <section className="review-workspace-queue-breakdown" aria-label="本次复习总结">
+                        <article className="review-workspace-metric">
+                          <span>本次复习总结</span>
+                          <strong>{`完成 ${sessionSummary.completed} 张`}</strong>
+                          <small>{`薄弱来源 ${sessionSummary.weakSourceCount}`}</small>
+                        </article>
+                        <article className="review-workspace-metric">
+                          <span>{`Again ${sessionSummary.ratings.again}`}</span>
+                          <strong>{sessionSummary.ratings.good + sessionSummary.ratings.easy}</strong>
+                          <small>{`Hard ${sessionSummary.ratings.hard} / Good ${sessionSummary.ratings.good} / Easy ${sessionSummary.ratings.easy}`}</small>
+                        </article>
+                        <article className="review-workspace-metric">
+                          <span>下一步</span>
+                          <strong>回补学习闭环</strong>
+                          <small><Link to="/graph?learningFilter=weak">查看薄弱节点</Link> · <Link to="/reader">继续阅读制卡</Link> · <Link to="/">返回首页</Link></small>
+                        </article>
+                      </section>
+                    ) : null}
+                    <DataState
+                      action={decks.length ? <Link className="primary-button" to="/reader">阅读新资料</Link> : <button className="primary-button" onClick={() => setManagementTab("create")} type="button"><Plus size={16} /> 创建卡组</button>}
+                      description={reviewState.description}
+                      kind={reviewState.kind}
+                      title={reviewState.title}
+                    />
+                  </>
                 ) : (
                   <>
                     {reviewState?.kind === "stale" ? (
@@ -1656,6 +1855,59 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                         </article>
                       </div>
                     </section>
+                    <section className="review-workspace-queue-breakdown" aria-label="今日学习计划">
+                      <article className="review-workspace-metric">
+                        <span>今日学习计划</span>
+                        <strong>{plannedReviewCount || dueCount}</strong>
+                        <small>{`预计用时 ${estimatedReviewMinutes} 分钟`}</small>
+                      </article>
+                      <article className="review-workspace-metric">
+                        <span>{`新卡 ${queueStateCounts.newCount} / ${queueStateCounts.newLimit}`}</span>
+                        <strong>{queueStateCounts.learningCount + queueStateCounts.relearningCount}</strong>
+                        <small>{`${queueStateCounts.learningCount} learning / ${queueStateCounts.relearningCount} relearning`}</small>
+                      </article>
+                      <article className="review-workspace-metric">
+                        <span>{`复习 ${queueStateCounts.reviewCount} / ${queueStateCounts.reviewLimit}`}</span>
+                        <strong>{todayWeakSourceCount ?? "—"}</strong>
+                        <small>{todayFeedbackError ? "薄弱来源暂时不可用，刷新后重试" : "当前薄弱来源（全部卡片）"}</small>
+                      </article>
+                    </section>
+                    {sessionSummary.completed > 0 ? (
+                      <section className="review-workspace-queue-breakdown" aria-label="本次复习总结">
+                        <article className="review-workspace-metric">
+                          <span>本次复习总结</span>
+                          <strong>{`完成 ${sessionSummary.completed} 张`}</strong>
+                          <small>{`薄弱来源 ${sessionSummary.weakSourceCount}`}</small>
+                        </article>
+                        <article className="review-workspace-metric">
+                          <span>{`Again ${sessionSummary.ratings.again}`}</span>
+                          <strong>{sessionSummary.ratings.good + sessionSummary.ratings.easy}</strong>
+                          <small>{`Hard ${sessionSummary.ratings.hard} / Good ${sessionSummary.ratings.good} / Easy ${sessionSummary.ratings.easy}`}</small>
+                        </article>
+                        <article className="review-workspace-metric">
+                          <span>下一步</span>
+                          <strong>回补学习闭环</strong>
+                          <small><Link to="/graph?learningFilter=weak">查看薄弱节点</Link> · <Link to="/reader">继续阅读制卡</Link> · <Link to="/">返回首页</Link></small>
+                        </article>
+                      </section>
+                    ) : null}
+                    <section className="review-workspace-queue-breakdown" aria-label="Formal review queue buckets">
+                      <article className="review-workspace-metric">
+                        <span>new</span>
+                        <strong>{queueStateCounts.newCount}</strong>
+                        <small>{queueStateCounts.newLimit ? `new limit ${queueStateCounts.newLimit}` : "new cards waiting"}</small>
+                      </article>
+                      <article className="review-workspace-metric">
+                        <span>learning / relearning</span>
+                        <strong>{queueStateCounts.learningCount + queueStateCounts.relearningCount}</strong>
+                        <small>{`${queueStateCounts.learningCount} learning / ${queueStateCounts.relearningCount} relearning`}</small>
+                      </article>
+                      <article className="review-workspace-metric">
+                        <span>review</span>
+                        <strong>{queueStateCounts.reviewCount}</strong>
+                        <small>{queueStateCounts.reviewLimit ? `review limit ${queueStateCounts.reviewLimit}` : "scheduled review cards"}</small>
+                      </article>
+                    </section>
                     <section className="review-workspace-upnext" aria-label="即将复习">
                       <div className="review-workspace-upnext__head">
                         <strong>接下来适合做什么</strong>
@@ -1695,9 +1947,15 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                       {!showAnswer ? <p>先回想答案，再翻面确认。按空格键或 Enter 翻面。</p> : null}
                     </article>
                     <div className="review-focus-schedule">
-                      <span>当前状态：{currentItem.schedule.state}</span>
+                      <span>{`当前队列：${currentItem.schedule.state}`}</span>
+                      <span>{`当前状态：${formatScheduleStateLabel(currentItem.schedule.state)}`}</span>
+                      <span>{`learningStep ${currentItem.schedule.learningStep ?? 0}`}</span>
                       <span>预估下次：{formatRelativeInterval(currentItem.schedule.intervalDays)}</span>
                       <span>计划到期：{formatDateTime(currentItem.schedule.dueAt)}</span>
+                    </div>
+                    <div className="review-focus-card-meta review-focus-card-meta--detail">
+                      {currentItem.card.cardNoteId ? <span>{`CardNote ${currentItem.card.cardNoteId}`}</span> : null}
+                      <span>{formatTemplateLabel(currentItem.card)}</span>
                     </div>
                     <ReviewSourceSummary card={currentItem.card} />
                     <div className="review-focus-actions">
@@ -1736,7 +1994,7 @@ export function ReviewWorkspacePage(props: ReviewWorkspacePageProps) {
                   </section>
                 ) : reviewState?.kind === "empty" ? (
                   <DataState
-                    action={<button className="primary-button" onClick={() => openManagement("create")} type="button"><Plus size={16} /> 创建卡组</button>}
+                    action={decks.length ? <Link className="primary-button" to="/reader">阅读新资料</Link> : <button className="primary-button" onClick={() => openManagement("create")} type="button"><Plus size={16} /> 创建卡组</button>}
                     description={reviewState.description}
                     kind={reviewState.kind}
                     title={reviewState.title}

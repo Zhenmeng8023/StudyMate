@@ -180,6 +180,82 @@ export interface GraphNodeSourcePayload {
   excerpt?: string;
 }
 
+export interface SourceLinkPayload {
+  sourceType: string;
+  sourceId: string;
+  title?: string;
+  excerpt?: string;
+  locator?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+export interface NoteTypeFieldSchemaPayload {
+  name: string;
+  label?: string;
+  kind?: string;
+  required?: boolean;
+}
+
+export interface NoteTypePayload {
+  id: string;
+  code: string;
+  name: string;
+  kind: string;
+  isBuiltin: boolean;
+  status: string;
+  fieldSchema?: NoteTypeFieldSchemaPayload[];
+  templateCount: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CardTemplatePayload {
+  id: string;
+  noteTypeId: string;
+  name: string;
+  templateKind: string;
+  ordinal: number;
+  isActive: boolean;
+  frontFormat?: string;
+  backFormat?: string;
+  clozeRule?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CardNotePayload {
+  id: string;
+  deckId: string;
+  ownerUserId: string;
+  noteTypeId: string;
+  noteTypeCode?: string;
+  primarySourceLink?: SourceLinkPayload;
+  sourceLinks?: SourceLinkPayload[];
+  fields?: Record<string, string>;
+  generatedCardCount: number;
+  status: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateCardNoteResultPayload {
+  cardNote: CardNotePayload;
+  generatedCards: GeneratedCardPayload[];
+}
+
+export interface ManagedCardNotePayload {
+  cardNote: CardNotePayload;
+  generatedCards: GeneratedCardPayload[];
+  queueStates: Record<string, number>;
+  tags?: string[];
+  regeneration?: {
+    createdCount: number;
+    updatedCount: number;
+    removedCount: number;
+    preservedCount: number;
+  };
+}
+
 export type GraphNodeTone = "neutral" | "sage" | "sky" | "amber" | "rose";
 
 export type GraphNodeEmphasis = "default" | "strong" | "muted";
@@ -330,6 +406,9 @@ export interface CardPayload {
   id: string;
   deckId: string;
   ownerUserId: string;
+  cardNoteId?: string;
+  templateId?: string;
+  templateOrdinal?: number;
   cardType: string;
   front: string;
   back: string;
@@ -337,16 +416,21 @@ export interface CardPayload {
   sourceType?: string;
   sourceId?: string;
   sourceMetadata?: Record<string, unknown>;
+  primarySourceLink?: SourceLinkPayload;
+  sourceLinks?: SourceLinkPayload[];
   status: string;
   schedule?: CardSchedulePayload;
   createdAt: string;
   updatedAt: string;
 }
 
+export type GeneratedCardPayload = CardPayload;
+
 export interface CardSchedulePayload {
   cardId: string;
   userId: string;
   dueAt: string;
+  learningStep?: number;
   intervalDays: number;
   easeFactor: number;
   repetitionCount: number;
@@ -363,6 +447,12 @@ export interface ReviewQueueItemPayload {
 
 export interface ReviewQueuePayload {
   dueCount: number;
+  newCount?: number;
+  learningCount?: number;
+  reviewCount?: number;
+  relearningCount?: number;
+  newLimit?: number;
+  reviewLimit?: number;
   items: ReviewQueueItemPayload[];
 }
 
@@ -374,6 +464,8 @@ export interface ReviewFeedbackCardPayload {
   sourceType?: string;
   sourceId?: string;
   sourceMetadata?: Record<string, unknown>;
+  primarySourceLink?: SourceLinkPayload;
+  sourceLinks?: SourceLinkPayload[];
   dueAt: string;
   lapseCount: number;
   repetitionCount: number;
@@ -381,9 +473,12 @@ export interface ReviewFeedbackCardPayload {
 }
 
 export interface ReviewFeedbackSourcePayload {
+  lastReviewedAt?: string;
   sourceType?: string;
   sourceId?: string;
   sourceMetadata?: Record<string, unknown>;
+  primarySourceLink?: SourceLinkPayload;
+  sourceLinks?: SourceLinkPayload[];
   totalCardCount: number;
   reviewCardCount: number;
   masteredCardCount: number;
@@ -403,6 +498,55 @@ export interface ReviewFeedbackPayload {
   weakCards: ReviewFeedbackCardPayload[];
   sourceSummaries?: ReviewFeedbackSourcePayload[];
   weakSources?: ReviewFeedbackSourcePayload[];
+}
+
+export interface ReviewInsightDailyPayload {
+  date: string;
+  reviewCount: number;
+  ratingCounts: Record<"again" | "hard" | "good" | "easy" | string, number>;
+  weakNewCount: number;
+  weakCarryCount: number;
+}
+
+export interface ReviewInsightSourceTrendPayload {
+  date: string;
+  sourceType?: string;
+  sourceId?: string;
+  masteryScore: number;
+}
+
+export interface ReviewInsightsPayload {
+  days: ReviewInsightDailyPayload[];
+  sourceTrends?: ReviewInsightSourceTrendPayload[];
+  sources?: ReviewFeedbackSourcePayload[];
+}
+
+export interface SourceProfileReviewPayload {
+  reviewId: string;
+  cardId: string;
+  rating: string;
+  reviewedAt: string;
+}
+
+export interface SourceProfilePayload {
+  sourceType: string;
+  sourceId: string;
+  title?: string;
+  excerpt?: string;
+  locator?: Record<string, unknown>;
+  target?: string;
+  cardNotes?: ManagedCardNotePayload[];
+  generatedCards?: CardPayload[];
+  queueStates: Record<string, number>;
+  masteryScore: number;
+  masteryLevel?: "weak" | "building" | "solid" | string;
+  dueCount: number;
+  learningCount: number;
+  weakCardCount: number;
+  lastReviewedAt?: string;
+  recentReviews?: SourceProfileReviewPayload[];
+  primarySourceLink?: SourceLinkPayload;
+  sourceLinks?: SourceLinkPayload[];
 }
 
 export interface DeckExportPayload {

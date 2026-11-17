@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  bulkCreateDeckCards,
+  createDeckCardNote,
   createReaderAnnotation,
   deleteReaderAnnotation,
   generateAnnotationCardDrafts,
@@ -45,7 +45,7 @@ vi.mock("../api/client", async () => {
   const actual = await vi.importActual<typeof import("../api/client")>("../api/client");
   return {
     ...actual,
-    bulkCreateDeckCards: vi.fn(),
+    createDeckCardNote: vi.fn(),
     createReaderAnnotation: vi.fn(),
     deleteReaderAnnotation: vi.fn(),
     generateAnnotationCardDrafts: vi.fn(),
@@ -74,7 +74,7 @@ const listMaterialsMock = vi.mocked(listMaterials);
 const listDecksMock = vi.mocked(listDecks);
 const getReaderStateMock = vi.mocked(getReaderState);
 const updateReaderProgressMock = vi.mocked(updateReaderProgress);
-const bulkCreateDeckCardsMock = vi.mocked(bulkCreateDeckCards);
+const createDeckCardNoteMock = vi.mocked(createDeckCardNote);
 const createReaderAnnotationMock = vi.mocked(createReaderAnnotation);
 const generateAnnotationCardDraftsMock = vi.mocked(generateAnnotationCardDrafts);
 const generateAnnotationGraphDraftsMock = vi.mocked(generateAnnotationGraphDrafts);
@@ -93,7 +93,7 @@ describe("ReaderPage", () => {
     listDecksMock.mockReset();
     getReaderStateMock.mockReset();
     updateReaderProgressMock.mockReset();
-    bulkCreateDeckCardsMock.mockReset();
+    createDeckCardNoteMock.mockReset();
     createReaderAnnotationMock.mockReset();
     generateAnnotationCardDraftsMock.mockReset();
     generateAnnotationGraphDraftsMock.mockReset();
@@ -149,7 +149,30 @@ describe("ReaderPage", () => {
       lastReadAt: "2026-06-02T12:01:00Z",
       annotations: []
     });
-    bulkCreateDeckCardsMock.mockResolvedValue([]);
+    createDeckCardNoteMock.mockResolvedValue({
+      cardNote: {
+        id: "note-1",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        noteTypeId: "basic",
+        noteTypeCode: "basic",
+        generatedCardCount: 1,
+        status: "active"
+      },
+      generatedCards: [
+        {
+          id: "card-1",
+          deckId: "deck-1",
+          ownerUserId: "user-1",
+          cardType: "basic",
+          front: "Question",
+          back: "Answer",
+          status: "active",
+          createdAt: "2026-06-02T12:00:00Z",
+          updatedAt: "2026-06-02T12:00:00Z"
+        }
+      ]
+    });
     createReaderAnnotationMock.mockResolvedValue({
       id: "annotation-1",
       materialId: "material-1",
@@ -307,6 +330,78 @@ describe("ReaderPage", () => {
     expect(screen.getByText("阅读上下文刷新失败")).toBeInTheDocument();
     expect(screen.getByTestId("pdf-reader-pane")).toBeInTheDocument();
     expect(screen.getByText("initial-page-3")).toBeInTheDocument();
+  });
+
+  it("creates a card note from annotation drafts with the selected template", async () => {
+    const user = userEvent.setup();
+    getReaderStateMock.mockResolvedValueOnce({
+      materialId: "material-1",
+      currentPage: 3,
+      totalPages: 10,
+      progressPercent: 30,
+      bookmarks: [1],
+      lastReadAt: "2026-06-02T12:00:00Z",
+      annotations: [
+        {
+          id: "annotation-1",
+          materialId: "material-1",
+          page: 3,
+          quote: "Highlighted quote",
+          comment: "Useful note",
+          color: "#f0d080",
+          rects: [{ page: 3, x: 0, y: 0, width: 1, height: 0.08 }],
+          createdAt: "2026-06-02T12:02:00Z",
+          updatedAt: "2026-06-02T12:02:00Z"
+        }
+      ]
+    });
+    generateAnnotationCardDraftsMock.mockResolvedValueOnce([
+      {
+        id: "draft-1",
+        sourceType: "annotation",
+        sourceId: "annotation-1",
+        sourceLabel: "算法导论",
+        sourceMetadata: {
+          materialId: "material-1",
+          annotationId: "annotation-1",
+          page: 3
+        },
+        front: "Question",
+        back: "Answer"
+      }
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ReaderPage session={session} />
+      </MemoryRouter>
+    );
+
+    await expect(screen.findByTestId("pdf-reader-pane")).resolves.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "生成复习草稿" }));
+    await user.selectOptions(screen.getByLabelText("卡片模板"), "basic_reverse");
+    await user.click(screen.getByRole("button", { name: "写入复习系统" }));
+
+    await waitFor(() => {
+      expect(createDeckCardNoteMock).toHaveBeenCalledWith(session, "deck-1", {
+        noteTypeCode: "basic_reverse",
+        fields: {
+          front: "Question",
+          back: "Answer"
+        },
+        sourceLinks: [
+          {
+            sourceType: "annotation",
+            sourceId: "annotation-1",
+            locator: {
+              materialId: "material-1",
+              annotationId: "annotation-1",
+              page: 3
+            }
+          }
+        ]
+      });
+    });
   });
 
   it("opens private library files with authenticated PDF requests and offers original download", async () => {

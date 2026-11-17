@@ -140,6 +140,16 @@ describe("SearchWorkspacePage", () => {
     expect(searchAllMock).toHaveBeenCalledWith(session, { query: "\u56fe\u8c31", limit: 12 });
   });
 
+  it("shows empty-result guidance while preserving the current type filters", async () => {
+    searchAllMock.mockResolvedValue(buildResponse());
+
+    renderPage("/search?q=%E5%9B%BE%E8%B0%B1&types=card");
+
+    await expect(screen.findByRole("heading", { level: 2, name: "\u5f53\u524d\u7b5b\u9009\u6ca1\u6709\u547d\u4e2d\u7ed3\u679c" })).resolves.toBeInTheDocument();
+    expect(screen.getByText("\u53ef\u4ee5\u5c1d\u8bd5\u7f29\u77ed\u5173\u952e\u8bcd\uff0c\u6216\u8005\u5207\u56de\u201c\u5168\u90e8\u7c7b\u578b\u201d\u91cd\u65b0\u641c\u7d22\u3002")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "\u5361\u7247" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("syncs type filters into the URL and forwards them to the search API", async () => {
     const user = userEvent.setup();
     searchAllMock.mockResolvedValue(buildResponse({ graph: [buildResult("graph", 1)] }));
@@ -185,6 +195,25 @@ describe("SearchWorkspacePage", () => {
     expect(await screen.findByRole("link", { name: /graph-title-5/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /graph-title-1/ })).not.toBeInTheDocument();
     expect(screen.getByText("\u7b2c 2 / 2 \u9875")).toBeInTheDocument();
+  });
+
+  it("adds SourceProfile entry points for learning-object search results", async () => {
+    searchAllMock.mockResolvedValue(
+      buildResponse({
+        material: [buildResult("material", 1)],
+        post: [buildResult("post", 1)],
+        card: [buildResult("card", 1)]
+      })
+    );
+
+    renderPage("/search?q=%E5%9B%BE%E8%B0%B1");
+
+    await expect(screen.findByRole("link", { name: /material-title-1/ })).resolves.toBeInTheDocument();
+    const profileLinks = screen.getAllByRole("link", { name: "查看来源学习档案" });
+    expect(profileLinks.map((link) => link.getAttribute("href"))).toEqual([
+      "/sources?sourceType=material&sourceId=material-1",
+      "/sources?sourceType=card&sourceId=card-1"
+    ]);
   });
 
   it("explains when only the first returned batch of a larger group is currently visible", async () => {

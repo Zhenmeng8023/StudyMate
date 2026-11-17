@@ -16,6 +16,7 @@ const ReaderPage = lazy(() => import("../pages/ReaderPage").then((module) => ({ 
 const GraphPage = lazy(() => import("../pages/GraphReviewPages").then((module) => ({ default: module.GraphPage })));
 const ReviewWorkspaceRoute = lazy(() => import("../pages/GraphReviewPages").then((module) => ({ default: module.ReviewWorkspaceRoute })));
 const AiPage = lazy(() => import("../pages/AiPage").then((module) => ({ default: module.AiPage })));
+const SourceProfilePage = lazy(() => import("../pages/SourceProfilePage").then((module) => ({ default: module.SourceProfilePage })));
 const SettingsPage = lazy(() => import("../pages/SettingsPage").then((module) => ({ default: module.SettingsPage })));
 const SearchWorkspacePage = lazy(() => import("../modules/search/SearchWorkspacePage").then((module) => ({ default: module.SearchWorkspacePage })));
 const SharePage = lazy(() => import("../pages/SharePage").then((module) => ({ default: module.SharePage })));
@@ -105,6 +106,7 @@ export function App() {
           <Route element={<NotesPage session={session as AuthSession} />} path="notes" />
           <Route element={<GraphPage session={session as AuthSession} />} path="graph" />
           <Route element={<ReviewWorkspaceRoute session={session as AuthSession} />} path="review" />
+          <Route element={<SourceProfilePage session={session as AuthSession} />} path="sources" />
           <Route element={<AiPage session={session as AuthSession} />} path="ai" />
           <Route element={<SettingsPage session={session as AuthSession} />} path="settings" />
         </Route>

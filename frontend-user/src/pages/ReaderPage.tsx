@@ -3,7 +3,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { BookMarked, FileText, Highlighter, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
 import type { AuthSession, CardDraftPayload, DeckPayload, MaterialPayload, ReaderStatePayload } from "../api/client";
 import {
-  bulkCreateDeckCards,
+  createDeckCardNote,
   createReaderAnnotation,
   deleteReaderAnnotation,
   generateAnnotationCardDrafts,
@@ -14,18 +14,22 @@ import {
 } from "../api/client";
 import { downloadLibraryMaterial, getLibraryMaterial, getMaterialAttachmentUrl, listLibraryMaterials } from "../api/library";
 import { DataState, Select, Tag } from "../design-system/primitives";
+import { CardNoteComposer, buildCardNoteFields, type CardNoteTemplateCode } from "../features/card-notes/CardNoteComposer";
+import { CardNoteCreationResult, type CardNoteCreationResultData } from "../features/card-notes/CardNoteCreationResult";
+import { commitCardNoteBatch } from "../features/card-notes/commitCardNoteBatch";
+import { buildPrimarySourceLink, buildSourceBacklinkTarget } from "../features/sources/sourceLinks";
 import { PdfReaderPane } from "../modules/reader/PdfReaderPane";
 import { isPdfMaterial, type PdfTextSelection } from "../modules/reader/pdfSelection";
 import { useReaderProgress } from "../modules/reader/useReaderProgress";
 import { ReaderAnnotationList } from "../modules/reader/ReaderAnnotationList";
 import {
-  buildCardInputsFromDrafts,
   displayMaterialDescription,
   displayMaterialTitle,
   formatDate
 } from "../app/appShared";
 
 type ReaderInspectorTab = "annotations" | "bookmarks" | "drafts";
+type ReaderCardTemplate = CardNoteTemplateCode;
 type ReaderWorkspaceState =
   | {
       kind: "loading" | "error" | "stale";
@@ -56,6 +60,8 @@ export function ReaderPage(props: { session: AuthSession }) {
   const [focusedAnnotationId, setFocusedAnnotationId] = useState(requestedAnnotation);
   const [annotationComment, setAnnotationComment] = useState("");
   const [annotationDrafts, setAnnotationDrafts] = useState<CardDraftPayload[]>([]);
+  const [creationResult, setCreationResult] = useState<CardNoteCreationResultData | null>(null);
+  const [annotationTemplate, setAnnotationTemplate] = useState<ReaderCardTemplate>("basic");
   const [selectedDeckId, setSelectedDeckId] = useState("");
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
@@ -76,6 +82,7 @@ export function ReaderPage(props: { session: AuthSession }) {
     setSelection(null);
     setAnnotationComment("");
     setAnnotationDrafts([]);
+    setCreationResult(null);
 
     void Promise.all([listLibraryMaterials(sessionRef.current), listMaterials(), listDecks(sessionRef.current).catch(() => {
       if (!cancelled) setMessage("卡组暂时不可用，仍可继续阅读和批注。");
@@ -270,6 +277,7 @@ export function ReaderPage(props: { session: AuthSession }) {
     if (!selectedMaterial || !readerState?.annotations.length) return;
 
     setBusy("annotation-drafts");
+    setCreationResult(null);
     setMessage("");
     try {
       const payload = await generateAnnotationCardDrafts(
@@ -313,16 +321,19 @@ export function ReaderPage(props: { session: AuthSession }) {
     setBusy("annotation-commit");
     setMessage("");
     try {
-      const payload = await bulkCreateDeckCards(props.session, selectedDeckId, buildCardInputsFromDrafts(annotationDrafts));
+      const batch = await commitCardNoteBatch(annotationDrafts, (draft) => createDeckCardNote(props.session, selectedDeckId, buildCardNoteCreateInput(draft, annotationTemplate)));
+      const createdCount = batch.createdCount;
+      const writtenDraft = annotationDrafts.find((draft) => batch.succeededIds.includes(draft.id));
+      if (createdCount) setCreationResult({ count: createdCount, cardId: batch.cardId, sourcePath: buildSourceBacklinkTarget(writtenDraft ? buildPrimarySourceLink(writtenDraft) : null) || `/reader/${encodeURIComponent(selectedId)}` });
       setDecks((current) =>
         current.map((deck) =>
           deck.id === selectedDeckId
-            ? { ...deck, cardCount: deck.cardCount + payload.length, updatedAt: new Date().toISOString() }
+            ? { ...deck, cardCount: deck.cardCount + createdCount, updatedAt: new Date().toISOString() }
             : deck
         )
       );
-      setAnnotationDrafts([]);
-      setMessage(`已把 ${payload.length} 张批注卡片写入 deck。`);
+      setAnnotationDrafts((current) => current.filter((draft) => !batch.succeededIds.includes(draft.id)));
+      setMessage(batch.error ? `${batch.error} 已保留 ${batch.failedIds.length} 条未写入草稿，重试只会提交这些草稿。` : `已把 ${createdCount} 张批注卡片写入 deck。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "写入复习卡片失败。");
     } finally {
@@ -412,6 +423,7 @@ export function ReaderPage(props: { session: AuthSession }) {
 
       {message ? <p className="studio-inline-message" role="status">{message}</p> : null}
       {progress.error ? <div className="reader-progress-error" role="alert"><span>阅读进度尚未保存：{progress.error}</span><button className="secondary-button" onClick={progress.retry} type="button">重试保存进度</button></div> : null}
+      <CardNoteCreationResult result={creationResult} />
 
       <div className="reader-studio__body">
         <aside className="studio-resource-dock reader-resource-dock" aria-label="可阅读资料">
@@ -630,36 +642,26 @@ export function ReaderPage(props: { session: AuthSession }) {
               <div className="studio-panel-stack">
                 {annotationDrafts.length ? (
                   <>
-                    <section className="reader-draft-actions">
-                      <label className="form-stack">
-                        <span>写入 Deck</span>
-                        <Select aria-label="写入 Deck" onChange={(event) => setSelectedDeckId(event.target.value)} value={selectedDeckId}>
-                          <option value="">请选择一个 deck</option>
-                          {decks.map((deck) => (
-                            <option key={deck.id} value={deck.id}>{deck.title}</option>
-                          ))}
-                        </Select>
-                      </label>
-                      <button className="primary-button" disabled={!selectedDeckId || busy === "annotation-commit"} onClick={() => void handleCommitAnnotationDrafts()} type="button">
-                        写入复习系统
-                      </button>
-                    </section>
-                    <div className="studio-draft-list">
-                      {annotationDrafts.map((item) => (
-                        <article className="studio-draft-card" key={item.id}>
-                          <strong>{item.sourceLabel || "批注草稿"}</strong>
-                          <label>
-                            <span>问题</span>
-                            <input onChange={(event) => handleAnnotationDraftChange(item.id, "front", event.target.value)} value={item.front} />
-                          </label>
-                          <label>
-                            <span>答案</span>
-                            <textarea onChange={(event) => handleAnnotationDraftChange(item.id, "back", event.target.value)} rows={4} value={item.back} />
-                          </label>
-                          {item.explanation ? <small>{item.explanation}</small> : null}
-                        </article>
-                      ))}
-                    </div>
+                    <CardNoteComposer
+                      allowedTemplates={["basic", "basic_reverse", "cloze"]}
+                      busy={busy === "annotation-commit"}
+                      decks={decks}
+                      drafts={annotationDrafts.map((item) => ({
+                        id: item.id,
+                        title: item.sourceLabel || "批注草稿",
+                        excerpt: item.explanation,
+                        locatorLabel: item.sourceType && item.sourceId ? `${item.sourceType} / ${item.sourceId}` : undefined,
+                        front: item.front,
+                        back: item.back,
+                        explanation: item.explanation
+                      }))}
+                      onDeckChange={setSelectedDeckId}
+                      onDraftFieldChange={handleAnnotationDraftChange}
+                      onSubmit={() => void handleCommitAnnotationDrafts()}
+                      onTemplateChange={(template) => setAnnotationTemplate(template)}
+                      selectedDeckId={selectedDeckId}
+                      template={annotationTemplate}
+                    />
                   </>
                 ) : decks.length ? (
                   <DataState
@@ -683,6 +685,20 @@ export function ReaderPage(props: { session: AuthSession }) {
       </div>
     </section>
   );
+}
+
+function buildCardNoteCreateInput(draft: CardDraftPayload, noteTypeCode: ReaderCardTemplate) {
+  const sourceLink = buildPrimarySourceLink({
+    sourceType: draft.sourceType,
+    sourceId: draft.sourceId,
+    sourceMetadata: draft.sourceMetadata
+  });
+  const sourceLinks = sourceLink ? [sourceLink] : [];
+  return {
+    noteTypeCode,
+    sourceLinks,
+    fields: buildCardNoteFields(draft, noteTypeCode)
+  };
 }
 
 function parseReaderPageQuery(search: string) {

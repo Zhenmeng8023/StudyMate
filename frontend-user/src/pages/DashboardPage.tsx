@@ -1,10 +1,22 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { ArrowRight, BookOpen, BrainCircuit, FileText, NotebookPen, Sparkles, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { AiDraftPayload, AiTaskPayload, AuthSession, MaterialPayload, NotePayload, PostSummary, ReviewFeedbackPayload, ReviewQueuePayload } from "../api/client";
+import type {
+  AiDraftPayload,
+  AiTaskPayload,
+  AuthSession,
+  MaterialPayload,
+  NotePayload,
+  PostSummary,
+  ReviewFeedbackPayload,
+  ReviewFeedbackSourcePayload,
+  ReviewInsightsPayload,
+  ReviewQueuePayload
+} from "../api/client";
 import { listAiDrafts, listAiTasks } from "../api/ai";
 import { listMaterials, listNotes, listPosts } from "../api/client";
-import { getReviewFeedback, getTodayReviewQueue } from "../api/review";
+import { getReviewFeedback, getReviewInsights, getTodayReviewQueue } from "../api/review";
+import "./dashboard-learning-status.css";
 import {
   displayMaterialCategory,
   displayMaterialDescription,
@@ -20,7 +32,9 @@ import {
   WorkspaceHeader
 } from "../app/appShared";
 import { DataState } from "../design-system/primitives";
+import { ReviewHistoryTable } from "../features/review/ReviewHistoryTable";
 import { formatAiStatusLabel, formatAiTaskLabel } from "../features/ai/aiDrafts";
+import { buildPrimarySourceLink, buildSourceBacklinkTarget, buildSourceProfileTarget, normalizeSourceType } from "../features/sources/sourceLinks";
 
 type DashboardSectionState =
   | {
@@ -30,12 +44,67 @@ type DashboardSectionState =
     }
   | null;
 
+function formatDashboardSourceType(sourceType?: string) {
+  switch (normalizeSourceType(sourceType)) {
+    case "material":
+    case "pdf-anchor":
+    case "annotation":
+      return "PDF";
+    case "graph":
+    case "graph-node":
+      return "图谱";
+    case "ai":
+    case "ai-task":
+    case "ai-draft":
+      return "AI";
+    case "note":
+    case "note-block":
+      return "笔记";
+    default:
+      return sourceType?.trim() || "来源";
+  }
+}
+
+function buildDashboardSourceTitle(source: ReviewFeedbackSourcePayload) {
+  const primarySource = buildPrimarySourceLink(source);
+  return primarySource?.title || source.sourceId || "未命名来源";
+}
+
+function buildDashboardSourceBacklink(source: ReviewFeedbackSourcePayload) {
+  const primarySource = buildPrimarySourceLink(source);
+  return buildSourceBacklinkTarget(primarySource);
+}
+
+function buildDashboardSourceReviewTarget(source: ReviewFeedbackSourcePayload) {
+  const sourceType = normalizeSourceType(source.sourceType);
+  const sourceId = source.sourceId?.trim();
+  if (!sourceType || !sourceId) {
+    return "/review";
+  }
+  const params = new URLSearchParams({ sourceType, sourceId });
+  return `/review?${params.toString()}`;
+}
+
+function formatMasteryLevelLabel(level?: string) {
+  switch (level) {
+    case "weak":
+      return "薄弱";
+    case "solid":
+      return "已掌握";
+    case "building":
+      return "学习中";
+    default:
+      return level || "学习中";
+  }
+}
+
 export function DashboardPage(props: { session: AuthSession | null }) {
   const [materials, setMaterials] = useState<MaterialPayload[]>([]);
   const [notes, setNotes] = useState<NotePayload[]>([]);
   const [posts, setPosts] = useState<PostSummary[]>([]);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueuePayload | null>(null);
   const [reviewFeedback, setReviewFeedback] = useState<ReviewFeedbackPayload | null>(null);
+  const [reviewInsights, setReviewInsights] = useState<ReviewInsightsPayload | null>(null);
   const [aiDrafts, setAiDrafts] = useState<AiDraftPayload[]>([]);
   const [aiTasks, setAiTasks] = useState<AiTaskPayload[]>([]);
   const [materialsLoading, setMaterialsLoading] = useState(true);
@@ -43,12 +112,14 @@ export function DashboardPage(props: { session: AuthSession | null }) {
   const [notesLoading, setNotesLoading] = useState(Boolean(props.session));
   const [reviewLoading, setReviewLoading] = useState(Boolean(props.session));
   const [feedbackLoading, setFeedbackLoading] = useState(Boolean(props.session));
+  const [insightsLoading, setInsightsLoading] = useState(Boolean(props.session));
   const [aiLoading, setAiLoading] = useState(Boolean(props.session));
   const [materialsError, setMaterialsError] = useState("");
   const [postsError, setPostsError] = useState("");
   const [notesError, setNotesError] = useState("");
   const [reviewError, setReviewError] = useState("");
   const [feedbackError, setFeedbackError] = useState("");
+  const [insightsError, setInsightsError] = useState("");
   const [aiError, setAiError] = useState("");
 
   async function loadMaterialsSection() {
@@ -116,6 +187,19 @@ export function DashboardPage(props: { session: AuthSession | null }) {
     }
   }
 
+  async function loadInsightsSection(session: AuthSession) {
+    setInsightsLoading(true);
+    setInsightsError("");
+    try {
+      setReviewInsights(await getReviewInsights(session));
+    } catch (error) {
+      setReviewInsights(null);
+      setInsightsError(error instanceof Error ? error.message : "读取学习趋势失败。");
+    } finally {
+      setInsightsLoading(false);
+    }
+  }
+
   async function loadAiSection(session: AuthSession) {
     setAiLoading(true);
     setAiError("");
@@ -148,6 +232,9 @@ export function DashboardPage(props: { session: AuthSession | null }) {
       setReviewFeedback(null);
       setFeedbackError("");
       setFeedbackLoading(false);
+      setReviewInsights(null);
+      setInsightsError("");
+      setInsightsLoading(false);
       setAiDrafts([]);
       setAiTasks([]);
       setAiError("");
@@ -158,6 +245,7 @@ export function DashboardPage(props: { session: AuthSession | null }) {
     void loadNotesSection(props.session);
     void loadReviewSection(props.session);
     void loadFeedbackSection(props.session);
+    void loadInsightsSection(props.session);
     void loadAiSection(props.session);
   }, [props.session]);
 
@@ -166,10 +254,34 @@ export function DashboardPage(props: { session: AuthSession | null }) {
   const recentPosts = posts.slice(0, 4);
   const recentReviewItems = reviewQueue?.items.slice(0, 3) || [];
   const weakReviewCards = reviewFeedback?.weakCards.slice(0, 3) || [];
+  const feedbackSources = reviewFeedback?.weakSources?.length
+    ? reviewFeedback.weakSources
+    : reviewFeedback?.sourceSummaries ?? [];
+  const weakFeedbackSources = feedbackSources
+    .filter((source) => source.weakCardCount > 0 || source.masteryLevel === "weak")
+    .slice(0, 4);
+  const masteredSourceCount = feedbackSources.filter(
+    (source) =>
+      source.totalCardCount > 0 &&
+      (source.masteryLevel === "solid" || source.masteredCardCount >= source.totalCardCount)
+  ).length;
+  const averageWeakMasteryScore = weakFeedbackSources.length
+    ? Math.round(
+        weakFeedbackSources.reduce((total, source) => total + source.masteryScore, 0) / weakFeedbackSources.length
+      )
+    : null;
   const pendingAiTasks = aiTasks.filter((task) => !["completed", "confirmed", "failed"].includes(task.status));
   const recentAiDrafts = aiDrafts.slice(0, 2);
   const recentAiTasks = (pendingAiTasks.length ? pendingAiTasks : aiTasks).slice(0, 2);
   const pendingWorkspaceCount = (reviewQueue?.dueCount || 0) + aiDrafts.length + pendingAiTasks.length;
+  const latestInsightDay = reviewInsights?.days?.[reviewInsights.days.length - 1];
+  const sevenDayReviewCount = reviewInsights?.days?.reduce((total, day) => total + day.reviewCount, 0) ?? 0;
+  const sevenDayAgainCount = reviewInsights?.days?.reduce((total, day) => total + (day.ratingCounts.again || 0), 0) ?? 0;
+  const sevenDayWeakNewCount = reviewInsights?.days?.reduce((total, day) => total + day.weakNewCount, 0) ?? 0;
+  const sevenDayWeakCarryCount = reviewInsights?.days?.reduce((total, day) => total + day.weakCarryCount, 0) ?? 0;
+  const latestSourceTrend = reviewInsights?.sourceTrends?.[reviewInsights.sourceTrends.length - 1];
+  const todayReviewVolume = latestInsightDay?.reviewCount ?? 0;
+  const todayAgainCount = latestInsightDay?.ratingCounts.again ?? 0;
 
   const materialsState: DashboardSectionState = materialsLoading
     ? {
@@ -414,6 +526,128 @@ export function DashboardPage(props: { session: AuthSession | null }) {
         <MetricTile helper="已经沉淀下来的个人笔记" label="笔记数" value={String(notes.length)} />
         <MetricTile helper="社区里可浏览的公开内容" label="社区分享" value={String(posts.length)} />
         <MetricTile helper="复习与 AI 草稿会在这里汇总成今天的最小待办" label="今日待办" value={props.session ? String(pendingWorkspaceCount) : "登录后查看"} />
+      </div>
+
+      <section aria-label="今日学习状态" className="dashboard-learning-status">
+        <div className="dashboard-study-flow__intro">
+          <p className="eyebrow">学习指挥台</p>
+          <h2>今日学习状态</h2>
+          <p>
+            {props.session
+              ? "复习队列、来源反馈和 AI 草稿会汇总成今天的最小行动清单。"
+              : "登录后可以看到今日复习、薄弱来源和学习趋势。"}
+          </p>
+        </div>
+        <div className="dashboard-learning-status__metrics" aria-label="今日学习状态指标">
+          <span>{`今日待复习 ${reviewQueue?.dueCount ?? reviewFeedback?.dueCount ?? 0}`}</span>
+          <span>{`学习中 ${reviewFeedback?.learningCount ?? reviewQueue?.learningCount ?? 0}`}</span>
+          <span>{`薄弱来源 ${weakFeedbackSources.length}`}</span>
+          <span>{`已掌握来源 ${masteredSourceCount}`}</span>
+        </div>
+        {!props.session ? (
+          <DataState
+            action={<Link className="secondary-button" to="/login">登录后继续</Link>}
+            description="登录后首页会优先展示今天该复习什么，以及哪些来源需要回补。"
+            kind="unauthorized"
+            title="登录后查看学习指挥台"
+          />
+        ) : !reviewQueue?.dueCount && !feedbackSources.length ? (
+          <DataState
+            action={<Link className="secondary-button" to="/reader">去 Reader 批注制卡</Link>}
+            description="还没有卡片时，先从阅读器批注关键概念并写入复习系统。"
+            kind="empty"
+            title="还没有可复习卡片"
+          />
+        ) : null}
+      </section>
+
+      <div className="dashboard-grid">
+        <SectionFrame
+          action={<Link className="bookmark-chip" to={props.session ? "/review" : "/login"}>进入复习</Link>}
+          className="dashboard-section dashboard-section-feedback"
+          subtitle="学习反馈"
+          title="薄弱知识点 / 薄弱来源"
+        >
+          {props.session && weakFeedbackSources.length ? (
+            <div className="mini-card-grid stacked">
+              {weakFeedbackSources.map((source) => {
+                const sourceBacklink = buildDashboardSourceBacklink(source);
+                return (
+                  <article className="mini-card" key={`${source.sourceType}:${source.sourceId}`}>
+                    <strong>{buildDashboardSourceTitle(source)}</strong>
+                    <p>{`${formatDashboardSourceType(source.sourceType)} · 掌握度 ${source.masteryScore}%`}</p>
+                    <p>{`${formatMasteryLevelLabel(source.masteryLevel)} · 待回补 ${source.weakCardCount} 张 · 到期 ${source.dueCount} 张`}</p>
+                    {source.sampleCardFronts?.length ? <small>{source.sampleCardFronts.slice(0, 2).join(" / ")}</small> : null}
+                    <div className="header-actions">
+                      {buildSourceProfileTarget(buildPrimarySourceLink(source)) ? (
+                        <Link className="primary-button" to={buildSourceProfileTarget(buildPrimarySourceLink(source))}>
+                          来源档案
+                        </Link>
+                      ) : null}
+                      <Link className="secondary-button" to={buildDashboardSourceReviewTarget(source)}>
+                        去复习
+                      </Link>
+                      {sourceBacklink ? (
+                        <Link className="secondary-button" to={sourceBacklink}>
+                          回到来源
+                        </Link>
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <DataState
+              action={<Link className="secondary-button" to={props.session ? "/materials" : "/login"}>{props.session ? "继续学习新材料" : "登录后继续"}</Link>}
+              description={props.session ? "当前没有明显薄弱来源，可以继续学习新材料或补充卡片。" : "登录后查看来源级掌握度和回补入口。"}
+              kind={props.session ? "empty" : "unauthorized"}
+              title={props.session ? "没有薄弱点" : "登录后查看薄弱来源"}
+            />
+          )}
+        </SectionFrame>
+
+        <SectionFrame
+          action={<Link className="bookmark-chip" to={props.session ? "/review" : "/login"}>查看复习</Link>}
+          className="dashboard-section dashboard-section-review"
+          subtitle="趋势"
+          title="7 天学习趋势"
+        >
+          {insightsLoading && !reviewInsights ? (
+            <DataState description="正在读取最近 7 天 ReviewLog 聚合。" kind="loading" title="正在生成趋势" />
+          ) : (
+            <>
+            <div className="mini-card-grid stacked">
+              {insightsError ? (
+                <article className="mini-card">
+                  <strong>趋势暂时不可用</strong>
+                  <p>{insightsError}</p>
+                  <small>当前学习摘要会继续保留，可以稍后重试趋势接口。</small>
+                  <button className="secondary-button" onClick={() => props.session ? void loadInsightsSection(props.session) : undefined} type="button">
+                    重试趋势
+                  </button>
+                </article>
+              ) : null}
+              <article className="mini-card">
+                <strong>{`今日 ${todayReviewVolume} 张复习`}</strong>
+                <p>{`Again ${todayAgainCount} 次${averageWeakMasteryScore === null ? "" : ` · 薄弱掌握度 ${averageWeakMasteryScore}%`}`}</p>
+                <small>{reviewInsights ? "来自 card_reviews 的今日评分聚合。" : "完成一次复习后生成趋势。"}</small>
+              </article>
+              <article className="mini-card">
+                <strong>{`近 7 天 ${sevenDayReviewCount} 张`}</strong>
+                <p>{`Again ${sevenDayAgainCount} 次 · 新增薄弱来源 ${sevenDayWeakNewCount}`}</p>
+                <small>{`持续薄弱 ${sevenDayWeakCarryCount} 次${latestSourceTrend ? ` · 最新来源掌握度 ${latestSourceTrend.masteryScore}%` : ""}`}</small>
+              </article>
+              <article className="mini-card">
+                <strong>来源掌握趋势</strong>
+                <p>{`薄弱来源 ${weakFeedbackSources.length} · 已掌握来源 ${masteredSourceCount}`}</p>
+                <small>{reviewInsights?.sourceTrends?.length ? "由复习记录与当前学习状态估算，可随记录变化重新计算。" : "暂无历史，完成一次复习后生成趋势。"}</small>
+              </article>
+            </div>
+            <ReviewHistoryTable days={reviewInsights?.days ?? []} />
+            </>
+          )}
+        </SectionFrame>
       </div>
 
       <div className="dashboard-grid">

@@ -7,11 +7,14 @@ import {
   createDeckCard,
   exportDeckCards,
   getTodayReviewQueue,
+  getReviewFeedback,
   importDeckCards,
+  listCardNotes,
   listDeckCards,
   listDecks,
   reviewCard,
   undoReviewCard,
+  updateCardNote,
   updateCardStatus
 } from "../../api/client";
 import type { AuthSession } from "../../api/client";
@@ -25,11 +28,14 @@ vi.mock("../../api/client", async () => {
     createDeckCard: vi.fn(),
     exportDeckCards: vi.fn(),
     getTodayReviewQueue: vi.fn(),
+    getReviewFeedback: vi.fn(),
     importDeckCards: vi.fn(),
+    listCardNotes: vi.fn(),
     listDeckCards: vi.fn(),
     listDecks: vi.fn(),
     reviewCard: vi.fn(),
     undoReviewCard: vi.fn(),
+    updateCardNote: vi.fn(),
     updateCardStatus: vi.fn()
   };
 });
@@ -51,11 +57,14 @@ const createDeckMock = vi.mocked(createDeck);
 const createDeckCardMock = vi.mocked(createDeckCard);
 const exportDeckCardsMock = vi.mocked(exportDeckCards);
 const getTodayReviewQueueMock = vi.mocked(getTodayReviewQueue);
+const getReviewFeedbackMock = vi.mocked(getReviewFeedback);
 const importDeckCardsMock = vi.mocked(importDeckCards);
+const listCardNotesMock = vi.mocked(listCardNotes);
 const listDeckCardsMock = vi.mocked(listDeckCards);
 const listDecksMock = vi.mocked(listDecks);
 const reviewCardMock = vi.mocked(reviewCard);
 const undoReviewCardMock = vi.mocked(undoReviewCard);
+const updateCardNoteMock = vi.mocked(updateCardNote);
 const updateCardStatusMock = vi.mocked(updateCardStatus);
 
 function renderPage(path = "/review") {
@@ -82,11 +91,15 @@ describe("ReviewWorkspacePage", () => {
     createDeckCardMock.mockReset();
     exportDeckCardsMock.mockReset();
     getTodayReviewQueueMock.mockReset();
+    getReviewFeedbackMock.mockReset();
+    getReviewFeedbackMock.mockResolvedValue({ dueCount: 0, learningCount: 0, weakCardCount: 0, weakCards: [], weakSources: [] });
     importDeckCardsMock.mockReset();
+    listCardNotesMock.mockReset();
     listDeckCardsMock.mockReset();
     listDecksMock.mockReset();
     reviewCardMock.mockReset();
     undoReviewCardMock.mockReset();
+    updateCardNoteMock.mockReset();
     updateCardStatusMock.mockReset();
 
     listDecksMock.mockResolvedValue([
@@ -115,8 +128,61 @@ describe("ReviewWorkspacePage", () => {
         updatedAt: "2026-06-02T12:00:00Z"
       }
     ]);
+    listCardNotesMock.mockResolvedValue([
+      {
+        cardNote: {
+          id: "note-1",
+          deckId: "deck-1",
+          ownerUserId: "user-1",
+          noteTypeId: "note-type-basic",
+          noteTypeCode: "basic",
+          primarySourceLink: { sourceType: "note", sourceId: "source-note-1", title: "DFS 笔记" },
+          sourceLinks: [{ sourceType: "note", sourceId: "source-note-1", title: "DFS 笔记" }],
+          fields: { front: "DFS 的时间复杂度？", back: "O(V+E)" },
+          generatedCardCount: 1,
+          status: "active"
+        },
+        generatedCards: [
+          {
+            id: "card-1",
+            deckId: "deck-1",
+            ownerUserId: "user-1",
+            cardNoteId: "note-1",
+            templateId: "template-1",
+            templateOrdinal: 0,
+            cardType: "basic",
+            front: "DFS 的时间复杂度？",
+            back: "O(V+E)",
+            tags: ["graph"],
+            status: "active",
+            schedule: {
+              cardId: "card-1",
+              userId: "user-1",
+              dueAt: "2026-06-02T12:00:00Z",
+              learningStep: 0,
+              intervalDays: 0,
+              easeFactor: 2.5,
+              repetitionCount: 0,
+              lapseCount: 0,
+              state: "new",
+              updatedAt: "2026-06-02T12:00:00Z"
+            },
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        ],
+        queueStates: { new: 1 },
+        tags: ["graph"]
+      }
+    ]);
     getTodayReviewQueueMock.mockResolvedValue({
       dueCount: 1,
+      newCount: 1,
+      learningCount: 0,
+      reviewCount: 0,
+      relearningCount: 0,
+      newLimit: 20,
+      reviewLimit: 200,
       items: [
         {
           deckTitle: "期末复习",
@@ -222,6 +288,38 @@ describe("ReviewWorkspacePage", () => {
       createdAt: "2026-06-02T12:00:00Z",
       updatedAt: "2026-06-02T12:00:00Z"
     }));
+    updateCardNoteMock.mockImplementation(async (_session, cardNoteId, input) => ({
+      cardNote: {
+        id: cardNoteId,
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        noteTypeId: "note-type-basic",
+        noteTypeCode: "basic",
+        sourceLinks: [{ sourceType: "note", sourceId: "source-note-1", title: "DFS 笔记" }],
+        fields: input.fields ?? { front: "DFS 的时间复杂度？", back: "O(V+E)" },
+        generatedCardCount: 1,
+        status: "active"
+      },
+      generatedCards: [
+        {
+          id: "card-1",
+          deckId: "deck-1",
+          ownerUserId: "user-1",
+          cardNoteId: cardNoteId,
+          templateId: "template-1",
+          templateOrdinal: 0,
+          cardType: "basic",
+          front: input.fields?.front ?? "DFS 的时间复杂度？",
+          back: input.fields?.back ?? "O(V+E)",
+          tags: input.tags ?? ["graph"],
+          status: "active",
+          createdAt: "2026-06-02T12:00:00Z",
+          updatedAt: "2026-06-02T12:00:00Z"
+        }
+      ],
+      queueStates: { new: 1 },
+      tags: input.tags ?? ["graph"]
+    }));
 
     Object.defineProperty(URL, "createObjectURL", {
       configurable: true,
@@ -253,6 +351,100 @@ describe("ReviewWorkspacePage", () => {
     expect(screen.getByLabelText("导入卡片文件")).toBeInTheDocument();
   });
 
+  it("passes the formal queue state filter to the card browser request", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await openCardBrowser(user);
+    await user.selectOptions(screen.getByLabelText("Formal queue state filter"), "review");
+
+    await waitFor(() => {
+      expect(listDeckCardsMock).toHaveBeenLastCalledWith(
+        session,
+        "deck-1",
+        expect.objectContaining({
+          queueState: "review"
+        })
+      );
+    });
+  });
+
+  it("manages card notes with generated cards from the Note view", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByRole("button", { name: "Note 视图" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Note 视图" }));
+
+    expect(screen.getByText("来源笔记与卡片")).toBeInTheDocument();
+    expect(screen.getByText("CardNote note-1")).toBeInTheDocument();
+    expect(screen.getByText("问答卡 · 1 张卡片")).toBeInTheDocument();
+    expect(screen.getByText("来源：笔记")).toBeInTheDocument();
+    expect(screen.getByText("新卡 1")).toBeInTheDocument();
+    expect(screen.getByText("生成卡片")).toBeInTheDocument();
+
+    const frontInput = screen.getByLabelText("编辑 CardNote note-1 Front");
+    await user.clear(frontInput);
+    await user.type(frontInput, "Updated DFS front");
+    const tagInput = screen.getByLabelText("编辑 CardNote note-1 标签");
+    await user.clear(tagInput);
+    await user.type(tagInput, "graph, weak");
+    await user.click(screen.getByRole("button", { name: "保存并更新未学习卡片" }));
+
+    await waitFor(() => {
+      expect(updateCardNoteMock).toHaveBeenCalledWith(
+        session,
+        "note-1",
+        expect.objectContaining({
+          fields: { front: "Updated DFS front", back: "O(V+E)" },
+          tags: ["graph", "weak"],
+          sourceLinks: [{ sourceType: "note", sourceId: "source-note-1", title: "DFS 笔记" }]
+        })
+      );
+    });
+    expect(await screen.findByText("CardNote 已更新，未开始复习的 GeneratedCards 已重新生成。")).toBeInTheDocument();
+  });
+
+  it("refreshes deck totals after regeneration without discarding another note's unsaved edits", async () => {
+    const user = userEvent.setup();
+    const [note] = await listCardNotesMock(session);
+    const decks = await listDecksMock(session);
+    listCardNotesMock.mockResolvedValue([note, { ...note, cardNote: { ...note.cardNote, id: "note-2" } }]);
+    const updated = {
+      ...note, cardNote: { ...note.cardNote, fields: { ...note.cardNote.fields, front: "更新后的内容" }, generatedCardCount: 2 },
+      generatedCards: [...note.generatedCards, { ...note.generatedCards[0], id: "card-2" }],
+      regeneration: { createdCount: 1, updatedCount: 1, removedCount: 0, preservedCount: 0 }
+    };
+    updateCardNoteMock.mockResolvedValue(updated);
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: "Note 视图" }));
+    listDecksMock.mockResolvedValue(decks.map((deck) => ({ ...deck, cardCount: 2 })));
+    await user.type(screen.getByLabelText("编辑 CardNote note-2 Front"), "未保存修改");
+    await user.clear(screen.getByLabelText("编辑 CardNote note-1 Front"));
+    await user.type(screen.getByLabelText("编辑 CardNote note-1 Front"), "更新后的内容");
+    const firstNote = screen.getByText("CardNote note-1").closest("article");
+    if (!firstNote) throw new Error("missing note card");
+    await user.click(within(firstNote).getByRole("button", { name: "保存并更新未学习卡片" }));
+    await waitFor(() => expect(within(firstNote).getByRole("status")).toHaveTextContent("新增 1 张"));
+    expect(screen.getByLabelText("编辑 CardNote note-2 Front")).toHaveValue("DFS 的时间复杂度？未保存修改");
+    await user.click(screen.getByRole("button", { name: "卡组" }));
+    expect(await screen.findByRole("button", { name: /期末复习2 张卡片/ })).toBeInTheDocument();
+  });
+
+  it("resynchronizes the queue when pausing a managed card outside today's queue", async () => {
+    const user = userEvent.setup();
+    const notes = await listCardNotesMock(session);
+    listCardNotesMock.mockResolvedValue(notes.map((note) => ({
+      ...note, generatedCards: note.generatedCards.map((card) => ({ ...card, id: "future-card" }))
+    })));
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: "Note 视图" }));
+    await user.click(screen.getByRole("button", { name: "暂停" }));
+    await waitFor(() => expect(updateCardStatusMock).toHaveBeenCalledWith(session, "future-card", { status: "suspended" }));
+    await waitFor(() => expect(getTodayReviewQueueMock).toHaveBeenCalledTimes(2));
+    expect(screen.getByLabelText("复习进度")).toHaveTextContent("1 到期");
+  });
+
   it("starts review only after clicking start and then writes back a rating", async () => {
     const user = userEvent.setup();
     renderPage();
@@ -274,6 +466,80 @@ describe("ReviewWorkspacePage", () => {
     });
     expect(await screen.findByText(/已记录复习，下次/)).toBeInTheDocument();
     expect(screen.getByText("今天的队列已经清空")).toBeInTheDocument();
+  });
+
+  it("shows the daily learning plan, current queue metadata, and session summary", async () => {
+    const user = userEvent.setup();
+    const weakSource = {
+      sourceType: "note", sourceId: "note-existing", totalCardCount: 2, reviewCardCount: 0,
+      masteredCardCount: 0, masteryScore: 0, weakCardCount: 2, dueCount: 1, learningCount: 2, maxLapseCount: 1
+    };
+    getReviewFeedbackMock.mockResolvedValue({ dueCount: 3, learningCount: 2, weakCardCount: 2, weakCards: [], weakSources: [weakSource, weakSource] });
+    getTodayReviewQueueMock.mockResolvedValueOnce({
+      dueCount: 3,
+      newCount: 1,
+      learningCount: 1,
+      reviewCount: 1,
+      relearningCount: 0,
+      newLimit: 20,
+      reviewLimit: 200,
+      items: [
+        {
+          deckTitle: "期末复习",
+          card: {
+            id: "card-1",
+            deckId: "deck-1",
+            ownerUserId: "user-1",
+            cardNoteId: "note-1",
+            templateId: "template-1",
+            templateOrdinal: 0,
+            cardType: "basic",
+            front: "什么是图谱？",
+            back: "节点和关系。",
+            status: "active",
+            createdAt: "2026-06-02T12:00:00Z",
+            updatedAt: "2026-06-02T12:00:00Z"
+          },
+          schedule: {
+            cardId: "card-1",
+            userId: "user-1",
+            dueAt: "2026-06-02T12:00:00Z",
+            learningStep: 1,
+            intervalDays: 0,
+            easeFactor: 2.5,
+            repetitionCount: 0,
+            lapseCount: 0,
+            state: "learning",
+            updatedAt: "2026-06-02T12:00:00Z"
+          }
+        }
+      ]
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("今日学习计划")).toBeInTheDocument();
+    expect(screen.getByText("新卡 1 / 20")).toBeInTheDocument();
+    expect(screen.getByText("预计用时 2 分钟")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("当前薄弱来源（全部卡片）").parentElement).toHaveTextContent("1"));
+
+    await startReview(user);
+
+    expect(screen.getByText("当前队列：learning")).toBeInTheDocument();
+    expect(screen.getByText("learningStep 1")).toBeInTheDocument();
+    expect(screen.getByText("CardNote note-1")).toBeInTheDocument();
+    expect(screen.getByText("模板 #1")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "显示答案" }));
+    await user.click(screen.getByRole("button", { name: "Again 重来" }));
+
+    expect(await screen.findByText("本次复习总结")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "阅读新资料" })).toHaveAttribute("href", "/reader");
+    expect(screen.getByText("完成 1 张")).toBeInTheDocument();
+    expect(screen.getByText("Again 1")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回首页" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "查看薄弱节点" })).toHaveAttribute("href", "/graph?learningFilter=weak");
+    expect(screen.getByRole("link", { name: "继续阅读制卡" })).toHaveAttribute("href", "/reader");
   });
 
   it("surfaces a graph backlink after rating a graph-sourced card", async () => {

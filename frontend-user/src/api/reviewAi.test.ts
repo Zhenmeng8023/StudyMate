@@ -5,6 +5,8 @@ import {
   createDeck,
   exportDeckCards,
   getReviewFeedback,
+  getReviewInsights,
+  getSourceProfile,
   getAiUsageSummary,
   getTodayReviewQueue,
   importDeckCards,
@@ -163,6 +165,36 @@ describe("review API clients", () => {
     });
   });
 
+  it("reads review insights with auth headers", async () => {
+    const fetchMock = mockApiResponse({ days: [] });
+
+    await getReviewInsights(session);
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/review/insights");
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+      Authorization: "Bearer access-token"
+    });
+  });
+
+  it("reads source profiles with encoded source query", async () => {
+    const fetchMock = mockApiResponse({
+      sourceType: "graph-node",
+      sourceId: "node 1",
+      queueStates: {},
+      masteryScore: 0,
+      dueCount: 0,
+      learningCount: 0,
+      weakCardCount: 0
+    });
+
+    await getSourceProfile(session, { sourceType: "graph-node", sourceId: "node 1" });
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/review/source-profile?sourceType=graph-node&sourceId=node+1");
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+      Authorization: "Bearer access-token"
+    });
+  });
+
   it("exports portable deck artifacts with auth headers and format query", async () => {
     const fetchMock = mockApiResponse({
       format: "json",
@@ -228,6 +260,7 @@ describe("review API clients", () => {
         cardId: "card-1",
         userId: "user-1",
         dueAt: "2026-06-02T12:00:00Z",
+        learningStep: 0,
         intervalDays: 0,
         easeFactor: 2.5,
         repetitionCount: 0,
@@ -246,6 +279,7 @@ describe("review API clients", () => {
         cardId: "card-1",
         userId: "user-1",
         dueAt: "2026-06-02T12:00:00Z",
+        learningStep: 0,
         intervalDays: 0,
         easeFactor: 2.5,
         repetitionCount: 0,
