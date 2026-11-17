@@ -195,6 +195,24 @@ func TestSearchDefaultsToAllGroupsWhenTypesFilterMissing(t *testing.T) {
 	}
 }
 
+func TestSearchKeepsOffsetAndOwnerScopeAcrossDefaultGroups(t *testing.T) {
+	indexer := &fakeIndexer{results: map[string]*SearchBatch{}}
+
+	_, err := NewServiceWithIndexer(indexer).Search("graph", nil, 8, 3, "user-7")
+	if err != nil {
+		t.Fatalf("expected default grouped search to succeed, got error %v", err)
+	}
+
+	if len(indexer.calls) != 5 {
+		t.Fatalf("expected five default indexer calls, got %#v", indexer.calls)
+	}
+	for _, call := range indexer.calls {
+		if call.offset != 3 || call.userID != "user-7" {
+			t.Fatalf("expected offset and owner scope to be preserved for every group, got %#v", indexer.calls)
+		}
+	}
+}
+
 func TestSearchRejectsUnsupportedTypesBeforeIndexer(t *testing.T) {
 	indexer := &fakeIndexer{}
 

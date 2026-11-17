@@ -8,11 +8,15 @@ test("search page renders grouped backend results", async ({ page }) => {
         success: true,
         data: {
           query: "图谱",
+          limit: 12,
+          elapsedMs: 18,
           total: 1,
           groups: [
             {
               type: "note",
               count: 1,
+              returnedCount: 1,
+              nextOffset: null,
               results: [
                 {
                   type: "note",
@@ -33,7 +37,7 @@ test("search page renders grouped backend results", async ({ page }) => {
   await page.goto("/search?q=%E5%9B%BE%E8%B0%B1");
 
   await expect(page.getByRole("heading", { name: '"图谱"' })).toBeVisible();
-  await expect(page.getByText("搜索完成，共 1 条结果。")).toBeVisible();
+  await expect(page.getByText("搜索完成，共 1 条结果，用时 18ms。当前每个分组首批最多展示 12 条。")).toBeVisible();
   await expect(page.getByRole("link", { name: /图谱笔记/ })).toBeVisible();
 });
 

@@ -155,7 +155,7 @@ func buildSearchQuerySpec(itemType string, keyword string, limit int, offset int
 			selectSQL: "id, title, body AS summary",
 			whereSQL:  "status = ? AND visibility = ? AND (title LIKE ? OR body LIKE ?)",
 			whereArgs: []any{"approved", "public", like, like},
-			orderSQL:  "updated_at DESC",
+			orderSQL:  "updated_at DESC, id DESC",
 			limit:     candidateLimit,
 		}, false, nil
 	case "note":
@@ -167,7 +167,7 @@ func buildSearchQuerySpec(itemType string, keyword string, limit int, offset int
 			selectSQL: "id, title, summary",
 			whereSQL:  "owner_user_id = ? AND (title LIKE ? OR summary LIKE ? OR content LIKE ? OR folder_name LIKE ?)",
 			whereArgs: []any{userID, like, like, like, like},
-			orderSQL:  "updated_at DESC",
+			orderSQL:  "updated_at DESC, id DESC",
 			limit:     candidateLimit,
 		}, false, nil
 	case "graph":
@@ -179,7 +179,7 @@ func buildSearchQuerySpec(itemType string, keyword string, limit int, offset int
 			selectSQL: "id, title, description AS summary",
 			whereSQL:  "status = ? AND (owner_user_id = ? OR visibility = ?) AND (title LIKE ? OR description LIKE ?)",
 			whereArgs: []any{"active", userID, "public", like, like},
-			orderSQL:  "updated_at DESC",
+			orderSQL:  "updated_at DESC, id DESC",
 			limit:     candidateLimit,
 		}, false, nil
 	case "card":
@@ -191,7 +191,7 @@ func buildSearchQuerySpec(itemType string, keyword string, limit int, offset int
 			selectSQL: "id, front AS title, back AS summary",
 			whereSQL:  "owner_user_id = ? AND status = ? AND (front LIKE ? OR back LIKE ?)",
 			whereArgs: []any{userID, "active", like, like},
-			orderSQL:  "updated_at DESC",
+			orderSQL:  "updated_at DESC, id DESC",
 			limit:     candidateLimit,
 		}, false, nil
 	default:

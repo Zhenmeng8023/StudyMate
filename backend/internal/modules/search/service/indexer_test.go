@@ -105,6 +105,19 @@ func TestBuildSearchQueryScopesPrivateUserContent(t *testing.T) {
 	}
 }
 
+func TestBuildSearchQueryUsesStableUpdatedAtAndIDOrdering(t *testing.T) {
+	for _, itemType := range []string{"material", "post", "note", "graph", "card"} {
+		userID := ""
+		if itemType == "note" || itemType == "graph" || itemType == "card" {
+			userID = "user-1"
+		}
+		spec := mustBuildSearchSpec(t, itemType, "鍥捐氨", 20, userID)
+		if spec.orderSQL != "updated_at DESC, id DESC" {
+			t.Fatalf("expected stable updated_at/id ordering for %s, got %q", itemType, spec.orderSQL)
+		}
+	}
+}
+
 func TestMySQLFallbackIndexerReportsTrueMatchCountBeyondReturnedBatch(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
 	if err != nil {
