@@ -34,6 +34,12 @@ func (s *Service) ListMaterials() ([]materialdto.MaterialSummary, error) {
 }
 
 func (s *Service) CreateMaterial(ownerUserID string, request materialdto.CreateMaterialRequest) (*materialdto.MaterialSummary, error) {
+	if err := s.validatePDFAttachment(ownerUserID, request.AttachmentFileID); err != nil {
+		return nil, err
+	}
+	if err := s.validateFileOwner(ownerUserID, request.CoverFileID); err != nil {
+		return nil, err
+	}
 	material := &materialmodel.Material{
 		OwnerUserID:      ownerUserID,
 		Title:            request.Title,
@@ -43,6 +49,7 @@ func (s *Service) CreateMaterial(ownerUserID string, request materialdto.CreateM
 		CoverFileID:      request.CoverFileID,
 		AttachmentFileID: request.AttachmentFileID,
 		Status:           "pending",
+		LibraryScope:     "community",
 	}
 
 	if err := s.repository.Create(material); err != nil {
@@ -64,7 +71,7 @@ func (s *Service) GetMaterial(materialID string) (*materialdto.MaterialSummary, 
 		}
 		return nil, apperrors.Internal("读取资料失败")
 	}
-	if material.Status != "approved" {
+	if !material.IsPublic() {
 		return nil, apperrors.New(http.StatusNotFound, "material_not_visible", "资料暂未公开")
 	}
 	return s.repository.BuildSummary(material)
@@ -78,8 +85,19 @@ func (s *Service) UpdateMaterial(actorUserID string, materialID string, request 
 		}
 		return nil, apperrors.Internal("读取资料失败")
 	}
+	if material.LibraryScope == "personal" || material.LibraryScope == "official" {
+		return nil, apperrors.New(http.StatusForbidden, "library_route_required", "Use the corresponding library endpoint")
+	}
 	if material.OwnerUserID != actorUserID {
 		return nil, apperrors.New(http.StatusForbidden, "forbidden", "只能编辑自己创建的资料")
+	}
+	if material.AttachmentFileID != request.AttachmentFileID {
+		return nil, apperrors.New(http.StatusConflict, "attachment_immutable", "请新建资料上传新版本，避免已有批注错位")
+	}
+	if material.CoverFileID != request.CoverFileID {
+		if err := s.validateFileOwner(actorUserID, request.CoverFileID); err != nil {
+			return nil, err
+		}
 	}
 
 	material.Title = request.Title
@@ -104,6 +122,9 @@ func (s *Service) DeleteMaterial(actorUserID string, materialID string) error {
 		}
 		return apperrors.Internal("读取资料失败")
 	}
+	if material.LibraryScope == "personal" || material.LibraryScope == "official" {
+		return apperrors.New(http.StatusForbidden, "library_route_required", "Use the corresponding library endpoint")
+	}
 	if material.OwnerUserID != actorUserID {
 		return apperrors.New(http.StatusForbidden, "forbidden", "只能删除自己创建的资料")
 	}
@@ -116,7 +137,7 @@ func (s *Service) DeleteMaterial(actorUserID string, materialID string) error {
 
 func (s *Service) ToggleFavorite(userID string, materialID string) (*materialdto.MaterialFavoriteResponse, error) {
 	material, err := s.repository.FindByID(materialID)
-	if err != nil || material.Status != "approved" {
+	if err != nil || !material.IsPublic() {
 		return nil, apperrors.New(http.StatusNotFound, "material_not_found", "资料不存在")
 	}
 
@@ -129,7 +150,7 @@ func (s *Service) ToggleFavorite(userID string, materialID string) (*materialdto
 
 func (s *Service) RateMaterial(userID string, materialID string, score int) (*materialdto.MaterialRatingResponse, error) {
 	material, err := s.repository.FindByID(materialID)
-	if err != nil || material.Status != "approved" {
+	if err != nil || !material.IsPublic() {
 		return nil, apperrors.New(http.StatusNotFound, "material_not_found", "资料不存在")
 	}
 

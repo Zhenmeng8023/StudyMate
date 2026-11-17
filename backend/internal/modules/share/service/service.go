@@ -167,7 +167,7 @@ func (s *Service) ownerCanShare(ownerUserID string, targetType string, targetID 
 	var err error
 	switch targetType {
 	case "material":
-		err = s.db.Table("materials").Where("id = ? AND owner_user_id = ?", targetID, ownerUserID).Count(&count).Error
+		err = s.db.Table("materials").Where("id = ? AND owner_user_id = ? AND COALESCE(library_scope, '') <> 'personal'", targetID, ownerUserID).Count(&count).Error
 	case "note":
 		err = s.db.Table("notes").Where("id = ? AND owner_user_id = ?", targetID, ownerUserID).Count(&count).Error
 	case "graph":
@@ -187,7 +187,7 @@ func (s *Service) describeTarget(link sharemodel.ShareLink) (*targetSummary, err
 	switch link.TargetType {
 	case "material":
 		err = s.db.Table("materials").Select("title, description AS summary, status, 'material' AS source").
-			Where("id = ?", link.TargetID).Scan(&row).Error
+			Where("id = ? AND COALESCE(library_scope, '') <> 'personal' AND status = ?", link.TargetID, "approved").Scan(&row).Error
 		row.URL = "/materials?selected=" + link.TargetID
 	case "note":
 		err = s.db.Table("notes").Select("title, summary, 'active' AS status, 'note' AS source").

@@ -6,6 +6,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+	materialrepo "studymate/backend/internal/modules/material/repository"
 )
 
 func openMaterialListTestDB(t *testing.T) *gorm.DB {
@@ -28,6 +29,7 @@ func openMaterialListTestDB(t *testing.T) *gorm.DB {
 		`CREATE TABLE materials (
 			id TEXT PRIMARY KEY,
 			owner_user_id TEXT NOT NULL,
+			library_scope TEXT NOT NULL DEFAULT 'community',
 			title TEXT NOT NULL,
 			description TEXT NOT NULL,
 			category TEXT NOT NULL,
@@ -45,6 +47,41 @@ func openMaterialListTestDB(t *testing.T) *gorm.DB {
 	}
 
 	return db
+}
+
+func TestPersonalMaterialsAreExcludedFromGovernanceAndCannotBePublished(t *testing.T) {
+	db := openMaterialListTestDB(t)
+	now := time.Now().UTC()
+	for _, scope := range []string{"personal", "official", "community"} {
+		if err := db.Exec(`INSERT INTO materials (id,owner_user_id,library_scope,title,description,category,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)`, scope, "owner", scope, "title", "description", "book", "pending", now, now).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	s := &Service{db: db, materials: materialrepo.NewRepository(db)}
+	rows, err := s.ListMaterials(20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected only official/community rows, got %#v", rows)
+	}
+	for _, row := range rows {
+		if row.ID == "personal" {
+			t.Fatal("private material leaked to governance")
+		}
+	}
+	for _, status := range []string{"approved", "hidden", "rejected", "pending"} {
+		if err := s.ModerateMaterial("admin", "personal", status, "moderation"); err == nil {
+			t.Fatalf("personal material accepted moderation status %q", status)
+		}
+	}
+	var status string
+	if err := db.Table("materials").Where("id = ?", "personal").Select("status").Scan(&status).Error; err != nil {
+		t.Fatal(err)
+	}
+	if status != "pending" {
+		t.Fatalf("private material changed status: %s", status)
+	}
 }
 
 func TestListMaterialsReturnsRealGovernanceRows(t *testing.T) {

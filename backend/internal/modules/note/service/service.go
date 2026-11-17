@@ -369,7 +369,13 @@ func (s *Service) ensureMaterialReadable(ownerUserID string, materialID string) 
 		return apperrors.Internal("读取资料失败")
 	}
 
-	if material.Status != "approved" && material.OwnerUserID != ownerUserID {
+	if material.LibraryScope == "personal" {
+		if !material.CanRead(ownerUserID) {
+			return apperrors.New(http.StatusForbidden, "forbidden", "当前不能关联该个人资料")
+		}
+		return nil
+	}
+	if !material.IsPublic() && material.OwnerUserID != ownerUserID {
 		return apperrors.New(http.StatusForbidden, "forbidden", "当前不能关联未公弢�的资�?")
 	}
 

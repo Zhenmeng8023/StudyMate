@@ -25,11 +25,12 @@ type mysqlFallbackIndexer struct {
 }
 
 type searchRow struct {
-	ID      string
-	Title   string
-	Summary string
-	URL     string
-	Source  string
+	ID           string
+	LibraryScope string
+	Title        string
+	Summary      string
+	URL          string
+	Source       string
 }
 
 type searchQuerySpec struct {
@@ -75,7 +76,7 @@ func (i *mysqlFallbackIndexer) Search(itemType string, keyword string, limit int
 			ID:      row.ID,
 			Title:   row.Title,
 			Summary: normalizeSearchSummary(row.Summary),
-			URL:     buildSearchResultURL(itemType, row.ID),
+			URL:     buildScopedSearchResultURL(itemType, row),
 			Source:  buildSearchResultSource(itemType),
 		})
 	}
@@ -134,12 +135,18 @@ func buildSearchQuerySpec(itemType string, keyword string, limit int, offset int
 
 	switch itemType {
 	case "material":
+		visibilitySQL := "(COALESCE(library_scope, '') <> 'personal' AND status = ?)"
+		visibilityArgs := []any{"approved"}
+		if userID != "" {
+			visibilitySQL = "(" + visibilitySQL + " OR (library_scope = 'personal' AND status = 'private' AND owner_user_id = ?))"
+			visibilityArgs = append(visibilityArgs, userID)
+		}
 		return &searchQuerySpec{
 			table:     "materials",
-			selectSQL: "id, title, description AS summary",
-			whereSQL:  "status = ? AND (title LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ?)",
-			whereArgs: []any{"approved", like, like, like, like},
-			orderSQL:  "updated_at DESC",
+			selectSQL: "id, title, description AS summary, library_scope",
+			whereSQL:  visibilitySQL + " AND (title LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ?)",
+			whereArgs: append(visibilityArgs, like, like, like, like),
+			orderSQL:  "updated_at DESC, id DESC",
 			limit:     candidateLimit,
 		}, false, nil
 	case "post":
@@ -190,6 +197,18 @@ func buildSearchQuerySpec(itemType string, keyword string, limit int, offset int
 	default:
 		return nil, false, apperrors.New(400, "invalid_search_type", fmt.Sprintf("unsupported search type: %s", itemType))
 	}
+}
+
+func buildScopedSearchResultURL(itemType string, row searchRow) string {
+	if itemType == "material" {
+		switch row.LibraryScope {
+		case "personal":
+			return "/library?selected=" + row.ID
+		case "official":
+			return "/official-materials?selected=" + row.ID
+		}
+	}
+	return buildSearchResultURL(itemType, row.ID)
 }
 
 func rankAndLimitSearchRows(rows []searchRow, keyword string, offset int, limit int) []searchRow {

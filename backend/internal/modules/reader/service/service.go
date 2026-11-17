@@ -62,7 +62,7 @@ var _ auditLogWriter = (*adminrepo.AuditLogRepository)(nil)
 var _ aiDraftRecorder = (*aiservice.Service)(nil)
 
 func (s *Service) GetState(userID string, materialID string) (*readerdto.ReaderStateResponse, error) {
-	if err := s.ensureReadable(materialID); err != nil {
+	if err := s.ensureReadable(userID, materialID); err != nil {
 		return nil, err
 	}
 
@@ -88,7 +88,7 @@ func (s *Service) GetState(userID string, materialID string) (*readerdto.ReaderS
 }
 
 func (s *Service) UpdateProgress(userID string, materialID string, request readerdto.UpdateProgressRequest) (*readerdto.ReaderStateResponse, error) {
-	if err := s.ensureReadable(materialID); err != nil {
+	if err := s.ensureReadable(userID, materialID); err != nil {
 		return nil, err
 	}
 
@@ -130,7 +130,7 @@ func (s *Service) UpdateProgress(userID string, materialID string, request reade
 }
 
 func (s *Service) CreateAnnotation(userID string, materialID string, request readerdto.CreateAnnotationRequest) (*readerdto.AnnotationSummary, error) {
-	if err := s.ensureReadable(materialID); err != nil {
+	if err := s.ensureReadable(userID, materialID); err != nil {
 		return nil, err
 	}
 
@@ -169,7 +169,7 @@ func (s *Service) CreateAnnotation(userID string, materialID string, request rea
 }
 
 func (s *Service) DeleteAnnotation(userID string, materialID string, annotationID string) error {
-	if err := s.ensureReadable(materialID); err != nil {
+	if err := s.ensureReadable(userID, materialID); err != nil {
 		return err
 	}
 
@@ -189,7 +189,7 @@ func (s *Service) DeleteAnnotation(userID string, materialID string, annotationI
 }
 
 func (s *Service) GenerateCardDrafts(userID string, materialID string, annotationIDs []string) ([]carddto.CardDraftPayload, error) {
-	if err := s.ensureReadable(materialID); err != nil {
+	if err := s.ensureReadable(userID, materialID); err != nil {
 		return nil, err
 	}
 
@@ -231,7 +231,7 @@ func (s *Service) GenerateCardDrafts(userID string, materialID string, annotatio
 }
 
 func (s *Service) GenerateGraphDrafts(userID string, materialID string, annotationIDs []string) ([]aidto.DraftPayload, error) {
-	if err := s.ensureReadable(materialID); err != nil {
+	if err := s.ensureReadable(userID, materialID); err != nil {
 		return nil, err
 	}
 
@@ -273,7 +273,7 @@ func (s *Service) GenerateGraphDrafts(userID string, materialID string, annotati
 	return persisted, nil
 }
 
-func (s *Service) ensureReadable(materialID string) error {
+func (s *Service) ensureReadable(userID, materialID string) error {
 	material, err := s.materials.FindByID(materialID)
 	if err != nil {
 		if readerrepo.IsNotFound(err) {
@@ -282,7 +282,7 @@ func (s *Service) ensureReadable(materialID string) error {
 		return apperrors.Internal("读取资料失败")
 	}
 
-	if material.Status != "approved" {
+	if !material.CanRead(userID) {
 		return apperrors.New(http.StatusForbidden, "material_not_visible", "当前资料还不可阅�?")
 	}
 

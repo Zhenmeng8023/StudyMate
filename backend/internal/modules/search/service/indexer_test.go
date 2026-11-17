@@ -114,6 +114,8 @@ func TestMySQLFallbackIndexerReportsTrueMatchCountBeyondReturnedBatch(t *testing
 	if err := db.Exec(`
 		CREATE TABLE materials (
 			id TEXT PRIMARY KEY,
+			owner_user_id TEXT NOT NULL DEFAULT '',
+			library_scope TEXT NOT NULL DEFAULT 'community',
 			title TEXT NOT NULL,
 			description TEXT NOT NULL,
 			category TEXT NOT NULL,

@@ -168,7 +168,7 @@ func NewServer(cfg config.Config) (*Server, error) {
 	graphHandler := graphhandler.NewHandler(graphService)
 	readerHandler := readerhandler.NewHandler(readerService)
 	cardHandler := cardhandler.NewHandler(cardService)
-	searchHandler := searchhandler.NewHandler(searchService, tokenManager)
+	searchHandler := searchhandler.NewHandler(searchService, tokenManager, userRepository)
 	shareHandler := sharehandler.NewHandler(shareService)
 	authGuard := middleware.Authenticate(tokenManager, userRepository)
 

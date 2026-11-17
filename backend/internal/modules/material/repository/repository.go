@@ -47,6 +47,8 @@ func (r *Repository) FindByID(materialID string) (*materialmodel.Material, error
 
 func (r *Repository) ListApproved() ([]materialdto.MaterialSummary, error) {
 	type materialRow struct {
+		LibraryScope     string    `gorm:"column:library_scope"`
+		FolderName       string    `gorm:"column:folder_name"`
 		ID               string    `gorm:"column:id"`
 		OwnerUserID      string    `gorm:"column:owner_user_id"`
 		OwnerName        string    `gorm:"column:owner_name"`
@@ -66,6 +68,8 @@ func (r *Repository) ListApproved() ([]materialdto.MaterialSummary, error) {
 	var rows []materialRow
 	err := r.db.Table("materials").
 		Select(`
+			materials.library_scope,
+			materials.folder_name,
 			materials.id,
 			materials.owner_user_id,
 			users.display_name as owner_name,
@@ -83,7 +87,7 @@ func (r *Repository) ListApproved() ([]materialdto.MaterialSummary, error) {
 		`).
 		Joins("left join users on users.id = materials.owner_user_id").
 		Joins("left join file_records as files on files.id = materials.attachment_file_id").
-		Where("materials.status = ?", "approved").
+		Where("materials.status = ? AND materials.library_scope <> ?", "approved", "personal").
 		Order("materials.created_at desc").
 		Scan(&rows).Error
 	if err != nil {
@@ -94,6 +98,8 @@ func (r *Repository) ListApproved() ([]materialdto.MaterialSummary, error) {
 	for _, row := range rows {
 		avg, _ := r.getAverageRating(row.ID)
 		summaries = append(summaries, materialdto.MaterialSummary{
+			LibraryScope:     row.LibraryScope,
+			FolderName:       row.FolderName,
 			ID:               row.ID,
 			OwnerUserID:      row.OwnerUserID,
 			OwnerName:        row.OwnerName,
@@ -118,6 +124,8 @@ func (r *Repository) ListApproved() ([]materialdto.MaterialSummary, error) {
 
 func (r *Repository) BuildSummary(material *materialmodel.Material) (*materialdto.MaterialSummary, error) {
 	type materialRow struct {
+		LibraryScope     string    `gorm:"column:library_scope"`
+		FolderName       string    `gorm:"column:folder_name"`
 		ID               string    `gorm:"column:id"`
 		OwnerUserID      string    `gorm:"column:owner_user_id"`
 		OwnerName        string    `gorm:"column:owner_name"`
@@ -137,6 +145,8 @@ func (r *Repository) BuildSummary(material *materialmodel.Material) (*materialdt
 	var row materialRow
 	if err := r.db.Table("materials").
 		Select(`
+			materials.library_scope,
+			materials.folder_name,
 			materials.id,
 			materials.owner_user_id,
 			users.display_name as owner_name,
@@ -161,6 +171,8 @@ func (r *Repository) BuildSummary(material *materialmodel.Material) (*materialdt
 
 	avg, _ := r.getAverageRating(row.ID)
 	return &materialdto.MaterialSummary{
+		LibraryScope:     row.LibraryScope,
+		FolderName:       row.FolderName,
 		ID:               row.ID,
 		OwnerUserID:      row.OwnerUserID,
 		OwnerName:        row.OwnerName,
@@ -233,7 +245,7 @@ func (r *Repository) UpsertRating(materialID string, userID string, score int) (
 
 func (r *Repository) ListForModeration() ([]materialmodel.Material, error) {
 	var materials []materialmodel.Material
-	err := r.db.Where("status <> ?", "approved").Order("created_at desc").Find(&materials).Error
+	err := r.db.Where("status <> ? AND library_scope <> ?", "approved", "personal").Order("created_at desc").Find(&materials).Error
 	return materials, err
 }
 
@@ -245,7 +257,7 @@ func (r *Repository) CountAllMaterials() (int64, error) {
 
 func (r *Repository) CountPendingMaterials() (int64, error) {
 	var count int64
-	err := r.db.Model(&materialmodel.Material{}).Where("status <> ?", "approved").Count(&count).Error
+	err := r.db.Model(&materialmodel.Material{}).Where("status <> ? AND library_scope <> ?", "approved", "personal").Count(&count).Error
 	return count, err
 }
 
@@ -272,7 +284,7 @@ func (r *Repository) ListModerationItems() ([]admindto.ModerationItem, error) {
 			materials.updated_at
 		`).
 		Joins("left join users on users.id = materials.owner_user_id").
-		Where("materials.status <> ?", "approved").
+		Where("materials.status <> ? AND materials.library_scope <> ?", "approved", "personal").
 		Order("materials.created_at desc").
 		Scan(&rows).Error
 	if err != nil {
@@ -298,7 +310,7 @@ func (r *Repository) ListModerationItems() ([]admindto.ModerationItem, error) {
 
 func (r *Repository) FindApprovedAttachment(materialID string) (*MaterialAttachment, error) {
 	var material materialmodel.Material
-	if err := r.db.First(&material, "id = ? AND status = ?", materialID, "approved").Error; err != nil {
+	if err := r.db.First(&material, "id = ? AND status = ? AND library_scope <> ?", materialID, "approved", "personal").Error; err != nil {
 		return nil, err
 	}
 

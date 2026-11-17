@@ -24,11 +24,7 @@ type Service struct {
 }
 
 func NewService(files *filerepo.Repository, auditLogs *adminrepo.AuditLogRepository, uploadDir string) *Service {
-	return &Service{
-		files:     files,
-		auditLogs: auditLogs,
-		uploadDir: uploadDir,
-	}
+	return &Service{files: files, auditLogs: auditLogs, uploadDir: uploadDir}
 }
 
 func (s *Service) Upload(ownerUserID string, fileHeader *multipart.FileHeader) (*dto.FileResponse, error) {
@@ -41,6 +37,10 @@ func (s *Service) Upload(ownerUserID string, fileHeader *multipart.FileHeader) (
 		return nil, apperrors.Internal("打开上传文件失败")
 	}
 	defer file.Close()
+	extension, mimeType, err := validateUpload(fileHeader, file)
+	if err != nil {
+		return nil, err
+	}
 
 	dateDir := time.Now().Format("20060102")
 	targetDir := filepath.Join(s.uploadDir, dateDir)
@@ -48,16 +48,22 @@ func (s *Service) Upload(ownerUserID string, fileHeader *multipart.FileHeader) (
 		return nil, apperrors.Internal("创建上传目录失败")
 	}
 
-	extension := filepath.Ext(fileHeader.Filename)
 	storedName := uuid.NewString() + extension
 	targetPath := filepath.Join(targetDir, storedName)
 
-	output, err := os.Create(targetPath)
+	output, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return nil, apperrors.Internal("创建目标文件失败")
 	}
 
-	if _, err := io.Copy(output, file); err != nil {
+	committed := false
+	defer func() {
+		if !committed {
+			_ = os.Remove(targetPath)
+		}
+	}()
+	written, err := io.Copy(output, io.LimitReader(file, MaxUploadBytes+1))
+	if err != nil {
 		output.Close()
 		return nil, apperrors.Internal("写入上传文件失败")
 	}
@@ -65,18 +71,22 @@ func (s *Service) Upload(ownerUserID string, fileHeader *multipart.FileHeader) (
 	if err := output.Close(); err != nil {
 		return nil, apperrors.Internal("关闭目标文件失败")
 	}
+	if written > MaxUploadBytes {
+		return nil, uploadTooLarge()
+	}
 
 	record := &filemodel.FileRecord{
 		OwnerUserID:  ownerUserID,
 		OriginalName: fileHeader.Filename,
 		StoredName:   storedName,
-		MimeType:     fileHeader.Header.Get("Content-Type"),
-		Size:         fileHeader.Size,
+		MimeType:     mimeType,
+		Size:         written,
 		Path:         targetPath,
 	}
 	if err := s.files.Create(record); err != nil {
 		return nil, apperrors.Internal("保存文件记录失败")
 	}
+	committed = true
 
 	_ = s.auditLogs.Create(ownerUserID, "file.upload", "file", map[string]any{
 		"fileId":   record.ID,
@@ -111,7 +121,7 @@ func (s *Service) toResponse(record *filemodel.FileRecord) *dto.FileResponse {
 		OriginalName: record.OriginalName,
 		MimeType:     record.MimeType,
 		Size:         record.Size,
-		Path:         record.Path,
+		Path:         "",
 		CreatedAt:    record.CreatedAt.Format(time.RFC3339),
 	}
 }

@@ -85,6 +85,9 @@ func (s *Service) ModerateMaterial(actorID string, materialID string, status str
 	if err != nil {
 		return apperrors.New(404, "material_not_found", "资料不存在")
 	}
+	if material.LibraryScope == "personal" {
+		return apperrors.New(403, "personal_material_not_moderated", "个人知识库资料不参与公开审核")
+	}
 	material.Status = status
 	if err := s.materials.Save(material); err != nil {
 		return apperrors.Internal("更新资料审核状态失败")
@@ -296,6 +299,7 @@ func (s *Service) ListMaterials(limit int) ([]admindto.AdminMaterialPayload, err
 		`).
 		Joins("left join users on users.id = materials.owner_user_id").
 		Joins("left join file_records as files on files.id = materials.attachment_file_id").
+		Where("COALESCE(materials.library_scope, '') <> ?", "personal").
 		Order("materials.created_at DESC").
 		Limit(limit).
 		Scan(&rows).Error

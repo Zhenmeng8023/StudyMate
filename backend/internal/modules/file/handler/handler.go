@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"os"
 
@@ -21,8 +22,19 @@ func NewHandler(service *service.Service) *Handler {
 
 func (h *Handler) Upload(ctx *gin.Context) {
 	userID := ctx.GetString(middleware.ContextUserIDKey)
+	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, service.MaxUploadBytes+1024*1024)
+	defer func() {
+		if ctx.Request.MultipartForm != nil {
+			_ = ctx.Request.MultipartForm.RemoveAll()
+		}
+	}()
 	fileHeader, err := ctx.FormFile("file")
 	if err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			response.Error(ctx, apperrors.New(http.StatusRequestEntityTooLarge, "file_too_large", "文件不能超过 50 MiB"))
+			return
+		}
 		response.Error(ctx, apperrors.New(http.StatusBadRequest, "file_required", "请选择要上传的文件"))
 		return
 	}
@@ -80,5 +92,7 @@ func (h *Handler) Download(ctx *gin.Context) {
 		return
 	}
 
+	ctx.Header("Cache-Control", "private, no-store")
+	ctx.Header("X-Content-Type-Options", "nosniff")
 	ctx.FileAttachment(record.Path, record.OriginalName)
 }
