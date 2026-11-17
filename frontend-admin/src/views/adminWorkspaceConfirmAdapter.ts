@@ -34,8 +34,9 @@ export function createAdminWorkspaceConfirmAdapter(
       if (options.readLoading()) return;
       runners.runConfirmDialogHandler(key, controller.resetHandlers);
     },
-    confirmDialog(key: ConfirmDialogKey) {
-      return runners.runConfirmDialogHandler(key, controller.submitHandlers);
+    confirmDialog(key: ConfirmDialogKey, note?: string) {
+      if (note === undefined) return runners.runConfirmDialogHandler(key, controller.submitHandlers);
+      return runners.runConfirmDialogHandler(key, controller.submitHandlers, note);
     },
     resetAll: () => controller.resetAll()
   };

@@ -132,6 +132,46 @@ func TestHandleReportUpdatesStatusAndWritesAuditLog(t *testing.T) {
 	}
 }
 
+func TestHandleReportWithNoteWritesAuditMetadata(t *testing.T) {
+	service, db := newReportActionTestService(t)
+
+	if err := db.Exec(`
+		INSERT INTO reports (id, reporter_user_id, target_type, target_id, reason, description, status, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, "report-1", "user-1", "post", "post-1", "spam", "duplicate links", "pending", time.Date(2026, 7, 9, 8, 0, 0, 0, time.UTC)).Error; err != nil {
+		t.Fatalf("seed report: %v", err)
+	}
+
+	if err := service.HandleReportWithNote("admin-1", "report-1", "dismissed", "重复举报，已合并到 report-0"); err != nil {
+		t.Fatalf("handle report with note: %v", err)
+	}
+
+	var audit struct {
+		Metadata string
+	}
+	if err := db.Table("audit_logs").Select("metadata").Take(&audit).Error; err != nil {
+		t.Fatalf("load audit log: %v", err)
+	}
+
+	var metadata map[string]any
+	if err := json.Unmarshal([]byte(audit.Metadata), &metadata); err != nil {
+		t.Fatalf("decode audit metadata: %v", err)
+	}
+	if metadata["note"] != "重复举报，已合并到 report-0" {
+		t.Fatalf("expected audit note, got %#v", metadata)
+	}
+}
+
+func TestHandleReportWithNoteRejectsTooLongNote(t *testing.T) {
+	service, _ := newReportActionTestService(t)
+
+	err := service.HandleReportWithNote("admin-1", "report-1", "resolved", strings.Repeat("x", 501))
+	appErr := apperrors.As(err)
+	if appErr.Status != 400 || appErr.Code != "invalid_report_note" {
+		t.Fatalf("expected invalid_report_note, got %#v", appErr)
+	}
+}
+
 func TestHandleReportReturnsNotFoundWhenReportMissing(t *testing.T) {
 	service, _ := newReportActionTestService(t)
 

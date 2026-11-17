@@ -160,7 +160,7 @@ describe("AdminWorkspacePageSurface", () => {
     await wrapper.get("form").trigger("submit.prevent");
 
     expect(surface.cancelConfirmDialog).toHaveBeenCalledWith("moderation");
-    expect(surface.confirmConfirmDialog).toHaveBeenCalledWith("moderation");
+    expect(surface.confirmConfirmDialog).toHaveBeenCalledWith("moderation", "");
     expect(surface.loginPanelEvents.updateLoginValue).toHaveBeenCalledWith("operator@example.test");
     expect(surface.loginPanelEvents.updatePasswordValue).toHaveBeenCalledWith("secret");
     expect(surface.loginPanelEvents.submit).toHaveBeenCalledTimes(1);

@@ -160,7 +160,11 @@ func (h *Handler) AIUsage(ctx *gin.Context) {
 }
 
 func (h *Handler) AuditLogs(ctx *gin.Context) {
-	result, err := h.adminService.ListAuditLogs(adminLimit(ctx))
+	result, err := h.adminService.ListAuditLogsWithFilters(adminLimit(ctx), adminservice.AuditLogFilters{
+		Action:  ctx.Query("action"),
+		ActorID: ctx.Query("actorId"),
+		Target:  ctx.Query("target"),
+	})
 	if err != nil {
 		response.Error(ctx, err)
 		return
@@ -183,7 +187,16 @@ func adminLimit(ctx *gin.Context) int {
 }
 
 func (h *Handler) handleReport(ctx *gin.Context, status string) {
-	if err := h.adminService.HandleReport(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), status); err != nil {
+	var request struct {
+		Note string `json:"note"`
+	}
+	if ctx.Request.ContentLength != 0 {
+		if err := ctx.ShouldBindJSON(&request); err != nil {
+			response.Error(ctx, err)
+			return
+		}
+	}
+	if err := h.adminService.HandleReportWithNote(ctx.GetString(middleware.ContextUserIDKey), ctx.Param("id"), status, request.Note); err != nil {
 		response.Error(ctx, err)
 		return
 	}

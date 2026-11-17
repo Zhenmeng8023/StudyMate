@@ -9,6 +9,7 @@ import AdminRecordRow from "../../components/admin/AdminRecordRow.vue";
 import AdminTableHead from "../../components/admin/AdminTableHead.vue";
 import {
   formatGovernanceCell,
+  formatGovernanceFieldValue,
   formatGovernanceFieldLabel,
   getGovernanceRecordTitle,
   type GovernanceRecord
@@ -73,7 +74,7 @@ const inspectorFields = computed(() =>
   props.selectedRecord
     ? Object.entries(props.selectedRecord).map(([key, value]) => ({
         label: formatGovernanceFieldLabel(String(key)),
-        value: formatGovernanceCell(value)
+        value: formatGovernanceFieldValue(String(key), value)
       }))
     : []
 );

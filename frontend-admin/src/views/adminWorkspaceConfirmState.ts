@@ -52,7 +52,7 @@ export function buildAdminWorkspaceConfirmSubmitHandlers(options: {
     item: AdminWorkspaceModerationItem,
     action: "approve" | "reject" | "hide"
   ) => Promise<void> | void;
-  applyReportAction: (record: GovernanceRecord, action: "resolve" | "dismiss") => Promise<void> | void;
+  applyReportAction: (record: GovernanceRecord, action: "resolve" | "dismiss", note?: string) => Promise<void> | void;
   applyTemplateAction: (record: GovernanceRecord, action: "publish" | "unpublish") => Promise<void> | void;
   applyUserAction: (record: GovernanceRecord, action: "disable" | "activate") => Promise<void> | void;
   readAITaskAction: () => PendingAITaskAction;
@@ -60,17 +60,18 @@ export function buildAdminWorkspaceConfirmSubmitHandlers(options: {
   readReportAction: () => PendingReportAction;
   readTemplateAction: () => PendingTemplateAction;
   readUserAction: () => PendingUserAction;
-}): ConfirmDialogHandlerMap<() => Promise<void>> {
+}): ConfirmDialogHandlerMap<(note?: string) => Promise<void>> {
   return {
     moderation: async () => {
       const pending = options.readModerationAction();
       if (!pending) return;
       await options.applyModerationAction(pending.item, pending.action);
     },
-    report: async () => {
+    report: async (note) => {
       const pending = options.readReportAction();
       if (!pending) return;
-      await options.applyReportAction(pending.record, pending.action);
+      if (note === undefined) { await options.applyReportAction(pending.record, pending.action); return; }
+      await options.applyReportAction(pending.record, pending.action, note);
     },
     user: async () => {
       const pending = options.readUserAction();

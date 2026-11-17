@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import type { ConfirmDialogKey } from "../../views/adminConfirmDialogState";
 import AdminConfirmDialog from "./AdminConfirmDialog.vue";
 
 type AdminConfirmStackItem = {
-  key: string;
+  key: ConfirmDialogKey;
   cancelLabel?: string;
   confirmDisabled?: boolean;
   confirmLabel?: string;
@@ -12,6 +13,9 @@ type AdminConfirmStackItem = {
   description?: string;
   errorMessage?: string;
   isOpen: boolean;
+  noteLabel?: string;
+  noteMaxLength?: number;
+  notePlaceholder?: string;
   title: string;
 };
 
@@ -20,8 +24,8 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  cancel: [key: string];
-  confirm: [key: string];
+  cancel: [key: ConfirmDialogKey];
+  confirm: [payload: { key: ConfirmDialogKey; note: string }];
 }>();
 </script>
 
@@ -39,9 +43,12 @@ const emit = defineEmits<{
       :description="dialog.description"
       :error-message="dialog.errorMessage"
       :is-open="dialog.isOpen"
+      :note-label="dialog.noteLabel"
+      :note-max-length="dialog.noteMaxLength"
+      :note-placeholder="dialog.notePlaceholder"
       :title="dialog.title"
       @cancel="emit('cancel', dialog.key)"
-      @confirm="emit('confirm', dialog.key)"
+      @confirm="emit('confirm', { key: dialog.key, note: $event })"
     />
   </div>
 </template>

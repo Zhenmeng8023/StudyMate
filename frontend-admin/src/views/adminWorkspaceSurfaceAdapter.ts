@@ -12,7 +12,7 @@ import type { AdminWorkspaceModerationItem } from "./adminWorkspaceDerivedData";
 interface AdminWorkspaceConfirmSurface {
   buildDialogs: () => AdminConfirmDialogItem[];
   cancelDialog: (key: ConfirmDialogKey) => void;
-  confirmDialog: (key: ConfirmDialogKey) => Promise<void>;
+  confirmDialog: (key: ConfirmDialogKey, note?: string) => Promise<void>;
 }
 
 interface AdminWorkspaceInteractionSurface {

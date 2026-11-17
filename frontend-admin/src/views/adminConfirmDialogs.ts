@@ -12,6 +12,9 @@ export type AdminConfirmDialogItem = {
   description?: string;
   errorMessage?: string;
   isOpen: boolean;
+  noteLabel?: string;
+  noteMaxLength?: number;
+  notePlaceholder?: string;
   title: string;
 };
 
@@ -19,6 +22,9 @@ type AdminConfirmDialogInput = {
   copy: ActionConfirmCopy;
   errorMessage: string;
   isOpen: boolean;
+  noteLabel?: string;
+  noteMaxLength?: number;
+  notePlaceholder?: string;
 };
 
 export function buildAdminConfirmDialogs(input: {
@@ -47,6 +53,9 @@ export function buildAdminConfirmDialogs(input: {
     description: dialog.copy.description,
     errorMessage: dialog.errorMessage,
     isOpen: dialog.isOpen,
+    ...(dialog.noteLabel ? { noteLabel: dialog.noteLabel } : {}),
+    ...(dialog.noteMaxLength ? { noteMaxLength: dialog.noteMaxLength } : {}),
+    ...(dialog.notePlaceholder ? { notePlaceholder: dialog.notePlaceholder } : {}),
     title: dialog.copy.title
   }));
 }

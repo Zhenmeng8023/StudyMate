@@ -204,6 +204,34 @@ describe("AdminGovernanceModule", () => {
     expect(wrapper.get('[data-admin-record-inspector-empty="true"]').text()).toContain("从左侧表格选择一条记录");
   });
 
+  it("renders audit metadata as readable inspector details", () => {
+    const selectedRecord = {
+      id: "audit-1",
+      action: "admin.handle.report",
+      metadata: JSON.stringify({
+        reportId: "report-1",
+        previousStatus: "pending",
+        status: "dismissed",
+        note: "重复举报，已合并处理"
+      })
+    };
+
+    const wrapper = mount(AdminGovernanceModule, {
+      props: {
+        columns: ["id", "action"],
+        emptyText: "暂无记录",
+        query: "",
+        rows: [selectedRecord],
+        selectedRecord,
+        summary: null
+      }
+    });
+
+    expect(wrapper.text()).toContain("审计详情");
+    expect(wrapper.text()).toContain("处理备注：重复举报，已合并处理");
+    expect(wrapper.text()).toContain("原状态：pending");
+  });
+
   it("hides governance rows when the shared unauthorized state is active", () => {
     const wrapper = mount(AdminGovernanceModule, {
       props: {

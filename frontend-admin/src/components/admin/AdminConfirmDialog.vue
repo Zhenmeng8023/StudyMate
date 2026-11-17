@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import AdminButton from "./AdminButton.vue";
 
 const props = withDefaults(defineProps<{
@@ -12,6 +12,9 @@ const props = withDefaults(defineProps<{
   description?: string;
   errorMessage?: string;
   isOpen: boolean;
+  noteLabel?: string;
+  noteMaxLength?: number;
+  notePlaceholder?: string;
   title: string;
 }>(), {
   cancelLabel: "取消",
@@ -22,16 +25,27 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   cancel: [];
-  confirm: [];
+  confirm: [note: string];
 }>();
+
+const noteValue = ref("");
 
 const confirmText = computed(() => {
   if (props.confirming) {
-    return props.confirmingLabel ?? `${props.confirmLabel ?? "确认"}中…`;
+    return props.confirmingLabel ?? `${props.confirmLabel ?? "确认"}中...`;
   }
 
   return props.confirmLabel ?? "确认";
 });
+
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (isOpen) {
+      noteValue.value = "";
+    }
+  }
+);
 </script>
 
 <template>
@@ -48,6 +62,17 @@ const confirmText = computed(() => {
         <p v-if="description" id="admin-confirm-dialog-description">{{ description }}</p>
         <p v-else-if="errorMessage" id="admin-confirm-dialog-description" />
         <p v-if="errorMessage" class="admin-confirm-dialog__error" role="alert">{{ errorMessage }}</p>
+        <label v-if="noteLabel" class="admin-confirm-dialog__note">
+          <span>{{ noteLabel }}</span>
+          <textarea
+            v-model="noteValue"
+            data-confirm-note="true"
+            :disabled="confirming"
+            :maxlength="noteMaxLength"
+            :placeholder="notePlaceholder"
+            rows="4"
+          />
+        </label>
       </div>
       <div class="admin-confirm-dialog__footer">
         <AdminButton
@@ -62,7 +87,7 @@ const confirmText = computed(() => {
           :danger="confirmTone === 'danger'"
           :disabled="confirming || confirmDisabled"
           variant="primary"
-          @click="emit('confirm')"
+          @click="emit('confirm', noteValue)"
         >
           {{ confirmText }}
         </AdminButton>

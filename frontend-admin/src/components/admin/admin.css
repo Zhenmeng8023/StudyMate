@@ -103,6 +103,8 @@ button:disabled { cursor: not-allowed; opacity: .58; }
 .admin-confirm-dialog__body h2 { margin: 0; color: var(--admin-text); font-size: 20px; }
 .admin-confirm-dialog__body p { margin: 0; color: var(--admin-text-soft); line-height: 1.6; }
 .admin-confirm-dialog__error { color: #b42318; font-weight: 600; }
+.admin-confirm-dialog__note { display: grid; gap: 8px; color: var(--admin-text); font-size: 12px; font-weight: 720; }
+.admin-confirm-dialog__note textarea { width: 100%; min-height: 96px; resize: vertical; border: 1px solid var(--admin-line); border-radius: 10px; padding: 10px 12px; color: var(--admin-text); font: inherit; font-weight: 500; line-height: 1.55; background: #fff; }
 .admin-confirm-dialog__footer { display: flex; justify-content: flex-end; gap: 10px; padding: 0 24px 24px; }
 
 .primary-button, .secondary-button, .ghost-button { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 13px; border: 1px solid transparent; border-radius: 9px; font-size: 13px; font-weight: 720; }

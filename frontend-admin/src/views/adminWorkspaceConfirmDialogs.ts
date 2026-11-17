@@ -90,7 +90,10 @@ export function buildAdminWorkspaceConfirmDialogs(input: {
     report: {
       copy: getReportConfirmCopy(input.report.pending),
       errorMessage: input.report.errorMessage,
-      isOpen: Boolean(input.report.pending)
+      isOpen: Boolean(input.report.pending),
+      noteLabel: input.report.pending ? "处理备注" : undefined,
+      noteMaxLength: 500,
+      notePlaceholder: "记录本次举报处理原因，便于后续审计追溯"
     },
     aiTask: {
       copy: getAITaskConfirmCopy(input.aiTask.pending),

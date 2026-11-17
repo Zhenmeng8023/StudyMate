@@ -177,7 +177,7 @@ describe("adminWorkspaceConfirmController", () => {
     });
 
     await runAdminConfirmDialogHandler("moderation", controller.submitHandlers);
-    await runAdminConfirmDialogHandler("report", controller.submitHandlers);
+    await runAdminConfirmDialogHandler("report", controller.submitHandlers, "重复举报");
 
     expect(applyModerationAction).toHaveBeenCalledWith(
       {
@@ -192,6 +192,6 @@ describe("adminWorkspaceConfirmController", () => {
       },
       "reject"
     );
-    expect(applyReportAction).toHaveBeenCalledWith({ id: "report-1" }, "dismiss");
+    expect(applyReportAction).toHaveBeenCalledWith({ id: "report-1" }, "dismiss", "重复举报");
   });
 });

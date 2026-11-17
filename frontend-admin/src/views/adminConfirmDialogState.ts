@@ -6,9 +6,10 @@ export type ConfirmDialogHandlerMap<T> = Record<ConfirmDialogKey, T>;
 
 export function runAdminConfirmDialogHandler<T>(
   key: ConfirmDialogKey,
-  handlers: ConfirmDialogHandlerMap<() => T>
+  handlers: ConfirmDialogHandlerMap<(note?: string) => T>,
+  note?: string
 ) {
-  return handlers[key]();
+  return handlers[key](note);
 }
 
 export function resetAdminConfirmDialogState(handlers: ConfirmDialogHandlerMap<() => void>) {

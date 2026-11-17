@@ -67,14 +67,15 @@ export function createAdminWorkspaceMutationAdapter(
     key: GovernanceMutationKey,
     record: GovernanceRecord,
     action: string,
-    setConfirmError: (message: string) => void
+    setConfirmError: (message: string) => void,
+    body: ApiRequestInit["body"] = {}
   ) => {
     if (!options.hasSession()) return;
 
     await runners.runGovernanceAction(key, record, action, {
       readStatus: options.readStatus,
       reloadView: (view) => Promise.resolve(options.loadGovernance(view)),
-      request: (path) => options.post<{ status: string }>(path, {}),
+      request: (path) => options.post<{ status: string }>(path, body),
       resetDialog: () => {
         if (key === "report") options.setReportAction(null);
         if (key === "user") options.setUserAction(null);
@@ -120,8 +121,8 @@ export function createAdminWorkspaceMutationAdapter(
         setNotice: options.setNotice
       });
     },
-    applyReportAction: (record: GovernanceRecord, action: ReportAction) =>
-      applyGovernanceRecordAction("report", record, action, options.setReportConfirmError),
+    applyReportAction: (record: GovernanceRecord, action: ReportAction, note?: string) =>
+      applyGovernanceRecordAction("report", record, action, options.setReportConfirmError, { note: note ?? "" }),
     applyTemplateAction: (record: GovernanceRecord, action: TemplateAction) =>
       applyGovernanceRecordAction("template", record, action, options.setTemplateConfirmError),
     applyUserAction: (record: GovernanceRecord, action: UserAction) =>

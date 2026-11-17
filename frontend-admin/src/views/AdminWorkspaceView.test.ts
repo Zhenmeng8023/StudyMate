@@ -670,6 +670,9 @@ describe("AdminWorkspaceView governance modules", () => {
       }
       if (path === resolvePath) {
         expect(init?.method).toBe("POST");
+        expect(JSON.parse(String(init?.body))).toEqual({
+          note: "重复举报，已合并处理"
+        });
         return apiPayload({ status: "resolved" });
       }
       throw new Error(`Unexpected request: ${path}`);
@@ -698,6 +701,8 @@ describe("AdminWorkspaceView governance modules", () => {
 
     await wrapper.get('[data-governance-action="resolve"]').trigger("click");
     await flushPromises();
+    expect(wrapper.text()).toContain("处理备注");
+    await wrapper.get('[data-confirm-note="true"]').setValue("重复举报，已合并处理");
     await wrapper.get('[data-confirm-submit="true"]').trigger("click");
     await flushPromises();
 

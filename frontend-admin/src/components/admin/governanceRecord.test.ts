@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatGovernanceCell,
   formatGovernanceFieldLabel,
+  formatGovernanceFieldValue,
   getGovernanceColumns,
   getGovernanceRecordTitle
 } from "./governanceRecord";
@@ -23,7 +24,22 @@ describe("governanceRecord helpers", () => {
 
   it("formats known field labels and falls back to camel-case splitting", () => {
     expect(formatGovernanceFieldLabel("handledBy")).toBe("处理人");
+    expect(formatGovernanceFieldLabel("metadata")).toBe("审计详情");
     expect(formatGovernanceFieldLabel("customFieldName")).toBe("custom Field Name");
+  });
+
+  it("formats audit metadata into readable governance detail text", () => {
+    expect(
+      formatGovernanceFieldValue(
+        "metadata",
+        JSON.stringify({
+          reportId: "report-1",
+          previousStatus: "pending",
+          status: "dismissed",
+          note: "重复举报，已合并处理"
+        })
+      )
+    ).toBe("处理备注：重复举报，已合并处理；状态：dismissed；原状态：pending；举报：report-1");
   });
 
   it("orders governance columns through the shared preferred schema and keeps the first seven", () => {

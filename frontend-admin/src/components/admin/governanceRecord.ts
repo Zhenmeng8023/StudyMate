@@ -26,6 +26,12 @@ const governanceFieldLabels: Record<string, string> = {
   errorMessage: "错误信息",
   targetType: "目标类型",
   targetId: "目标标识",
+  metadata: "审计详情",
+  note: "处理备注",
+  previousStatus: "原状态",
+  reportId: "举报",
+  taskId: "AI 任务",
+  templateId: "图谱模板",
   size: "文件大小",
   mimeType: "文件类型"
 };
@@ -57,6 +63,13 @@ export function formatGovernanceCell(value: GovernanceRecordValue) {
   return String(value);
 }
 
+export function formatGovernanceFieldValue(key: string, value: GovernanceRecordValue) {
+  if (key === "metadata" && typeof value === "string") {
+    return formatGovernanceMetadata(value);
+  }
+  return formatGovernanceCell(value);
+}
+
 export function formatGovernanceFieldLabel(key: string) {
   return governanceFieldLabels[key] ?? key.replace(/([A-Z])/g, " $1").trim();
 }
@@ -79,4 +92,42 @@ export function getGovernanceColumns(rows: GovernanceRecord[], limit = 7) {
       return aIndex - bIndex;
     })
     .slice(0, limit);
+}
+
+function formatGovernanceMetadata(raw: string) {
+  const trimmed = raw.trim();
+  if (!trimmed) return "-";
+
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, GovernanceRecordValue>;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return trimmed;
+    }
+
+    const preferredKeys = [
+      "note",
+      "status",
+      "previousStatus",
+      "action",
+      "reportId",
+      "userId",
+      "taskId",
+      "templateId",
+      "targetType",
+      "targetId"
+    ];
+    const keys = [
+      ...preferredKeys.filter((key) => Object.prototype.hasOwnProperty.call(parsed, key)),
+      ...Object.keys(parsed)
+        .filter((key) => !preferredKeys.includes(key))
+        .sort()
+    ];
+    if (keys.length === 0) return "-";
+
+    return keys
+      .map((key) => `${formatGovernanceFieldLabel(key)}：${formatGovernanceCell(parsed[key])}`)
+      .join("；");
+  } catch {
+    return trimmed;
+  }
 }

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	admindto "studymate/backend/internal/modules/admin/dto"
@@ -26,6 +27,12 @@ type Service struct {
 	materials *materialrepo.Repository
 	graphs    *graphrepo.Repository
 	users     *userrepo.Repository
+}
+
+type AuditLogFilters struct {
+	Action  string
+	ActorID string
+	Target  string
 }
 
 func NewService(
@@ -394,8 +401,16 @@ func (s *Service) ListReports(limit int) ([]admindto.AdminReportPayload, error) 
 }
 
 func (s *Service) HandleReport(actorID string, reportID string, status string) error {
+	return s.HandleReportWithNote(actorID, reportID, status, "")
+}
+
+func (s *Service) HandleReportWithNote(actorID string, reportID string, status string, note string) error {
 	if status != "resolved" && status != "dismissed" {
 		return apperrors.New(400, "invalid_report_status", "unsupported report status")
+	}
+	normalizedNote := strings.TrimSpace(note)
+	if len([]rune(normalizedNote)) > 500 {
+		return apperrors.New(400, "invalid_report_note", "report handling note must be 500 characters or fewer")
 	}
 
 	return s.db.Transaction(func(tx *gorm.DB) error {
@@ -426,11 +441,15 @@ func (s *Service) HandleReport(actorID string, reportID string, status string) e
 			return apperrors.Internal("handle admin report failed")
 		}
 
-		if err := adminrepo.NewAuditLogRepository(tx).Create(actorID, "admin.handle.report", "report", map[string]any{
+		metadata := map[string]any{
 			"reportId":       reportID,
 			"previousStatus": report.Status,
 			"status":         status,
-		}); err != nil {
+		}
+		if normalizedNote != "" {
+			metadata["note"] = normalizedNote
+		}
+		if err := adminrepo.NewAuditLogRepository(tx).Create(actorID, "admin.handle.report", "report", metadata); err != nil {
 			return apperrors.Internal("create admin report audit log failed")
 		}
 
@@ -750,6 +769,10 @@ func (s *Service) AIUsage() (*admindto.AdminAIUsagePayload, error) {
 }
 
 func (s *Service) ListAuditLogs(limit int) ([]admindto.AdminAuditLogPayload, error) {
+	return s.ListAuditLogsWithFilters(limit, AuditLogFilters{})
+}
+
+func (s *Service) ListAuditLogsWithFilters(limit int, filters AuditLogFilters) ([]admindto.AdminAuditLogPayload, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
@@ -764,11 +787,19 @@ func (s *Service) ListAuditLogs(limit int) ([]admindto.AdminAuditLogPayload, err
 	}
 
 	var rows []row
-	err := s.db.Table("audit_logs").
+	query := s.db.Table("audit_logs").
 		Select("id, COALESCE(actor_id, '') AS actor_id, action, target, COALESCE(metadata, '') AS metadata, created_at").
-		Order("created_at DESC").
-		Limit(limit).
-		Scan(&rows).Error
+		Order("created_at DESC")
+	if action := strings.TrimSpace(filters.Action); action != "" {
+		query = query.Where("action = ?", action)
+	}
+	if target := strings.TrimSpace(filters.Target); target != "" {
+		query = query.Where("target = ?", target)
+	}
+	if actorID := strings.TrimSpace(filters.ActorID); actorID != "" {
+		query = query.Where("actor_id = ?", actorID)
+	}
+	err := query.Limit(limit).Scan(&rows).Error
 	if err != nil {
 		return nil, apperrors.Internal("list admin audit logs failed")
 	}

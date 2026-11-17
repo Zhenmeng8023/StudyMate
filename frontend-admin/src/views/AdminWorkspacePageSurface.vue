@@ -20,8 +20,8 @@ function handleConfirmDialogCancel(key: ConfirmDialogKey) {
   props.surface.cancelConfirmDialog(key);
 }
 
-async function handleConfirmDialogConfirm(key: ConfirmDialogKey) {
-  await props.surface.confirmConfirmDialog(key);
+async function handleConfirmDialogConfirm(payload: { key: ConfirmDialogKey; note: string }) {
+  await props.surface.confirmConfirmDialog(payload.key, payload.note);
 }
 </script>
 
@@ -30,7 +30,7 @@ async function handleConfirmDialogConfirm(key: ConfirmDialogKey) {
     <AdminConfirmStack
       :dialogs="surface.confirmDialogs"
       @cancel="handleConfirmDialogCancel($event as ConfirmDialogKey)"
-      @confirm="handleConfirmDialogConfirm($event as ConfirmDialogKey)"
+      @confirm="handleConfirmDialogConfirm"
     />
 
     <AdminLoginPanel

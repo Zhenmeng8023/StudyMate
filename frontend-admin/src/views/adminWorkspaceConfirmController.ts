@@ -22,7 +22,7 @@ export interface CreateAdminWorkspaceConfirmControllerOptions {
     item: AdminWorkspaceModerationItem,
     action: "approve" | "reject" | "hide"
   ) => Promise<void> | void;
-  applyReportAction: (record: GovernanceRecord, action: "resolve" | "dismiss") => Promise<void> | void;
+  applyReportAction: (record: GovernanceRecord, action: "resolve" | "dismiss", note?: string) => Promise<void> | void;
   applyTemplateAction: (record: GovernanceRecord, action: "publish" | "unpublish") => Promise<void> | void;
   applyUserAction: (record: GovernanceRecord, action: "disable" | "activate") => Promise<void> | void;
   readAITaskAction: () => PendingAITaskAction;
@@ -111,6 +111,6 @@ export function createAdminWorkspaceConfirmController(
     buildDialogs: () => ReturnType<typeof buildAdminWorkspaceConfirmDialogs>;
     resetAll: () => void;
     resetHandlers: ConfirmDialogHandlerMap<() => void>;
-    submitHandlers: ConfirmDialogHandlerMap<() => Promise<void>>;
+    submitHandlers: ConfirmDialogHandlerMap<(note?: string) => Promise<void>>;
   };
 }
