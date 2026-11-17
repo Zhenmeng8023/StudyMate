@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { MousePointer2 } from "lucide-react";
-import type { MouseEvent, PointerEvent, ReactNode, RefObject, WheelEvent } from "react";
+import type { MouseEvent, PointerEvent, ReactNode, RefObject } from "react";
 import type {
   GraphDetailPayload,
   GraphDocumentPayload,
@@ -21,6 +21,11 @@ import {
   type GraphConflictResolutionValidationIssue
 } from "../lib/graphConflictSummary";
 import { buildNodeStyle } from "../nodeAppearance";
+import {
+  formatGraphLearningStateLabel,
+  resolveGraphLearningState,
+  type GraphSourceReviewFeedback
+} from "../lib/graphSourceReviewFeedback";
 import {
   buildEdgeLabelPosition,
   buildEdgePath,
@@ -47,6 +52,7 @@ export function GraphStageCanvas(props: {
   hiddenNodeIds: Set<string>;
   linkFromNodeId: string;
   minimapViewport: GraphStageMinimapViewport | null;
+  nodeReviewFeedbackById?: Map<string, GraphSourceReviewFeedback | null>;
   nodeMap: Map<string, GraphNodePayload>;
   onCanvasContextMenu: (event: MouseEvent<HTMLDivElement>) => void;
   onCanvasPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
@@ -56,7 +62,7 @@ export function GraphStageCanvas(props: {
   onNodeContextMenu: (event: MouseEvent<HTMLButtonElement>, node: GraphNodePayload) => void;
   onNodePointerDown: (event: PointerEvent<HTMLButtonElement>, node: GraphNodePayload) => void;
   onToggleGroupCollapse: (groupId: string) => void;
-  onWheel: (event: WheelEvent<HTMLDivElement>) => void;
+  onWheel: (event: WheelEvent) => void;
   scale: number;
   selectedEdgeId: string;
   selectedNodeIds: string[];
@@ -68,12 +74,19 @@ export function GraphStageCanvas(props: {
 }) {
   const selectedNodeSet = useMemo(() => new Set(props.selectedNodeIds), [props.selectedNodeIds]);
 
+  useEffect(() => {
+    const stage = props.stageRef.current;
+    if (!stage) return;
+    // React delegates wheel events passively; canvas zoom must cancel page scrolling.
+    stage.addEventListener("wheel", props.onWheel, { passive: false });
+    return () => stage.removeEventListener("wheel", props.onWheel);
+  }, [props.stageRef, props.onWheel]);
+
   return (
     <div
       className="graph-stage"
       onContextMenu={props.onCanvasContextMenu}
       onPointerDown={props.onCanvasPointerDown}
-      onWheel={props.onWheel}
       ref={props.stageRef}
     >
       {props.graphDetail && props.document ? (
@@ -135,11 +148,13 @@ export function GraphStageCanvas(props: {
 
             {props.visibleNodes.map((node) => {
               const selected = selectedNodeSet.has(node.id);
+              const learningState = resolveGraphLearningState(props.nodeReviewFeedbackById?.get(node.id));
               return (
                 <button
                   className={[
                     "graph-node",
                     `type-${node.type}`,
+                    `learning-${learningState}`,
                     selected ? "active" : "",
                     props.linkFromNodeId === node.id ? "linking" : ""
                   ].join(" ").trim()}
@@ -156,6 +171,7 @@ export function GraphStageCanvas(props: {
                   type="button"
                 >
                   <span className="graph-node-type">{node.type}</span>
+                  <span className="graph-node-learning-state">{formatGraphLearningStateLabel(learningState)}</span>
                   <strong>{buildNodeTitle(node)}</strong>
                   {node.source?.label ? <small>{node.source.label}</small> : <small>自由节点</small>}
                 </button>

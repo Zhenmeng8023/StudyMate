@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GraphNodePayload } from "../../../api/client";
-import { resolveGraphSourceReviewFeedback } from "./graphSourceReviewFeedback";
+import { resolveGraphLearningState, resolveGraphSourceReviewFeedback } from "./graphSourceReviewFeedback";
 
 function node(overrides: Partial<GraphNodePayload> = {}): GraphNodePayload {
   return {
@@ -51,7 +51,8 @@ describe("resolveGraphSourceReviewFeedback", () => {
           dueCount: 0,
           learningCount: 0,
           maxLapseCount: 0,
-          sampleCardFronts: ["Card B"]
+          sampleCardFronts: ["Card B"],
+          lastReviewedAt: "2026-11-16T08:00:00Z"
         }
       ]
     );
@@ -65,7 +66,8 @@ describe("resolveGraphSourceReviewFeedback", () => {
       dueCount: 0,
       learningCount: 0,
       maxLapseCount: 0,
-      sampleCardFronts: ["Card B"]
+      sampleCardFronts: ["Card B"],
+      lastReviewedAt: "2026-11-16T08:00:00Z"
     });
   });
 
@@ -103,5 +105,51 @@ describe("resolveGraphSourceReviewFeedback", () => {
       maxLapseCount: 3,
       sampleCardFronts: ["Card A"]
     });
+  });
+
+  it("classifies graph learning state from runtime review feedback", () => {
+    expect(resolveGraphLearningState(null)).toBe("unlearned");
+    expect(
+      resolveGraphLearningState({
+        totalCardCount: 2,
+        reviewCardCount: 0,
+        masteredCardCount: 0,
+        masteryLevel: "building",
+        masteryScore: 20,
+        weakCardCount: 0,
+        dueCount: 0,
+        learningCount: 2,
+        maxLapseCount: 0,
+        sampleCardFronts: []
+      })
+    ).toBe("learning");
+    expect(
+      resolveGraphLearningState({
+        totalCardCount: 2,
+        reviewCardCount: 1,
+        masteredCardCount: 0,
+        masteryLevel: "weak",
+        masteryScore: 20,
+        weakCardCount: 1,
+        dueCount: 1,
+        learningCount: 1,
+        maxLapseCount: 2,
+        sampleCardFronts: []
+      })
+    ).toBe("weak");
+    expect(
+      resolveGraphLearningState({
+        totalCardCount: 2,
+        reviewCardCount: 2,
+        masteredCardCount: 2,
+        masteryLevel: "solid",
+        masteryScore: 100,
+        weakCardCount: 0,
+        dueCount: 0,
+        learningCount: 0,
+        maxLapseCount: 0,
+        sampleCardFronts: []
+      })
+    ).toBe("mastered");
   });
 });

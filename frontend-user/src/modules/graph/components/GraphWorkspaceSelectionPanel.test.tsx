@@ -81,6 +81,14 @@ function renderPanel(overrides: Partial<Parameters<typeof GraphWorkspaceSelectio
 }
 
 describe("GraphWorkspaceSelectionPanel", () => {
+  it("shows the actual latest review time instead of a placeholder", () => {
+    renderPanel({ selectedNode: urlNode, selectedNodes: [urlNode], selectedNodeIds: [urlNode.id], selectedNodeReviewFeedback: {
+      totalCardCount: 1, reviewCardCount: 1, masteredCardCount: 1, masteryLevel: "solid", masteryScore: 100,
+      weakCardCount: 0, dueCount: 0, learningCount: 0, maxLapseCount: 0, sampleCardFronts: [],
+      lastReviewedAt: "2026-11-16T08:00:00Z"
+    } });
+    expect(screen.getByText(`最近复习 ${new Date("2026-11-16T08:00:00Z").toLocaleString("zh-CN")}`)).toBeInTheDocument();
+  });
   afterEach(() => cleanup());
 
   it("renders node metadata editors and delegates node edits", async () => {
@@ -145,13 +153,17 @@ describe("GraphWorkspaceSelectionPanel", () => {
     expect(screen.getByText("复习反馈")).toBeInTheDocument();
     expect(screen.getByText("关联 2 张待回补卡片，其中 1 张已经到期。")).toBeInTheDocument();
     expect(screen.getByText("掌握度 33% · 巩固中")).toBeInTheDocument();
+    expect(screen.getByText("关联卡片数 3")).toBeInTheDocument();
+    expect(screen.getByText("待复习数 1")).toBeInTheDocument();
+    expect(screen.getByText("遗忘次数 3")).toBeInTheDocument();
+    expect(screen.getByText("尚未复习")).toBeInTheDocument();
     expect(screen.getByText("1 / 3 张已进入稳定复习")).toBeInTheDocument();
     expect(screen.getByText("2 张仍在学习中")).toBeInTheDocument();
     expect(screen.getByText("最高遗忘 3 次")).toBeInTheDocument();
     expect(screen.getByText("资料卡片 A")).toBeInTheDocument();
     expect(screen.getByText("资料卡片 B")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "打开复习工作台" }));
+    await user.click(screen.getByRole("button", { name: "复习这个节点相关卡片" }));
     expect(props.onOpenReviewWorkspace).toHaveBeenCalledWith({
       sourceType: "material",
       sourceId: "material-1"

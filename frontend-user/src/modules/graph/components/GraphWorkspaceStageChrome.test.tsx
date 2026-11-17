@@ -268,6 +268,32 @@ describe("GraphWorkspaceStageChrome components", () => {
     expect(onApplyResolutionSuggestions).toHaveBeenCalled();
   });
 
+  it("cancels canvas wheel scrolling once and removes obsolete listeners", () => {
+    const onWheel = vi.fn((event: { preventDefault: () => void }) => event.preventDefault());
+    const props: Parameters<typeof GraphStageCanvas>[0] = {
+      alignmentGuides: [], document: null, focusPreview: null, graphDetail: null,
+      hiddenNodeIds: new Set(), linkFromNodeId: "", minimapViewport: null, nodeMap: new Map(),
+      onCanvasContextMenu: vi.fn(), onCanvasPointerDown: vi.fn(), onEdgeContextMenu: vi.fn(), onEdgeSelect: vi.fn(),
+      onNodeClick: vi.fn(), onNodeContextMenu: vi.fn(), onNodePointerDown: vi.fn(), onToggleGroupCollapse: vi.fn(),
+      onWheel, scale: 1, selectedEdgeId: "", selectedNodeIds: [], selectionBox: null,
+      stageHeight: 800, stageWidth: 1200, stageRef: createRef<HTMLDivElement>(), visibleNodes: []
+    };
+    const { container, rerender, unmount } = render(<GraphStageCanvas {...props} />);
+    const stage = container.querySelector(".graph-stage")!;
+    const wheel = new window.WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -100 });
+    fireEvent(stage, wheel);
+    expect(wheel.defaultPrevented).toBe(true);
+    expect(onWheel).toHaveBeenCalledTimes(1);
+    const nextHandler = vi.fn((event: { preventDefault: () => void }) => event.preventDefault());
+    rerender(<GraphStageCanvas {...props} onWheel={nextHandler} />);
+    fireEvent.wheel(stage, { cancelable: true, deltaY: 100 });
+    expect(onWheel).toHaveBeenCalledTimes(1);
+    expect(nextHandler).toHaveBeenCalledTimes(1);
+    unmount();
+    stage.dispatchEvent(new window.WheelEvent("wheel", { cancelable: true, deltaY: 100 }));
+    expect(nextHandler).toHaveBeenCalledTimes(1);
+  });
+
   it("delegates canvas node, edge, and group interactions", () => {
     const onEdgeSelect = vi.fn();
     const onNodeClick = vi.fn();
@@ -314,6 +340,61 @@ describe("GraphWorkspaceStageChrome components", () => {
     expect(edgePath).not.toBeNull();
     fireEvent.click(edgePath as Element);
     expect(onEdgeSelect).toHaveBeenCalledWith(expect.any(Object), document.edges[0]);
+  });
+
+  it("renders runtime learning state badges on graph nodes", () => {
+    const nodeMap = new Map(visibleNodes.map((node) => [node.id, node]));
+    const nodeReviewFeedbackById = new Map([
+      [
+        "node-1",
+        {
+          totalCardCount: 3,
+          reviewCardCount: 1,
+          masteredCardCount: 1,
+          masteryLevel: "weak",
+          masteryScore: 33,
+          weakCardCount: 2,
+          dueCount: 1,
+          learningCount: 1,
+          maxLapseCount: 2,
+          sampleCardFronts: []
+        }
+      ]
+    ]);
+
+    const { container } = render(
+      <GraphStageCanvas
+        alignmentGuides={[]}
+        document={document}
+        focusPreview={null}
+        graphDetail={graphDetail}
+        hiddenNodeIds={new Set()}
+        linkFromNodeId=""
+        minimapViewport={null}
+        nodeMap={nodeMap}
+        nodeReviewFeedbackById={nodeReviewFeedbackById}
+        onCanvasContextMenu={vi.fn()}
+        onCanvasPointerDown={vi.fn()}
+        onEdgeContextMenu={vi.fn()}
+        onEdgeSelect={vi.fn()}
+        onNodeClick={vi.fn()}
+        onNodeContextMenu={vi.fn()}
+        onNodePointerDown={vi.fn()}
+        onToggleGroupCollapse={vi.fn()}
+        onWheel={vi.fn()}
+        scale={0.1}
+        selectedEdgeId=""
+        selectedNodeIds={[]}
+        selectionBox={null}
+        stageHeight={800}
+        stageRef={createRef<HTMLDivElement>()}
+        stageWidth={1200}
+        visibleNodes={visibleNodes}
+      />
+    );
+
+    expect(screen.getByText("薄弱")).toBeInTheDocument();
+    expect(container.querySelector(".graph-node.learning-weak")).not.toBeNull();
   });
 
   it("renders the empty stage fallback", () => {

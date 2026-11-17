@@ -7,6 +7,7 @@ import type {
   GraphNodeTone
 } from "../../../api/client";
 import { Select } from "../../../design-system/primitives";
+import { buildGraphNodeSourceProfileTarget } from "../features/source-profile/graphSourceProfileTargets";
 import {
   getNodeDetail,
   getNodeEmphasis,
@@ -42,6 +43,7 @@ export function GraphWorkspaceSelectionPanel(props: {
   batchEmphasis: GraphNodeEmphasis;
   batchSizePreset: GraphNodeSizePreset;
   batchTone: GraphNodeTone;
+  graphId?: string;
   groups: GraphGroupPayload[];
   onAlignSelectedNodes: (direction: "left" | "top" | "center" | "middle") => void;
   onApplyBatchEmphasis: (emphasis: GraphNodeEmphasis) => void;
@@ -125,6 +127,7 @@ export function GraphWorkspaceSelectionPanel(props: {
           onOpenReviewWorkspace={props.onOpenReviewWorkspace}
           onRefreshReviewFeedback={props.onRefreshReviewFeedback}
           onOpenSource={props.onOpenSource}
+          graphId={props.graphId}
           reviewFeedbackRefreshPending={props.reviewFeedbackRefreshPending}
           selectedNode={selectedNode}
           selectedNodeReviewFeedback={props.selectedNodeReviewFeedback}
@@ -337,11 +340,21 @@ function GraphSingleNodePanel(props: {
   onRefreshReviewFeedback?: () => void;
   onOpenSource: (target: string) => void;
   reviewFeedbackRefreshPending?: boolean;
+  graphId?: string;
   selectedNode: GraphNodePayload;
   selectedNodeReviewFeedback: GraphSourceReviewFeedback | null;
   selectedNodeSourceBacklink: GraphSourceBacklink | null;
 }) {
   const { selectedNode } = props;
+  const selectedNodeSourceProfileTarget = buildGraphNodeSourceProfileTarget({
+    graphId: props.graphId,
+    node: selectedNode
+  })?.target;
+  const cardNoteCount =
+    props.selectedNodeReviewFeedback?.cardNoteCount ??
+    ((props.selectedNodeReviewFeedback?.totalCardCount ?? 0) > 0 ? 1 : 0);
+  const generatedCardCount =
+    props.selectedNodeReviewFeedback?.generatedCardCount ?? props.selectedNodeReviewFeedback?.totalCardCount ?? 0;
 
   return (
     <div className="graph-form-stack">
@@ -429,10 +442,18 @@ function GraphSingleNodePanel(props: {
                 : `当前来源下 ${props.selectedNodeReviewFeedback.totalCardCount} 张卡片中，已有 ${props.selectedNodeReviewFeedback.masteredCardCount} 张进入稳定复习。`}
           </p>
           <div className="graph-source-summary-list">
+            <span className="graph-source-summary-pill">{`关联 CardNote 数 ${cardNoteCount}`}</span>
+            <span className="graph-source-summary-pill">{`GeneratedCard 数 ${generatedCardCount}`}</span>
+            <span className="graph-source-summary-pill">{`关联卡片数 ${props.selectedNodeReviewFeedback.totalCardCount}`}</span>
+            <span className="graph-source-summary-pill">{`待复习数 ${props.selectedNodeReviewFeedback.dueCount}`}</span>
+            <span className="graph-source-summary-pill">{`遗忘次数 ${props.selectedNodeReviewFeedback.maxLapseCount}`}</span>
             <span className="graph-source-summary-pill">{`掌握度 ${props.selectedNodeReviewFeedback.masteryScore}% · ${formatMasteryLevelLabel(props.selectedNodeReviewFeedback.masteryLevel)}`}</span>
             <span className="graph-source-summary-pill">{`${props.selectedNodeReviewFeedback.masteredCardCount} / ${props.selectedNodeReviewFeedback.totalCardCount} 张已进入稳定复习`}</span>
             <span className="graph-source-summary-pill">{`${props.selectedNodeReviewFeedback.learningCount} 张仍在学习中`}</span>
             <span className="graph-source-summary-pill">{`最高遗忘 ${props.selectedNodeReviewFeedback.maxLapseCount} 次`}</span>
+            <span className="graph-source-summary-pill">{props.selectedNodeReviewFeedback.lastReviewedAt
+              ? `最近复习 ${new Date(props.selectedNodeReviewFeedback.lastReviewedAt).toLocaleString("zh-CN")}`
+              : "尚未复习"}</span>
           </div>
           {props.selectedNodeReviewFeedback.sampleCardFronts.length ? (
             <div className="graph-source-summary-list">
@@ -464,8 +485,17 @@ function GraphSingleNodePanel(props: {
               }}
               type="button"
             >
-              打开复习工作台
+              复习这个节点相关卡片
             </button>
+            {selectedNodeSourceProfileTarget ? (
+              <button
+                className="secondary-button"
+                onClick={() => props.onOpenSource(selectedNodeSourceProfileTarget)}
+                type="button"
+              >
+                查看来源学习档案
+              </button>
+            ) : null}
           </div>
         </article>
       ) : null}

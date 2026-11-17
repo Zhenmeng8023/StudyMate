@@ -42,6 +42,7 @@ import {
 } from "../lib/graphWorkspaceDraftRecovery";
 import type { GraphWorkspaceSaveState } from "../state/types";
 import { useGraphAutosaveLifecycle } from "./useGraphWorkspaceEffects";
+import { buildGraphBatchSaveCommand } from "../features/persistence/graphPersistenceCommands";
 
 type GraphWorkspacePersistenceOptions = {
   detailRef: RefObject<GraphDetailPayload | null>;
@@ -165,12 +166,7 @@ export function useGraphWorkspacePersistence(options: GraphWorkspacePersistenceO
       options.onReloadLatestSuggestionChange(false);
       options.onStatusMessage("正在保存图谱...");
       try {
-        const payload = await batchSaveGraph(options.session, current.id, {
-          title: current.title,
-          description: current.description,
-          summary,
-          document: normalizeDocument(current.id, current.currentVersion, current.document)
-        });
+        const payload = await batchSaveGraph(options.session, current.id, buildGraphBatchSaveCommand(current, summary));
         const normalized = {
           ...payload,
           document: normalizeDocument(payload.id, payload.currentVersion, payload.document)

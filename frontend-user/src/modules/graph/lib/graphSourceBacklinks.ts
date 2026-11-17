@@ -1,4 +1,10 @@
 import type { GraphNodePayload, GraphNodeSourcePayload } from "../../../api/client";
+import {
+  buildSourceBacklinkTarget,
+  buildSourceLinkReadModel,
+  normalizeSourceType,
+  type SourceLinkLike
+} from "../../../features/sources/sourceLinks";
 
 export type GraphSourceBacklink = {
   target: string;
@@ -19,15 +25,25 @@ export function buildGraphSourceBacklinkFromSource(
   source: SourceLike,
   metadata: Record<string, unknown> | null | undefined = {}
 ): GraphSourceBacklink | null {
-  const sourceId = source?.id?.trim();
-  const sourceType = normalizeSourceType(source?.type);
-  if (!sourceId || !sourceType) {
+  const sourceLink = buildSourceLinkReadModel({
+    sourceType: source?.type,
+    sourceId: source?.id,
+    sourceMetadata: metadata ?? undefined
+  });
+  if (!sourceLink) {
+    return null;
+  }
+
+  const sourceId = sourceLink.sourceId;
+  const sourceType = normalizeSourceType(sourceLink.sourceType);
+  const target = buildSourceBacklinkTarget(sourceLink);
+  if (!target) {
     return null;
   }
 
   if (sourceType === "material") {
     return {
-      target: appendReaderQuery(`/reader/${encodeURIComponent(sourceId)}`, metadata),
+      target,
       actionLabel: "回到阅读器",
       sourceTypeLabel: "资料",
       sourceId,
@@ -38,7 +54,7 @@ export function buildGraphSourceBacklinkFromSource(
 
   if (sourceType === "note") {
     return {
-      target: `/notes?selected=${encodeURIComponent(sourceId)}`,
+      target,
       actionLabel: "回到笔记",
       sourceTypeLabel: "笔记",
       sourceId,
@@ -49,7 +65,7 @@ export function buildGraphSourceBacklinkFromSource(
 
   if (sourceType === "card") {
     return {
-      target: `/review?card=${encodeURIComponent(sourceId)}`,
+      target,
       actionLabel: "去复习页",
       sourceTypeLabel: "卡片",
       sourceId,
@@ -59,11 +75,6 @@ export function buildGraphSourceBacklinkFromSource(
   }
 
   if (sourceType === "graph") {
-    const target = buildGraphWorkspaceTarget(metadata);
-    if (!target) {
-      return null;
-    }
-
     return {
       target,
       actionLabel: "回到图谱",
@@ -75,16 +86,8 @@ export function buildGraphSourceBacklinkFromSource(
   }
 
   if (sourceType === "annotation") {
-    const materialId = readMetadataString(metadata, "materialId") || readMetadataString(metadata, "sourceMaterialId");
-    if (!materialId) {
-      return null;
-    }
-
     return {
-      target: appendReaderQuery(`/reader/${encodeURIComponent(materialId)}`, {
-        ...metadata,
-        annotation: sourceId
-      }),
+      target,
       actionLabel: "回到批注",
       sourceTypeLabel: "批注",
       sourceId,
@@ -94,16 +97,8 @@ export function buildGraphSourceBacklinkFromSource(
   }
 
   if (sourceType === "pdf-anchor") {
-    const materialId = readMetadataString(metadata, "materialId") || readMetadataString(metadata, "sourceMaterialId");
-    if (!materialId) {
-      return null;
-    }
-
     return {
-      target: appendReaderQuery(`/reader/${encodeURIComponent(materialId)}`, {
-        ...metadata,
-        anchor: sourceId
-      }),
+      target,
       actionLabel: "回到 PDF 页",
       sourceTypeLabel: "PDF 锚点",
       sourceId,
@@ -114,7 +109,7 @@ export function buildGraphSourceBacklinkFromSource(
 
   if (sourceType === "ai-draft") {
     return {
-      target: `/ai?draft=${encodeURIComponent(sourceId)}`,
+      target,
       actionLabel: "查看 AI 草稿",
       sourceTypeLabel: "AI 草稿",
       sourceId,
@@ -125,7 +120,7 @@ export function buildGraphSourceBacklinkFromSource(
 
   if (sourceType === "ai-task" || sourceType === "ai") {
     return {
-      target: `/ai?task=${encodeURIComponent(sourceId)}`,
+      target,
       actionLabel: "查看 AI 任务",
       sourceTypeLabel: "AI",
       sourceId,
@@ -134,94 +129,5 @@ export function buildGraphSourceBacklinkFromSource(
     };
   }
 
-  return null;
-}
-
-function normalizeSourceType(sourceType: string | undefined) {
-  return sourceType?.trim().toLowerCase().replace(/_/g, "-") ?? "";
-}
-
-function appendReaderQuery(basePath: string, metadata: Record<string, unknown> | null | undefined) {
-  const params = new URLSearchParams();
-  const page = readMetadataNumber(metadata, "page") ?? readMetadataNumber(metadata, "pdfPage");
-  const annotation = readMetadataString(metadata, "annotation") || readMetadataString(metadata, "annotationId");
-  const anchor = readMetadataString(metadata, "anchor") || readMetadataString(metadata, "anchorId");
-
-  if (page) {
-    params.set("page", String(page));
-  }
-  if (annotation) {
-    params.set("annotation", annotation);
-  } else if (anchor) {
-    params.set("anchor", anchor);
-  }
-
-  const query = params.toString();
-  return query ? `${basePath}?${query}` : basePath;
-}
-
-function buildGraphWorkspaceTarget(metadata: Record<string, unknown> | null | undefined) {
-  const graphId = readMetadataString(metadata, "graphId");
-  if (!graphId) {
-    return "";
-  }
-
-  const params = new URLSearchParams();
-  params.set("graphId", graphId);
-
-  const focusX = readMetadataNumberString(metadata, "focusX", true);
-  const focusY = readMetadataNumberString(metadata, "focusY", true);
-  const focusWidth = readMetadataNumberString(metadata, "focusWidth");
-  const focusHeight = readMetadataNumberString(metadata, "focusHeight");
-  const focusLabel = readMetadataString(metadata, "focusLabel");
-
-  if (focusX) {
-    params.set("focusX", focusX);
-  }
-  if (focusY) {
-    params.set("focusY", focusY);
-  }
-  if (focusWidth) {
-    params.set("focusWidth", focusWidth);
-  }
-  if (focusHeight) {
-    params.set("focusHeight", focusHeight);
-  }
-  if (focusLabel) {
-    params.set("focusLabel", focusLabel);
-  }
-
-  return `/graph?${params.toString()}`;
-}
-
-function readMetadataString(metadata: Record<string, unknown> | null | undefined, key: string) {
-  const value = metadata?.[key];
-  return typeof value === "string" && value.trim() ? value.trim() : "";
-}
-
-function readMetadataNumberString(metadata: Record<string, unknown> | null | undefined, key: string, allowZero = false) {
-  const value = metadata?.[key];
-  if (typeof value === "number" && Number.isFinite(value) && (allowZero ? value >= 0 : value > 0)) {
-    return String(value);
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    const parsed = Number(trimmed);
-    if (trimmed && Number.isFinite(parsed) && (allowZero ? parsed >= 0 : parsed > 0)) {
-      return trimmed;
-    }
-  }
-  return "";
-}
-
-function readMetadataNumber(metadata: Record<string, unknown> | null | undefined, key: string) {
-  const value = metadata?.[key];
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-    return Math.round(value);
-  }
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
-  }
   return null;
 }

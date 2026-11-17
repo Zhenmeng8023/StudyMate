@@ -149,6 +149,36 @@ function buildLayoutExportSmokeDocument() {
   };
 }
 
+test("graph wheel zoom prevents page scrolling without passive listener errors", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  const detail = buildGraphDetail({ document: buildLayoutExportSmokeDocument() });
+  await page.addInitScript((value) => localStorage.setItem("studymate.session", JSON.stringify(value)), session);
+  await page.route("**/api/v1/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const reply = (data: unknown) => route.fulfill({ json: { success: true, data } });
+    if (path === "/api/v1/auth/me") return reply(session.user);
+    if (path === "/api/v1/graphs/graph-1") return reply(detail);
+    if (path === "/api/v1/graphs") return reply([detail]);
+    if (path === "/api/v1/review/feedback") return reply({ weakCards: [], weakSources: [], sourceSummaries: [] });
+    return reply([]);
+  });
+  await page.goto("/graph");
+  const world = page.locator(".graph-world");
+  await expect(world).toHaveCSS("transform", /matrix\(1, /);
+  const stage = page.locator(".graph-stage");
+  const bounds = await stage.boundingBox();
+  expect(bounds).not.toBeNull();
+  const scrollBefore = await page.evaluate(() => window.scrollY);
+  await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
+  await page.mouse.wheel(0, -100);
+  await expect(world).toHaveCSS("transform", /matrix\(1\.08, /);
+  await page.mouse.wheel(0, 100);
+  await expect(world).toHaveCSS("transform", /matrix\(1, /);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
+  expect(errors.filter((message) => /passive|preventDefault/i.test(message))).toEqual([]);
+});
+
 test("graph workspace opens a 200 node graph and exposes canvas save, import, and history flows", async ({ page }) => {
   const document = buildGraphDocument();
   const detail = buildGraphDetail({ document });
@@ -515,6 +545,8 @@ test("graph workspace keeps the current selection when graph export actions fail
   await expect(page.getByText("导出 PNG 失败")).toBeVisible();
 
   await expect(page.getByText("版本 4 · 3 节点 · 1 连线")).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("已选 3 个节点");
+  await page.getByRole("button", { name: "打开检查器", exact: true }).click();
   await expect(page.getByText("已选中 3 个节点")).toBeVisible();
   await expect(page.getByRole("button", { name: /布局节点 1/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /布局节点 2/ })).toBeVisible();
@@ -788,7 +820,7 @@ test("graph workspace keeps generated swimlanes visible when export fails after 
   await expect(page.getByText("笔记来源泳道")).toBeVisible();
   await expect(page.getByText("AI 来源泳道")).toBeVisible();
 
-  await page.getByLabel("关闭检查器").click();
+  await page.getByRole("complementary", { name: "图谱检查器" }).getByLabel("关闭检查器").click();
   await page.getByTitle("导出 PNG").click();
   await expect(page.getByText("导出 PNG 失败")).toBeVisible();
 
@@ -1888,7 +1920,7 @@ test("graph workspace shows source mastery feedback in the inspector", async ({ 
   await expect(page.getByText("复习反馈")).toBeVisible();
   await expect(page.getByText("掌握度 33% · 巩固中")).toBeVisible();
   await expect(page.getByText("1 / 3 张已进入稳定复习")).toBeVisible();
-  await expect(page.getByRole("button", { name: "打开复习工作台" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "复习这个节点相关卡片" })).toBeVisible();
 });
 
 test("graph workspace refreshes learning feedback without discarding dirty local edits", async ({ page }) => {
@@ -2053,6 +2085,143 @@ test("graph workspace refreshes learning feedback without discarding dirty local
   await expect(page.getByText("旧卡片 A")).toHaveCount(0);
   await expect(titleInput).toHaveValue("已更新节点");
   await expect(page.getByLabel("图谱保存状态：有未保存修改")).toBeVisible();
+  expect(reviewFeedbackRequestCount).toBe(2);
+});
+
+test("graph workspace keeps dirty edits and previous feedback when learning feedback refresh fails", async ({ page }) => {
+  const detail = buildGraphDetail({
+    currentVersion: 6,
+    description: "feedback refresh failure smoke",
+    document: {
+      graphId: "graph-1",
+      version: 6,
+      schemaVersion: 1,
+      viewport: { x: 140, y: 120, zoom: 1 },
+      nodes: [
+        {
+          id: "node-1",
+          type: "material",
+          title: "Feedback Failure Node",
+          x: 240,
+          y: 180,
+          width: 240,
+          height: 132,
+          source: { type: "material", id: "material-1", label: "Material A" },
+          metadata: {}
+        }
+      ],
+      edges: [],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 0,
+    nodeCount: 1,
+    title: "Feedback Failure Graph",
+    updatedAt: "2026-07-20T01:05:00Z"
+  });
+  let reviewFeedbackRequestCount = 0;
+
+  await page.addInitScript((value) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(value));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname === "/api/v1/auth/me") {
+      await route.fulfill({ contentType: "application/json", body: success(session.user) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([detail]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/review/feedback") {
+      reviewFeedbackRequestCount += 1;
+      if (reviewFeedbackRequestCount > 1) {
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: false,
+            error: { code: "review_feedback_unavailable", message: "feedback refresh failed" }
+          })
+        });
+        return;
+      }
+
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          dueCount: 1,
+          learningCount: 2,
+          weakCardCount: 2,
+          weakCards: [],
+          sourceSummaries: [
+            {
+              sourceType: "material",
+              sourceId: "material-1",
+              totalCardCount: 3,
+              reviewCardCount: 1,
+              masteredCardCount: 1,
+              masteryLevel: "building",
+              masteryScore: 33,
+              weakCardCount: 2,
+              dueCount: 1,
+              learningCount: 2,
+              maxLapseCount: 3,
+              sampleCardFronts: ["Old feedback card"]
+            }
+          ],
+          weakSources: []
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (["/api/v1/decks", "/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+  await page.locator(".graph-canvas-commandbar__actions button").last().click();
+  await page.locator(".graph-node", { hasText: "Feedback Failure Node" }).click();
+
+  await expect(page.getByText("Old feedback card")).toBeVisible();
+
+  const titleInput = page.locator(".graph-canvas-inspector input").first();
+  await titleInput.fill("Dirty Feedback Failure Node");
+  await expect(titleInput).toHaveValue("Dirty Feedback Failure Node");
+  await expect(page.locator(".graph-save-state.dirty")).toBeVisible();
+
+  await page.locator(".graph-meta-card", { hasText: "Old feedback card" }).getByRole("button").first().click();
+
+  await expect(page.getByText("feedback refresh failed")).toBeVisible();
+  await expect(page.getByText("Old feedback card")).toBeVisible();
+  await expect(titleInput).toHaveValue("Dirty Feedback Failure Node");
+  await expect(page.locator(".graph-save-state.dirty")).toBeVisible();
   expect(reviewFeedbackRequestCount).toBe(2);
 });
 
@@ -2227,6 +2396,194 @@ test("graph workspace refreshes learning feedback without discarding dirty local
   await expect(titleInput).toHaveValue("窄屏已更新节点");
   await expect(page.getByLabel("图谱保存状态：有未保存修改")).toHaveText("有未保存修改");
   expect(reviewFeedbackRequestCount).toBe(2);
+});
+
+test("graph workspace creates a CardNote from a selected node in a narrow viewport", async ({ page }) => {
+  const detail = buildGraphDetail({
+    currentVersion: 7,
+    description: "窄屏图谱制卡 smoke",
+    document: {
+      graphId: "graph-1",
+      version: 7,
+      schemaVersion: 1,
+      viewport: { x: 140, y: 120, zoom: 1 },
+      nodes: [
+        {
+          id: "node-1",
+          type: "text",
+          title: "二叉树遍历",
+          x: 120,
+          y: 160,
+          width: 260,
+          height: 140,
+          metadata: {
+            detail: "前序、中序、后序遍历的递归关系。"
+          }
+        }
+      ],
+      edges: [],
+      groups: [],
+      theme: {},
+      metadata: {}
+    },
+    edgeCount: 0,
+    nodeCount: 1,
+    title: "窄屏制卡图谱",
+    updatedAt: "2026-07-19T21:30:00Z"
+  });
+  let cardNoteRequest: unknown = null;
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((value) => {
+    window.localStorage.setItem("studymate.session", JSON.stringify(value));
+  }, session);
+
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+
+    if (url.pathname === "/api/v1/auth/me") {
+      await route.fulfill({ contentType: "application/json", body: success(session.user) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1") {
+      await route.fulfill({ contentType: "application/json", body: success(detail) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs") {
+      await route.fulfill({ contentType: "application/json", body: success([detail]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/graphs/graph-1/snapshots") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/review/feedback") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({ dueCount: 0, learningCount: 0, weakCardCount: 0, weakCards: [], sourceSummaries: [] })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/decks") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: success([
+          {
+            id: "deck-1",
+            ownerUserId: "user-1",
+            title: "算法 Deck",
+            description: "",
+            visibility: "private",
+            cardCount: 0,
+            createdAt: "2026-07-19T21:30:00Z",
+            updatedAt: "2026-07-19T21:30:00Z"
+          }
+        ])
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/decks/deck-1/card-notes" && request.method() === "POST") {
+      cardNoteRequest = request.postDataJSON();
+      await route.fulfill({
+        contentType: "application/json",
+        body: success({
+          cardNote: {
+            id: "card-note-1",
+            deckId: "deck-1",
+            ownerUserId: "user-1",
+            noteTypeId: "note-type-basic-reverse",
+            noteTypeCode: "basic_reverse",
+            primarySourceLink: { sourceType: "graph-node", sourceId: "node-1" },
+            sourceLinks: [{ sourceType: "graph-node", sourceId: "node-1" }],
+            fields: { front: "二叉树遍历", back: "前序、中序、后序遍历的递归关系。" },
+            generatedCardCount: 2,
+            status: "active",
+            createdAt: "2026-07-19T21:30:00Z",
+            updatedAt: "2026-07-19T21:30:00Z"
+          },
+          generatedCards: [
+            {
+              id: "card-1",
+              deckId: "deck-1",
+              ownerUserId: "user-1",
+              cardNoteId: "card-note-1",
+              cardType: "basic_reverse",
+              front: "二叉树遍历",
+              back: "前序、中序、后序遍历的递归关系。",
+              sourceType: "graph-node",
+              sourceId: "node-1",
+              status: "active",
+              createdAt: "2026-07-19T21:30:00Z",
+              updatedAt: "2026-07-19T21:30:00Z"
+            },
+            {
+              id: "card-2",
+              deckId: "deck-1",
+              ownerUserId: "user-1",
+              cardNoteId: "card-note-1",
+              cardType: "basic_reverse",
+              front: "前序、中序、后序遍历的递归关系。",
+              back: "二叉树遍历",
+              sourceType: "graph-node",
+              sourceId: "node-1",
+              status: "active",
+              createdAt: "2026-07-19T21:30:00Z",
+              updatedAt: "2026-07-19T21:30:00Z"
+            }
+          ]
+        })
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/diagram/templates") {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    if (["/api/v1/materials", "/api/v1/notes"].includes(url.pathname)) {
+      await route.fulfill({ contentType: "application/json", body: success([]) });
+      return;
+    }
+
+    await route.fulfill({ contentType: "application/json", body: success({}) });
+  });
+
+  await page.goto("/graph?graphId=graph-1");
+  const nodeButton = page.getByRole("button", { name: /二叉树遍历/ });
+  await nodeButton.focus();
+  await nodeButton.press("Enter");
+
+  await page.getByRole("button", { name: "历史" }).click();
+  await page.getByRole("button", { name: "生成卡片草稿" }).click();
+  await page.getByLabel("卡片模板").selectOption("basic_reverse");
+  await page.getByLabel("写入 Deck").selectOption("deck-1");
+  await page.getByRole("button", { name: "确认写入卡组" }).click();
+
+  await expect(page.getByText("GeneratedCard 数 2")).toBeVisible();
+  await expect(page.getByText("关联 CardNote 数 1")).toBeVisible();
+  expect(cardNoteRequest).toMatchObject({
+    noteTypeCode: "basic_reverse",
+    fields: {
+      front: "二叉树遍历",
+      back: "前序、中序、后序遍历的递归关系。"
+    },
+    primarySourceLink: {
+      sourceType: "graph-node",
+      sourceId: "node-1",
+      locator: {
+        graphId: "graph-1",
+        nodeId: "node-1"
+      }
+    }
+  });
 });
 
 test("graph workspace blocks snapshot restore while local edits are still dirty", async ({ page }) => {

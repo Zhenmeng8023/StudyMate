@@ -456,12 +456,12 @@ func TestBuildCardCreateRequestsPreservesSourceMetadataForGraphBacklinks(t *test
 		t.Fatalf("expected graph source metadata to be preserved")
 	}
 	for key, want := range map[string]any{
-		"graphId":      "graph-1",
-		"focusX":       420.0,
-		"focusY":       320.0,
-		"focusWidth":   220.0,
-		"focusHeight":  120.0,
-		"focusLabel":   "Binary Tree",
+		"graphId":     "graph-1",
+		"focusX":      420.0,
+		"focusY":      320.0,
+		"focusWidth":  220.0,
+		"focusHeight": 120.0,
+		"focusLabel":  "Binary Tree",
 	} {
 		if got := requests[0].SourceMetadata[key]; got != want {
 			t.Fatalf("expected source metadata %s=%#v, got %#v", key, want, got)

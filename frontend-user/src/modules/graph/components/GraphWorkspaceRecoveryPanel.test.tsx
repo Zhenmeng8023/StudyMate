@@ -2,9 +2,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
   DeckPayload,
-  GraphCardDraftPayload,
   GraphSnapshotPayload
 } from "../../../api/client";
+import type { GraphCardNoteDraft } from "../features/card-notes/graphCardNoteDrafts";
 import { GraphWorkspaceRecoveryPanel } from "./GraphWorkspaceRecoveryPanel";
 
 const deck: DeckPayload = {
@@ -18,12 +18,13 @@ const deck: DeckPayload = {
   updatedAt: "2026-06-05T00:00:00Z"
 };
 
-const cardDraft: GraphCardDraftPayload = {
+const cardDraft: GraphCardNoteDraft = {
   id: "draft-1",
-  sourceNodeId: "node-1",
+  title: "Question 1",
   front: "Question 1",
   back: "Answer 1",
-  explanation: "From graph node"
+  explanation: "From graph node",
+  sourceLinks: [{ sourceType: "graph-node", sourceId: "node-1" }]
 };
 
 const snapshot: GraphSnapshotPayload = {
@@ -48,7 +49,9 @@ describe("GraphWorkspaceRecoveryPanel", () => {
       <GraphWorkspaceRecoveryPanel
         canGenerateCards={true}
         cardDrafts={[cardDraft]}
+        cardTemplate="basic"
         decks={[deck]}
+        onCardTemplateChange={vi.fn()}
         onCommitCardDrafts={onCommitCardDrafts}
         onDraftDeckChange={onDraftDeckChange}
         onDraftFieldChange={onDraftFieldChange}
@@ -62,9 +65,10 @@ describe("GraphWorkspaceRecoveryPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "生成卡片草稿" }));
     expect(onGenerateCards).toHaveBeenCalled();
-    expect(screen.getByRole("combobox")).toHaveClass("ds-select");
+    expect(screen.getAllByText("Question 1").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("卡片模板")).toHaveClass("ds-select");
 
-    fireEvent.change(screen.getByDisplayValue("Deck 1"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("写入 Deck"), { target: { value: "" } });
     expect(onDraftDeckChange).toHaveBeenCalledWith("");
 
     fireEvent.change(screen.getByDisplayValue("Question 1"), { target: { value: "Question 2" } });
@@ -77,12 +81,43 @@ describe("GraphWorkspaceRecoveryPanel", () => {
     expect(onRestoreSnapshot).toHaveBeenCalledWith(3);
   });
 
+  it("allows Basic Reverse and Cloze CardNote templates for graph drafts", () => {
+    const onTemplateChange = vi.fn();
+
+    render(
+      <GraphWorkspaceRecoveryPanel
+        canGenerateCards={true}
+        cardDrafts={[cardDraft]}
+        cardTemplate="basic_reverse"
+        decks={[deck]}
+        onCardTemplateChange={onTemplateChange}
+        onCommitCardDrafts={vi.fn()}
+        onDraftDeckChange={vi.fn()}
+        onDraftFieldChange={vi.fn()}
+        onGenerateCards={vi.fn()}
+        onRestoreSnapshot={vi.fn()}
+        saving={false}
+        selectedDraftDeckId="deck-1"
+        snapshots={[]}
+      />
+    );
+
+    expect(screen.getByText("Basic Reverse")).toBeInTheDocument();
+    expect(screen.getAllByText("Question 1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Answer 1").length).toBeGreaterThan(0);
+
+    fireEvent.change(screen.getByLabelText("卡片模板"), { target: { value: "cloze" } });
+    expect(onTemplateChange).toHaveBeenCalledWith("cloze");
+  });
+
   it("disables card generation without a selected node and shows deck guidance", () => {
     render(
       <GraphWorkspaceRecoveryPanel
         canGenerateCards={false}
         cardDrafts={[]}
+        cardTemplate="basic"
         decks={[]}
+        onCardTemplateChange={vi.fn()}
         onCommitCardDrafts={vi.fn()}
         onDraftDeckChange={vi.fn()}
         onDraftFieldChange={vi.fn()}

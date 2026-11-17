@@ -8,7 +8,6 @@ import {
   AuthSession,
   DeckPayload,
   DiagramTemplatePayload,
-  GraphCardDraftPayload,
   GraphDetailPayload,
   GraphDocumentPayload,
   GraphNodeEmphasis,
@@ -19,10 +18,8 @@ import {
   MaterialPayload,
   NotePayload,
   ReviewFeedbackPayload,
-  commitGraphCardDrafts,
   createGraph,
   deleteGraph,
-  generateGraphCardDrafts,
   getGraph,
   getReviewFeedback,
   listDecks,
@@ -33,7 +30,10 @@ import {
   previewGraphLayout,
   validateGraph
 } from "../../../api/client";
+import { createDeckCardNote } from "../../../api/review";
 import { ConfirmDialog, DataState } from "../../../design-system/primitives";
+import { type CardNoteTemplateCode } from "../../../features/card-notes/CardNoteComposer";
+import { CardNoteCreationResult, type CardNoteCreationResultData } from "../../../features/card-notes/CardNoteCreationResult";
 import {
   getNodeEmphasis,
   getNodeTone,
@@ -68,6 +68,29 @@ import { GraphWorkspaceOverviewPanel } from "../components/GraphWorkspaceOvervie
 import { GraphWorkspaceSourceSummary } from "../components/GraphWorkspaceSourceSummary";
 import { GraphWorkspaceSelectionPanel } from "../components/GraphWorkspaceSelectionPanel";
 import { GraphWorkspaceImportPanel } from "../components/GraphWorkspaceImportPanel";
+import { type GraphCardNoteDraft } from "../features/card-notes/graphCardNoteDrafts";
+import {
+  commitGraphCardNoteDrafts,
+  planGraphCardNoteDraftsFromSelection
+} from "../features/card-notes/graphCardNoteCommands";
+import {
+  applyGraphLearningFeedbackRefreshFailure,
+  applyGraphLearningFeedbackRefreshSuccess
+} from "../features/learning/graphLearningFeedbackRuntime";
+import {
+  buildGraphLearningFilterState,
+  type GraphLearningFilter
+} from "../features/learning/graphLearningFilters";
+import {
+  buildGraphConflictPanelPlan,
+  buildGraphInspectorTabPlan,
+  buildGraphPanelTogglePlan,
+  buildGraphResourceTabPlan,
+  buildGraphSelectionPanelPlan,
+  shouldUseGraphOverlayDock,
+  type GraphPanelPlan
+} from "../features/panel/graphPanelCommands";
+import { buildGraphReloadLatestSuccessPlan } from "../features/recovery/graphRecoveryCommands";
 
 import {
   applyGraphDocumentChange,
@@ -205,8 +228,13 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   const [diagramTemplates, setDiagramTemplates] = useState<DiagramTemplatePayload[]>([]);
   const [reviewFeedback, setReviewFeedback] = useState<ReviewFeedbackPayload | null>(null);
   const [reviewFeedbackRefreshPending, setReviewFeedbackRefreshPending] = useState(false);
+  const [learningFilter, setLearningFilter] = useState<GraphLearningFilter>(() =>
+    new URLSearchParams(location.search).get("learningFilter") === "weak" ? "weak" : "all"
+  );
   const [validationIssues, setValidationIssues] = useState<GraphValidationIssuePayload[]>([]);
-  const [cardDrafts, setCardDrafts] = useState<GraphCardDraftPayload[]>([]);
+  const [cardDrafts, setCardDrafts] = useState<GraphCardNoteDraft[]>([]);
+  const [cardCreationResult, setCardCreationResult] = useState<CardNoteCreationResultData | null>(null);
+  const [cardDraftTemplate, setCardDraftTemplate] = useState<CardNoteTemplateCode>("basic");
   const [graphDetail, setGraphDetail] = useState<GraphDetailPayload | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState("");
   const graphSelection = useGraphSelectionState({ onClearEdgeSelection: () => setSelectedEdgeId("") });
@@ -327,18 +355,43 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   }, [selectedNodes]);
   const selectedEdge = selectedEdgeId ? document?.edges.find((edge) => edge.id === selectedEdgeId) ?? null : null;
   const selectedNodeSourceBacklink = selectedNode ? buildGraphSourceBacklink(selectedNode) : null;
+  const reviewFeedbackSources = useMemo(
+    () => (reviewFeedback?.sourceSummaries?.length ? reviewFeedback.sourceSummaries : reviewFeedback?.weakSources ?? []),
+    [reviewFeedback?.sourceSummaries, reviewFeedback?.weakSources]
+  );
   const selectedNodeReviewFeedback = useMemo(
     () =>
       selectedNode
-        ? resolveGraphSourceReviewFeedback(selectedNode, reviewFeedback?.sourceSummaries ?? reviewFeedback?.weakSources ?? [])
+        ? resolveGraphSourceReviewFeedback(selectedNode, reviewFeedbackSources)
         : null,
-    [reviewFeedback?.sourceSummaries, reviewFeedback?.weakSources, selectedNode]
+    [reviewFeedbackSources, selectedNode]
   );
+  const nodeReviewFeedbackById = useMemo(() => {
+    const feedbackById = new Map<string, ReturnType<typeof resolveGraphSourceReviewFeedback>>();
+    for (const node of document?.nodes ?? []) {
+      feedbackById.set(node.id, resolveGraphSourceReviewFeedback(node, reviewFeedbackSources));
+    }
+    return feedbackById;
+  }, [document?.nodes, reviewFeedbackSources]);
+  const learningFilterState = useMemo(
+    () =>
+      buildGraphLearningFilterState({
+        filter: learningFilter,
+        nodes: document?.nodes ?? [],
+        reviewFeedbackByNodeId: nodeReviewFeedbackById
+      }),
+    [document?.nodes, learningFilter, nodeReviewFeedbackById]
+  );
+  const learningStateCounts = learningFilterState.stateCounts;
   const contextMenuNode = contextMenu?.nodeId ? nodeMap.get(contextMenu.nodeId) ?? null : null;
   const contextMenuSourceBacklink = contextMenuNode ? buildGraphSourceBacklink(contextMenuNode) : null;
+  const filteredLearningNodeIds = learningFilterState.filteredNodeIds;
   const visibleNodes = useMemo(
-    () => (document?.nodes ?? []).filter((node) => !hiddenNodeIds.has(node.id)),
-    [document?.nodes, hiddenNodeIds]
+    () =>
+      (document?.nodes ?? []).filter(
+        (node) => !hiddenNodeIds.has(node.id) && (!filteredLearningNodeIds || filteredLearningNodeIds.has(node.id))
+      ),
+    [document?.nodes, filteredLearningNodeIds, hiddenNodeIds]
   );
   const sourceReferenceSummary = useMemo(
     () => summarizeGraphSourceReferences(document?.nodes ?? []),
@@ -416,32 +469,26 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   );
 
   useEffect(() => {
-    if (!selectedNode && !selectedEdge) {
-      return;
-    }
-    setInspectorTab("selection");
-    setInspectorOpen(true);
-    if (typeof window !== "undefined" && window.innerWidth < 1600) {
-      setResourcePanelOpen(false);
-    }
-  }, [selectedEdge?.id, selectedNode?.id]);
+    applyGraphPanelPlan(
+      buildGraphSelectionPanelPlan({
+        hasSelection: Boolean(selectedNode || selectedEdge),
+        overlayDock: shouldUseOverlayDock(),
+        resourcePanelOpen
+      })
+    );
+  }, [resourcePanelOpen, selectedEdge?.id, selectedNode?.id]);
 
   useEffect(() => {
-    if (!reloadLatestSuggested || !dirty) {
-      return;
-    }
-    setInspectorTab("conflict");
-    setInspectorOpen(true);
-    if (typeof window !== "undefined" && window.innerWidth < 1600) {
-      setResourcePanelOpen(false);
-    }
-  }, [dirty, reloadLatestSuggested]);
-
-  useEffect(() => {
-    if (inspectorTab === "conflict" && (!reloadLatestSuggested || !dirty)) {
-      setInspectorTab("overview");
-    }
-  }, [dirty, inspectorTab, reloadLatestSuggested]);
+    applyGraphPanelPlan(
+      buildGraphConflictPanelPlan({
+        dirty,
+        inspectorTab,
+        overlayDock: shouldUseOverlayDock(),
+        reloadLatestSuggested,
+        resourcePanelOpen
+      })
+    );
+  }, [dirty, inspectorTab, reloadLatestSuggested, resourcePanelOpen]);
 
   function setWorkspaceStatusMessage(message: string, options?: { suggestReload?: boolean }) {
     setStatusMessage(message);
@@ -613,6 +660,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setLinkFromNodeId("");
     setValidationIssues([]);
     setCardDrafts([]);
+    setCardCreationResult(null);
     graphDrag.clearActiveDrag();
   }
 
@@ -970,10 +1018,13 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
     setWorkspaceStatusMessage("正在刷新学习反馈...");
     try {
       const payload = await getReviewFeedback(props.session);
-      setReviewFeedback(payload);
-      setWorkspaceStatusMessage("已刷新学习反馈");
+      const plan = applyGraphLearningFeedbackRefreshSuccess(payload);
+      setReviewFeedback(plan.reviewFeedback);
+      setWorkspaceStatusMessage(plan.statusMessage);
     } catch (error) {
-      setWorkspaceStatusMessage(error instanceof Error ? error.message : "刷新学习反馈失败");
+      const plan = applyGraphLearningFeedbackRefreshFailure(reviewFeedback, error);
+      setReviewFeedback(plan.reviewFeedback);
+      setWorkspaceStatusMessage(plan.statusMessage);
     } finally {
       setReviewFeedbackRefreshPending(false);
     }
@@ -1019,17 +1070,13 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
       const normalized = normalizeGraphWorkspaceDetail(detail);
       resetHistory(normalized, "重新加载最新图谱");
       const snapshotsLoaded = await loadSnapshots(current.id);
-      setSaveState("idle");
-      setConfirmDialogAction("");
-      setWorkspaceStatusMessage(
+      const plan = buildGraphReloadLatestSuccessPlan({
+        discardedDirtyChanges: shouldConfirmDiscard,
         snapshotsLoaded
-          ? shouldConfirmDiscard
-            ? "已重新加载最新图谱，未保存更改已放弃"
-            : "已重新加载最新图谱"
-          : shouldConfirmDiscard
-            ? `已重新加载最新图谱，未保存更改已放弃；${buildSnapshotListFailureState().statusMessage}`
-            : `已重新加载最新图谱；${buildSnapshotListFailureState().statusMessage}`
-      );
+      });
+      setSaveState(plan.saveState);
+      setConfirmDialogAction(plan.confirmDialogAction);
+      setWorkspaceStatusMessage(plan.statusMessage);
     } catch (error) {
       const nextMessage = error instanceof Error ? error.message : "重新加载图谱失败";
       setConfirmDialogError(nextMessage);
@@ -1762,18 +1809,15 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   }
 
   async function handleGenerateCards() {
-    if (!graphDetail || !selectedNode) {
-      setWorkspaceStatusMessage("先选中一个节点，再生成卡片草稿");
+    if (!graphDetail || selectedNodes.length === 0) {
+      setWorkspaceStatusMessage("先选中一个或多个节点，再生成卡片草稿");
       return;
     }
 
-    try {
-      const payload = await generateGraphCardDrafts(props.session, graphDetail.id, [selectedNode.id]);
-      setCardDrafts(payload);
-      setWorkspaceStatusMessage(payload.length ? "已生成卡片草稿" : "没有生成新的卡片草稿");
-    } catch (error) {
-      setWorkspaceStatusMessage(error instanceof Error ? error.message : "生成卡片草稿失败");
-    }
+    const plan = planGraphCardNoteDraftsFromSelection(graphDetail.id, selectedNodes);
+    setCardCreationResult(null);
+    setCardDrafts(plan.drafts);
+    setWorkspaceStatusMessage(plan.statusMessage);
   }
 
   async function handleCommitCardDrafts() {
@@ -1788,20 +1832,21 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
 
     setSaving(true);
     try {
-      const payload = await commitGraphCardDrafts(props.session, graphDetail.id, {
+      const result = await commitGraphCardNoteDrafts({
+        session: props.session,
         deckId: selectedDraftDeckId,
-        drafts: cardDrafts
+        templateCode: cardDraftTemplate,
+        drafts: cardDrafts,
+        decks,
+        currentReviewFeedback: reviewFeedback,
+        createCardNote: createDeckCardNote
       });
-      setCardDrafts([]);
-      const targetDeck = decks.find((deck) => deck.id === selectedDraftDeckId);
-      setDecks((current) =>
-        current.map((deck) =>
-          deck.id === selectedDraftDeckId
-            ? { ...deck, cardCount: deck.cardCount + payload.length, updatedAt: new Date().toISOString() }
-            : deck
-        )
-      );
-      setWorkspaceStatusMessage(`已将 ${payload.length} 张卡片写入 ${targetDeck?.title || "目标卡组"}。`);
+      setCardDrafts(result.remainingDrafts);
+      if (result.creationResult) setCardCreationResult(result.creationResult);
+      setDecks(result.decks);
+      setReviewFeedback(result.reviewFeedback);
+      setInspectorTab(result.remainingDrafts.length ? "history" : "selection");
+      setWorkspaceStatusMessage(result.statusMessage);
     } catch (error) {
       setWorkspaceStatusMessage(error instanceof Error ? error.message : "写入卡片失败");
     } finally {
@@ -1890,43 +1935,58 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
   }
 
   function shouldUseOverlayDock() {
-    return typeof window !== "undefined" && window.innerWidth < 1600;
+    return shouldUseGraphOverlayDock(typeof window === "undefined" ? null : window.innerWidth);
+  }
+
+  function applyGraphPanelPlan(plan: GraphPanelPlan) {
+    if (plan.resourceTab !== undefined) {
+      setResourceTab(plan.resourceTab);
+    }
+    if (plan.resourcePanelOpen !== undefined) {
+      setResourcePanelOpen(plan.resourcePanelOpen);
+    }
+    if (plan.inspectorTab !== undefined) {
+      setInspectorTab(plan.inspectorTab);
+    }
+    if (plan.inspectorOpen !== undefined) {
+      setInspectorOpen(plan.inspectorOpen);
+    }
   }
 
   function handleResourceTabChange(tab: GraphWorkspaceResourceTab) {
-    setResourceTab(tab);
-    setResourcePanelOpen(true);
-    if (shouldUseOverlayDock()) {
-      setInspectorOpen(false);
-    }
+    applyGraphPanelPlan(buildGraphResourceTabPlan({ overlayDock: shouldUseOverlayDock(), tab }));
   }
 
   function handleInspectorTabChange(tab: GraphInspectorTab) {
-    setInspectorTab(tab);
-    setInspectorOpen(true);
-    if (shouldUseOverlayDock()) {
-      setResourcePanelOpen(false);
-    }
+    applyGraphPanelPlan(
+      buildGraphInspectorTabPlan({
+        overlayDock: shouldUseOverlayDock(),
+        resourcePanelOpen,
+        tab
+      })
+    );
   }
 
   function toggleResourcePanel() {
-    setResourcePanelOpen((current) => {
-      const next = !current;
-      if (next && shouldUseOverlayDock()) {
-        setInspectorOpen(false);
-      }
-      return next;
-    });
+    applyGraphPanelPlan(
+      buildGraphPanelTogglePlan({
+        inspectorOpen,
+        overlayDock: shouldUseOverlayDock(),
+        panel: "resources",
+        resourcePanelOpen
+      })
+    );
   }
 
   function toggleInspectorPanel() {
-    setInspectorOpen((current) => {
-      const next = !current;
-      if (next && shouldUseOverlayDock()) {
-        setResourcePanelOpen(false);
-      }
-      return next;
-    });
+    applyGraphPanelPlan(
+      buildGraphPanelTogglePlan({
+        inspectorOpen,
+        overlayDock: shouldUseOverlayDock(),
+        panel: "inspector",
+        resourcePanelOpen
+      })
+    );
   }
 
   function handleGraphTitleChange(title: string) {
@@ -2146,6 +2206,21 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                 zoomLabel={zoomLabel}
               />
 
+              <section className="graph-source-summary-list" aria-label="图谱学习状态过滤器">
+                {learningFilterState.options.map((option) => (
+                  <button
+                    className={learningFilter === option.filter ? "secondary-button active" : "secondary-button"}
+                    key={option.filter}
+                    onClick={() => setLearningFilter(option.filter)}
+                    type="button"
+                  >
+                    {option.filter === "all" ? `${option.label}节点 ${option.count}` : `只看${option.label}节点 ${option.count}`}
+                  </button>
+                ))}
+                <span className="graph-source-summary-pill">{`学习中 ${learningStateCounts.learning}`}</span>
+                <span className="graph-source-summary-pill">{`当前显示 ${visibleNodes.length} 个节点`}</span>
+              </section>
+
               <div className="graph-stage-shell graph-stage-shell--canvas">
                 <GraphStageStatus
                   alignmentHintLabels={alignmentHintLabels}
@@ -2166,6 +2241,7 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                   linkFromNodeId={linkFromNodeId}
                   minimapViewport={graphViewport.minimapViewport}
                   nodeMap={nodeMap}
+                  nodeReviewFeedbackById={nodeReviewFeedbackById}
                   onCanvasContextMenu={(event) => openContextMenu(event)}
                   onCanvasPointerDown={handleCanvasPointerDown}
                   onEdgeContextMenu={(event, edge) => openContextMenu(event, { edgeId: edge.id })}
@@ -2300,11 +2376,13 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
                 />
               ) : null}
 
+              <CardNoteCreationResult result={cardCreationResult} />
               {inspectorTab === "selection" ? (
                 <GraphWorkspaceSelectionPanel
                   batchEmphasis={batchEmphasis ?? "default"}
                   batchSizePreset={batchSizePreset ?? "default"}
                   batchTone={batchTone ?? "neutral"}
+                  graphId={graphDetail?.id}
                   groups={document?.groups ?? []}
                   onAlignSelectedNodes={alignSelectedNodes}
                   onApplyBatchEmphasis={applyBatchEmphasis}
@@ -2420,9 +2498,11 @@ export function useGraphWorkspaceController(props: { session: AuthSession }) {
 
               {inspectorTab === "history" ? (
                 <GraphWorkspaceRecoveryPanel
-                  canGenerateCards={Boolean(selectedNode)}
+                  canGenerateCards={selectedNodes.length > 0}
                   cardDrafts={cardDrafts}
+                  cardTemplate={cardDraftTemplate}
                   decks={decks}
+                  onCardTemplateChange={setCardDraftTemplate}
                   onCommitCardDrafts={() => void handleCommitCardDrafts()}
                   onDraftDeckChange={setSelectedDraftDeckId}
                   onDraftFieldChange={handleDraftFieldChange}

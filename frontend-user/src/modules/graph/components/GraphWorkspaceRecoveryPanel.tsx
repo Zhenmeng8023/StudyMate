@@ -1,15 +1,20 @@
-import { BookOpen, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import type {
   DeckPayload,
-  GraphCardDraftPayload,
   GraphSnapshotPayload
 } from "../../../api/client";
-import { Select } from "../../../design-system/primitives";
+import {
+  CardNoteComposer,
+  type CardNoteTemplateCode
+} from "../../../features/card-notes/CardNoteComposer";
+import type { GraphCardNoteDraft } from "../features/card-notes/graphCardNoteDrafts";
 
 export function GraphWorkspaceRecoveryPanel(props: {
   canGenerateCards: boolean;
-  cardDrafts: GraphCardDraftPayload[];
+  cardDrafts: GraphCardNoteDraft[];
+  cardTemplate: CardNoteTemplateCode;
   decks: DeckPayload[];
+  onCardTemplateChange: (template: CardNoteTemplateCode) => void;
   onCommitCardDrafts: () => void;
   onDraftDeckChange: (deckId: string) => void;
   onDraftFieldChange: (draftId: string, field: "front" | "back", value: string) => void;
@@ -37,55 +42,19 @@ export function GraphWorkspaceRecoveryPanel(props: {
 
       {props.cardDrafts.length ? (
         <>
-          <div className="graph-form-stack">
-            <label>
-              <span>写入卡组</span>
-              <Select
-                aria-label="鍐欏叆鍗＄粍"
-                onChange={(event) => props.onDraftDeckChange(event.target.value)}
-                value={props.selectedDraftDeckId}
-              >
-                <option value="">请选择一个 deck</option>
-                {props.decks.map((deck) => (
-                  <option key={deck.id} value={deck.id}>
-                    {deck.title}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <button
-              className="secondary-button"
-              disabled={!props.selectedDraftDeckId || props.saving}
-              onClick={props.onCommitCardDrafts}
-              type="button"
-            >
-              <BookOpen size={16} />
-              确认写入卡组
-            </button>
-          </div>
-
-          <div className="graph-card-draft-list">
-            {props.cardDrafts.map((draft) => (
-              <article className="graph-card-draft" key={draft.id}>
-                <label>
-                  <span>问题</span>
-                  <input
-                    onChange={(event) => props.onDraftFieldChange(draft.id, "front", event.target.value)}
-                    value={draft.front}
-                  />
-                </label>
-                <label>
-                  <span>答案</span>
-                  <textarea
-                    onChange={(event) => props.onDraftFieldChange(draft.id, "back", event.target.value)}
-                    rows={4}
-                    value={draft.back}
-                  />
-                </label>
-                {draft.explanation ? <small>{draft.explanation}</small> : null}
-              </article>
-            ))}
-          </div>
+          <CardNoteComposer
+            allowedTemplates={["basic", "basic_reverse", "cloze"]}
+            busy={props.saving}
+            decks={props.decks}
+            drafts={props.cardDrafts}
+            onDeckChange={props.onDraftDeckChange}
+            onDraftFieldChange={props.onDraftFieldChange}
+            onSubmit={props.onCommitCardDrafts}
+            onTemplateChange={props.onCardTemplateChange}
+            selectedDeckId={props.selectedDraftDeckId}
+            submitLabel="确认写入卡组"
+            template={props.cardTemplate}
+          />
         </>
       ) : !props.decks.length ? (
         <article className="graph-meta-card muted">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject, type WheelEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   buildGraphMinimapViewport,
   clampGraphZoom,
@@ -134,8 +134,8 @@ export function useGraphViewportCamera(options: GraphViewportCameraOptions) {
   }, [options]);
 
   const handleWheel = useCallback(
-    (event: WheelEvent<HTMLDivElement>) => {
-      event.preventDefault();
+    (event: Pick<WheelEvent, "cancelable" | "preventDefault" | "deltaY">) => {
+      if (event.cancelable) event.preventDefault();
       zoomGraph(event.deltaY < 0 ? 0.08 : -0.08, "已调整缩放，等待保存");
     },
     [zoomGraph]

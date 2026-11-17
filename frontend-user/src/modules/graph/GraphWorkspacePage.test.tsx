@@ -18,6 +18,7 @@ import {
   validateGraph
 } from "../../api/client";
 import type { AuthSession, GraphDetailPayload, GraphSummaryPayload, ReviewFeedbackPayload } from "../../api/client";
+import { createDeckCardNote } from "../../api/review";
 import { GraphWorkspacePage } from "./GraphWorkspacePage";
 import { buildGraphWorkspaceConcurrencyStorageKey } from "./lib/graphWorkspaceConcurrencySignal";
 import { buildGraphWorkspaceDraftStorageKey } from "./lib/graphWorkspaceDraftRecovery";
@@ -41,6 +42,10 @@ vi.mock("../../api/client", async () => {
     validateGraph: vi.fn()
   };
 });
+
+vi.mock("../../api/review", () => ({
+  createDeckCardNote: vi.fn()
+}));
 
 const session: AuthSession = {
   accessToken: "access-token",
@@ -107,6 +112,7 @@ const restoreGraphSnapshotMock = vi.mocked(restoreGraphSnapshot);
 const createGraphMock = vi.mocked(createGraph);
 const deleteGraphMock = vi.mocked(deleteGraph);
 const validateGraphMock = vi.mocked(validateGraph);
+const createDeckCardNoteMock = vi.mocked(createDeckCardNote);
 const clipboardWriteTextMock = vi.fn();
 const createObjectUrlMock = vi.fn();
 const revokeObjectUrlMock = vi.fn();
@@ -199,6 +205,38 @@ describe("GraphWorkspacePage persistence states", () => {
     createGraphMock.mockResolvedValue(graphDetail);
     deleteGraphMock.mockResolvedValue(undefined as never);
     validateGraphMock.mockResolvedValue({ issues: [] });
+    createDeckCardNoteMock.mockResolvedValue({
+      cardNote: {
+        id: "card-note-1",
+        deckId: "deck-1",
+        ownerUserId: "user-1",
+        noteTypeId: "note-type-basic",
+        noteTypeCode: "basic",
+        primarySourceLink: { sourceType: "graph-node", sourceId: "node-1" },
+        sourceLinks: [{ sourceType: "graph-node", sourceId: "node-1" }],
+        fields: { front: "Question", back: "Answer" },
+        generatedCardCount: 1,
+        status: "active",
+        createdAt: "2026-06-05T08:00:00Z",
+        updatedAt: "2026-06-05T08:00:00Z"
+      },
+      generatedCards: [
+        {
+          id: "card-1",
+          deckId: "deck-1",
+          ownerUserId: "user-1",
+          front: "Question",
+          back: "Answer",
+          cardType: "basic",
+          status: "active",
+          sourceType: "graph-node",
+          sourceId: "node-1",
+          sourceLinks: [{ sourceType: "graph-node", sourceId: "node-1" }],
+          createdAt: "2026-06-05T08:00:00Z",
+          updatedAt: "2026-06-05T08:00:00Z"
+        }
+      ]
+    });
   });
 
   it("renders the shared loading state while the graph workspace is bootstrapping", async () => {
@@ -1084,6 +1122,17 @@ describe("GraphWorkspacePage persistence states", () => {
 
     await user.click(await screen.findByRole("button", { name: /Original URL/ }));
     await expect(screen.findByText(/33%/)).resolves.toBeInTheDocument();
+    expect(screen.getByLabelText("图谱学习状态过滤器")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "只看薄弱节点 1" })).toBeInTheDocument();
+    expect(screen.getByText("待复习数 1")).toBeInTheDocument();
+    expect(screen.getByText("尚未复习")).toBeInTheDocument();
+    expect(screen.getByText("薄弱")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "只看到期节点 1" }));
+    expect(screen.getByRole("button", { name: /Original URL/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "只看未制卡节点 0" }));
+    expect(screen.queryByRole("button", { name: /Original URL/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "全部节点 1" }));
 
     const titleInput = screen.getByDisplayValue("Original URL");
     await user.clear(titleInput);
@@ -1093,12 +1142,240 @@ describe("GraphWorkspacePage persistence states", () => {
     await user.click(screen.getByRole("button", { name: "刷新学习反馈" }));
 
     await expect(screen.findByText(/掌握度 100%/)).resolves.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "只看已掌握节点 1" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "只看已掌握节点 1" }));
+    expect(screen.getByRole("button", { name: /Updated URL/ })).toBeInTheDocument();
     expect(screen.getByText("New card")).toBeInTheDocument();
     expect(screen.queryByText("Old card")).not.toBeInTheDocument();
     expect(screen.getByDisplayValue("Updated URL")).toBeInTheDocument();
     expect(screen.getByDisplayValue("https://old.example.test")).toBeInTheDocument();
     expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
     expect(getReviewFeedbackMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps runtime feedback, selection, and dirty edits visible when review feedback refresh fails", async () => {
+    const user = userEvent.setup();
+    const detailWithNode: GraphDetailPayload = {
+      ...graphDetail,
+      nodeCount: 1,
+      document: {
+        ...graphDetail.document,
+        nodes: [
+          {
+            id: "node-1",
+            type: "url",
+            title: "Original URL",
+            x: 100,
+            y: 100,
+            width: 250,
+            height: 132,
+            source: { type: "material", id: "material-1", label: "资料 A" },
+            metadata: {
+              content: { url: "https://old.example.test" }
+            }
+          }
+        ]
+      }
+    };
+    listGraphsMock.mockResolvedValue([{ ...graphSummary, nodeCount: 1 }]);
+    getGraphMock.mockResolvedValue(detailWithNode);
+    getReviewFeedbackMock
+      .mockResolvedValueOnce({
+        dueCount: 1,
+        learningCount: 2,
+        weakCardCount: 2,
+        weakCards: [],
+        sourceSummaries: [
+          {
+            sourceType: "material",
+            sourceId: "material-1",
+            totalCardCount: 3,
+            reviewCardCount: 1,
+            masteredCardCount: 1,
+            masteryLevel: "building",
+            masteryScore: 33,
+            weakCardCount: 2,
+            dueCount: 1,
+            learningCount: 2,
+            maxLapseCount: 3,
+            sampleCardFronts: ["Old card"]
+          }
+        ]
+      })
+      .mockRejectedValueOnce(new Error("刷新服务暂不可用"));
+
+    renderWorkspace();
+
+    await user.click(await screen.findByRole("button", { name: /Original URL/ }));
+    expect(await screen.findByText("Old card")).toBeInTheDocument();
+
+    const titleInput = screen.getByDisplayValue("Original URL");
+    await user.clear(titleInput);
+    await user.type(titleInput, "Updated URL");
+    expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "刷新学习反馈" }));
+
+    expect(await screen.findByText("刷新服务暂不可用")).toBeInTheDocument();
+    expect(screen.getByText("Old card")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Updated URL")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("https://old.example.test")).toBeInTheDocument();
+    expect(screen.getByLabelText("图谱保存状态：有未保存修改")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Updated URL/ })).toBeInTheDocument();
+  });
+
+  it("creates a CardNote from a selected graph node with graph-node SourceLink metadata", async () => {
+    const user = userEvent.setup();
+    const detailWithNode: GraphDetailPayload = {
+      ...graphDetail,
+      nodeCount: 1,
+      document: {
+        ...graphDetail.document,
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "二叉树遍历",
+            x: 120,
+            y: 160,
+            width: 260,
+            height: 140,
+            metadata: {
+              detail: "前序、中序、后序遍历的递归关系。"
+            }
+          }
+        ]
+      }
+    };
+    listGraphsMock.mockResolvedValue([{ ...graphSummary, nodeCount: 1 }]);
+    getGraphMock.mockResolvedValue(detailWithNode);
+    listDecksMock.mockResolvedValue([
+      {
+        id: "deck-1",
+        ownerUserId: "user-1",
+        title: "算法 Deck",
+        description: "",
+        visibility: "private",
+        cardCount: 0,
+        createdAt: "2026-06-05T08:00:00Z",
+        updatedAt: "2026-06-05T08:00:00Z"
+      }
+    ]);
+
+    renderWorkspace();
+
+    await user.click(await screen.findByRole("button", { name: /二叉树遍历/ }));
+    await openInspectorTab(user, "历史");
+    await user.click(screen.getByRole("button", { name: "生成卡片草稿" }));
+    expect(screen.getAllByText("二叉树遍历").length).toBeGreaterThan(0);
+
+    await user.selectOptions(screen.getByLabelText("卡片模板"), "basic_reverse");
+    await user.selectOptions(screen.getByLabelText("写入 Deck"), "deck-1");
+    await user.click(screen.getByRole("button", { name: "确认写入卡组" }));
+
+    await waitFor(() => expect(createDeckCardNoteMock).toHaveBeenCalled());
+    expect(createDeckCardNoteMock).toHaveBeenCalledWith(session, "deck-1", {
+      noteTypeCode: "basic_reverse",
+      fields: {
+        front: "二叉树遍历",
+        back: "前序、中序、后序遍历的递归关系。"
+      },
+      primarySourceLink: {
+        sourceType: "graph-node",
+        sourceId: "node-1",
+        title: "二叉树遍历",
+        excerpt: "前序、中序、后序遍历的递归关系。",
+        locator: {
+          graphId: "graph-1",
+          nodeId: "node-1",
+          focusX: 120,
+          focusY: 160,
+          focusWidth: 260,
+          focusHeight: 140
+        },
+        metadata: {
+          sourceType: "text"
+        }
+      },
+      sourceLinks: [
+        {
+          sourceType: "graph-node",
+          sourceId: "node-1",
+          title: "二叉树遍历",
+          excerpt: "前序、中序、后序遍历的递归关系。",
+          locator: {
+            graphId: "graph-1",
+            nodeId: "node-1",
+            focusX: 120,
+            focusY: 160,
+            focusWidth: 260,
+            focusHeight: 140
+          },
+          metadata: {
+            sourceType: "text"
+          }
+        }
+      ]
+    });
+    expect(await screen.findByText("GeneratedCard 数 1")).toBeInTheDocument();
+    expect(screen.getByText("关联 CardNote 数 1")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "去复习" })).toHaveAttribute("href", "/review?card=card-1");
+    expect(screen.getByRole("link", { name: "回到来源" })).toHaveAttribute("href", expect.stringContaining("graphId=graph-1"));
+  });
+
+  it("keeps graph CardNote drafts visible when writing to the deck fails", async () => {
+    const user = userEvent.setup();
+    const detailWithNode: GraphDetailPayload = {
+      ...graphDetail,
+      nodeCount: 1,
+      document: {
+        ...graphDetail.document,
+        nodes: [
+          {
+            id: "node-1",
+            type: "text",
+            title: "二叉树遍历",
+            x: 120,
+            y: 160,
+            width: 260,
+            height: 140,
+            metadata: {
+              detail: "前序、中序、后序遍历的递归关系。"
+            }
+          }
+        ]
+      }
+    };
+    listGraphsMock.mockResolvedValue([{ ...graphSummary, nodeCount: 1 }]);
+    getGraphMock.mockResolvedValue(detailWithNode);
+    listDecksMock.mockResolvedValue([
+      {
+        id: "deck-1",
+        ownerUserId: "user-1",
+        title: "算法 Deck",
+        description: "",
+        visibility: "private",
+        cardCount: 0,
+        createdAt: "2026-06-05T08:00:00Z",
+        updatedAt: "2026-06-05T08:00:00Z"
+      }
+    ]);
+    createDeckCardNoteMock.mockRejectedValueOnce(new Error("CardNote 写入失败"));
+
+    renderWorkspace();
+
+    await user.click(await screen.findByRole("button", { name: /二叉树遍历/ }));
+    await openInspectorTab(user, "历史");
+    await user.click(screen.getByRole("button", { name: "生成卡片草稿" }));
+    await user.selectOptions(screen.getByLabelText("写入 Deck"), "deck-1");
+    await user.click(screen.getByRole("button", { name: "确认写入卡组" }));
+
+    expect(await screen.findByText(/CardNote 写入失败.*已保留 1 条未写入草稿/)).toBeInTheDocument();
+    expect(screen.getAllByText("二叉树遍历").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("写入 Deck")).toHaveValue("deck-1");
+    expect(screen.getByRole("button", { name: "确认写入卡组" })).toBeEnabled();
+    expect(screen.getByLabelText("图谱保存状态：空闲")).toBeInTheDocument();
+    expect(screen.queryByText("GeneratedCard 数 1")).not.toBeInTheDocument();
   });
 
   it("edits selected edge label and curve style before saving", async () => {
