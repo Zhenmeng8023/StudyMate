@@ -62,7 +62,7 @@ func (s *Service) UsageSummary(userID string) (*aidto.UsageSummaryPayload, error
 
 func (s *Service) ListDrafts(userID string) ([]aidto.DraftPayload, error) {
 	if s.documents == nil {
-		return nil, nil
+		return []aidto.DraftPayload{}, nil
 	}
 
 	result, err := s.documents.ListDraftsByUser(userID, 24)

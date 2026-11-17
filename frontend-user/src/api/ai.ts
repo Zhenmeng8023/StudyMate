@@ -44,7 +44,8 @@ export async function getAiUsageSummary(session: AuthSession) {
 }
 
 export async function listAiDrafts(session: AuthSession) {
-  return request<AiDraftPayload[]>("/ai/drafts", {
+  const drafts = await request<AiDraftPayload[] | null>("/ai/drafts", {
     headers: withAuth(session)
   });
+  return drafts ?? [];
 }

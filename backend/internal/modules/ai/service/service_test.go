@@ -1,6 +1,24 @@
 package service
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
+
+func TestListDraftsWithoutDocumentStoreReturnsJSONArray(t *testing.T) {
+	service := NewService(nil, nil, nil)
+	drafts, err := service.ListDrafts("user-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(drafts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(encoded) != "[]" {
+		t.Fatalf("draft list must serialize as [], got %s", encoded)
+	}
+}
 
 func TestNormalizeTaskStatus(t *testing.T) {
 	if got := normalizeTaskStatus("completed"); got != "completed" {

@@ -42,6 +42,11 @@ afterEach(() => {
 });
 
 describe("review API clients", () => {
+  it("normalizes a null AI draft list from an older or degraded backend", async () => {
+    mockApiResponse(null);
+    await expect(listAiDrafts(session)).resolves.toEqual([]);
+  });
+
   it("creates decks with visibility and auth headers", async () => {
     const fetchMock = mockApiResponse({
       id: "deck-1",
