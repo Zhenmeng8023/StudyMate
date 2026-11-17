@@ -1,37 +1,10 @@
 # StudyMate Codex 可执行任务队列
 
+## 2026-11-17 全工作区分组提交收口
 
-## 2026-11-16 个人知识库、官方资料库与阅读器
-
-### 2026-11-17 调整
-
-- `OFL-010`：DONE。官方资料类型、作者／机构、来源链接、年份、版本说明和授权状态；旧数据标记未确认，精确枚举及安全链接校验；011幂等迁移及回滚保留原件。
-- `OFL-020`：DONE。官方专用管理列表、状态筛选、必填下架原因及重新上架，状态与审计同事务；官方排除社区审核，通用治理不能绕过专用状态规则。
-- `OFL-030`：DONE。服务端官方关键词／分类／类型筛选、稳定排序、分页和批量摘要；旧无参数数组API保留，跨页深链补详情，桌面及390窄屏可验收。
-- 官方后续：新旧文件版本关联、平台资产归属／独立配额、评分与质量反馈、封面展示及全文索引；本轮版本说明不等于完整版本关系。
-
-- `LIB-011`：DONE。取消 Word 新上传/保存，仅接受 PDF，前后端签名校验和附件绑定检查阻止 fileId 绕过；历史附件保留。
-- `LIB-012`：DONE。个人库采用封面书架、悬浮/聚焦详情框、Escape 关闭与触屏点击；弹层支持视口边界和内部滚动，保留原阅读/下载/收藏操作。
-- `LIB-013`：DONE。个人书架显示本人阅读进度，支持状态筛选、最近阅读排序和页码续读；公开列表不返回个人进度，元数据编辑保留阅读状态。
-- `RDR-021`：DONE。内嵌目录、当前 PDF 正文查找、结果高亮与上一处／下一处；扫描进度、取消、重试、500 处限制和无文字提示；异步定位保留最后选择。
-- `LIB-014 / RDR-022`：DONE。个人书架惰性生成真实首页封面，受保护读取、并发上限、失败回退与重试、卸载释放；阅读器复用现有 PDF 每组 8 页缩略图、当前页标记与跳页，桌面及窄屏可验收。
-- `LIB-031`：DONE。每账号容量配额、MySQL 用户行锁下最终写入检查、超额失败补偿；个人／管理员官方库容量面板、刷新重试、最多20条待核查文件只读展示。默认1GiB，归档仍计费，收藏不重复计费。
-- 本轮无数据库迁移。后续优先完整引用核验、可恢复文件回收与带批注导出；封面服务端缓存和分页书架作为性能工作包，不再推进 Word 转换。
-
-| 工作包 | 状态 | 已实现与验收边界 |
-| --- | --- | --- |
-| LIB-010 | DONE | personal/official/community 隔离；私有上传即用、官方管理员维护、收藏引用；页面编辑、归档、下载、文件夹名称和标签筛选 |
-| LIB-020 | DONE | 50 MiB/类型签名/归属校验；私有资料不进入公开接口、分享和审核；事务审计、并发归档保护；真实 MySQL 临时库验证迁移幂等、权限、收藏和回滚 |
-| RDR-010 | DONE | 真实选区/高亮/缩放/批注深链、书签移除、进度重试、令牌刷新保草稿、摘录到笔记；浏览器全链路通过 |
-| LIB-030 | IN_PROGRESS | LIB-031已完成配额和待核查文件可视化；剩余完整引用核验、可恢复回收／永久删除、分页与对象存储 |
-| RDR-020 | IN_PROGRESS | RDR-021/022 已完成目录、当前 PDF 正文查找和缩略图；剩余 OCR、带批注导出、跨资料摘录池 |
-
-契约见 `docs/architecture/LIBRARY_STORAGE_AND_READER.md`。旧资料默认 community；删除为 archived，保留原件及来源身份。2026-11-17 后仅支持新上传 PDF，历史 Word 保留下载。
-
-
-**状态约定：** `TODO` / `IN_PROGRESS` / `BLOCKED` / `DONE` / `VERIFY`
-
-> **2026-11-17 语义收紧（DOC-010）**：`DONE` = 代码与测试已落地且有验收证据；`VERIFY` = 代码已落地但仍有明确缺口或回归矩阵未补齐，**不等于完成**。同一工作包在不同小节同时出现 `DONE` 与 `VERIFY` 时（例如 `ANKI-030 / ANKI-040 / ANKI-050 / ANKI-060`），以本文 P0/P1 表的 `VERIFY` 为准，补齐缺口后再改为 `DONE`。
+- `OFL-040`已独立提交（881f198），其余CardNote／复习／图谱／后台治理／AI空态／搜索与工作文档均按依赖分类提交；当前无功能工作包待暂存，未推送或部署。
+- 审查修复新旧制卡路径并发覆盖牌组计数：原子增量与真实MySQL强制并发回归通过；用户501项、管理端221项、后端全量、74项浏览器及构建／文档门禁通过。
+- 本地backend/.gocache已忽略。依赖审计既有51项npm告警与Go工具链通告继续待独立安全升级，不随本次功能提交隐式变更。
 
 ## 2026-11-17 DOC-010 文档基线对齐（只改 docs/，不动代码）
 
@@ -69,9 +42,188 @@
 - `README.md` 与 `PROJECT_LOG.md` 位于仓库根目录，不在本工作包的 `docs/` 范围内，**本轮未修改**；若需要把 DOC-010 写入推进日志，应另开一个允许改根文件的工作包。
 - 本次只登记“已核实”的事实；`ADM-010`、`FE-040 / FE-041`、`GPH-040` 等状态值保持原表不变，避免文档单向改口径。
 
+## 2026-11-16 个人知识库、官方资料库与阅读器
+
+### 2026-11-17 调整
+
+- `OFL-040`：DONE。管理员从链末上传新PDF发布新版、独立ID与原件、版本记录／最新版切换、更新说明与审计；前版行锁和唯一索引防分支，200项链上限、坏链拒绝；旧收藏／批注／进度／笔记不迁移，管理跨页下架旧版有专用详情。012幂等迁移及真实MySQL并发验证通过，已独立提交881f198。
+
+- `OFL-010`：DONE。官方资料类型、作者／机构、来源链接、年份、版本说明和授权状态；旧数据标记未确认，精确枚举及安全链接校验；011幂等迁移及回滚保留原件。
+- `OFL-020`：DONE。官方专用管理列表、状态筛选、必填下架原因及重新上架，状态与审计同事务；官方排除社区审核，通用治理不能绕过专用状态规则。
+- `OFL-030`：DONE。服务端官方关键词／分类／类型筛选、稳定排序、分页和批量摘要；旧无参数数组API保留，跨页深链补详情，桌面及390窄屏可验收。
+- 官方后续：平台资产归属／独立配额、评分与质量反馈、封面展示及全文索引；跨版本批注迁移不在当前版本关联范围。
+
+- `LIB-011`：DONE。取消 Word 新上传/保存，仅接受 PDF，前后端签名校验和附件绑定检查阻止 fileId 绕过；历史附件保留。
+- `LIB-012`：DONE。个人库采用封面书架、悬浮/聚焦详情框、Escape 关闭与触屏点击；弹层支持视口边界和内部滚动，保留原阅读/下载/收藏操作。
+- `LIB-013`：DONE。个人书架显示本人阅读进度，支持状态筛选、最近阅读排序和页码续读；公开列表不返回个人进度，元数据编辑保留阅读状态。
+- `RDR-021`：DONE。内嵌目录、当前 PDF 正文查找、结果高亮与上一处／下一处；扫描进度、取消、重试、500 处限制和无文字提示；异步定位保留最后选择。
+- `LIB-014 / RDR-022`：DONE。个人书架惰性生成真实首页封面，受保护读取、并发上限、失败回退与重试、卸载释放；阅读器复用现有 PDF 每组 8 页缩略图、当前页标记与跳页，桌面及窄屏可验收。
+- `LIB-031`：DONE。每账号容量配额、MySQL 用户行锁下最终写入检查、超额失败补偿；个人／管理员官方库容量面板、刷新重试、最多20条待核查文件只读展示。默认1GiB，归档仍计费，收藏不重复计费。
+- 本轮无数据库迁移。后续优先完整引用核验、可恢复文件回收与带批注导出；封面服务端缓存和分页书架作为性能工作包，不再推进 Word 转换。
+
+| 工作包 | 状态 | 已实现与验收边界 |
+| --- | --- | --- |
+| LIB-010 | DONE | personal/official/community 隔离；私有上传即用、官方管理员维护、收藏引用；页面编辑、归档、下载、文件夹名称和标签筛选 |
+| LIB-020 | DONE | 50 MiB/类型签名/归属校验；私有资料不进入公开接口、分享和审核；事务审计、并发归档保护；真实 MySQL 临时库验证迁移幂等、权限、收藏和回滚 |
+| RDR-010 | DONE | 真实选区/高亮/缩放/批注深链、书签移除、进度重试、令牌刷新保草稿、摘录到笔记；浏览器全链路通过 |
+| LIB-030 | IN_PROGRESS | LIB-031已完成配额和待核查文件可视化；剩余完整引用核验、可恢复回收／永久删除、分页与对象存储 |
+| RDR-020 | IN_PROGRESS | RDR-021/022 已完成目录、当前 PDF 正文查找和缩略图；剩余 OCR、带批注导出、跨资料摘录池 |
+
+契约见 `docs/architecture/LIBRARY_STORAGE_AND_READER.md`。旧资料默认 community；删除为 archived，保留原件及来源身份。2026-11-17 后仅支持新上传 PDF，历史 Word 保留下载。
+
+
 **状态约定：** `TODO` / `IN_PROGRESS` / `BLOCKED` / `DONE` / `VERIFY`
 
 > **2026-11-17 语义收紧（DOC-010）**：`DONE` = 代码与测试已落地且有验收证据；`VERIFY` = 代码已落地但仍有明确缺口或回归矩阵未补齐，**不等于完成**。同一工作包在不同小节同时出现 `DONE` 与 `VERIFY` 时（例如 `ANKI-030 / ANKI-040 / ANKI-050 / ANKI-060`），以本文 P0/P1 表的 `VERIFY` 为准，补齐缺口后再改为 `DONE`。
+
+## 2026-11-16 图谱滚轮缩放与页面滚动冲突修复
+
+- `GPH-040 / WB-034`：DONE。画布滚轮改为组件内显式 `{ passive: false }` 原生监听，移除 React 被动委托处理；重渲染更新回调、卸载移除监听，防止重复触发。相机仅在可取消事件上调用 `preventDefault()`，保留原有缩放步长。
+- 回归检查滚轮默认行为确实被取消、回调替换和卸载清理；浏览器真实滚轮检查缩放结果、页面滚动位置与控制台被动监听器错误。
+
+## 2026-11-16 Dashboard 空 AI 草稿白屏修复
+
+- `LC-010 / ANKI-050`：DONE。Mongo 文档库不可用时，后端 AI 草稿列表改为序列化 `[]`；前端 AI API 边界兼容旧服务的 `data: null`，避免 Dashboard 的 `aiDrafts.slice()` 和 AI 页的数组操作崩溃。
+- 已补无文档库服务测试、空值 API 测试及浏览器首页回归，要求学习状态、AI 空态和入口正常渲染且无未捕获页面异常；保留现有非空列表及失败处理语义。
+
+## 2026-11-16 学习工作台验收补齐
+
+本轮针对附件阶段 1—5 的逐项差距补齐，优先修复数据正确性，并检查前端桌面与 390px 窄屏操作路径。历史完成记录保留；下列状态说明本轮增量范围，不代表所有远期能力均已完成。
+
+| 工作包 | 状态 | 本轮验收范围 |
+|---|---|---|
+| ANKI-010 统一制卡 | DONE | Cloze 按编号生成准确预览，输入检查，批量部分成功后仅重试失败草稿；Reader / Notes / AI / Graph 成功后可进入复习或回到来源。 |
+| ANKI-020 复习会话 | DONE | 本次 Again 来源按统一 SourceLink 去重，今日薄弱来源独立读取总体反馈，总结提供继续阅读与图谱回看；评分/撤销与管理写操作统一事务和锁顺序。 |
+| ANKI-040 Note 管理 | DONE | 标签清空、具体来源筛选、来源标题/说明编辑、详情读取、安全重生成和确认删除单卡；同步权威牌组数量；反向模板子集及省略零编号的预览正确。 |
+| ANKI-060 学习反馈 | DONE | 图谱最近复习时间真实聚合，Dashboard 展示逐日复习/Again/薄弱来源趋势，运行时反馈仍不写入图谱文档。 |
+| LC-010 前端可用性 | DONE | 桌面与窄屏覆盖筛选、编辑、删除失败保留上下文及重试；来源链接和状态分行，空卡片组提供恢复操作指引；修复今日状态网格复用导致的竖排和不可见指标。 |
+
+验证与真实 MySQL 隔离联调结果见 `PROJECT_LOG.md` 的同日执行记录。完整 SourceLink 关系表、事件化 mastery 历史快照、课程、RAG 和完整 `.apkg` 仍不属于本次范围。
+
+本轮验收：后端全量测试通过；用户端全量 93 文件 / 394 项通过，最后补充的预览兼容回归 9 项通过；相关 Playwright 48 项通过。可选真实 MySQL 测试 `TestMySQLCardMutationIsolation` 已实际运行，覆盖全量迁移重复执行、评分/删除串行化、重生成历史保护和事务失败回滚。新前端模块专项覆盖率语句 95.50%、分支 89.02%（最后的零编号补丁前快照）；不代表全仓达到 80%。
+
+## 2026-11-16 密钥扫描误报修复
+
+- `SEC-011`：修复 Vue 动态属性和事件绑定触发的密钥扫描误报；保留普通属性和动态绑定字符串字面量的凭据检测，并增加回归测试。
+
+## 2026-07-20 GPH-040 / SourceLink / SE-020 / ADM-011 二次收口
+
+本轮继续沿主学习闭环做工程可信度补强，仍不扩课程、Tauri、RAG、完整 `.apkg` 或工程图谱深域。
+
+| 阶段 | 状态 | 完成证据 |
+|---|---|---|
+| Stage 1：图谱 controller 二次拆分 | DONE | `graphLearningFilters`、`graphSourceProfileTargets`、`graphPersistenceCommands`、`graphRecoveryCommands` 继续把学习过滤、SourceProfile 目标、保存 payload 和恢复成功计划移出 controller；页面回归仍通过。 |
+| Stage 2：后端 SourceLink read model | DONE | 后端新增 `SourceLinkReadModel` / `SourceLinkReadModelMatches`，`ListSourceCardsBySource`、`ListReviewEventsBySource`、`SourceProfile` 和 review feedback 摘要统一使用同一匹配层，支持 `graph-node` 通过 locator `nodeId` 命中。 |
+| Stage 3：图谱失败态与持久化污染回归 | DONE | 补页面级回归锁定 CardNote 写入失败后保留草稿、Deck 选择和可重试入口；保存命令继续剥离节点 metadata 中的 runtime `reviewFeedback`。 |
+| Stage 4：`SE-020` 搜索续取/空态/权限回归 | DONE | 搜索默认全类型保留 offset 和 owner scope 的后端测试已补；前端空结果指导、SourceProfile 入口、全类型视图分组续取测试通过。 |
+| Stage 5：`ADM-011` 审计可读性与失败重试 | DONE | 审计 metadata 在治理详情中格式化为可读字段；举报确认弹窗在提交失败返回错误时保留处理备注，方便管理员重试。 |
+
+本轮验证：
+
+- `go test ./internal/modules/card/...`
+- `go test ./internal/modules/search/...`
+- `go test ./internal/modules/admin/...`
+- `npm --workspace frontend-user run test -- src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run test -- src/modules/graph/features/persistence/graphPersistenceCommands.test.ts src/modules/graph/features/recovery/graphRecoveryCommands.test.ts src/modules/graph/features/card-notes/graphCardNoteCommands.test.ts`
+- `npm --workspace frontend-user run test -- src/modules/search/SearchWorkspacePage.test.tsx`
+- `npm --workspace frontend-admin run test -- src/components/admin/governanceRecord.test.ts src/components/admin/AdminConfirmStack.test.ts src/views/modules/AdminGovernanceModule.test.ts`
+
+后续建议：
+
+- SourceLink 若继续深化，应进入规范化 relation/read model，而不是继续依赖每个页面自行解析 JSON。
+- `GPH-040` 后续继续拆 controller 时优先迁移命令、过滤和恢复计划；不要把 runtime learning feedback 写回 graph document。
+- `ADM-011` 可继续补审计筛选和治理动作失败明细，但不应扩张新治理域。
+
+## 2026-07-19 GPH-040 / SourceLink / SE-020 / ADM-011 收口记录
+
+本轮继续服务“资料/图谱来源 -> CardNote -> 复习反馈 -> SourceProfile”的主学习闭环，不扩课程、Tauri、RAG、完整 `.apkg` 或工程图谱深域。
+
+| 阶段 | 状态 | 完成证据 |
+|---|---|---|
+| Stage 0：基线验证 | DONE | 已先跑 `go test ./internal/modules/card/...`、用户端 typecheck、图谱/SourceLink 相关 Vitest、文档校验、图谱节点制卡 Playwright smoke，确认在本轮改动前主路径可执行。 |
+| Stage 1：`GPH-040` 图谱制卡 controller 拆分 | DONE | 新增 `graphCardNoteCommands`，把图谱选中节点生成 CardNote 草稿、提交 CardNote、更新 runtime reviewFeedback 的逻辑从 `useGraphWorkspaceController` 抽到 feature helper。 |
+| Stage 2：SourceLink read model | DONE | 新增 `buildSourceLinkReadModel(...)`，让 review backlinks、graph backlinks 与 Graph Inspector SourceProfile 入口优先消费 `primarySourceLink/sourceLinks`，再兼容旧 `sourceType/sourceId/sourceMetadata`。 |
+| Stage 3：图谱学习反馈失败态 | DONE | 新增 `graphLearningFeedbackRuntime` 成功/失败计划；刷新学习反馈失败时保留旧 runtime feedback、当前选择与未保存图谱编辑，不把失败态写入 graph document。 |
+| Stage 4：`SE-020` 搜索主路径入口 | DONE | 用户端搜索结果为 material / note / graph / card 等学习对象增加“来源学习档案”入口，继续复用 SourceProfile，而不是新增搜索页专属详情逻辑。 |
+| Stage 5：`ADM-011` 举报治理备注 | DONE | 后端举报处理支持可选 `note` 并写入审计 metadata；管理端举报确认弹窗增加 500 字备注输入，提交到 `/api/v1/admin/reports/:id/(resolve|dismiss)`。 |
+
+后续建议：
+
+- `GPH-040` 继续拆 controller 时，优先沿 `frontend-user/src/modules/graph/features/` 扩展命令与 runtime plan，不把制卡和学习反馈逻辑回灌到页面控制器。
+- SourceLink 下一步如需支持更复杂的多来源查询，应升级规范化 relation/read model；当前兼容 helper 不应继续复制成页面级解析分支。
+- `ADM-011` 后续可继续补治理备注列表可读性、失败重试和审计筛选，但不应借机扩张新治理域。
+
+## 2026-07-19 图谱学习工作区 2.0 完成记录
+
+当前图谱学习模式已经从“按复习反馈过滤/展示节点”推进到“图谱节点可直接进入统一 CardNote 制卡闭环”：
+
+| 阶段 | 状态 | 完成证据 |
+|---|---|---|
+| 阶段 1：图谱节点制卡入口 | DONE | 图谱恢复/学习面板复用 `CardNoteComposer`，选中图谱节点后可选择 Basic / Basic Reverse / Cloze 并提交到 deck。 |
+| 阶段 2：`graph-node` SourceLink 契约 | DONE | 图谱节点制卡请求写入 `sourceType = "graph-node"`，`sourceId = node.id`，`locator` 保留 `graphId / nodeId / focus*` 回跳定位信息。 |
+| 阶段 3：制卡后运行时反馈 | DONE | `CreateCardNote` 成功后更新本地 `reviewFeedback` read model，Inspector 展示 `关联 CardNote 数` 与 `GeneratedCard 数`，不写入 graph document。 |
+| 阶段 4：学习状态筛选补齐 | DONE | 图谱学习筛选覆盖全部、薄弱、到期、未制卡、已掌握；学习状态解析继续由 `graphSourceReviewFeedback` 统一承接。 |
+| 阶段 5：窄屏端到端验证 | DONE | `e2e/v1-graph-workspace.spec.ts` 覆盖 390px 宽度下从选中节点到创建 CardNote、校验请求体和反馈计数的完整路径。 |
+
+本轮验证：
+
+- `npm --workspace frontend-user run test -- src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx src/features/sources/sourceLinks.test.ts src/modules/graph/lib/graphSourceReviewFeedback.test.ts`
+- `npm --workspace frontend-user run typecheck`
+- `npm run build:user`
+- `npx playwright test e2e/v1-graph-workspace.spec.ts --grep "creates a CardNote from a selected node"`
+
+后续建议：
+
+- `GPH-040` 继续拆分图谱 controller 时，应优先把本轮新增的 card-note drafts、learning feedback runtime、SourceLink 构建等 feature helpers 保持在 `frontend-user/src/modules/graph/features/` 下，而不是回流到控制器。
+- 若后续需要跨图谱/笔记/复习做来源级精确历史画像，应升级规范化 SourceLink relation 或 mastery snapshot；不要把 runtime `reviewFeedback` 当作图谱 document 持久字段。
+
+## 2026-07-18 学习工作台二阶段完成记录
+
+当前二阶段主线已经从“统一制卡与当前反馈”推进到“真实历史学习数据 + 来源学习档案”：
+
+| 阶段 | 状态 | 完成证据 |
+|---|---|---|
+| 阶段 1：真实学习趋势与历史统计 | DONE | `GET /api/v1/review/insights` 已基于 `card_reviews` 输出最近 7 天复习量、评分分布、薄弱来源新增/持续次数和来源 mastery 趋势；Dashboard 已接入真实趋势，并保留趋势失败时的可恢复提示。 |
+| 阶段 2：Source 学习档案 | DONE | `GET /api/v1/review/source-profile` 与用户端 `/sources` 已落地，展示来源摘要、CardNotes、GeneratedCards、队列分布、mastery、最近复习、去复习和回来源动作。 |
+| 阶段 3：CardNote 管理器增强 | DONE | CardNote Note 视图已有列表、编辑、队列状态、GeneratedCards 与安全重算未复习卡片；本轮补上 CardNote -> SourceProfile 入口。 |
+| 阶段 4：图谱学习模式 | DONE | 图谱学习状态、过滤和 Inspector 反馈已存在；本轮补上 Graph Inspector -> SourceProfile 入口，并继续保持 runtime reviewFeedback 不写入 graph document。 |
+| 阶段 5：AI 确认流二阶段 | DONE | AI 草稿已支持确认到 CardNote 与 Graph 节点；本轮补上 AI 草稿/历史来源 -> SourceProfile 入口，CardNote 链路保持可用。 |
+
+本轮验证：
+
+- `go test ./internal/modules/card/...`
+- `npm --workspace frontend-user run test -- src/api/reviewAi.test.ts src/pages/DashboardPage.test.tsx src/pages/SourceProfilePage.test.tsx src/pages/AiPage.test.tsx src/modules/review/ReviewWorkspacePage.test.tsx src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx src/modules/graph/components/GraphWorkspaceSelectionPanel.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
+- `npm --workspace frontend-user run typecheck`
+
+后续建议：
+
+- SourceLink 多来源查询如需继续精确化，应从 JSON 兼容读取升级为规范化 source link relation/read model。
+- ReviewInsights 当前是最近 7 天可重算聚合，长期可继续演进为事件化 mastery snapshot。
+
+## 2026-07-17 下一步执行入口
+
+最新的下一步开发方向与 4 个冲刺计划见 [`NEXT_DEVELOPMENT_PLAN.md`](./NEXT_DEVELOPMENT_PLAN.md)。后续领取任务时，以该文档的主线判断优先级：
+
+```text
+资料 / PDF / AI / 笔记
+  -> SourceLink
+  -> CardNote
+  -> 模板生成 GeneratedCard
+  -> Anki 式复习队列
+  -> 图谱 / Dashboard / 笔记学习反馈
+```
+
+当前最优先工作包顺序：
+
+| 顺位 | 工作包 | 当前动作 | 验收重点 |
+|---|---|---|---|
+| 1 | ANKI-000 | 已完成契约文档，进入 `ANKI-010` 设计落地 | `docs/architecture/ANKI_CARD_MODEL.md` 已固定 CardNote / NoteType / Template / GeneratedCard / Schedule / ReviewLog / SourceLink 边界与旧 Card 兼容策略。 |
+| 2 | ANKI-010 | 已完成最小 Note / Card 分离，转向 `ANKI-020` | `CardNotePayload / NoteTypePayload / CardTemplatePayload / GeneratedCardPayload`、`card_notes / note_types / card_templates`、`POST /decks/:id/card-notes` 与 Reader 前端入口都已落地；旧 `front/back` 卡片继续可复习。 |
+| 3 | ANKI-020 | 已收口正式队列语义，进入验证对齐 | `card_schedules.state` 已承接 new / learning / review / relearning，`cards.status` 继续承接 active / suspended / buried；今日队列已返回分桶计数、默认限额与稳定排序。 |
+| 4 | WB-033 / LC-010 | 已打通主闭环验证，继续维持边界清晰 | 来源回跳一致，图谱 / Dashboard 反馈与复习结果一致，运行时字段不误写入 graph document，且已有 Reader -> Review -> Dashboard 浏览器级 E2E。 |
+| 5 | GPH-040 / SE-020 / ADM-011 | 服务主闭环的工程收口 | 图谱控制器不继续膨胀；搜索和后台治理补主路径可信度。 |
+
+工程图谱、课程/LMS、Tauri、RAG、完整 `.apkg` 兼容继续保留为 P2/P3，不进入最近 4 个冲刺。
 
 ## 2026-07-15 快速原型优先级校准
 
@@ -125,18 +277,18 @@
 | WB-030 | DONE | 图谱 API 契约与生命周期整理 | WB-020 | graph routers/handlers/services/docs | graph/document/node/edge/group/snapshot 关系和版本策略清晰。 |
 | WB-031 | DONE | 图谱导出、缩略图与布局能力 | WB-030 | graph backend + frontend | 至少 JSON/SVG 导出；缩略图和布局有明确 API/任务模型。 |
 | WB-032 | DONE | 自动保存/快照/冲突处理可靠性 | WB-030, WB-021 | graph persistence | 保存可追溯、冲突可见、恢复安全；无静默覆盖，冲突导出物可携带人工合并清单、对象级明细与取舍草稿，并支持把已标记取舍显式应用为可保存合并草稿；预检阻断摘要优先展示可读对象原因。 |
-| ANKI-000 | TODO | Anki 式闪卡产品契约 | FE-030, LC-010 | docs/engineering、docs/architecture、card/review domain | 明确 Deck、CardNote、NoteType、CardTemplate、GeneratedCard、Schedule、ReviewLog、Tag、SourceLink 的职责边界；输出兼容现有 `Card(front/back)` 的迁移路线，确认哪些 Anki 能力进入快速原型，哪些仅预研。 |
-| ANKI-010 | TODO | Note / Card 分离与模板生成 | ANKI-000 | backend card models/dto/service、frontend review types | 不重写当前卡片链路，先支持一条 CardNote 通过模板生成一张或多张 Card；首批模板覆盖 Basic、Basic Reverse、Cloze；旧 `front/back` 卡片必须可兼容读取。 |
-| ANKI-020 | TODO | Anki 式调度与队列模型 | ANKI-000 | card schedule service/repository/review API | 在现有 SM-2 与 `active/suspended/buried` 原型上补 new / learning / review / relearning 状态、学习步进、每日新卡/复习上限和重新学习路径；继续保留 `again / hard / good / easy` 评分语义。 |
-| ANKI-030 | IN_PROGRESS | Anki 式复习会话体验 | 现有 card/review API；后续由 ANKI-010/020 归并 | `frontend-user/src/modules/review/`、review API | 复习会话已支持翻面、1-4 评分、来源卡片深链定位、复习页内对笔记/资料/卡片等可直达来源的回看入口、下一次间隔预估、键盘路径、“跳过当前卡片”并将其顺延到当前内存队列末尾，以及“暂停当前卡片”“埋藏当前卡片”从今日活跃队列移除、并可在管理面板恢复；本轮已补“撤销上一次评分”，可恢复评分前 schedule 并把卡片放回今日队列；后续优先服务主演示闭环，再由正式队列模型收口。 |
-| ANKI-040 | IN_PROGRESS | 卡片浏览器与批量管理 | 现有 card/review API；后续由 ANKI-010/020 归并 | review/card browser UI + backend list/filter APIs | 复习管理面板已支持卡片浏览器服务端关键词/状态/来源类型/来源 ID/到期时间/标签筛选，卡片创建链路也开始保留标签并在浏览器中展示；批量暂停、埋藏、恢复、加标签、移除标签选中卡片都已可用，其中标签更新通过后端单卡动作接口承接；后续先补跨牌组分页/统计和批量移动/删除，再归并到正式 CardNote/GeneratedCard 模型。 |
-| ANKI-050 | IN_PROGRESS | 来源驱动制卡闭环 | LC-010, WB-030 | reader/note/graph/ai/card | 批注来源卡片现已补齐 `sourceMetadata` 通路，图谱节点转卡也开始保留 reader/PDF 锚点上下文，AI 草稿确认页与 AI 任务历史里的来源回跳也已接入同一套 reader 精确定位规则，能在草稿确认、AI 工作台深链定位、卡片创建与复习队列中回跳原批注、PDF 页或指定 AI 草稿/任务；后续优先统一最小 SourceLink，正式 CardNote 抽象随后承接。 |
-| ANKI-060 | IN_PROGRESS | 复习反馈回写学习图谱 | ANKI-050, LC-010 | graph/card/review/dashboard | 当前已起步补上 `GET /review/feedback` 摘要接口，并让 dashboard 直接展示薄弱卡片、学习中卡片与到期卡片数量，作为学习反馈入口；本轮已继续补上来源级 `weakSources` 汇总，并让图谱选中节点在来源匹配时直接展示“待回补卡片 / 到期 / 学习中 / 遗忘次数”反馈，且能带着 `sourceType + sourceId` 精确跳回复习工作台；进一步又补上 `sourceSummaries` mastery 摘要，让图谱节点即使没有弱项也能看到“掌握度 / 已进入稳定复习卡片数 / 最高遗忘次数”等来源级学习反馈；现在复习页在 graph 来源卡片评分后也会直接出现“回到图谱查看反馈”入口，便于在同一会话里验证图谱侧反馈，而图谱侧也已补上“刷新学习反馈”入口，能够在不覆盖本地未保存编辑的前提下拉取最新 mastery 摘要并覆盖过期快照；后续再继续补图谱节点或来源级 mastery 的更持久回写，复杂学习画像和完整 Anki 队列统计后置。 |
+| ANKI-000 | DONE | Anki 式闪卡产品契约 | FE-030, LC-010 | docs/engineering、docs/architecture、card/review domain | 已新增 `docs/architecture/ANKI_CARD_MODEL.md`，明确 Deck、CardNote、NoteType、CardTemplate、GeneratedCard、Schedule、ReviewLog、Tag、SourceLink 的职责边界，固定旧 `Card(front/back)` 兼容策略、MySQL/JSON 分工、首批模板范围、正式队列状态与近期非目标。 |
+| ANKI-010 | DONE | Note / Card 分离与模板生成 | ANKI-000 | backend card models/dto/service、frontend review types | 已落地 `card_notes / note_types / card_templates` 最小持久化骨架，`POST /decks/:id/card-notes` 可把一个 CardNote 通过 Basic / Basic Reverse / Cloze 模板生成一张或多张卡，并保留旧 `front/back` 卡片兼容读取与 SourceLink/legacy source 字段双写；当前 `CreateCardNote` 也已实际消费 `note_types / card_templates` 并支持 `templateKeys` 最小模板子集选择。 |
+| ANKI-020 | VERIFY | Anki 式调度与队列模型 | ANKI-000 | card schedule service/repository/review API | 当前已由 `card_schedules.state` 做实 `new / learning / review / relearning`，并继续由 `cards.status` 承接 `active / suspended / buried` 兼容层；SM-2 评分流已覆盖 `new -> learning/review`、`learning -> review`、`review -> relearning`、`relearning -> review`，今日队列已返回 `newCount / learningCount / reviewCount / relearningCount / newLimit / reviewLimit`，默认限额为 `20` 新卡与 `200` 复习卡，排序固定为 `learning -> relearning -> review -> new`，旧 `Card(front/back)` 无需迁移仍可继续列表、复习、评分、导入导出与来源回跳。 |
+| ANKI-030 | VERIFY | Anki 式复习会话体验 | 现有 card/review API；后续由 ANKI-010/020 归并 | `frontend-user/src/modules/review/`、review API | 复习会话已支持翻面、1-4 评分、来源卡片深链定位、复习页内来源回看、下一次间隔预估、键盘路径、跳过、暂停、埋藏与撤销评分；本轮继续补上“今日学习计划”和“会话总结”，可展示 new / learning / review / relearning、每日限额、预计耗时、评级分布和弱来源回看。 |
+| ANKI-040 | VERIFY | 卡片浏览器与批量管理 | 现有 card/review API；后续由 ANKI-010/020 归并 | review/card browser UI + backend list/filter APIs | 复习管理面板已支持卡片浏览器服务端关键词/状态/来源类型/来源 ID/到期时间/标签筛选、批量暂停/埋藏/恢复/加标签/移除标签；本轮新增 CardNote “Note 视图”，可查看一个 CardNote 生成的多张 GeneratedCard、队列状态、标签和字段，并通过 `PATCH /card-notes/:id` 重算未复习卡片。 |
+| ANKI-050 | VERIFY | 来源驱动制卡闭环 | LC-010, WB-030 | reader/note/graph/ai/card | 批注、笔记、AI 草稿和图谱来源制卡已统一到 `CardNoteComposer` 与 `createDeckCardNote`，不再各自维护字段和模板提交逻辑；来源回跳继续优先消费 `primarySourceLink / sourceLinks`，并兼容旧 `sourceType / sourceId / sourceMetadata`。 |
+| ANKI-060 | VERIFY | 复习反馈回写学习图谱 | ANKI-050, LC-010 | graph/card/review/dashboard | `GET /review/feedback` 已支撑 Dashboard 与图谱读取来源级 `weakSources / sourceSummaries`；本轮 Dashboard 升级为薄弱来源指挥中心，图谱节点新增学习状态徽标和全部/薄弱/到期/未制卡过滤，Inspector 展示关联卡片数、待复习数、遗忘次数与来源级复习入口；mastery 仍作为可重算读模型，不误写入 graph document。 |
 | ANKI-070 | IN_PROGRESS | 闪卡导入导出与 Anki 兼容预研 | 现有 card/review API；ANKI-010 后续兼容 | card import/export docs/tools | 复习工作区现已支持当前卡组的 JSON / CSV 导入导出入口，后端也已起步提供 `GET /decks/:id/export` 与 `POST /decks/:id/import` 统一承接可移植卡片文件；当前已补上服务端导入预检、重复卡片检测、逐条失败摘要、前端确认弹层里的重复/失败明细展示，以及复习工作区的“最近一次导入结果”持久面板；`.apkg` 只做预研，不阻塞当前原型。 |
-| WB-033 | IN_PROGRESS | 图谱-复习学习反馈闭环 | ANKI-050, ANKI-060, WB-030 | graph/card/review | 先基于现有 `sourceMetadata` / 最小 SourceLink 串起图谱节点、卡片复习和学习反馈；卡片与来源节点可追溯，复习结果能回写节点熟练度。当前已起步让 `review/feedback` 返回全来源 `sourceSummaries` mastery 摘要，并让图谱节点检查器显示来源级掌握度、稳定复习卡片数和弱项状态；本轮继续把这份摘要在 `GET /graphs/:id` 读链路内嵌到节点 `metadata.reviewFeedback`，同时在保存前剥离运行时字段，避免误持久化进 graph document；进一步又在复习页评分完成后补上“回到图谱查看反馈”入口，优先使用刚评分卡片的来源信息，必要时回退到管理列表里的同卡来源，补齐 `review -> graph` 的最小验证闭环；现在图谱检查器也已补上显式“刷新学习反馈”动作，并让新拉取的来源级摘要优先覆盖旧节点快照，同时保留本地未保存图谱编辑不被回滚；完整 CardNote / Schedule 模型落地后再归并。 |
+| WB-033 | VERIFY | 图谱-复习学习反馈闭环 | ANKI-050, ANKI-060, WB-030 | graph/card/review | 基于 SourceLink 的图谱节点、卡片复习和学习反馈已形成可验收闭环；图谱详情可读取来源级 mastery 快照，保存前剥离运行时字段；本轮继续把 `sourceSummaries / weakSources` 映射为节点学习状态、过滤器和画布徽标，`ReviewLog / Schedule` 继续作为事实来源。 |
 | WB-034 | IN_PROGRESS | 图谱 API 与工作区回归验证矩阵 | WB-032 | graph backend + frontend + e2e | 覆盖 create/save/restore/export/layout/conflict/权限路径；图谱工作区在桌面与窄屏至少有 smoke 回归，不再只依赖零散组件测试。当前已具备加载/保存/导入/历史、布局预览、导出、权限失败、来源级 mastery 展示，以及“刷新学习反馈且保留本地草稿”“dirty 状态下阻断快照恢复并保留本地草稿”“restore 命中 forbidden 后仍保留当前图谱”“restore 成功后继续保存仍能命中正确 conflict 流程”“重载最新图谱命中 forbidden 后仍保留冲突辅助与本地草稿”“删除当前图谱命中 forbidden 后仍保留当前图谱与确认上下文”“窄屏下快照恢复主链仍可达”“窄屏下 restore 后继续保存仍能命中正确 conflict 流程”“窄屏下 restore 后应用对象级取舍仍能通过真实点击完成 rebased save”的首批浏览器级回归；后续继续扩更完整的 create/save/restore/export/layout/conflict/权限组合矩阵。 |
-| GPH-040 | TODO | 图谱工作区 store / commands / features 拆分 | WB-032, FE-020 | `frontend-user/src/modules/graph/`、`packages/graph-core` | `useGraphWorkspaceController` 不再继续承接新增业务；选中、相机、面板、保存、冲突等浏览器状态进入 store，新增节点/连线/分组/模板/恢复等用户意图进入 commands。 |
-| LC-010 | IN_PROGRESS | 主学习闭环演示路径收口 | WB-033, ANKI-030, FE-030 | material/reader/note/graph/card/review/AI | “资料上传 -> PDF 阅读 -> 高亮批注 -> 摘录池 -> 笔记块 -> CardNote -> 模板生成闪卡 -> Anki 式复习 -> 图谱熟练度回写”已开始按真实路径收口；当前已补上图谱来源卡片 `/review?card=` 深链定位、复习页内对可直达来源工作台的回看入口、批注来源卡片到 reader 批注位置的真实回跳、图谱节点生成卡片对 reader/PDF 锚点上下文的保留，以及 `/ai?draft=` / `/ai?task=` 深链下 AI 工作台对指定草稿/任务的优先定位、AI 草稿来源链接对批注/PDF 锚点的精确 reader 回跳、AI 任务历史对 reader 上下文的精确回跳，和复习会话内“跳过当前卡片”保持待完成队列上下文、“暂停当前卡片”“埋藏当前卡片”从今日活跃队列移除并可在管理面板恢复、以及“撤销上一次评分”恢复评分前 schedule 与今日队列；首页除今日复习与 AI 入口外，也已开始展示学习反馈摘要、薄弱卡片和回补入口，而图谱选中节点现在也能在来源匹配时直接看到来源级复习反馈，并通过 `/review?sourceType=...&sourceId=...` 精确落到待回补卡片集合；进一步又能显示来源级 mastery 摘要，并且图谱详情读接口已能直接内嵌节点级 `reviewFeedback` 快照，让“复习结果 -> 图谱节点反馈”不只停留在弱项提醒，而开始具备掌握度回写雏形；现在 graph 来源卡片在评分完成后也能直接回到图谱查看反馈，而图谱工作区本身也已支持在保留本地脏编辑的前提下刷新学习反馈，让“复习完成 -> 立刻验证图谱侧变化”可在同一次会话里完成；后续继续补更统一的 SourceLink 与失败状态清晰。 |
+| GPH-040 | IN_PROGRESS | 图谱工作区 store / commands / features 拆分 | WB-032, FE-020 | `frontend-user/src/modules/graph/`、`packages/graph-core` | 已抽出制卡、学习过滤、持久化、恢复与面板 feature helper；剩余 controller 状态和命令继续按闭环需求拆分，不能把局部拆分完成等同于整体 store/commands 迁移完成。 |
+| LC-010 | VERIFY | 主学习闭环演示路径收口 | WB-033, ANKI-030, FE-030 | material/reader/note/graph/card/review/AI | “资料/PDF/AI/笔记 -> SourceLink -> CardNote -> GeneratedCard -> Anki 式复习 -> 图谱/Dashboard 反馈”已按真实路径收口：Reader、Notes、AI、Graph 共用制卡 Composer；复习工作区展示今日计划和会话总结；Dashboard 展示薄弱来源和复习入口；图谱按学习状态过滤节点并展示反馈徽标；CardNote Note 视图支持字段与来源管理，且只重算未复习 GeneratedCard。 |
 | WB-040 | TODO | 管理端真实只读数据页第一批 | WB-001 | admin backend + frontend-admin | 用户、内容、AI 任务/用量、审计至少展示真实数据。 |
 | WB-041 | TODO | 后台内容治理与审批状态流转 | WB-040 | admin/community/material/graph | 受控审核、筛选分页、角色校验、状态记录齐全。 |
 | WB-042 | TODO | 审计事件模型 | WB-040 | backend migrations/admin services | 管理关键操作、审核、AI 重试等可查询追溯。 |
@@ -155,6 +307,40 @@
 | WB-052 | TODO | UML/ERD/C4 模板中心第一版 | WB-051, WB-041 | graph/admin | 模板版本、审核/发布、用户创建与复用可用。 |
 | WB-053 | TODO | Go 代码分析图 MVP | WB-051 | analysis jobs/graph | 路由图、ERD、模块依赖图至少一项可生成。 |
 | WB-054 | TODO | Tauri 离线图谱技术预研 | WB-021, WB-031 | desktop prototype | 明确数据同步、文件模型、打包与采用/不采用结论。 |
+
+### 执行记录：ANKI-030 / ANKI-040 / ANKI-050 / ANKI-060 / WB-033 / LC-010（阶段 1-5 学习工作台产品化闭环）
+- 执行日期：2026-07-18
+- 关联提交：本工作包提交
+- 实际变更：
+  - 新增 `frontend-user/src/features/card-notes/CardNoteComposer.tsx`，并接入 Reader、Notes、AI 与图谱来源制卡入口。
+  - 更新 `frontend-user/src/modules/review/ReviewWorkspacePage.tsx`，补今日学习计划、会话总结、弱来源回看和 CardNote “Note 视图”。
+  - 更新 `frontend-user/src/pages/DashboardPage.tsx`，把首页学习反馈推进到来源级指挥中心。
+  - 更新 `frontend-user/src/modules/graph/` 相关 controller、canvas、Inspector 与 feedback helper，补学习状态过滤、节点徽标和来源级反馈展示。
+  - 更新后端 `backend/internal/modules/card/` DTO、repository、service、handler 与 router，新增 CardNote 列表与更新 API，并补服务/handler 测试。
+- 完成证据：
+  - Reader / Notes / AI / Graph 的新制卡入口都走统一 CardNote 草稿、模板字段和 SourceLink 提交流。
+  - Review 工作区可在一次会话里看到今日队列计划、评分后的总结、弱来源回看，以及按 CardNote 管理多张 GeneratedCard。
+  - Dashboard 与 Graph 都直接消费 `review/feedback` 的来源级摘要；图谱运行时反馈仍是可重算读模型，不写回 graph document。
+  - CardNote 更新只重新渲染未开始复习的 GeneratedCard，已复习卡片保留调度历史。
+- 已执行验证：
+  - `gofmt` 覆盖本轮后端 card 模块改动。
+  - `$env:GOCACHE = (Join-Path (Get-Location) '.gocache'); go test ./internal/modules/card/...`
+  - `npm --workspace frontend-user run typecheck`
+  - `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx`
+  - `npm --workspace frontend-user run test -- src/pages/ReaderPage.test.tsx src/pages/AiPage.test.tsx src/pages/NotesPage.test.tsx src/modules/graph/components/GraphWorkspaceRecoveryPanel.test.tsx src/pages/DashboardPage.test.tsx src/modules/graph/lib/graphSourceReviewFeedback.test.ts src/modules/graph/components/GraphWorkspaceSelectionPanel.test.tsx src/modules/graph/components/GraphWorkspaceStageChrome.test.tsx`
+  - `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.test.tsx src/modules/graph/GraphWorkspacePage.test.tsx`
+  - `npm --workspace frontend-user run test -- src/modules/review/ReviewWorkspacePage.sourceLinks.test.tsx`
+  - `npm --workspace frontend-user run test`
+  - `$env:GOCACHE = Join-Path $env:TEMP 'studymate-codex-gocache'; go test ./...`（backend）
+  - `npm run build:user`
+  - `npm run build:admin`
+  - `npx playwright test e2e/v1-study-loop.spec.ts`
+  - `npm run verify:docs`
+  - `git diff --check`
+- 已知风险：
+  - Dashboard 的 7 天趋势仍是基于今日队列与反馈摘要的前端推导，真实历史聚合接口后置。
+  - 图谱 Inspector 的最近复习时间仍缺后端来源级字段，当前以“待聚合”显式标识。
+  - `useGraphWorkspaceController` 继续承接了学习过滤接线，后续 `GPH-040` 应把这部分状态迁入更清晰的 graph store / commands。
 
 ### 执行记录：WB-033 / LC-010（图谱侧刷新学习反馈并保留本地草稿）
 - 执行日期：2026-07-16
@@ -3934,3 +4120,12 @@
 - 后续影响：
   - `WB-033 / LC-010` 现在不只支持“图谱节点 -> 复习回补”，也开始支持“复习卡片 -> 图谱节点”的最小反链，主学习闭环的双向可追溯又补了一段。
   - 下一步更适合继续补 `WB-033` 的持久 mastery 回写，或把这类 graph/review/source 深链继续收口成更统一的 SourceLink 契约，而不是扩更多孤立入口。
+## 2026-07-20 Stage 0-7 closeout delta
+
+| Area | Status | Evidence |
+|---|---|---|
+| SourceLink relation/read model | VERIFY | `SourceLinkRelationReadModel` and `BuildSourceLinkRelationReadModels(...)` provide the minimum relation boundary with explicit-link-first and legacy fallback semantics. No migration/table was added in this closeout. |
+| GPH-040 panel state | VERIFY | `features/panel/graphPanelCommands.ts` covers resource/inspector mutual exclusion, selection reveal, and conflict reveal plans; controller applies the pure plans. |
+| WB-034 failure matrix | VERIFY | Playwright now covers learning-feedback refresh failure preserving dirty local edits and previous runtime feedback, in addition to existing CardNote failure/save/restore/conflict/narrow tests. |
+| SE-020 trusted pagination/sort | VERIFY | MySQL fallback search order is now `updated_at DESC, id DESC`; all-types and single-type load-more tests remain green. |
+| ADM-011 audit filters | VERIFY | `/api/v1/admin/audit-logs` accepts `action`, `target`, and `actorId`; service tests cover combined filtering. |

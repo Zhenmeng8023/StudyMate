@@ -2,6 +2,18 @@
 
 ## 2026-11-16 资料学习入口补齐
 
+### 2026-11-17 全工作区收口
+
+- 已将剩余CardNote、学习工作台、图谱、官方版本、后台治理、AI空态、搜索及文档按依赖分类提交，保留本地编译缓存但加入忽略；无推送或部署。
+- 修复新旧制卡并发丢失牌组计数，真实MySQL强制并发与全量后端回归通过；用户端501项、管理端221项、浏览器74项及构建通过。
+- 下一工作包仍需独立处理既有依赖／工具链安全升级，功能验收通过不等同依赖审计通过。
+
+### 2026-11-17 官方版本关联
+
+- 已完成此前资料库工作包的6个独立本地提交，保留既有卡片／图谱等未提交改动，无远端推送。随后推进OFL-040：新版独立PDF／资料ID、线性关系与历史记录，旧学习状态不迁移。
+- 新增012幂等迁移、同前版行锁与唯一索引、200项链限制；真实MySQL临时库验证并发只产生一个后继。管理员跨页下架旧版通过专用详情读取，公开仅展示已发布版本。
+- 后续优先平台资产归属与容量、评分及质量反馈；既有依赖／Go工具链审计问题需独立升级复验后再部署。
+
 ### 2026-11-17 官方资料管理第一阶段
 
 - OFL-010/020/030完成来源出版元数据、官方专用管理与上下架原因、服务端筛选排序分页。旧数组API兼容，011新增字段默认未知，批注身份及原件不变。
@@ -36,8 +48,97 @@
 
 **原则：先收口安全默认值、质量门禁、设计系统与 API 契约，再补强已有搜索与图谱闭环，最后再扩展工程图谱与桌面端。**
 
+## 2026-11-16 学习工作台正确性与可用性验收
 
-**原则：先收口安全默认值、质量门禁、设计系统与 API 契约，再补强已有搜索与图谱闭环，最后再扩展工程图谱与桌面端。**
+- 统一制卡补齐多编号 Cloze 预览、提交前检查、部分成功恢复以及制卡后的复习/来源入口。
+- CardNote 管理新增详情读取、具体来源过滤、来源说明编辑、可清空标签、安全重生成及明确确认的单卡删除；已学习卡片正文和调度保留。
+- 复习总结区分本次会话与今日总体统计，来源去重；Dashboard 逐日趋势及图谱最近复习时间消费真实复习数据。
+- 前端管理逻辑进入 `features/card-notes`，复习会话统计进入独立 helper，避免继续扩大页面业务职责。
+- 本轮包含真实 MySQL 隔离迁移与 HTTP 权限/数据验证，桌面和 390px 窄屏浏览器操作验收；具体命令和限制记录于 `PROJECT_LOG.md`。
+
+当前不应继续把早期“缺 CardNote/SourceLink 骨架”作为下一步任务。工程收口继续服务已有闭环；跨客户端 AI 草稿确认、规范化 SourceLink 存储和历史 mastery 快照作为后续独立工作包。
+
+## 2026-07-20 GPH-040 / SourceLink / SE-020 / ADM-011 二次收口
+
+- `GPH-040` 继续从“图谱节点制卡可用”推进到更细的 feature helper：学习过滤状态、Graph Inspector SourceProfile 目标、batch-save payload 清洗和 reload-latest 成功计划已从 controller 拆出。
+- 后端 SourceLink 读取侧新增统一 read model，`review/feedback`、`review/source-profile`、来源复习记录查询不再只按旧 `sourceType/sourceId` 精确匹配；`graph-node` 可通过 locator 中的 `nodeId` 命中。
+- 图谱失败态新增页面级保护：CardNote 写入 deck 失败时保留草稿、Deck 选择和确认按钮，不把失败态或 runtime `reviewFeedback` 写入 graph document / 保存 payload。
+- `SE-020` 已补搜索主路径回归：全类型视图可对单个分组继续加载，后端默认全类型搜索会保留 offset 与 owner scope，空结果提示继续保留当前类型筛选。
+- `ADM-011` 进入审计可读性阶段：举报处理备注已写入后端审计 metadata，管理端治理详情会把 metadata 格式化为“处理备注 / 状态 / 原状态 / 对象”等字段；提交失败后备注保留，便于管理员重试。
+
+近期路线仍维持：继续深化 SourceLink 规范化 read model、图谱 controller 边界、搜索可信分页和后台审计体验；课程/LMS、Tauri、RAG、完整 `.apkg` 与工程图谱深域继续后置。
+
+## 2026-07-19 GPH-040 / SE-020 / ADM-011 主路径继续收口
+
+- `GPH-040` 已从“图谱学习工作区 2.0 可用”继续推进到控制器拆分：图谱节点制卡草稿规划、CardNote 提交和制卡后的 runtime feedback 更新已进入 `features/card-notes` helper，学习反馈刷新成功/失败计划进入 `features/learning` helper。
+- 图谱学习反馈刷新失败现在是可恢复状态：保留已有来源反馈、当前选择和未保存图谱编辑，只显示可重试错误，不把 runtime `reviewFeedback` 写入 graph document、保存 payload、快照或冲突草稿。
+- SourceLink 读取侧新增统一 read model：优先消费 `primarySourceLink/sourceLinks`，再兼容旧 `sourceType/sourceId/sourceMetadata`，并把 review backlinks、graph backlinks、Graph Inspector SourceProfile 入口收口到同一层。
+- `SE-020` 补上搜索结果到 SourceProfile 的最小学习对象入口；material / note / graph / card 可以直接进入来源学习档案，帖子等非学习对象仍保持原结果跳转。
+- `ADM-011` 补上举报治理备注：管理端确认弹窗可填写处理备注，后端校验 500 字上限并写入 `admin.handle.report` 审计 metadata。
+
+近期路线仍然保持不扩新域：继续优先补图谱 controller 边界、SourceLink 规范化 read model、搜索主路径可信度和后台治理审计可读性。
+
+## 2026-07-19 图谱学习工作区 2.0 已落地
+
+- 图谱工作区现在不只读取复习反馈，也能从选中节点直接创建 `CardNote`：恢复/学习面板复用统一 `CardNoteComposer`，支持 Basic / Basic Reverse / Cloze，并通过 `createDeckCardNote` 进入现有 `CardNote -> GeneratedCard -> Schedule` 链路。
+- 图谱节点制卡使用新的 `graph-node` SourceLink 语义：`sourceId` 固定为节点 ID，`locator` 保存 `graphId / nodeId / focusX / focusY / focusWidth / focusHeight`，用于回跳到图谱焦点区域；页面层不再用旧 metadata 猜测图谱节点定位。
+- 制卡成功后的 Inspector 反馈由本地 runtime `reviewFeedback` read model 更新，立即显示 `关联 CardNote 数` 和 `GeneratedCard 数`，但仍不把复习反馈写入 graph document、快照或保存 payload。
+- 图谱学习过滤补齐“已掌握”状态，当前可按全部、薄弱、到期、未制卡、已掌握过滤节点，继续服务 `WB-033 / LC-010` 主学习闭环。
+- 近期路线因此应优先进入 `GPH-040` 的控制器拆分与 SourceLink read model 收口，而不是新增课程、协作、RAG、完整 `.apkg` 或工程图谱深域。
+
+## 2026-07-18 阶段 1-5 学习工作台产品化闭环已落地
+
+- 阶段 1：Reader、Notes、AI 与 Graph 的来源制卡入口已统一到 `CardNoteComposer`，同一套 Basic / Basic Reverse / Cloze 字段、模板预览和 SourceLink 提交流承接多来源 CardNote 创建。
+- 阶段 2：复习工作区已升级到会话 2.0，展示今日学习计划、队列分桶、预计耗时、评分总结、评级分布和弱来源回看。
+- 阶段 3：Dashboard 已从简单摘要推进到学习指挥中心，直接基于今日队列与 `review/feedback` 展示薄弱来源、来源回跳、复习入口和趋势边界。
+- 阶段 4：图谱工作区已具备学习状态热力层，节点可显示未学习、学习中、薄弱、已掌握状态，并支持全部、薄弱、到期、未制卡过滤。
+- 阶段 5：CardNote 管理已具备后端列表/更新 API 和复习管理面板 “Note 视图”；更新 CardNote 字段、来源与标签时，只重算未开始复习的 GeneratedCard，不重置已复习卡片的记忆历史。
+
+因此，近期路线不应再回到“各入口各自制卡”或“只有后端 API 没有页面验收”的状态。`ReviewInsights / SourceProfile` 已补上来源级历史聚合与来源学习档案：Dashboard 趋势已从前端推导升级为读取 `card_reviews` 的真实 7 天统计，Dashboard / Review / Graph / AI / CardNote 管理器也都有进入 `/sources` 的可验收入口。下一步更适合沿 `GPH-040` 拆分图谱 controller 学习过滤状态，或继续把 SourceLink 多来源查询从 JSON 兼容读取升级为规范化 relation/read model。
+
+## 2026-07-17 下一步开发方向校准
+
+最新执行计划已单独沉淀到 [`NEXT_DEVELOPMENT_PLAN.md`](./NEXT_DEVELOPMENT_PLAN.md)。该文档基于根目录《学伴项目-设计说明书.md》和当前真实代码进展，替代早期“平均推进各模块深度”的执行倾向。
+
+当前判断：
+
+- 图谱、搜索、后台治理和共享工程底座已经有真实切片；下一步主矛盾不是继续横向开新域。
+- 复习 / 卡片模块已经具备可用原型，但仍缺正式 Anki 式领域模型：`CardNote / NoteType / CardTemplate / GeneratedCard / SourceLink`。
+- 最近 4 个冲刺应优先推进 `ANKI-000 -> ANKI-010 -> ANKI-020`，同步收口 `SourceLink` 与 `WB-033 / LC-010` 的反馈持久边界。
+- `GPH-040`、`ADM-011`、`SE-020` 继续推进，但服务主学习闭环；工程图谱、课程、Tauri、RAG 和完整 `.apkg` 兼容继续后置。
+
+建议执行顺序：
+
+1. `ANKI-000`：先定义 Anki 式卡片产品契约和旧 Card 兼容策略。
+2. `ANKI-010`：最小落地 Note / Card 分离，支持 Basic、Reverse、Cloze。
+3. `ANKI-020`：做实 new / learning / review / relearning / suspended / buried 队列语义。
+4. `WB-033 / LC-010`：用统一 SourceLink 和 mastery 边界收口“来源 -> 复习 -> 图谱 / Dashboard 反馈”。
+
+## 2026-07-17 ANKI-010 最小实现已落地
+
+- 后端 `card` 模块已新增 `CardNote / NoteType / CardTemplate` 模型、最小 MySQL 迁移骨架，以及 `POST /api/v1/decks/:id/card-notes`。
+- `CreateCardNote` 现已支持 `basic`、`basic_reverse`、`cloze` 三类模板生成，并把结果继续落到现有 `cards` / `card_schedules` 读模型里。
+- `CreateCardNote` 现在不再只把 `noteTypeCode` 当作占位字符串写入，而是会实际解析 `note_types / card_templates`，并支持通过 `templateKeys` 做最小模板子集选择。
+- Reader 工作台已接入一条真实入口：批注草稿可选择卡片模板并直接写入 deck，其中 `cloze` 会把批注正文映射到填空文本字段。
+- 旧 `sourceType / sourceId / sourceMetadata` 兼容出口仍保留，同时新链路已开始双写 `primarySourceLink / sourceLinks`。
+- 下一步优先级随之收敛为：`ANKI-020 -> WB-033 / LC-010 -> 来源统一确认流`，而不是继续停留在 DTO 草案阶段。
+
+## 2026-07-16 ANKI-000 契约已落地
+
+- `ANKI-000` 的实现前契约文档已落到 [`docs/architecture/ANKI_CARD_MODEL.md`](../architecture/ANKI_CARD_MODEL.md)。
+- 该文档明确了 `Deck / CardNote / NoteType / CardTemplate / GeneratedCard / Schedule / ReviewLog / Tag / SourceLink` 的职责边界。
+- 文档同时固定了三条关键约束：
+  - 不推翻现有 `Card(front/back)`，而是把 `GeneratedCard` 继续落在现有 `cards` 表中。
+  - `sourceType / sourceId / sourceMetadata` 继续作为兼容出口，对应 `SourceLink v1` 的主来源字段。
+  - 首批模板只支持 `Basic / Basic Reverse / Cloze`，正式队列状态只收口 `new / learning / review / relearning / suspended / buried`。
+- 下一步推荐顺序随之收敛为：`ANKI-010 -> ANKI-020 -> SourceLink v1 -> 来源制卡统一确认流 -> WB-033 / LC-010`。
+
+## 2026-07-16 SourceLink v1 最小代码收口已起步
+
+- 后端 `card` DTO 已开始在旧 `sourceType / sourceId / sourceMetadata` 之上同步暴露 `primarySourceLink / sourceLinks`。
+- 后端来源兼容 helper 已把 reader、graph、ai 常见 locator 从旧 `sourceMetadata` 中归一化拆分出来。
+- 前端已新增共享来源解析 helper，并让 `review / graph / ai` 共用同一套回跳解析。
+- 当前这层实现仍是兼容层，不代表全仓库已经切到正式 `SourceLink` 写模型；但下一步不应再新增页面级分叉解析。
 
 ## 2026-07-15 设计说明书复核后的快速原型校准
 
@@ -376,7 +477,7 @@
 
 ### 工作包
 
-- ANKI-000：定义 Anki 式产品契约，明确 Deck、CardNote、NoteType、CardTemplate、GeneratedCard、Schedule、ReviewLog、Tag、SourceLink 的职责边界。
+- ANKI-000：已完成实现前契约文档，见 `docs/architecture/ANKI_CARD_MODEL.md`；后续不再讨论“是否引入正式模型”，而直接进入最小落地。
 - ANKI-010：补 Note / Card 分离与模板生成能力，首批支持 Basic、Basic Reverse、Cloze 三类模板，并提供旧 `Card(front/back)` 的兼容迁移策略。
 - ANKI-020：升级调度与队列模型，补 new / learning / review / relearning / suspended / buried 状态、学习步进、每日新卡/复习上限和重新学习路径。
 - ANKI-030：升级复习会话体验，补撤销上一次评分、跳过/埋藏、暂停卡片、显示来源、显示下一次间隔预估和键盘路径。
@@ -464,3 +565,10 @@ flowchart LR
   E --> F[同步文档与任务状态]
   F --> G[交付当前工作包]
 ```
+## 2026-07-20 Stage 0-7 closeout update
+
+- `SourceLinkRelationReadModel` now defines the code-level relation shape for `owner_user_id`, linked object type/id, source type/id, locator JSON, title, excerpt, metadata JSON, primary flag, and timestamps. No `source_links` table migration was added in this package; continue using explicit `primarySourceLink/sourceLinks` first and legacy `sourceType/sourceId/sourceMetadata` fallback.
+- `GPH-040` continues by extracting graph panel/inspector/resource-dock plans into `features/panel`; controller should keep shrinking around selection, viewport, save/autosave, conflict/recovery, and command scheduling.
+- `WB-034` now includes browser coverage for learning feedback refresh failure preserving dirty edits and previous runtime feedback. Runtime `reviewFeedback` remains excluded from graph document/snapshot/save/conflict drafts.
+- `SE-020` fallback search now uses stable `updated_at DESC, id DESC` ordering and keeps group pagination/SourceProfile entry tests.
+- `ADM-011` audit logs now accept API filters `action`, `target`, and `actorId`; the admin UI still uses the shared local governance filter surface as the visible entry.
