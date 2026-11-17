@@ -4,6 +4,7 @@ import { Tag } from "../../design-system/primitives";
 import { documentFileKind, materialTypeLabels, licenseStatusLabels, safeSourceUrl, type LibraryMode } from "./libraryDocument";
 import { getLibraryReadingState, readingTarget } from "./libraryReading";
 import { LibraryReadingStatus } from "./LibraryReadingStatus";
+import { OfficialVersionHistory } from "./OfficialVersionHistory";
 
 export function LibraryDocumentDetail(props: {
   material: MaterialPayload;
@@ -17,6 +18,8 @@ export function LibraryDocumentDetail(props: {
   onUncollect: () => void;
   onEdit: () => void;
   onRestore?: () => void;
+  onPublishVersion?: () => void;
+  managing?: boolean;
 }) {
   const { material, session } = props;
   const official = material.libraryScope === "official";
@@ -60,6 +63,7 @@ export function LibraryDocumentDetail(props: {
         {managesOfficial && !published ? <button className="primary-button" disabled={props.busy} onClick={props.onRestore} type="button">重新上架</button> : null}
       </div>
       <p className="muted-copy">{official ? "收藏保留官方来源，个人阅读进度与批注独立保存。" : "原文件保存在服务器；阅读进度与批注独立保存，下载原文件不包含批注。"}</p>
+      {official ? <OfficialVersionHistory key={`${material.id}:${session?.user.id || "anonymous"}:${props.managing ? "manage" : "public"}`} materialId={material.id} session={session} managing={Boolean(props.managing)} busy={props.busy} onPublish={props.onPublishVersion} /> : null}
     </section>
   );
 }

@@ -66,6 +66,8 @@ export interface TogglePayload {
 }
 
 export interface MaterialPayload {
+  previousVersionId?: string | null;
+  changeSummary?: string;
   materialType?: "book" | "paper" | "lecture" | "exercises" | "course" | "other";
   author?: string;
   sourceUrl?: string;

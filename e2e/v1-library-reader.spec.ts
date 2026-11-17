@@ -101,6 +101,11 @@ async function mockLibrary(page: Page, initial: MaterialPayload[] = []) {
       const items = state.official.filter((item) => status === "all" || item.status === status);
       return success(route, { items, total: items.length, page: 1, pageSize: 20, categories: [...new Set(items.map((item) => item.category))] });
     }
+    const versions = path.match(/^\/official-materials\/(?:manage\/)?([^/]+)\/versions$/);
+    if (versions) {
+      const item = state.official.find((candidate) => candidate.id === versions[1]);
+      return success(route, { items: item ? [{ id: item.id, title: item.title, edition: item.edition || "", status: item.status, changeSummary: "", createdAt: item.createdAt }] : [], currentMaterialId: versions[1], latestPublishedId: item?.status === "approved" ? item.id : "" });
+    }
     const transition = path.match(/^\/official-materials\/([^/]+)\/status$/);
     if (transition && method === "PUT") {
       const change = request.postDataJSON() as { status: string; reason?: string };

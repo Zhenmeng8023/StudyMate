@@ -27,6 +27,8 @@ type RateMaterialRequest struct {
 }
 
 type MaterialSummary struct {
+	PreviousVersionID *string `json:"previousVersionId,omitempty"`
+	ChangeSummary     string  `json:"changeSummary,omitempty"`
 	OfficialMetadata
 	ArchiveReason    string                   `json:"archiveReason"`
 	ReadingProgress  *MaterialReadingProgress `json:"readingProgress,omitempty"`

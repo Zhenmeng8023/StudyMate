@@ -46,6 +46,9 @@ export function listOfficialMaterials() {
 export function getPublicOfficialMaterial(id: string) {
   return request<MaterialPayload>(`/materials/${encodeURIComponent(id)}`);
 }
+export function getManagedOfficialMaterial(session: AuthSession, id: string) {
+  return request<MaterialPayload>(`/official-materials/manage/${encodeURIComponent(id)}`, { headers: withAuth(session) });
+}
 
 export interface OfficialCatalogQuery {
   page: number;
@@ -80,6 +83,29 @@ export function transitionOfficialMaterial(session: AuthSession, id: string, inp
 
 export function createOfficialMaterial(session: AuthSession, input: LibraryMaterialInput) {
   return request<MaterialPayload>("/official-materials", { method: "POST", headers: withAuth(session), body: { ...input } });
+}
+
+export interface OfficialVersionItem {
+  id: string;
+  title: string;
+  edition: string;
+  status: string;
+  changeSummary: string;
+  createdAt: string;
+}
+export interface OfficialVersionHistoryPayload {
+  items: OfficialVersionItem[];
+  currentMaterialId: string;
+  latestPublishedId: string;
+}
+export function getOfficialVersions(id: string) {
+  return request<OfficialVersionHistoryPayload>(`${officialPath(id)}/versions`);
+}
+export function getManagedOfficialVersions(session: AuthSession, id: string) {
+  return request<OfficialVersionHistoryPayload>(`/official-materials/manage/${encodeURIComponent(id)}/versions`, { headers: withAuth(session) });
+}
+export function createOfficialVersion(session: AuthSession, previousId: string, input: LibraryMaterialInput & { changeSummary: string }) {
+  return request<MaterialPayload>(`${officialPath(previousId)}/versions`, { method: "POST", headers: withAuth(session), body: { ...input } });
 }
 
 export function updateOfficialMaterial(session: AuthSession, id: string, input: LibraryMaterialInput) {

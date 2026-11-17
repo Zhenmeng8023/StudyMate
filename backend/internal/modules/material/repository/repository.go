@@ -171,8 +171,9 @@ func (r *Repository) BuildSummary(material *materialmodel.Material) (*materialdt
 
 	avg, _ := r.getAverageRating(row.ID)
 	return &materialdto.MaterialSummary{
-		OfficialMetadata: materialdto.OfficialMetadata{MaterialType: material.MaterialType, Author: material.Author, SourceURL: material.SourceURL, PublicationYear: material.PublicationYear, Edition: material.Edition, LicenseStatus: material.LicenseStatus},
-		ArchiveReason:    material.ArchiveReason,
+		OfficialMetadata:  materialdto.OfficialMetadata{MaterialType: material.MaterialType, Author: material.Author, SourceURL: material.SourceURL, PublicationYear: material.PublicationYear, Edition: material.Edition, LicenseStatus: material.LicenseStatus},
+		ArchiveReason:     material.ArchiveReason,
+		PreviousVersionID: material.PreviousVersionID, ChangeSummary: material.ChangeSummary,
 		LibraryScope:     row.LibraryScope,
 		FolderName:       row.FolderName,
 		ID:               row.ID,

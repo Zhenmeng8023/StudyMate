@@ -26,7 +26,15 @@
 
 官方资料不再进入社区投稿审核队列，管理端通用资料列表标记 `libraryScope`，引导到官方专用管理入口；旧通用审核修改官方状态返回409，避免绕过专用校验。管理员官方维护入口仍在用户端，管理端没有重复实现一套编辑器。
 
-当前版本字段只是版本说明，不包含新旧文件版本关联或批注迁移；原附件仍不可直接替换。授权状态由维护者记录，未实现自动授权核验；官方文件仍归上传管理员计费，平台资产归属、独立配额、评分前端、内容反馈与全文索引仍是后续工作。
+授权状态由维护者记录，未实现自动授权核验；官方文件仍归上传管理员计费，平台资产归属、独立配额、评分前端、内容反馈与全文索引仍是后续工作。
+
+### 官方 PDF 版本关联
+
+管理员在管理模式中从版本链最后一项“发布新版”，上传独立的新 PDF 并填写最多500字版本更新说明；来源出版信息可沿用编辑，版本说明重新填写。新版产生独立资料ID和附件关联，`previousVersionId` 指向前版，`changeSummary` 保存变更说明。普通资料创建／元数据编辑不能改链关系，旧原件仍不可覆盖。
+
+每个前版最多一个直接后继，最终发布事务锁前版行并检查后继，数据库唯一索引兜底，创建与审计同事务；同一旧版并发发布不能分支。链最多200项，创建第201项前拒绝；历史按链关系从新到旧排序，循环、断链和跨scope污染拒绝读取。公共接口只允许已发布的当前资料，历史列表跳过下架版本；管理员接口可查看下架旧版，跨分页深链使用受保护详情。
+
+旧版收藏、阅读进度、批注、笔记仍属于旧版，不自动复制／迁移到新版。旧版保持发布时仍可继续阅读，详情提示最新已发布版本和版本记录，用户主动切换；版本关系本身不改变下载或下架权限。新旧版不是覆盖同一个PDF，也不提供跨版批注坐标映射。
 
 ## 原文件保存
 
@@ -66,6 +74,10 @@
 | POST `/official-materials` | 管理员发布 |
 | PUT/DELETE `/official-materials/:id` | 管理员编辑／归档下架 |
 | PUT `/official-materials/:id/status` | 管理员发布／下架，body为status:approved或archived及reason；下架原因必填；旧DELETE以默认原因兼容 |
+| POST `/official-materials/:id/versions` | 管理员从链末发布新版，创建资料字段加必填changeSummary，必须新PDF附件；冲突409，不改旧版 |
+| GET `/official-materials/:id/versions` | 公开版本记录items/currentMaterialId/latestPublishedId，当前及返回项仅已发布官方资料 |
+| GET `/official-materials/manage/:id/versions` | 管理员版本记录，包含下架版本 |
+| GET `/official-materials/manage/:id` | 管理员指定官方详情，支持管理列表跨分页与下架旧版深链 |
 | PUT/DELETE `/library/collections/:id` | 登录用户幂等收藏／移除官方资料 |
 | GET `/materials/:id/attachment` | 保留公开资料原件访问，`download=1` 下载 |
 
@@ -100,6 +112,8 @@
 新增 `010_material_libraries.sql`，后端启动迁移器自动执行幂等上行，历史资料默认 community。回滚先归档 personal/official，再删除新列，避免私有资料落回公开旧路径；回滚会丢失 scope/文件夹元数据，须用数据库备份恢复。
 
 `011_official_material_catalog.sql` 幂等增加7个来源／版本／授权／下架原因字段，后端迁移器执行。011回滚只删除本轮字段，保留scope、状态、资料ID与原件；字段数据不可从重新上行中恢复，需数据库备份。上线时应先执行后端迁移，再使用新版官方目录页面。
+
+`012_official_material_versions.sql` 幂等增加可空 `previous_version_id`、`change_summary` 与前版唯一索引；已有独立资料均保持NULL根节点。下行先删索引再删字段，保留资料与原件，但丢失版本关系／说明，需备份恢复；多次up/down与同前版并发发布由独立MySQL临时库测试验证。本轮尚未对业务库执行迁移或部署。
 
 备份须同时包含 SQL 与 `UPLOAD_DIR` 原件，笔记内容文档/快照另需 MongoDB 备份。多实例需共用持久存储；本轮未接 MinIO/OSS。
 

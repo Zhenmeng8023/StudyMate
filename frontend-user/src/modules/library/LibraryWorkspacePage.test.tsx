@@ -14,7 +14,8 @@ vi.mock("../../api/library", () => ({
   listLibraryMaterials: vi.fn(), listOfficialMaterials: vi.fn(), listOfficialCatalog: vi.fn(), listManagedOfficialCatalog: vi.fn(), transitionOfficialMaterial: vi.fn(), getPublicOfficialMaterial: vi.fn(),
   createLibraryMaterial: vi.fn(), updateLibraryMaterial: vi.fn(), deleteLibraryMaterial: vi.fn(),
   createOfficialMaterial: vi.fn(), updateOfficialMaterial: vi.fn(), deleteOfficialMaterial: vi.fn(),
-  collectOfficialMaterial: vi.fn(), uncollectOfficialMaterial: vi.fn(), downloadLibraryMaterial: vi.fn()
+  collectOfficialMaterial: vi.fn(), uncollectOfficialMaterial: vi.fn(), downloadLibraryMaterial: vi.fn(),
+  getOfficialVersions: vi.fn(), getManagedOfficialVersions: vi.fn(), createOfficialVersion: vi.fn(), getManagedOfficialMaterial: vi.fn()
 }));
 vi.mock("../../api/client", async () => ({
   ...await vi.importActual<typeof import("../../api/client")>("../../api/client"), uploadFile: vi.fn()
@@ -46,6 +47,9 @@ describe("LibraryWorkspacePage", () => {
     vi.mocked(libraryApi.listOfficialCatalog).mockResolvedValue({ items: [official], total: 1, page: 1, pageSize: 20, categories: ["讲义"] });
     vi.mocked(libraryApi.listManagedOfficialCatalog).mockResolvedValue({ items: [official], total: 1, page: 1, pageSize: 20, categories: ["讲义"] });
     vi.mocked(libraryApi.transitionOfficialMaterial).mockResolvedValue({ ...official, status: "archived" });
+    const versions = async (id: string) => ({ currentMaterialId: id, latestPublishedId: id, items: [{ id, title: "官方学习指南", edition: "第一版", status: "approved", changeSummary: "", createdAt: "2026-11-17" }] });
+    vi.mocked(libraryApi.getOfficialVersions).mockImplementation(versions);
+    vi.mocked(libraryApi.getManagedOfficialVersions).mockImplementation((_session, id) => versions(id));
     vi.mocked(uploadFile).mockResolvedValue({ id: "uploaded-1", ownerUserId: "user-1", originalName: "课程资料.pdf", mimeType: "application/pdf", size: 100, path: "", createdAt: "2026-11-16" });
     vi.mocked(libraryApi.createLibraryMaterial).mockResolvedValue({ ...personal, id: "new-1", attachmentFileId: "uploaded-1" });
     vi.mocked(libraryApi.createOfficialMaterial).mockResolvedValue({ ...official, id: "published-1" });
@@ -62,9 +66,52 @@ describe("LibraryWorkspacePage", () => {
     renderPage();
     expect(await screen.findByRole("link", { name: "继续阅读" })).toHaveAttribute("href", "/reader/private-1?page=7");
     expect(screen.getByRole("progressbar", { name: "我的算法讲义阅读进度" })).toHaveAttribute("value", "35");
+    expect(libraryApi.getOfficialVersions).not.toHaveBeenCalled();
     await userEvent.selectOptions(screen.getByLabelText("阅读状态"), "unread");
     expect(screen.queryByRole("button", { name: "查看《我的算法讲义》详情" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "查看《未读的资料》详情" })).toBeInTheDocument();
+  });
+
+  it("publishes a new PDF as a separate version while preserving the previous resource", async () => {
+    const admin = { ...session, user: { ...session.user, role: "admin" } };
+    vi.mocked(libraryApi.createOfficialVersion).mockResolvedValue({ ...official, id: "version-2", previousVersionId: official.id, edition: "第二版", changeSummary: "增加练习题" });
+    render(<MemoryRouter initialEntries={["/official-materials?manage=1"]}><LibraryWorkspacePage mode="official" session={admin} /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole("button", { name: "发布新版" }));
+    expect(screen.getByLabelText("资料标题")).toHaveValue(official.title);
+    expect(screen.getByLabelText("版本说明")).toHaveValue("");
+    await userEvent.upload(screen.getByLabelText("选择文件"), new File(["%PDF-1.7\n"], "第二版.pdf", { type: "application/pdf" }));
+    await userEvent.type(screen.getByLabelText("版本更新说明"), "增加练习题");
+    await userEvent.type(screen.getByLabelText("版本说明"), "第二版");
+    await userEvent.click(screen.getByRole("button", { name: "确认发布新版" }));
+    await waitFor(() => expect(libraryApi.createOfficialVersion).toHaveBeenCalledWith(admin, official.id, expect.objectContaining({ attachmentFileId: "uploaded-1", changeSummary: "增加练习题", edition: "第二版" })));
+    expect(libraryApi.updateOfficialMaterial).not.toHaveBeenCalled();
+    expect(libraryApi.collectOfficialMaterial).not.toHaveBeenCalled();
+    expect(await screen.findByText("官方资料新版已发布，旧版学习记录保持不变。")).toBeInTheDocument();
+  });
+
+  it("loads a managed archived version outside the first page without trying the public detail route", async () => {
+    const admin = { ...session, user: { ...session.user, role: "admin" } };
+    vi.mocked(libraryApi.getManagedOfficialMaterial).mockResolvedValue({ ...official, id: "archived-old", title: "下架旧版本", status: "archived" });
+    render(<MemoryRouter initialEntries={["/official-materials?manage=1&selected=archived-old"]}><LibraryWorkspacePage mode="official" session={admin} /></MemoryRouter>);
+    expect(await screen.findByRole("heading", { name: "下架旧版本" })).toBeInTheDocument();
+    expect(libraryApi.getManagedOfficialMaterial).toHaveBeenCalledWith(admin, "archived-old");
+    expect(libraryApi.getPublicOfficialMaterial).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "重新上架" })).toBeInTheDocument();
+  });
+
+  it("keeps the new-version draft and uploaded file when a conflicting publication fails", async () => {
+    const admin = { ...session, user: { ...session.user, role: "admin" } };
+    vi.mocked(libraryApi.createOfficialVersion).mockRejectedValueOnce(new Error("此资料已有新版，请刷新版本记录。")).mockResolvedValue({ ...official, id: "version-2", previousVersionId: official.id });
+    render(<MemoryRouter initialEntries={["/official-materials?manage=1"]}><LibraryWorkspacePage mode="official" session={admin} /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole("button", { name: "发布新版" }));
+    await userEvent.upload(screen.getByLabelText("选择文件"), new File(["%PDF-1.7\n"], "新版资料.pdf", { type: "application/pdf" }));
+    await userEvent.type(screen.getByLabelText("版本更新说明"), "纠正错误说明");
+    await userEvent.click(screen.getByRole("button", { name: "确认发布新版" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("此资料已有新版");
+    expect(screen.getByLabelText("版本更新说明")).toHaveValue("纠正错误说明");
+    await userEvent.click(screen.getByRole("button", { name: "确认发布新版" }));
+    await waitFor(() => expect(libraryApi.createOfficialVersion).toHaveBeenCalledTimes(2));
+    expect(uploadFile).toHaveBeenCalledTimes(1);
   });
 
   it("uses server filters and pagination while never requesting management for readers", async () => {

@@ -92,6 +92,7 @@ func (r *Repository) summarizeCatalog(materials []materialmodel.Material) ([]mat
 	for _, material := range materials {
 		row := byID[material.ID]
 		result = append(result, materialdto.MaterialSummary{
+			PreviousVersionID: material.PreviousVersionID, ChangeSummary: material.ChangeSummary,
 			OfficialMetadata: materialdto.OfficialMetadata{MaterialType: material.MaterialType, Author: material.Author, SourceURL: material.SourceURL, PublicationYear: material.PublicationYear, Edition: material.Edition, LicenseStatus: material.LicenseStatus},
 			ArchiveReason:    material.ArchiveReason, LibraryScope: material.LibraryScope, FolderName: material.FolderName, ID: material.ID, OwnerUserID: material.OwnerUserID, OwnerName: row.OwnerName, Title: material.Title, Description: material.Description, Category: material.Category, Tags: decodeTags(material.Tags), CoverFileID: material.CoverFileID, AttachmentFileID: material.AttachmentFileID, AttachmentName: row.AttachmentName, AttachmentMime: row.AttachmentMime, Status: material.Status, FavoritesCount: row.FavoritesCount, AverageRating: row.AverageRating, CreatedAt: material.CreatedAt.Format(time.RFC3339), UpdatedAt: material.UpdatedAt.Format(time.RFC3339),
 		})

@@ -8,6 +8,7 @@ export type LibraryDocumentDraft = {
   publicationYear?: string;
   edition?: string;
   licenseStatus?: NonNullable<MaterialPayload["licenseStatus"]>;
+  changeSummary?: string;
   title: string;
   description: string;
   category: string;

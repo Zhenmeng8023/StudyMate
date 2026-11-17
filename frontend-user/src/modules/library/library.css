@@ -96,6 +96,16 @@
 .library-storage li { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 7px; }
 .library-storage li > span { overflow-wrap: anywhere; min-width: 0; }
 .library-storage p { margin: 8px 0 0; }
+.official-version-history { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16px; min-width: 0; }
+.official-version-history > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.official-version-history h3 { margin: 0; font-size: 14px; }
+.official-version-history ol { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 10px; }
+.official-version-history li { padding: 10px 12px; background: var(--surface-soft); border-radius: 8px; overflow-wrap: anywhere; }
+.official-version-history li > div { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.official-version-history li strong, .official-version-history li a { font-size: 12px; }
+.official-version-history li strong span { margin-left: 8px; color: var(--accent); font-size: 10px; }
+.official-version-history small { color: var(--text-1); font-size: 11px; }
+.official-version-history li p { margin: 5px 0 0; font-size: 12px; line-height: 1.7; }
 .library-storage-loading { height: 50px; }
 @media (max-width: 640px) { .library-storage-loading { height: 82px; } }
 .library-book { position: relative; }

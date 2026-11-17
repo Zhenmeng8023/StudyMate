@@ -43,8 +43,8 @@ function LibraryWorkspaceContent(props: { mode: LibraryMode; session: AuthSessio
       {workspace.message ? <p className="library-feedback" role="status">{workspace.message}</p> : null}
       {workspace.selectionError ? <p className="library-feedback" role="alert">{workspace.selectionError}</p> : null}
       {workspace.editor ? <LibraryDocumentEditor
-        busy={workspace.busy === "save"} error={workspace.editorError} key={workspace.editor.material?.id || "new"}
-        material={workspace.editor.material} mode={props.mode} onCancel={() => workspace.setEditor(null)}
+        busy={workspace.busy === "save"} error={workspace.editorError} key={workspace.editor.versionOf ? `version:${workspace.editor.versionOf.id}` : workspace.editor.material?.id || "new"}
+        material={workspace.editor.material} versionOf={workspace.editor.versionOf} mode={props.mode} onCancel={() => workspace.setEditor(null)}
         onSave={(draft, file) => void workspace.save(draft, file)}
       /> : null}
       <div className="library-workspace-grid">
@@ -82,6 +82,7 @@ function LibraryWorkspaceContent(props: { mode: LibraryMode; session: AuthSessio
           onRemove={() => workspace.requestRemove(workspace.selected!, "delete")}
           onUncollect={() => workspace.requestRemove(workspace.selected!, "uncollect")}
           onRestore={() => workspace.requestRemove(workspace.selected!, "restore")}
+          managing={Boolean(workspace.managing)} onPublishVersion={() => workspace.startVersion(workspace.selected!)}
         /> : null}
       </div>
       <ConfirmDialog

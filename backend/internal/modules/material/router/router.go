@@ -7,6 +7,7 @@ import (
 
 func RegisterPublicRoutes(group *gin.RouterGroup, handler *materialhandler.Handler) {
 	group.GET("/official-materials", handler.ListOfficial)
+	group.GET("/official-materials/:id/versions", handler.ListOfficialVersions)
 	group.GET("/materials", handler.ListMaterials)
 	group.GET("/materials/:id", handler.GetMaterial)
 	group.GET("/materials/:id/attachment", handler.GetAttachment)
@@ -14,6 +15,9 @@ func RegisterPublicRoutes(group *gin.RouterGroup, handler *materialhandler.Handl
 
 func RegisterProtectedRoutes(group *gin.RouterGroup, handler *materialhandler.Handler) {
 	group.GET("/official-materials/manage", handler.ListOfficialManagement)
+	group.GET("/official-materials/manage/:id/versions", handler.ListManagedOfficialVersions)
+	group.GET("/official-materials/manage/:id", handler.GetManagedOfficialMaterial)
+	group.POST("/official-materials/:id/versions", handler.CreateOfficialVersion)
 	group.PUT("/official-materials/:id/status", handler.ChangeOfficialStatus)
 	group.GET("/library/materials", handler.ListLibrary)
 	group.POST("/library/materials", handler.CreatePersonal)

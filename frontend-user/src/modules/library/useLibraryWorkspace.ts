@@ -4,8 +4,8 @@ import { uploadFile } from "../../api/client";
 import { validatePdfUpload } from "../../api/pdfUpload";
 import {
   collectOfficialMaterial, createLibraryMaterial, createOfficialMaterial, deleteLibraryMaterial,
-  downloadLibraryMaterial, listLibraryMaterials, listOfficialCatalog, listManagedOfficialCatalog, transitionOfficialMaterial, getPublicOfficialMaterial,
-  uncollectOfficialMaterial, updateLibraryMaterial, updateOfficialMaterial, type OfficialCatalogQuery
+  downloadLibraryMaterial, listLibraryMaterials, listOfficialCatalog, listManagedOfficialCatalog, transitionOfficialMaterial, getPublicOfficialMaterial, getManagedOfficialMaterial,
+  uncollectOfficialMaterial, updateLibraryMaterial, updateOfficialMaterial, createOfficialVersion, type OfficialCatalogQuery
 } from "../../api/library";
 import { filterLibraryDocuments, type LibraryDocumentDraft, type LibraryMode } from "./libraryDocument";
 import { getLibraryReadingState, sortLibraryBooks, type LibraryBookSort, type LibraryReadingFilter } from "./libraryReading";
@@ -34,7 +34,7 @@ export function useLibraryWorkspace(mode: LibraryMode, session: AuthSession | nu
   const [folder, setFolder] = useState("");
   const [readingFilter, setReadingFilter] = useState<LibraryReadingFilter>("all");
   const [bookSort, setBookSort] = useState<LibraryBookSort>("updated");
-  const [editor, setEditor] = useState<{ material?: MaterialPayload } | null>(null);
+  const [editor, setEditor] = useState<{ material?: MaterialPayload; versionOf?: MaterialPayload } | null>(null);
   const [editorError, setEditorError] = useState("");
   const [remove, setRemove] = useState<{ material: MaterialPayload; action: "delete" | "uncollect" | "restore" } | null>(null);
   const [removeError, setRemoveError] = useState("");
@@ -82,13 +82,15 @@ export function useLibraryWorkspace(mode: LibraryMode, session: AuthSession | nu
     setLinkedDocument(null); setSelectionError("");
     if (mode !== "official" || loading || !requestedId || selectedId !== requestedId || items.some((item) => item.id === requestedId)) return;
     let active = true;
-    void getPublicOfficialMaterial(requestedId).then((item) => {
+    const management = managing && session?.user.role === "admin";
+    const detail = management ? getManagedOfficialMaterial(session!, requestedId) : getPublicOfficialMaterial(requestedId);
+    void detail.then((item) => {
       if (!active) return;
-      if (item.libraryScope !== "official" || item.status !== "approved") throw new Error("指定官方资料当前不可公开访问。");
+      if (item.libraryScope !== "official" || !management && item.status !== "approved") throw new Error("指定官方资料当前不可访问。");
       setLinkedDocument(item);
     }).catch((cause: unknown) => { if (active) setSelectionError(errorText(cause, "指定官方资料不可访问，请在列表中重新选择。")); });
     return () => { active = false; };
-  }, [mode, loading, requestedId, selectedId, items]);
+  }, [mode, loading, requestedId, selectedId, items, managing, session]);
   const visibleItems = useMemo(() => {
     if (mode === "official") return items;
     const filtered = filterLibraryDocuments(items, keyword, folder);
@@ -108,12 +110,18 @@ export function useLibraryWorkspace(mode: LibraryMode, session: AuthSession | nu
     setEditor({ material });
   }
 
+  function startVersion(material: MaterialPayload) {
+    if (mode !== "official" || session?.user.role !== "admin") return;
+    uploaded.current = null; setEditorError(""); setEditor({ versionOf: material });
+  }
+
   async function save(draft: LibraryDocumentDraft, file: File | null) {
     if (!session || !editor) return;
     setBusy("save");
     setEditorError("");
     try {
       let attachmentFileId = editor.material?.attachmentFileId || "";
+      if (editor.versionOf && (!draft.changeSummary?.trim() || draft.changeSummary.trim().length > 500)) throw new Error("请填写版本更新说明（最多500字）。");
       if (!editor.material) {
         if (!file) throw new Error("请选择 PDF 文件。");
         await validatePdfUpload(file);
@@ -129,7 +137,7 @@ export function useLibraryWorkspace(mode: LibraryMode, session: AuthSession | nu
         folderName: draft.folderName.trim(), attachmentFileId,
         ...(mode === "official" ? { materialType: draft.materialType, author: draft.author?.trim(), sourceUrl: draft.sourceUrl?.trim(), publicationYear: draft.publicationYear ? Number(draft.publicationYear) : 0, edition: draft.edition?.trim(), licenseStatus: draft.licenseStatus } : {})
       };
-      const result = editor.material
+      const result = editor.versionOf ? await createOfficialVersion(session, editor.versionOf.id, { ...input, changeSummary: draft.changeSummary!.trim() }) : editor.material
         ? await (mode === "official" ? updateOfficialMaterial : updateLibraryMaterial)(session, editor.material.id, input)
         : await (mode === "official" ? createOfficialMaterial : createLibraryMaterial)(session, input);
       setItems((current) => {
@@ -144,7 +152,7 @@ export function useLibraryWorkspace(mode: LibraryMode, session: AuthSession | nu
       setEditor(null);
       uploaded.current = null;
       if (mode === "official") setCatalogQuery((current) => ({ ...current, page: 1, q: "", category: "", materialType: "", sort: "updated", status: "all" }));
-      setMessage(mode === "official" ? editor.material ? "官方资料信息已保存。" : "官方资料已发布。" : "资料已私有保存，可以立即开始阅读。");
+      setMessage(mode === "official" ? editor.versionOf ? "官方资料新版已发布，旧版学习记录保持不变。" : editor.material ? "官方资料信息已保存。" : "官方资料已发布。" : "资料已私有保存，可以立即开始阅读。");
     } catch (error) { setEditorError(errorText(error, "保存失败，请重试。")); }
     finally { setBusy(""); setStorageRevision((value) => value + 1); }
   }
@@ -203,6 +211,6 @@ export function useLibraryWorkspace(mode: LibraryMode, session: AuthSession | nu
     catalogQuery, changeCatalog, catalogTotal, categories, managing: managing && session?.user.role === "admin", toggleManagement, archiveReason, setArchiveReason,
     selectionError,
     keyword, setKeyword, folder, setFolder, folders, readingFilter, setReadingFilter, bookSort, setBookSort, editor, setEditor, editorError, remove, setRemove, removeError,
-    setSelectedId, load, startEditor, save, collect, requestRemove, confirmRemove, download
+    setSelectedId, load, startEditor, startVersion, save, collect, requestRemove, confirmRemove, download
   };
 }

@@ -19,6 +19,22 @@ async function officialCatalog(page: Page, role = "student") {
     if (path === "/files/storage") return ok({ usedBytes: 1000, quotaBytes: 1024 ** 3, remainingBytes: 1024 ** 3 - 1000, fileCount: 1, unlinkedFileCount: 0, unlinkedBytes: 0, unlinkedFiles: [] });
     if (path === "/library/materials") return ok([]);
     if (path === "/files" && request.method() === "POST") return ok({ id: "new-file", ownerUserId: session.user.id, originalName: "new.pdf", mimeType: "application/pdf", size: 100, path: "", createdAt: "2026-11-17" }, 201);
+    const versions = path.match(/^\/official-materials\/(?:manage\/)?([^/]+)\/versions$/);
+    if (versions) {
+      const current = state.items.find((item) => item.id === versions[1]);
+      if (request.method() === "POST") {
+        const input = request.postDataJSON() as Partial<MaterialPayload>;
+        const next = { ...current, ...input, id: "official-revision", status: "approved", previousVersionId: versions[1], createdAt: "2026-11-18T00:00:00Z" } as MaterialPayload;
+        state.items = [next, ...state.items];
+        return ok(next, 201);
+      }
+      let root = current;
+      while (root?.previousVersionId) root = state.items.find((item) => item.id === root?.previousVersionId);
+      const chain: MaterialPayload[] = [];
+      for (let item = root; item; item = state.items.find((candidate) => candidate.previousVersionId === item!.id)) chain.unshift(item);
+      const visible = path.includes("/manage/") ? chain : chain.filter((item) => item.status === "approved");
+      return ok({ items: visible.map((item) => ({ id: item.id, title: item.title, edition: item.edition, status: item.status, changeSummary: item.changeSummary || "", createdAt: item.createdAt })), currentMaterialId: versions[1], latestPublishedId: chain.find((item) => item.status === "approved")?.id || "" });
+    }
     if (path === "/official-materials" && request.method() === "POST") {
       state.created = request.postDataJSON();
       const item = { ...state.items[0], ...state.created, id: "official-new", ownerUserId: session.user.id } as MaterialPayload;
@@ -48,6 +64,8 @@ async function officialCatalog(page: Page, role = "student") {
     }
     const detail = path.match(/^\/(?:library\/)?materials\/([^/]+)$/);
     if (detail) return ok(state.items.find((item) => item.id === detail[1]));
+    const managedDetail = path.match(/^\/official-materials\/manage\/([^/]+)$/);
+    if (managedDetail) return ok(state.items.find((item) => item.id === managedDetail[1]));
     return ok([]);
   });
   return state;
@@ -115,4 +133,35 @@ test(`official managers record metadata, take a resource down and restore its id
   await page.getByRole("button", { name: "返回公开目录", exact: true }).click();
   await expect(page.getByRole("heading", { name: "new-guide", exact: true })).toBeVisible();
 });
+}
+
+for (const width of [1280, 390]) {
+  test(`publishes an independent PDF revision and keeps the old version readable at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    const state = await officialCatalog(page, "admin");
+    await page.goto("/official-materials?manage=1&selected=official-1");
+    await page.getByRole("button", { name: "发布新版", exact: true }).click();
+    await page.getByLabel("选择文件", { exact: true }).setInputFiles({ name: "revised-guide.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.7\nrevision") });
+    await page.getByLabel("版本说明", { exact: true }).fill("第二版");
+    await page.getByLabel("版本更新说明", { exact: true }).fill("修正示例并补充习题");
+    await page.getByRole("button", { name: "确认发布新版", exact: true }).click();
+    await expect.poll(() => state.items.find((item) => item.id === "official-revision")?.previousVersionId).toBe("official-1");
+    expect(state.items.find((item) => item.id === "official-1")).toMatchObject({ attachmentFileId: "file-0", edition: "第一版", status: "approved" });
+    expect(state.items.find((item) => item.id === "official-revision")).toMatchObject({ attachmentFileId: "new-file", edition: "第二版", changeSummary: "修正示例并补充习题" });
+    await page.goto("/official-materials?selected=official-1");
+    await expect(page.getByRole("link", { name: "查看最新版本", exact: true })).toHaveAttribute("href", "/official-materials?selected=official-revision");
+    await expect(page.getByRole("region", { name: "资料详情" }).getByRole("link", { name: "开始阅读", exact: true })).toHaveAttribute("href", "/reader/official-1");
+    await page.getByRole("link", { name: "查看最新版本", exact: true }).click();
+    await expect(page.getByRole("region", { name: "资料详情" })).toContainText("第二版");
+    await expect(page.getByRole("region", { name: "资料详情" }).locator(".library-document-metadata > div").filter({ has: page.locator("dt", { hasText: "版本说明" }) }).locator("dd")).toHaveText("第二版");
+    await expect(page.getByRole("region", { name: "资料详情" }).getByRole("link", { name: "开始阅读", exact: true })).toHaveAttribute("href", "/reader/official-revision");
+    await page.screenshot({ path: testInfo.outputPath(`official-versions-${width}.png`), fullPage: true });
+    state.items = state.items.map((item) => item.id === "official-1" ? { ...item, status: "archived", archiveReason: "旧版停止发布" } : item);
+    const old = state.items.find((item) => item.id === "official-1")!;
+    state.items = [...state.items.filter((item) => item.id !== "official-1"), old];
+    await page.goto("/official-materials?manage=1&selected=official-revision");
+    await page.getByRole("region", { name: "版本记录" }).getByRole("link", { name: "第一版", exact: true }).click();
+    await expect(page.getByRole("region", { name: "资料详情" })).toContainText("旧版停止发布");
+    await expect(page.getByRole("button", { name: "重新上架", exact: true })).toBeVisible();
+  });
 }
