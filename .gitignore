@@ -6,6 +6,7 @@ vendor/
 dist/
 build/
 coverage/
+backend/.gocache/
 tmp/
 test-results/
 playwright-report/

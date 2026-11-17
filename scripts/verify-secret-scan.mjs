@@ -85,6 +85,13 @@ const detectors = [
     getSecretValue: (match) => match.groups?.value ?? match.groups?.value2 ?? null,
   },
   {
+    kind: "vue-literal-assignment",
+    priority: 4,
+    message: "Found a hardcoded secret in a Vue binding.",
+    regex: new RegExp("(?:\\:|v-bind:)(?<key>" + secretKeyPattern + ")\\s*=\\s*(?<outer>[\"'])(?<inner>[\"'`])(?<value>[^\"'`\\r\\n]{8,})\\k<inner>\\k<outer>", "gi"),
+    getSecretValue: (match) => match.groups?.value ?? null,
+  },
+  {
     kind: "generic-assignment",
     priority: 4,
     message: "Found a hardcoded secret-like assignment.",
@@ -281,7 +288,11 @@ export function readSecretScanFiles(scanRoot = root) {
   return files;
 }
 
-function shouldIgnoreFinding({ path: relativePath, lineText, kind, key, secretValue }) {
+function shouldIgnoreFinding({ path: relativePath, lineText, kind, key, secretValue, matchIndex }) {
+  if (kind === "vue-literal-assignment" && !relativePath.endsWith(".vue")) {
+    return true;
+  }
+
   if (isPlaceholderValue(secretValue)) {
     return true;
   }
@@ -295,6 +306,12 @@ function shouldIgnoreFinding({ path: relativePath, lineText, kind, key, secretVa
   }
 
   if (kind === "generic-assignment" && relativePath.endsWith("package.json")) {
+    return true;
+  }
+
+  if (kind === "generic-assignment" && relativePath.endsWith(".vue")
+    && /(?:^|[\s<])(?::|v-bind:|@update:|v-on:update:)$/.test(lineText.slice(0, matchIndex))
+    && /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*(?:\(\s*\$event\s*\))?$/.test(secretValue)) {
     return true;
   }
 
@@ -341,6 +358,7 @@ export function collectSecretScanFindings(files) {
             kind: detector.kind,
             key,
             secretValue,
+            matchIndex: match.index ?? 0,
           })) {
             continue;
           }

@@ -75,3 +75,18 @@ test("secret scan ignores documented placeholders and explicit allow markers", (
 
   assert.equal(findings.length, 0);
 });
+
+test("Vue dynamic bindings do not hide hardcoded credentials", () => {
+  const findings = collectSecretScanFindings([{
+    path: "frontend-admin/src/views/Example.vue",
+    content: [
+      ':password-value="surface.loginPanelProps.passwordValue"',
+      '@update:password-value="surface.loginPanelEvents.updatePasswordValue($event)"',
+      'password="hardcoded-value-123"',
+      ':password="\'hardcoded-value-456\'"',
+      ':password-value="surface.passwordValue" token="hardcoded-value-789"',
+    ].join("\n"),
+  }]);
+
+  assert.deepEqual(findings.map((finding) => finding.line), [3, 4, 5]);
+});
