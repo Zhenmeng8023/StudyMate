@@ -9,6 +9,7 @@ const LoginPage = lazy(() => import("../pages/AuthPages").then((module) => ({ de
 const RegisterPage = lazy(() => import("../pages/AuthPages").then((module) => ({ default: module.RegisterPage })));
 const DashboardPage = lazy(() => import("../pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const MaterialsPage = lazy(() => import("../pages/MaterialsPage").then((module) => ({ default: module.MaterialsPage })));
+const LibraryWorkspacePage = lazy(() => import("../modules/library/LibraryWorkspacePage").then((module) => ({ default: module.LibraryWorkspacePage })));
 const CommunityPage = lazy(() => import("../pages/CommunityPage").then((module) => ({ default: module.CommunityPage })));
 const NotesPage = lazy(() => import("../pages/NotesPage").then((module) => ({ default: module.NotesPage })));
 const ReaderPage = lazy(() => import("../pages/ReaderPage").then((module) => ({ default: module.ReaderPage })));
@@ -92,11 +93,13 @@ export function App() {
         <Route element={<PublicShellRoute onLogout={() => void handleLogout()} session={session} />}>
           <Route element={<DashboardPage session={session} />} index />
           <Route element={<MaterialsPage session={session} />} path="materials" />
+          <Route element={<LibraryWorkspacePage mode="official" session={session} />} path="official-materials" />
           <Route element={<CommunityPage />} path="community" />
           <Route element={<SearchWorkspacePage session={session} />} path="search" />
           <Route element={<SharePage />} path="share/:token" />
         </Route>
         <Route element={<ProtectedShellRoute onLogout={() => void handleLogout()} session={session} />}>
+          <Route element={<LibraryWorkspacePage mode="personal" session={session} />} path="library" />
           <Route element={<ReaderPage session={session as AuthSession} />} path="reader" />
           <Route element={<ReaderPage session={session as AuthSession} />} path="reader/:materialId" />
           <Route element={<NotesPage session={session as AuthSession} />} path="notes" />

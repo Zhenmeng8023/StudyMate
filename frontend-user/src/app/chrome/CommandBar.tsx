@@ -15,7 +15,9 @@ const modeLabels: Partial<Record<AppLayoutMode, string>> = {
 
 function resolvePageMeta(pathname: string): PageMeta {
   if (pathname === "/") return { crumb: "学习空间", title: "学习概览", subtitle: "继续一项已开始的学习任务" };
-  if (pathname.startsWith("/materials")) return { crumb: "学习空间", title: "资料库", subtitle: "管理资料与阅读入口" };
+  if (pathname.startsWith("/library")) return { crumb: "个人空间", title: "个人知识库", subtitle: "私有文件与官方收藏" };
+  if (pathname.startsWith("/official-materials")) return { crumb: "发现", title: "官方资料库", subtitle: "平台维护的学习来源" };
+  if (pathname.startsWith("/materials")) return { crumb: "发现", title: "社区资料", subtitle: "浏览审核发布的社区学习资料" };
   if (pathname.startsWith("/community")) return { crumb: "探索", title: "学习社区", subtitle: "浏览值得继续讨论的学习分享" };
   if (pathname.startsWith("/search")) return { crumb: "学习空间", title: "搜索", subtitle: "从你的学习资产中定位线索" };
   if (pathname.startsWith("/ai")) return { crumb: "学习空间", title: "AI 学伴", subtitle: "确认草稿，再进入正式学习资产" };

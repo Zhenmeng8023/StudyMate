@@ -9,7 +9,7 @@ export function CompactNavigation(props: { session: AuthSession | null }) {
       <Link aria-label="返回工作台" className="compact-brand" title="返回工作台" to="/">
         S
       </Link>
-      <Link aria-label="添加资料" className="compact-create" title="添加资料" to="/materials">
+      <Link aria-label="添加资料" className="compact-create" title="添加资料" to={props.session ? "/library" : "/login"}>
         <Plus aria-hidden="true" size={18} />
       </Link>
       <nav className="compact-nav-list" aria-label="学习功能">

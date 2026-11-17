@@ -4,9 +4,9 @@ import type { AuthSession } from "../../api/client";
 import { primaryNavItems } from "../appShared";
 
 const navigationGroups = [
-  { label: "学习空间", items: ["/", "/materials", "/reader", "/notes"] },
+  { label: "学习空间", items: ["/", "/library", "/reader", "/notes"] },
   { label: "理解与巩固", items: ["/graph", "/review", "/ai"] },
-  { label: "发现", items: ["/community", "/settings"] }
+  { label: "发现", items: ["/official-materials", "/materials", "/community", "/settings"] }
 ] as const;
 
 export function PrimaryNavigation(props: { session: AuthSession | null }) {
@@ -24,7 +24,7 @@ export function PrimaryNavigation(props: { session: AuthSession | null }) {
         </Link>
       </div>
 
-      <Link className="sidebar-primary-action" to="/materials">
+      <Link className="sidebar-primary-action" to={props.session ? "/library" : "/login"}>
         <Plus aria-hidden="true" size={17} strokeWidth={2.1} />
         <span>添加学习资料</span>
         <kbd>N</kbd>

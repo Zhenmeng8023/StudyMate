@@ -21,7 +21,9 @@ export type ContextCard = {
 
 export const primaryNavItems: ShellNavItem[] = [
   { icon: LayoutGrid, label: "工作台", to: "/" },
-  { icon: LibraryBig, label: "资料库", to: "/materials" },
+  { icon: LibraryBig, label: "个人知识库", to: "/library", requiresAuth: true },
+  { icon: LibraryBig, label: "官方资料库", to: "/official-materials" },
+  { icon: LibraryBig, label: "社区资料", to: "/materials" },
   { icon: BookOpen, label: "阅读器", to: "/reader", requiresAuth: true },
   { icon: NotebookPen, label: "笔记", to: "/notes", requiresAuth: true },
   { icon: Network, label: "图谱", to: "/graph", requiresAuth: true },
@@ -32,7 +34,7 @@ export const primaryNavItems: ShellNavItem[] = [
 ];
 
 export const quickActions = [
-  { icon: FilePlus2, label: "添加资料", description: "上传 PDF、讲义或链接，建立可检索的学习来源。", to: "/materials" },
+  { icon: FilePlus2, label: "添加资料", description: "私有保存 PDF 或 Word，开始阅读与批注。", to: "/library", requiresAuth: true },
   { icon: BookOpen, label: "继续阅读", description: "回到上次阅读位置，沿着高亮和批注继续理解。", to: "/reader", requiresAuth: true },
   { icon: NotebookPen, label: "整理笔记", description: "把摘要、观点和问题沉淀为可复用的知识卡片。", to: "/notes", requiresAuth: true },
   { icon: Network, label: "连接知识", description: "在画布中组织概念关系，形成可浏览的知识结构。", to: "/graph", requiresAuth: true }
